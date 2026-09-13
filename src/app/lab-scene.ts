@@ -1,4 +1,11 @@
 import Phaser from "phaser";
+import {
+  COMPANION_MODES,
+  RelationalPositioningBrain,
+  chaseIntent,
+  type CompanionMode,
+  type RelationalDecision
+} from "../brain/relational-positioning";
 import { S0_STEP_SECONDS } from "../physics/rapier-physical-world";
 import { SCENARIOS } from "../world/scenarios";
 import type { MotionIntent, ScenarioId, Vec2, WorldSnapshot } from "../world/types";
@@ -28,9 +35,12 @@ export class LabScene extends Phaser.Scene {
   private loading = false;
   private singleStepQueued = false;
   private scenarioId: ScenarioId = "open";
+  private companionMode: CompanionMode = "relational";
+  private readonly relationalBrain = new RelationalPositioningBrain();
+  private relationalDecision: RelationalDecision | null = null;
 
   private keys!: Record<
-    "w" | "a" | "s" | "d" | "up" | "down" | "left" | "right" | "reset" | "pause" | "step" | "debug" | "one" | "two" | "three" | "four",
+    "w" | "a" | "s" | "d" | "up" | "down" | "left" | "right" | "reset" | "pause" | "step" | "debug" | "mode" | "one" | "two" | "three" | "four",
     Phaser.Input.Keyboard.Key
   >;
 
@@ -40,7 +50,7 @@ export class LabScene extends Phaser.Scene {
 
   create(): void {
     this.graphics = this.add.graphics();
-    this.hud = this.add.text(12, 10, "Loading S0...", {
+    this.hud = this.add.text(12, 10, "Loading S1...", {
       fontFamily: "monospace",
       fontSize: "15px",
       color: "#e7e9ee",
@@ -49,7 +59,7 @@ export class LabScene extends Phaser.Scene {
     }).setDepth(10);
 
     const keyboard = this.input.keyboard;
-    if (!keyboard) throw new Error("Keyboard input is required for S0.");
+    if (!keyboard) throw new Error("Keyboard input is required for S1.");
     this.keys = keyboard.addKeys({
       w: Phaser.Input.Keyboard.KeyCodes.W,
       a: Phaser.Input.Keyboard.KeyCodes.A,
@@ -63,6 +73,7 @@ export class LabScene extends Phaser.Scene {
       pause: Phaser.Input.Keyboard.KeyCodes.P,
       step: Phaser.Input.Keyboard.KeyCodes.O,
       debug: Phaser.Input.Keyboard.KeyCodes.B,
+      mode: Phaser.Input.Keyboard.KeyCodes.M,
       one: Phaser.Input.Keyboard.KeyCodes.ONE,
       two: Phaser.Input.Keyboard.KeyCodes.TWO,
       three: Phaser.Input.Keyboard.KeyCodes.THREE,
@@ -93,16 +104,29 @@ export class LabScene extends Phaser.Scene {
   }
 
   private currentIntents(): MotionIntent[] {
-    return [
-      {
-        actorId: "player",
-        move: motion(axis(this.keys.a, this.keys.d), axis(this.keys.w, this.keys.s))
-      },
-      {
+    if (!this.snapshotValue) throw new Error("Cannot produce S1 intents without a World snapshot.");
+
+    const playerIntent: MotionIntent = {
+      actorId: "player",
+      move: motion(axis(this.keys.a, this.keys.d), axis(this.keys.w, this.keys.s))
+    };
+
+    let companionIntent: MotionIntent;
+    if (this.companionMode === "manual") {
+      this.relationalDecision = null;
+      companionIntent = {
         actorId: "companion",
         move: motion(axis(this.keys.left, this.keys.right), axis(this.keys.up, this.keys.down))
-      }
-    ];
+      };
+    } else if (this.companionMode === "chase") {
+      this.relationalDecision = null;
+      companionIntent = chaseIntent(this.snapshotValue);
+    } else {
+      companionIntent = this.relationalBrain.intent(this.snapshotValue);
+      this.relationalDecision = this.relationalBrain.debugState();
+    }
+
+    return [playerIntent, companionIntent];
   }
 
   private handleCommands(): void {
@@ -113,10 +137,20 @@ export class LabScene extends Phaser.Scene {
       this.singleStepQueued = true;
     }
     if (Phaser.Input.Keyboard.JustDown(this.keys.debug)) this.debug = !this.debug;
+    if (Phaser.Input.Keyboard.JustDown(this.keys.mode)) this.cycleCompanionMode();
     if (Phaser.Input.Keyboard.JustDown(this.keys.one)) void this.loadScenario("open");
     if (Phaser.Input.Keyboard.JustDown(this.keys.two)) void this.loadScenario("pillar");
     if (Phaser.Input.Keyboard.JustDown(this.keys.three)) void this.loadScenario("doorway");
     if (Phaser.Input.Keyboard.JustDown(this.keys.four)) void this.loadScenario("head-on");
+  }
+
+  private cycleCompanionMode(): void {
+    const currentIndex = COMPANION_MODES.indexOf(this.companionMode);
+    const next = COMPANION_MODES[(currentIndex + 1) % COMPANION_MODES.length];
+    if (!next) throw new Error("Companion mode cycle produced no next mode.");
+    this.companionMode = next;
+    this.relationalBrain.reset();
+    this.relationalDecision = null;
   }
 
   private async loadScenario(id: ScenarioId): Promise<void> {
@@ -132,6 +166,8 @@ export class LabScene extends Phaser.Scene {
       this.snapshotValue = next.snapshot();
       this.accumulator = 0;
       this.singleStepQueued = false;
+      this.relationalBrain.reset();
+      this.relationalDecision = null;
       this.draw(this.snapshotValue);
     } finally {
       this.loading = false;
@@ -152,6 +188,43 @@ export class LabScene extends Phaser.Scene {
     this.graphics.fillStyle(0x39414d, 1);
     for (const obstacle of snapshot.obstacles) {
       this.graphics.fillRect(sx(obstacle.x), sy(obstacle.y), obstacle.width * scale, obstacle.height * scale);
+    }
+
+    if (this.debug && this.companionMode === "relational" && this.relationalDecision) {
+      const companion = snapshot.actors.find((entry) => entry.id === "companion");
+      const player = snapshot.actors.find((entry) => entry.id === "player");
+      for (const candidate of this.relationalDecision.candidates) {
+        const selected = candidate.slot === this.relationalDecision.selectedSlot;
+        this.graphics.lineStyle(selected ? 3 : 1, candidate.valid ? 0x9da7b3 : 0xff5d66, selected ? 1 : 0.55);
+        this.graphics.strokeCircle(sx(candidate.position.x), sy(candidate.position.y), selected ? 8 : 5);
+      }
+      if (companion) {
+        this.graphics.lineStyle(2, 0xd2a8ff, 0.9);
+        this.graphics.lineBetween(
+          sx(companion.position.x),
+          sy(companion.position.y),
+          sx(this.relationalDecision.target.x),
+          sy(this.relationalDecision.target.y)
+        );
+      }
+      if (player) {
+        this.graphics.lineStyle(2, 0x79c0ff, 0.9);
+        this.graphics.lineBetween(
+          sx(player.position.x),
+          sy(player.position.y),
+          sx(player.position.x + this.relationalDecision.playerDirection.x),
+          sy(player.position.y + this.relationalDecision.playerDirection.y)
+        );
+      }
+    }
+
+    if (this.debug && this.companionMode === "chase") {
+      const companion = snapshot.actors.find((entry) => entry.id === "companion");
+      const player = snapshot.actors.find((entry) => entry.id === "player");
+      if (companion && player) {
+        this.graphics.lineStyle(2, 0xd29922, 0.8);
+        this.graphics.lineBetween(sx(companion.position.x), sy(companion.position.y), sx(player.position.x), sy(player.position.y));
+      }
     }
 
     for (const actor of snapshot.actors) {
@@ -187,11 +260,31 @@ export class LabScene extends Phaser.Scene {
     });
 
     const scenarioLabel = SCENARIOS[snapshot.scenarioId].label;
-    this.hud.setVisible(this.debug).setText([
-      `S0 · ${scenarioLabel} · tick ${snapshot.tick} · ${this.paused ? "PAUSED" : "RUNNING"}`,
-      "WASD player · arrows companion · 1-4 scenarios · R reset · P pause · O single-step · B debug",
-      "green=requested velocity · red=actual velocity · red body outline=contact",
-      ...actorLines
-    ]);
+    const baseLines = [
+      `S1 · ${scenarioLabel} · tick ${snapshot.tick} · ${this.paused ? "PAUSED" : "RUNNING"} · companion ${this.companionMode.toUpperCase()}`,
+      "WASD player · M mode · arrows manual companion · 1-4 scenarios · R reset · P pause · O step · B debug"
+    ];
+
+    const debugLines: string[] = [];
+    if (this.debug) {
+      debugLines.push("green=requested velocity · red=actual velocity · red body outline=contact");
+      if (this.companionMode === "relational" && this.relationalDecision) {
+        const scores = this.relationalDecision.candidates
+          .map((candidate) => `${candidate.slot}:${candidate.valid ? candidate.score.toFixed(2) : "X"}`)
+          .join("  ");
+        debugLines.push(
+          `brain slot ${this.relationalDecision.selectedSlot} · rethink #${this.relationalDecision.reconsiderationCount} @ tick ${this.relationalDecision.reconsideredAtTick}`,
+          `brain reason: ${this.relationalDecision.reason}`,
+          `candidate scores: ${scores}`
+        );
+      } else if (this.companionMode === "chase") {
+        debugLines.push("CHASE baseline: direct center-seeking; no relational slot selection");
+      } else {
+        debugLines.push("MANUAL baseline: companion brain bypassed; arrow keys own companion intent");
+      }
+      debugLines.push(...actorLines);
+    }
+
+    this.hud.setVisible(true).setText([...baseLines, ...debugLines]);
   }
 }
