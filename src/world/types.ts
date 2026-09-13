@@ -58,3 +58,22 @@ export interface WorldSnapshot {
   actors: readonly ActorSnapshot[];
   obstacles: readonly ObstacleSpec[];
 }
+
+export interface DirectTraversalBlocker {
+  label: string;
+  distance: number;
+  fraction: number;
+  hitCenter: Vec2;
+  contactPoint: Vec2;
+  normal: Vec2;
+}
+
+export interface DirectTraversalResult {
+  actorId: ActorId;
+  from: Vec2;
+  to: Vec2;
+  radius: number;
+  distance: number;
+  clear: boolean;
+  blocker: DirectTraversalBlocker | null;
+}
