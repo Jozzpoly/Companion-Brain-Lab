@@ -48,12 +48,14 @@ export type StaticTraversalQuery = (
   radius: number
 ) => StaticCircleTraversalResult;
 
-function distance(a: Vec2, b: Vec2): number {
-  return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
 function edgeId(a: string, b: string): string {
   return a < b ? `${a}<->${b}` : `${b}<->${a}`;
+}
+
+function nodeKindRank(kind: RouteNodeKind): number {
+  if (kind === "start") return 0;
+  if (kind === "target") return 1;
+  return 2;
 }
 
 function pointInsideExpandedObstacle(point: Vec2, obstacle: ObstacleSpec, margin: number): boolean {
@@ -123,11 +125,8 @@ function buildNodes(
   for (const obstacle of obstacles) nodes.push(...obstacleCornerNodes(snapshot, obstacle, queryRadius));
 
   return nodes.sort((a, b) => {
-    if (a.kind === "start") return -1;
-    if (b.kind === "start") return 1;
-    if (a.kind === "target") return b.kind === "start" ? 1 : -1;
-    if (b.kind === "target") return -1;
-    return a.id.localeCompare(b.id);
+    const rankOrder = nodeKindRank(a.kind) - nodeKindRank(b.kind);
+    return rankOrder !== 0 ? rankOrder : a.id.localeCompare(b.id);
   });
 }
 
