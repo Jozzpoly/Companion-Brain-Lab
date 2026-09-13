@@ -1,5 +1,6 @@
 name: deploy-pinned-s0-preview
 
+# Operational preview only: the published app source remains pinned to the qualified S0 experiment SHA below.
 on:
   push:
     branches:
