@@ -68,12 +68,15 @@ export interface DirectTraversalBlocker {
   normal: Vec2;
 }
 
-export interface DirectTraversalResult {
-  actorId: ActorId;
+export interface StaticCircleTraversalResult {
   from: Vec2;
   to: Vec2;
   radius: number;
   distance: number;
   clear: boolean;
   blocker: DirectTraversalBlocker | null;
+}
+
+export interface DirectTraversalResult extends StaticCircleTraversalResult {
+  actorId: ActorId;
 }
