@@ -6,6 +6,7 @@ import type {
   DirectTraversalResult,
   MotionIntent,
   ScenarioSpec,
+  StaticCircleTraversalResult,
   Vec2
 } from "../world/types";
 
@@ -89,10 +90,9 @@ export class RapierPhysicalWorld {
       });
     }
 
-    // In the deterministic-compat build the public World scene-query broad phase
-    // becomes queryable after a physics step. All initial velocities and gravity are
-    // zero, so this is an internal query warm-up only: LabWorld's domain tick remains 0.
-    // S0 reset/repeatability tests protect this assumption from silently changing.
+    // Deterministic-compat 0.20 makes World scene-query broad phase usable
+    // after a physics step. Initial gravity and velocities are zero, so this is
+    // a query warm-up outside LabWorld domain time. S0 regression tests protect it.
     this.world.step();
   }
 
@@ -106,21 +106,40 @@ export class RapierPhysicalWorld {
   }
 
   directTraversal(actorId: ActorId, target: Vec2): DirectTraversalResult {
-    if (!Number.isFinite(target.x) || !Number.isFinite(target.y)) {
-      throw new Error("Traversal target requires finite x/y components.");
-    }
     const actor = this.actors.get(actorId);
     if (!actor) throw new Error(`Missing actor for traversal query: ${actorId}`);
-
     const translation = actor.body.translation();
-    const from = { x: translation.x, y: translation.y };
-    const delta = { x: target.x - from.x, y: target.y - from.y };
-    const distance = Math.hypot(delta.x, delta.y);
-    const base: Omit<DirectTraversalResult, "clear" | "blocker"> = {
+    return {
       actorId,
-      from,
-      to: { ...target },
-      radius: actor.radius,
+      ...this.staticCircleTraversal(
+        { x: translation.x, y: translation.y },
+        target,
+        actor.radius
+      )
+    };
+  }
+
+  staticCircleTraversal(from: Vec2, target: Vec2, radius: number): StaticCircleTraversalResult {
+    if (
+      !Number.isFinite(from.x) ||
+      !Number.isFinite(from.y) ||
+      !Number.isFinite(target.x) ||
+      !Number.isFinite(target.y)
+    ) {
+      throw new Error("Static traversal requires finite from/to components.");
+    }
+    if (!Number.isFinite(radius) || radius <= 0) {
+      throw new Error("Static traversal requires a finite positive radius.");
+    }
+
+    const start = { ...from };
+    const to = { ...target };
+    const delta = { x: to.x - start.x, y: to.y - start.y };
+    const distance = Math.hypot(delta.x, delta.y);
+    const base: Omit<StaticCircleTraversalResult, "clear" | "blocker"> = {
+      from: start,
+      to,
+      radius,
       distance
     };
 
@@ -129,9 +148,9 @@ export class RapierPhysicalWorld {
     }
 
     const direction = unit(delta);
-    const shape = new RAPIER.Ball(actor.radius);
+    const shape = new RAPIER.Ball(radius);
     const hit = this.world.castShape(
-      from,
+      start,
       0,
       direction,
       shape,
@@ -140,8 +159,8 @@ export class RapierPhysicalWorld {
       true,
       undefined,
       undefined,
-      actor.collider,
-      actor.body,
+      undefined,
+      undefined,
       (collider) => {
         const label = this.colliderLabels.get(collider.handle);
         return label !== "player" && label !== "companion";
@@ -152,15 +171,9 @@ export class RapierPhysicalWorld {
 
     const hitDistance = Math.max(0, Math.min(distance, hit.time_of_impact));
     const hitCenter = {
-      x: from.x + direction.x * hitDistance,
-      y: from.y + direction.y * hitDistance
+      x: start.x + direction.x * hitDistance,
+      y: start.y + direction.y * hitDistance
     };
-
-    // The deterministic-compat 0.20 wrapper returns witness1/normal1 in the
-    // coordinates consumed by its JS World scene-query API. Regression tests tie
-    // these values to our authored obstacle geometry instead of re-transforming them.
-    const contactPoint = { x: hit.witness1.x, y: hit.witness1.y };
-    const normal = { x: hit.normal1.x, y: hit.normal1.y };
 
     return {
       ...base,
@@ -170,8 +183,11 @@ export class RapierPhysicalWorld {
         distance: hitDistance,
         fraction: distance > TRAVERSAL_EPSILON ? hitDistance / distance : 0,
         hitCenter,
-        contactPoint,
-        normal
+        // Deterministic-compat's World.castShape JS wrapper already exposes these
+        // in the coordinate convention used by our authored scene. Tests bind this
+        // adapter behavior to obstacle geometry instead of transforming speculatively.
+        contactPoint: { x: hit.witness1.x, y: hit.witness1.y },
+        normal: { x: hit.normal1.x, y: hit.normal1.y }
       }
     };
   }
