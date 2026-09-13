@@ -56,6 +56,7 @@ interface PhysicalActor {
 
 export class RapierPhysicalWorld {
   private readonly world: RAPIER.World;
+  private readonly queryPipeline: RAPIER.QueryPipeline;
   private readonly actors = new Map<ActorId, PhysicalActor>();
   private readonly colliderLabels = new Map<number, string>();
 
@@ -97,6 +98,9 @@ export class RapierPhysicalWorld {
         requestedVelocity: { x: 0, y: 0 }
       });
     }
+
+    this.queryPipeline = new RAPIER.QueryPipeline();
+    this.refreshQueries();
   }
 
   static async create(spec: ScenarioSpec): Promise<RapierPhysicalWorld> {
@@ -105,6 +109,7 @@ export class RapierPhysicalWorld {
   }
 
   dispose(): void {
+    this.queryPipeline.free();
     this.world.free();
   }
 
@@ -133,7 +138,9 @@ export class RapierPhysicalWorld {
 
     const direction = unit(delta);
     const shape = new RAPIER.Ball(actor.radius);
-    const hit = this.world.castShape(
+    const hit = this.queryPipeline.castShape(
+      this.world.bodies,
+      this.world.colliders,
       from,
       0,
       direction,
@@ -143,10 +150,10 @@ export class RapierPhysicalWorld {
       true,
       undefined,
       undefined,
-      actor.collider,
-      actor.body,
-      (collider) => {
-        const label = this.colliderLabels.get(collider.handle);
+      actor.collider.handle,
+      actor.body.handle,
+      (handle) => {
+        const label = this.colliderLabels.get(handle);
         return label !== "player" && label !== "companion";
       }
     );
@@ -197,6 +204,7 @@ export class RapierPhysicalWorld {
     }
 
     this.world.step();
+    this.refreshQueries();
 
     return [...this.actors.values()]
       .sort((a, b) => a.id.localeCompare(b.id))
@@ -238,6 +246,10 @@ export class RapierPhysicalWorld {
           contacts: this.contactsFor(actor)
         };
       });
+  }
+
+  private refreshQueries(): void {
+    this.queryPipeline.update(this.world.bodies, this.world.colliders);
   }
 
   private contactsFor(actor: PhysicalActor): ContactRecord[] {
