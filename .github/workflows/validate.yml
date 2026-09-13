@@ -2,7 +2,10 @@ name: validate
 
 on:
   push:
-    branches: [main, planning/initial-research-skeleton, experiment/s0-physical-apparatus]
+    branches:
+      - main
+      - planning/initial-research-skeleton
+      - "experiment/**"
   pull_request:
 
 jobs:
