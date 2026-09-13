@@ -1,0 +1,124 @@
+import { describe, expect, it } from "vitest";
+import { planStaticShadowRoute, S2C_ROUTE_CLEARANCE } from "./static-router";
+import { LabWorld } from "../world/world";
+import type { Vec2 } from "../world/types";
+
+function companionState(world: LabWorld): { position: Vec2; radius: number } {
+  const companion = world.snapshot().actors.find((actor) => actor.id === "companion");
+  if (!companion) throw new Error("Missing companion fixture.");
+  return { position: companion.position, radius: companion.radius };
+}
+
+function plan(world: LabWorld, target: Vec2, radiusOverride?: number) {
+  const snapshot = world.snapshot();
+  const companion = companionState(world);
+  const radius = radiusOverride ?? companion.radius;
+  return planStaticShadowRoute({
+    snapshot,
+    start: companion.position,
+    target,
+    radius,
+    query: (from, to, queryRadius) => world.staticCircleTraversal(from, to, queryRadius)
+  });
+}
+
+describe("S2-C0 inspectable deterministic shadow router", () => {
+  it("returns a direct plan in open space", async () => {
+    const world = await LabWorld.create("open");
+    const result = plan(world, { x: 3, y: 4 });
+
+    expect(result.status).toBe("direct");
+    expect(result.routeNodeIds).toEqual(["start", "target"]);
+    expect(result.waypoints).toEqual([{ x: 3, y: 4 }]);
+    expect(result.cost).toBeCloseTo(5, 6);
+    expect(result.queryRadius).toBeCloseTo(0.3 + S2C_ROUTE_CLEARANCE, 6);
+    world.dispose();
+  });
+
+  it("finds and exposes a deterministic route around the central pillar", async () => {
+    const world = await LabWorld.create("pillar");
+    const first = plan(world, { x: 3, y: 4 });
+    const second = plan(world, { x: 3, y: 4 });
+
+    expect(first.status).toBe("routed");
+    expect(first.routeNodeIds).toEqual(second.routeNodeIds);
+    expect(first.cost).toBeCloseTo(second.cost ?? Number.NaN, 9);
+    expect(first.routeNodeIds[0]).toBe("start");
+    expect(first.routeNodeIds.at(-1)).toBe("target");
+    expect(first.routeNodeIds).toContain("pillar.center.ne");
+    expect(first.routeNodeIds).toContain("pillar.center.nw");
+
+    const direct = first.edges.find((edge) => edge.id === "start<->target");
+    expect(direct?.clear).toBe(false);
+    expect(direct?.blocker?.label).toBe("pillar.center");
+
+    for (let index = 0; index < first.routeNodeIds.length - 1; index += 1) {
+      const a = first.routeNodeIds[index];
+      const b = first.routeNodeIds[index + 1];
+      if (!a || !b) throw new Error("Malformed route fixture.");
+      const id = a < b ? `${a}<->${b}` : `${b}<->${a}`;
+      expect(first.edges.find((edge) => edge.id === id)?.clear).toBe(true);
+    }
+    world.dispose();
+  });
+
+  it("finds a static route through the doorway gap to an offset target", async () => {
+    const world = await LabWorld.create("doorway");
+    const result = plan(world, { x: 4, y: 2.5 });
+
+    expect(result.status).toBe("routed");
+    expect(result.routeNodeIds[0]).toBe("start");
+    expect(result.routeNodeIds.at(-1)).toBe("target");
+    expect(result.waypoints.length).toBeGreaterThan(1);
+    expect(result.reason).toContain("direct route blocked");
+    expect(result.edges.some((edge) => !edge.clear && edge.blocker?.label === "door.wall.top")).toBe(true);
+    world.dispose();
+  });
+
+  it("rejects a target that cannot contain the actor body", async () => {
+    const world = await LabWorld.create("pillar");
+    const result = plan(world, { x: 6, y: 4 });
+
+    expect(result.status).toBe("invalid-target");
+    expect(result.nodes).toHaveLength(0);
+    expect(result.edges).toHaveLength(0);
+    expect(result.cost).toBeNull();
+    world.dispose();
+  });
+
+  it("reports a physically valid target as unreachable when the body cannot fit through the doorway", async () => {
+    const world = await LabWorld.create("doorway");
+    const result = plan(world, { x: 4, y: 4 }, 0.8);
+
+    expect(result.status).toBe("unreachable");
+    expect(result.cost).toBeNull();
+    expect(result.routeNodeIds).toHaveLength(0);
+    expect(result.edges.some((edge) => !edge.clear)).toBe(true);
+    world.dispose();
+  });
+
+  it("keeps the planner read-only with respect to World state", async () => {
+    const world = await LabWorld.create("pillar");
+    const before = world.snapshot();
+    plan(world, { x: 3, y: 4 });
+
+    expect(world.snapshot()).toEqual(before);
+    world.dispose();
+  });
+
+  it("rejects invalid routing clearance explicitly", async () => {
+    const world = await LabWorld.create("open");
+    const snapshot = world.snapshot();
+    const companion = companionState(world);
+
+    expect(() => planStaticShadowRoute({
+      snapshot,
+      start: companion.position,
+      target: { x: 3, y: 4 },
+      radius: companion.radius,
+      clearance: -0.01,
+      query: (from, to, radius) => world.staticCircleTraversal(from, to, radius)
+    })).toThrow(/clearance/);
+    world.dispose();
+  });
+});
