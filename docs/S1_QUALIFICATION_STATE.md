@@ -92,7 +92,7 @@ The Owner-proposed hard-core + compressible-envelope idea remains explicitly def
 
 ## Next stage
 
-Proceed to the bounded **S2 Movement Intelligence + Debug Workbench** plan.
+Proceed to the bounded **S2 Movement Intelligence + Debug Workbench** plan in `docs/S2_MOVEMENT_INTELLIGENCE_DEBUG_WORKBENCH_PLAN.md`.
 
 S2 should not begin with a full general-purpose navmesh, crowd simulator or AI architecture. It should first establish:
 
