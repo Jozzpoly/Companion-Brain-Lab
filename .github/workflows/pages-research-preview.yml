@@ -1,0 +1,53 @@
+name: deploy-pinned-research-preview
+
+# Operational Pages authority lives on main; application source is explicitly pinned to a qualified experiment SHA.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/pages-research-preview.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-research-preview
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact S1 evidence head
+        uses: actions/checkout@v4
+        with:
+          ref: 7dca836985f4023cd2166222e67ab754d99c2e9b
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Validate exact S1 source
+        run: npm run check
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy exact S1 artifact
+        id: deployment
+        uses: actions/deploy-pages@v4
