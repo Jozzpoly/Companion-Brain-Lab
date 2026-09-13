@@ -1,6 +1,7 @@
 name: deploy-pinned-research-preview
 
 # Operational Pages authority lives on main; application source is explicitly pinned to a qualified experiment SHA.
+# This workflow intentionally publishes the exact S1 evidence head below rather than the main branch application tree.
 on:
   push:
     branches:
