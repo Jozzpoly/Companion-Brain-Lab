@@ -1,9 +1,10 @@
 name: deploy-s0-pages
 
+# Retained as deployment-history evidence only. The live S0 preview is deployed by
+# main/.github/workflows/pages-s0-preview.yml, which checks out an exact qualified
+# experiment SHA so GitHub Pages environment policy does not couple experiment
+# branches to production deployment authority.
 on:
-  push:
-    branches:
-      - experiment/s0-physical-apparatus
   workflow_dispatch:
 
 permissions:
