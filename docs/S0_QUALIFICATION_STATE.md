@@ -1,10 +1,13 @@
 # S0 Physical Cooperation Apparatus — Qualification State
 
 Status: **MECHANICAL PASS / OWNER BROWSER GATE OPEN**  
-Live preview source SHA: `0ee6450aea121a1c3d2c59fc2fceda37539ab9f6`  
+Current experiment branch head: see PR #2  
+Live preview application source SHA: `0ee6450aea121a1c3d2c59fc2fceda37539ab9f6`  
 Live preview: https://jozzpoly.github.io/Companion-Brain-Lab/
 
 This document records what S0 has actually demonstrated and what remains unproven. It is intentionally stricter than a normal prototype status note: later companion-brain conclusions are only useful if the physical apparatus beneath them is trustworthy enough not to manufacture false AI failures.
+
+The experiment branch has received documentation/deployment-workflow commits after the live application source SHA. Those commits do not change the S0 runtime being Owner-tested. The live preview remains explicitly pinned to `0ee6450aea121a1c3d2c59fc2fceda37539ab9f6` until Owner feedback authorizes a new runtime build.
 
 ## Automated evidence established
 
@@ -32,7 +35,7 @@ The successful re-attack suite contains 9 focused physical/domain tests. A deter
 
 A Pages build produced a real static artifact containing `index.html` and the production JS bundle. The branch-local deployment attempt successfully built and uploaded that artifact but GitHub rejected the deployment job before any deployment step executed.
 
-A separate deployment workflow on `main` then ran with deployment authority from the default branch while explicitly checking out the exact S0 source SHA `0ee6450aea121a1c3d2c59fc2fceda37539ab9f6`.
+A separate deployment workflow on `main` then ran with deployment authority from the default branch while explicitly checking out the exact S0 application source SHA `0ee6450aea121a1c3d2c59fc2fceda37539ab9f6`.
 
 That pinned workflow established:
 
