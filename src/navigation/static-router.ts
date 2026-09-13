@@ -7,6 +7,7 @@ import type {
 } from "../world/types";
 
 export const S2C_ROUTE_CLEARANCE = 0.08;
+export const S2C_CORNER_EPSILON = 0.02;
 const SCORE_EPSILON = 1e-9;
 
 type RouteNodeKind = "start" | "target" | "corner";
@@ -90,10 +91,14 @@ function obstacleCornerNodes(
   obstacle: ObstacleSpec,
   queryRadius: number
 ): StaticRouteNode[] {
-  const x0 = obstacle.x - queryRadius;
-  const x1 = obstacle.x + obstacle.width + queryRadius;
-  const y0 = obstacle.y - queryRadius;
-  const y1 = obstacle.y + obstacle.height + queryRadius;
+  // A node exactly tangent to the inflated AABB can be reported as contact by the
+  // shape cast used to validate the edge. Keep this tiny epsilon explicit and
+  // debuggable instead of hiding it inside collision tolerances.
+  const cornerMargin = queryRadius + S2C_CORNER_EPSILON;
+  const x0 = obstacle.x - cornerMargin;
+  const x1 = obstacle.x + obstacle.width + cornerMargin;
+  const y0 = obstacle.y - cornerMargin;
+  const y1 = obstacle.y + obstacle.height + cornerMargin;
   const candidates: StaticRouteNode[] = [
     { id: `${obstacle.id}.nw`, kind: "corner", position: { x: x0, y: y0 }, sourceObstacle: obstacle.id },
     { id: `${obstacle.id}.ne`, kind: "corner", position: { x: x1, y: y0 }, sourceObstacle: obstacle.id },
@@ -102,7 +107,7 @@ function obstacleCornerNodes(
   ];
 
   return candidates.filter((candidate) => {
-    if (!pointFitsWorld(snapshot, candidate.position, 0, [])) return false;
+    if (!pointFitsWorld(snapshot, candidate.position, queryRadius, [])) return false;
     return !snapshot.obstacles.some((other) => {
       if (other.id === obstacle.id) return false;
       return pointInsideExpandedObstacle(candidate.position, other, queryRadius);
