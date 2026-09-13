@@ -102,7 +102,7 @@ describe("S1 relational positioning probe", () => {
 
   it("marks a candidate inside static geometry invalid", () => {
     const state = snapshot({
-      obstacles: [{ id: "block", x: 4.15, y: 3.6, width: 0.6, height: 0.8 }]
+      obstacles: [{ id: "block", x: 5.15, y: 3.6, width: 0.6, height: 0.8 }]
     });
     const candidates = evaluateRelationalCandidates(state, { x: 1, y: 0 }, null);
     const front = candidates.find((entry) => entry.slot === "front");
