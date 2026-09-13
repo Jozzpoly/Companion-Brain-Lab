@@ -1,12 +1,18 @@
 # S1 Relational Positioning — Qualification State
 
-Status: **AUTOMATED PASS / OWNER-BROWSER GATE OPEN**  
+Status: **OWNER-BROWSER INFORMATIVE FAIL / RESEARCH EVIDENCE PRESERVED**  
 Application evidence SHA: `7dca836985f4023cd2166222e67ab754d99c2e9b`  
 Base physical apparatus: qualified S0 merge `448ca9c86f219d9c18a8898dfa36d0b9a82cdce1`
 
-## Current claim
+## Final S1 claim
 
-S1 is ready for browser comparison, not qualified as a successful companion behavior yet.
+S1 successfully isolated a deeper missing competence, but the relational-positioning policy is **not** sufficient as a movement foundation for a useful companion.
+
+The experiment demonstrated that endpoint-relative positioning is not enough. A companion can choose a spatially reasonable and locally clear relationship point while still having no representation of whether the traversal to that point is feasible, contested or making progress.
+
+This is an informative failure and should be preserved as evidence, not tuned into apparent success with doorway-specific exceptions.
+
+## Automated evidence remains valid
 
 The exact application evidence SHA passes the full repository check:
 
@@ -26,71 +32,73 @@ Observed production artifact on that run:
 
 The bundle remains dominated by the existing Phaser + deterministic Rapier/WASM apparatus. S1 does not materially change the current research-bundle cost.
 
-## What is implemented
+## Owner/browser evidence
 
-Three directly comparable companion-control modes share the same World and physics:
+The Owner tested the pinned S1 runtime and identified a material failure around the doorway: the companion can block or become blocked in the passage and the current behavior is too shallow to recover intelligently.
 
-1. **MANUAL** — human arrow-key control; brain bypassed.
-2. **CHASE** — deliberately naive direct point-following toward the player.
-3. **RELATIONAL** — deterministic local probe selecting among eight relationship slots around the player.
+Review of the recording is consistent with three distinct missing capabilities:
 
-The relational probe:
+1. **Traversal feasibility** — candidate validity checks the destination point, not the swept/path corridor from companion to destination.
+2. **Dynamic cooperation in constrained space** — the companion has no concept of yielding, right-of-way, contested passage or short-horizon player/companion conflict.
+3. **Progress awareness / recovery** — the companion does not know that it has been requesting motion without making meaningful progress, cannot classify the blocker and cannot trigger a causally appropriate recovery.
 
-- consumes only public `WorldSnapshot` state;
-- outputs only a normal `MotionIntent`;
-- has no Rapier/renderer access;
-- reconsiders at 10 Hz while physical/motor execution remains at 60 Hz;
-- remembers the last meaningful player direction when the player is stationary;
-- scores front obstruction, travel cost, slot switching/hysteresis and static candidate validity;
-- keeps a previous slot for near-ties;
-- exposes selected target, player direction, candidates, scores, reconsideration count and compact selection reason.
+The recording also shows why this is not primarily a collision-model problem. S0 hard contact remains stable enough to expose the failure. Softer contact could improve feel later, but would currently risk masking a missing reasoning/movement layer.
 
-## Automated contracts established
+## Why the current implementation fails causally
 
-The exact-head tests establish:
+The relational probe deliberately contains only:
 
-- identical snapshot + brain state yields identical candidate evaluation/selection;
-- front relationship slots are penalized relative to back alternatives when the player is moving;
-- near-tie alternatives do not defeat hysteresis;
-- materially superior alternatives can defeat hysteresis;
-- candidate points colliding with static geometry are invalidated;
-- relational motor output stays bounded;
-- naive chase does not mutate World snapshot state;
-- tactical reconsideration is held between its scheduled ticks rather than rerunning at 60 Hz;
-- S0 physical contracts remain intact.
+- endpoint candidate generation around the player;
+- static endpoint-clearance checks;
+- a scalar candidate score;
+- hysteresis;
+- direct `intentToward(target)` steering.
 
-## Deliberate omissions
+It contains no route representation and no path-progress state. Therefore a target may be valid while the direct traversal is blocked by world geometry or by the player. The motor keeps requesting movement toward that target because nothing in the public state tells the brain that the attempted traversal is infeasible or stalled.
 
-S1 contains no:
+This is now evidence, not a hypothetical concern.
 
-- pathfinding;
-- reciprocal local avoidance beyond the qualified physical contact substrate;
-- combat or enemies;
-- command system;
-- LLM/higher cognition;
-- general utility-AI framework;
-- soft-contact behavior.
+## What S1 did establish usefully
 
-These omissions are intentional falsification tools. Pillar and doorway failures should reveal whether the next missing competence is navigation/yielding rather than being hidden by more machinery.
+S1 remains valuable because it established clean seams that should survive the next experiment unless evidence rejects them:
 
-## Owner/browser gate
+- relationship intent can remain separate from physical execution;
+- brain logic consumes public World state and emits ordinary intent rather than mutating physics;
+- decision cadence can be slower than the 60 Hz motor/physics loop;
+- candidate evaluation and selection can be inspectable and deterministic;
+- a deliberately weak baseline (CHASE) is useful for comparison;
+- visible causal debug is already materially useful to Owner testing.
 
-S1 should not be merged until browser evidence answers the comparison question:
+The fixed eight-slot policy itself is **not** canonized. It remains a probe.
 
-> Does RELATIONAL produce a visibly more useful and stable spatial relationship with the player than naive CHASE, and are its failures causal enough to tell us what to build next?
+## Debug finding
 
-Useful observations include:
+The existing S1 overlay is useful but insufficient for deeper work. It shows selected relationship target, candidate scores, requested/actual motion and contact state, but it cannot answer the questions that now matter:
 
-- whether RELATIONAL settles beside/behind the player rather than trying to occupy the player;
-- whether reversing or changing movement direction causes sensible adaptation or slot thrashing;
-- whether stationary player state settles cleanly;
-- how CHASE and RELATIONAL differ in head-on contact;
-- whether pillar/doorway failures are clearly attributable to missing path competence;
-- whether 10 Hz tactical reconsideration feels responsive enough;
-- whether debug candidates/reasons correspond to the visible behavior.
+- Is the target reachable?
+- Is the direct corridor clear for the companion's radius?
+- What route is currently intended?
+- What is the next waypoint?
+- What collider/actor blocks progress?
+- How long has progress been below expectation?
+- Did the system replan, yield, wait or recover, and why?
+- What changed immediately before a bad behavior?
+
+The next stage must treat this observability as first-class research apparatus, not UI polish.
 
 ## Preserved soft-contact hypothesis
 
-The Owner-proposed hard-core + compressible-envelope idea remains explicitly deferred. The S1 browser runtime keeps S0 hard contact unchanged so relational-positioning evidence is not contaminated by a new collision model.
+The Owner-proposed hard-core + compressible-envelope idea remains explicitly deferred. The hard-contact baseline is doing useful falsification work. A later A/B may test compliant contact once navigation/yielding failures are no longer being confused with collision feel.
 
-After S1 evidence, soft contact may become the next bounded A/B only if rigid body contact is materially limiting cooperation rather than merely looking visually raw.
+## Next stage
+
+Proceed to the bounded **S2 Movement Intelligence + Debug Workbench** plan.
+
+S2 should not begin with a full general-purpose navmesh, crowd simulator or AI architecture. It should first establish:
+
+1. traversal-feasibility queries;
+2. an explicit route/progress representation;
+3. a deterministic, inspectable static routing competence appropriate to the current tiny 2D lab;
+4. blocker classification and stuck/recovery state;
+5. a substantially stronger debug/trace workbench;
+6. then an Owner test of doorway/pillar cooperation before deciding whether explicit choke-point coordination or a more general navigation stack is actually required.
