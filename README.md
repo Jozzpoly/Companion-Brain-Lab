@@ -27,20 +27,21 @@ These are starting constraints for research, not a final AI architecture.
 
 ## Current state
 
-**Pre-architecture / first apparatus planning.**
+**S0 physical cooperation apparatus — mechanical PASS, Owner/browser qualification open.**
 
-The repository is intentionally almost empty. The immediate goal is to define and qualify the smallest physical cooperation apparatus before committing to behavior trees, utility AI, GOAP, planners, blackboards, squad hierarchies, LLM orchestration, or any other general decision architecture.
+Live pinned S0 preview: https://jozzpoly.github.io/Companion-Brain-Lab/
 
-The first design pass should remain easy to revise as evidence and Owner playtesting accumulate.
+The currently published application is pinned to experiment source SHA `0ee6450aea121a1c3d2c59fc2fceda37539ab9f6`; later documentation/deployment commits do not silently change the Owner-test runtime.
 
-Current draft planning material:
+The project still has **no autonomous companion brain**. S0 exists to qualify the physical and debugging apparatus before the first relational-positioning experiment.
+
+Current research material:
 
 - [`docs/INITIAL_RESEARCH_SKELETON.md`](docs/INITIAL_RESEARCH_SKELETON.md) — Owner intent, research axes, tensions, evidence model and provisional investigation order;
 - [`docs/SIBLING_DONOR_AUDIT.md`](docs/SIBLING_DONOR_AUDIT.md) — source-level audit of what the current LLM Live NPC substrate can and cannot safely donate;
 - [`docs/CROSS_REPO_COLLABORATION.md`](docs/CROSS_REPO_COLLABORATION.md) — reversible rules for sibling donor flow and gates for any future shared core;
-- [`docs/FIRST_PHYSICAL_COOPERATION_APPARATUS_AUDIT.md`](docs/FIRST_PHYSICAL_COOPERATION_APPARATUS_AUDIT.md) — comparison of physical substrates and the first companion-native apparatus hypothesis;
-- [`docs/S0_APPARATUS_SPIKE_PLAN.md`](docs/S0_APPARATUS_SPIKE_PLAN.md) — bounded PASS/FAIL plan for qualifying fixed-step player/companion physical truth before autonomous AI work.
+- [`docs/FIRST_PHYSICAL_COOPERATION_APPARATUS_AUDIT.md`](docs/FIRST_PHYSICAL_COOPERATION_APPARATUS_AUDIT.md) — physical/world substrate decision audit;
+- [`docs/S0_APPARATUS_SPIKE_PLAN.md`](docs/S0_APPARATUS_SPIKE_PLAN.md) — bounded S0 experiment contract;
+- [`docs/S0_QUALIFICATION_STATE.md`](docs/S0_QUALIFICATION_STATE.md) — current evidence boundary and Owner-test gate.
 
-Current working direction for S0 is TypeScript/Vite/Vitest, Phaser for presentation only, a fresh domain World, and Rapier 2D as a provisional collision/query kernel. This is an **experiment selection, not a family-wide architecture commitment**.
-
-These documents are planning evidence, not frozen architecture.
+These documents remain revisable research evidence rather than frozen architecture.
