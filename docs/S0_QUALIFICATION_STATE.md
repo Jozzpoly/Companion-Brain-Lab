@@ -1,17 +1,35 @@
 # S0 Physical Cooperation Apparatus — Qualification State
 
-Status: **MECHANICAL PASS / OWNER BROWSER GATE OPEN**  
-Current experiment branch head: see PR #2  
+Status: **FULL PASS FOR RESEARCH APPARATUS / NOT A MOVEMENT-QUALITY PASS**  
+Date qualified by Owner/browser evidence: 2026-09-13  
 Live preview application source SHA: `0ee6450aea121a1c3d2c59fc2fceda37539ab9f6`  
 Live preview: https://jozzpoly.github.io/Companion-Brain-Lab/
 
 This document records what S0 has actually demonstrated and what remains unproven. It is intentionally stricter than a normal prototype status note: later companion-brain conclusions are only useful if the physical apparatus beneath them is trustworthy enough not to manufacture false AI failures.
 
-The experiment branch has received documentation/deployment-workflow commits after the live application source SHA. Those commits do not change the S0 runtime being Owner-tested. The live preview remains explicitly pinned to `0ee6450aea121a1c3d2c59fc2fceda37539ab9f6` until Owner feedback authorizes a new runtime build.
+The experiment branch received documentation/deployment-workflow commits after the live application source SHA. Those commits did not change the runtime that was Owner-tested.
+
+## Qualification decision
+
+S0 is now qualified as a **research apparatus**, not as a final movement or character-control solution.
+
+The Owner described the presentation and movement prototype as extremely raw, while judging the collision itself to appear okay. Two browser recordings were reviewed after the live test. They include repeated actor contact, doorway contention, obstacle interaction and wall/boundary pressure. No visually obvious solver explosion, teleportation, runaway oscillation or catastrophic contact instability was observed in those recordings.
+
+That evidence is sufficient for the next bounded local-brain positioning experiment because the current contact substrate is stable and legible enough that obvious positioning failures should remain attributable to the positioning logic rather than to a broken collision system.
+
+It is **not** evidence that:
+
+- direct desired-velocity dynamic bodies are the final character controller;
+- current pushing/contact feel is good enough for a finished game;
+- circles accurately model final character body semantics;
+- crowding with several companions will remain acceptable;
+- the current apparatus is polished visually or ergonomically.
+
+Those remain open and should be revisited when the research question actually requires them.
 
 ## Automated evidence established
 
-The S0 source and physical contracts have passed repeated GitHub Actions qualification on the experiment line.
+The S0 source and physical contracts passed repeated GitHub Actions qualification on the experiment line.
 
 Current mechanical evidence includes:
 
@@ -31,13 +49,9 @@ Current mechanical evidence includes:
 
 The successful re-attack suite contains 9 focused physical/domain tests. A deterministic Rapier compat build is used, but this does **not** by itself prove whole-application or cross-platform determinism.
 
-After deployment/documentation cleanup, exact-head validation run `34786990140` also passed. This confirms that the post-preview branch state remains mechanically/build-valid; the Owner-facing runtime remains intentionally pinned to the earlier application source SHA above.
-
 ## Browser publication evidence
 
-A Pages build produced a real static artifact containing `index.html` and the production JS bundle. The branch-local deployment attempt successfully built and uploaded that artifact but GitHub rejected the deployment job before any deployment step executed.
-
-A separate deployment workflow on `main` then ran with deployment authority from the default branch while explicitly checking out the exact S0 application source SHA `0ee6450aea121a1c3d2c59fc2fceda37539ab9f6`.
+A Pages workflow on `main` ran with deployment authority from the default branch while explicitly checking out the exact S0 application source SHA `0ee6450aea121a1c3d2c59fc2fceda37539ab9f6`.
 
 That pinned workflow established:
 
@@ -49,49 +63,39 @@ That pinned workflow established:
 - Pages deployment: **PASS**;
 - GitHub-reported environment URL: `https://jozzpoly.github.io/Companion-Brain-Lab/`.
 
-The deployment workflow itself lives on `main`; the application code published by it does not. This preserves the sibling lab's experiment/main separation while respecting GitHub Pages deployment authority.
+The deployment workflow itself lives on `main`; the application code published by it does not. This preserves the experiment/main separation while respecting GitHub Pages deployment authority.
 
-The build currently produces a large single JS artifact (~3.53 MB minified / ~1.17 MB gzip), largely attributable to Phaser plus the deterministic Rapier/WASM path. This is accepted as S0 apparatus cost, not as a shipping-performance decision.
+The build produces a large single JS artifact (~3.53 MB minified / ~1.17 MB gzip), largely attributable to Phaser plus the deterministic Rapier/WASM path. This remains accepted as research-apparatus cost, not a shipping-performance decision.
 
-## What is still unproven
+## Soft-contact hypothesis recovered from Owner feedback
 
-Automated and deployment evidence do **not** establish that the movement substrate feels appropriate for companion research.
+The Owner raised a long-standing interest in a collision model where stronger pressure allows characters to enter one another slightly more instead of behaving as perfectly hard discs.
 
-Owner/browser qualification still needs to test directly:
+This is worth preserving as a separate hypothesis, but **must not replace the current hard-contact baseline before an A/B experiment**.
 
-- whether direct desired-velocity dynamic bodies feel excessively pushy, springy or rigid-body-like;
-- whether head-on contact jitters or oscillates under real keyboard input;
-- whether doorway contention feels stable and understandable;
-- whether a player can pin or displace the companion in ways that would contaminate later AI evaluation;
-- whether wall/corner sliding is acceptable;
-- whether pause + single-step exposes contact honestly;
-- whether requested-vs-actual velocity and contact visualization are useful enough to explain failures;
-- whether any browser-only initialization/input/render defect escaped headless CI.
+The current-best cheap model to investigate later is not a full deformable/soft-body simulation. It is a two-scale actor contact model:
 
-## Owner test controls
+1. a smaller **hard core** that remains non-penetrable and prevents tunnelling/complete overlap;
+2. a larger **soft envelope** that may overlap and generates increasing spring/damping resistance as compression grows.
 
-- `WASD` — player;
-- arrow keys — manually controlled companion;
-- `1` — open arena;
-- `2` — pillar;
-- `3` — doorway;
-- `4` — head-on;
-- `R` — reset current scenario;
-- `P` — pause/resume;
-- `O` — single simulation step (also forces pause);
-- `B` — debug overlay on/off.
+The visible character footprint may correspond more closely to the soft envelope, allowing stronger pressure to create limited apparent/physical compression while the hard core preserves robust collision truth.
 
-Debug semantics:
+This can remain computationally cheap: for the intended one-to-few companion scale, pairwise work is trivial; if the system later scales, the soft envelope should use the physics broadphase/sensor/contact-query mechanisms rather than an unconditional O(n²) all-agent scan. Rapier exposes sensor intersections, contact graphs/manifolds and contact-force events that can support such experiments without implementing general soft-body dynamics.
 
-- green vector = requested velocity;
-- red vector = actual velocity;
-- red body outline = contact;
-- HUD exposes position, motion error and contact counterparts/counts.
+Possible later A/B questions:
 
-## Qualification rule
+- Does limited compression reduce the rigid-disc feel without creating ambiguous body ownership?
+- Does it make doorway/crowding behavior more natural or merely hide poor positioning?
+- Is force/penetration response stable under sustained opposing intent?
+- Should softness be physical, visual-only squash, or a combination?
+- Can debug rendering expose soft-envelope compression clearly enough that brain failures remain legible?
 
-S0 becomes full **PASS** only if the Owner/browser run demonstrates that this physical substrate is sufficiently stable, legible and non-misleading to serve as apparatus for the first autonomous positioning experiment.
+**Decision now:** preserve this as an explicit follow-up experiment. Do not block Stage B and do not teach the first local brain to depend on soft overlap.
 
-If it feels materially wrong, S0 is **FAIL / REPAIR**, even though all automated tests are green. We must repair or replace the movement/contact substrate before introducing companion intelligence rather than teaching AI to compensate for a flawed apparatus.
+## Evidence boundary after S0
 
-No autonomous companion behavior, command system, LLM cognition, planner architecture or shared runtime extraction is authorized by this qualification state.
+S0 authorizes the next bounded experiment in autonomous relational positioning.
+
+It does **not** authorize a full companion architecture, combat system, command system, LLM cognition, planner framework or shared runtime extraction.
+
+The next experiment should preserve the hard-contact S0 baseline and make the companion's positioning policy inspectable so that body/contact failures, navigation failures and decision failures remain separable.
