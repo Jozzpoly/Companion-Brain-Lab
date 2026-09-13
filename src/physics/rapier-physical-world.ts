@@ -36,15 +36,6 @@ function unit(input: Vec2): Vec2 {
     : { x: 0, y: 0 };
 }
 
-function rotated(vector: Vec2, angle: number): Vec2 {
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-  return {
-    x: vector.x * cos - vector.y * sin,
-    y: vector.x * sin + vector.y * cos
-  };
-}
-
 interface PhysicalActor {
   id: ActorId;
   radius: number;
@@ -164,10 +155,12 @@ export class RapierPhysicalWorld {
       x: from.x + direction.x * hitDistance,
       y: from.y + direction.y * hitDistance
     };
-    const colliderPosition = hit.collider.translation();
-    const colliderRotation = hit.collider.rotation();
-    const witnessWorldOffset = rotated(hit.witness1, colliderRotation);
-    const normal = rotated(hit.normal1, colliderRotation);
+
+    // The deterministic-compat 0.20 wrapper returns witness1/normal1 in the
+    // coordinates consumed by its JS World scene-query API. Regression tests tie
+    // these values to our authored obstacle geometry instead of re-transforming them.
+    const contactPoint = { x: hit.witness1.x, y: hit.witness1.y };
+    const normal = { x: hit.normal1.x, y: hit.normal1.y };
 
     return {
       ...base,
@@ -177,10 +170,7 @@ export class RapierPhysicalWorld {
         distance: hitDistance,
         fraction: distance > TRAVERSAL_EPSILON ? hitDistance / distance : 0,
         hitCenter,
-        contactPoint: {
-          x: colliderPosition.x + witnessWorldOffset.x,
-          y: colliderPosition.y + witnessWorldOffset.y
-        },
+        contactPoint,
         normal
       }
     };
