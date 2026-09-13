@@ -141,10 +141,14 @@ export class RapierPhysicalWorld {
       0,
       distance,
       true,
-      RAPIER.QueryFilterFlags.EXCLUDE_DYNAMIC,
+      undefined,
       undefined,
       actor.collider,
-      actor.body
+      actor.body,
+      (collider) => {
+        const label = this.colliderLabels.get(collider.handle);
+        return label !== "player" && label !== "companion";
+      }
     );
 
     if (!hit) return { ...base, clear: true, blocker: null };
