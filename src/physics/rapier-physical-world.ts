@@ -3,6 +3,7 @@ import type {
   ActorId,
   ActorSnapshot,
   ContactRecord,
+  DirectTraversalResult,
   MotionIntent,
   ScenarioSpec,
   Vec2
@@ -10,6 +11,7 @@ import type {
 
 const STEP_SECONDS = 1 / 60;
 const WALL_THICKNESS = 0.2;
+const TRAVERSAL_EPSILON = 1e-6;
 
 let rapierReady: Promise<void> | null = null;
 
@@ -25,6 +27,22 @@ function normalized(input: Vec2): Vec2 {
   const magnitude = Math.hypot(input.x, input.y);
   if (magnitude <= 1) return { x: input.x, y: input.y };
   return { x: input.x / magnitude, y: input.y / magnitude };
+}
+
+function unit(input: Vec2): Vec2 {
+  const magnitude = Math.hypot(input.x, input.y);
+  return magnitude > TRAVERSAL_EPSILON
+    ? { x: input.x / magnitude, y: input.y / magnitude }
+    : { x: 0, y: 0 };
+}
+
+function rotated(vector: Vec2, angle: number): Vec2 {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return {
+    x: vector.x * cos - vector.y * sin,
+    y: vector.x * sin + vector.y * cos
+  };
 }
 
 interface PhysicalActor {
@@ -88,6 +106,74 @@ export class RapierPhysicalWorld {
 
   dispose(): void {
     this.world.free();
+  }
+
+  directTraversal(actorId: ActorId, target: Vec2): DirectTraversalResult {
+    if (!Number.isFinite(target.x) || !Number.isFinite(target.y)) {
+      throw new Error("Traversal target requires finite x/y components.");
+    }
+    const actor = this.actors.get(actorId);
+    if (!actor) throw new Error(`Missing actor for traversal query: ${actorId}`);
+
+    const translation = actor.body.translation();
+    const from = { x: translation.x, y: translation.y };
+    const delta = { x: target.x - from.x, y: target.y - from.y };
+    const distance = Math.hypot(delta.x, delta.y);
+    const base: Omit<DirectTraversalResult, "clear" | "blocker"> = {
+      actorId,
+      from,
+      to: { ...target },
+      radius: actor.radius,
+      distance
+    };
+
+    if (distance <= TRAVERSAL_EPSILON) {
+      return { ...base, clear: true, blocker: null };
+    }
+
+    const direction = unit(delta);
+    const shape = new RAPIER.Ball(actor.radius);
+    const hit = this.world.castShape(
+      from,
+      0,
+      direction,
+      shape,
+      0,
+      distance,
+      true,
+      RAPIER.QueryFilterFlags.EXCLUDE_DYNAMIC,
+      undefined,
+      actor.collider,
+      actor.body
+    );
+
+    if (!hit) return { ...base, clear: true, blocker: null };
+
+    const hitDistance = Math.max(0, Math.min(distance, hit.time_of_impact));
+    const hitCenter = {
+      x: from.x + direction.x * hitDistance,
+      y: from.y + direction.y * hitDistance
+    };
+    const colliderPosition = hit.collider.translation();
+    const colliderRotation = hit.collider.rotation();
+    const witnessWorldOffset = rotated(hit.witness1, colliderRotation);
+    const normal = rotated(hit.normal1, colliderRotation);
+
+    return {
+      ...base,
+      clear: false,
+      blocker: {
+        label: this.colliderLabels.get(hit.collider.handle) ?? `collider:${hit.collider.handle}`,
+        distance: hitDistance,
+        fraction: distance > TRAVERSAL_EPSILON ? hitDistance / distance : 0,
+        hitCenter,
+        contactPoint: {
+          x: colliderPosition.x + witnessWorldOffset.x,
+          y: colliderPosition.y + witnessWorldOffset.y
+        },
+        normal
+      }
+    };
   }
 
   step(intents: readonly MotionIntent[]): ActorSnapshot[] {
