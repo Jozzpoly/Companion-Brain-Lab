@@ -31,6 +31,8 @@ Current mechanical evidence includes:
 
 The successful re-attack suite contains 9 focused physical/domain tests. A deterministic Rapier compat build is used, but this does **not** by itself prove whole-application or cross-platform determinism.
 
+After deployment/documentation cleanup, exact-head validation run `34786990140` also passed. This confirms that the post-preview branch state remains mechanically/build-valid; the Owner-facing runtime remains intentionally pinned to the earlier application source SHA above.
+
 ## Browser publication evidence
 
 A Pages build produced a real static artifact containing `index.html` and the production JS bundle. The branch-local deployment attempt successfully built and uploaded that artifact but GitHub rejected the deployment job before any deployment step executed.
