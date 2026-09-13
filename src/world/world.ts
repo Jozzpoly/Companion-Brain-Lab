@@ -1,6 +1,6 @@
 import { RapierPhysicalWorld } from "../physics/rapier-physical-world";
 import { scenario } from "./scenarios";
-import type { MotionIntent, ScenarioId, WorldSnapshot } from "./types";
+import type { ActorId, DirectTraversalResult, MotionIntent, ScenarioId, Vec2, WorldSnapshot } from "./types";
 
 export class LabWorld {
   private tickValue = 0;
@@ -16,6 +16,10 @@ export class LabWorld {
 
   dispose(): void {
     this.physical.dispose();
+  }
+
+  directTraversal(actorId: ActorId, target: Vec2): DirectTraversalResult {
+    return this.physical.directTraversal(actorId, target);
   }
 
   step(intents: readonly MotionIntent[]): WorldSnapshot {
