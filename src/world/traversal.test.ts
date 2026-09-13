@@ -68,3 +68,45 @@ describe("S2-B direct traversal feasibility", () => {
     world.dispose();
   });
 });
+
+describe("S2-C0 arbitrary static graph-edge traversal", () => {
+  it("classifies an arbitrary graph edge through the pillar as blocked", async () => {
+    const world = await LabWorld.create("pillar");
+    const before = world.snapshot();
+    const result = world.staticCircleTraversal({ x: 9, y: 4 }, { x: 3, y: 4 }, 0.3);
+
+    expect(result.clear).toBe(false);
+    expect(result.blocker?.label).toBe("pillar.center");
+    expect(result.from).toEqual({ x: 9, y: 4 });
+    expect(result.to).toEqual({ x: 3, y: 4 });
+    expect(world.snapshot()).toEqual(before);
+    world.dispose();
+  });
+
+  it("classifies an arbitrary edge above the pillar as clear", async () => {
+    const world = await LabWorld.create("pillar");
+    const result = world.staticCircleTraversal({ x: 9, y: 1 }, { x: 3, y: 1 }, 0.3);
+
+    expect(result.clear).toBe(true);
+    expect(result.blocker).toBeNull();
+    world.dispose();
+  });
+
+  it("classifies the doorway center as a clear arbitrary graph edge", async () => {
+    const world = await LabWorld.create("doorway");
+    const result = world.staticCircleTraversal({ x: 8, y: 4 }, { x: 4, y: 4 }, 0.3);
+
+    expect(result.clear).toBe(true);
+    expect(result.blocker).toBeNull();
+    world.dispose();
+  });
+
+  it("rejects invalid graph-edge radius without mutating World state", async () => {
+    const world = await LabWorld.create("open");
+    const before = world.snapshot();
+
+    expect(() => world.staticCircleTraversal({ x: 8, y: 4 }, { x: 4, y: 4 }, 0)).toThrow(/positive radius/);
+    expect(world.snapshot()).toEqual(before);
+    world.dispose();
+  });
+});
