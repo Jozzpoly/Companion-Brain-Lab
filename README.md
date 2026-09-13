@@ -27,9 +27,9 @@ These are starting constraints for research, not a final AI architecture.
 
 ## Current state
 
-**Pre-architecture / research framing.**
+**Pre-architecture / first apparatus planning.**
 
-The repository is intentionally almost empty. The immediate goal is to define the experimental skeleton, research questions, donor boundaries, evidence strategy, and first playable investigation before committing to behavior trees, utility AI, GOAP, planners, blackboards, squad hierarchies, LLM orchestration, or any other particular decision architecture.
+The repository is intentionally almost empty. The immediate goal is to define and qualify the smallest physical cooperation apparatus before committing to behavior trees, utility AI, GOAP, planners, blackboards, squad hierarchies, LLM orchestration, or any other general decision architecture.
 
 The first design pass should remain easy to revise as evidence and Owner playtesting accumulate.
 
@@ -37,6 +37,10 @@ Current draft planning material:
 
 - [`docs/INITIAL_RESEARCH_SKELETON.md`](docs/INITIAL_RESEARCH_SKELETON.md) — Owner intent, research axes, tensions, evidence model and provisional investigation order;
 - [`docs/SIBLING_DONOR_AUDIT.md`](docs/SIBLING_DONOR_AUDIT.md) — source-level audit of what the current LLM Live NPC substrate can and cannot safely donate;
-- [`docs/CROSS_REPO_COLLABORATION.md`](docs/CROSS_REPO_COLLABORATION.md) — reversible rules for sibling donor flow and gates for any future shared core.
+- [`docs/CROSS_REPO_COLLABORATION.md`](docs/CROSS_REPO_COLLABORATION.md) — reversible rules for sibling donor flow and gates for any future shared core;
+- [`docs/FIRST_PHYSICAL_COOPERATION_APPARATUS_AUDIT.md`](docs/FIRST_PHYSICAL_COOPERATION_APPARATUS_AUDIT.md) — comparison of physical substrates and the first companion-native apparatus hypothesis;
+- [`docs/S0_APPARATUS_SPIKE_PLAN.md`](docs/S0_APPARATUS_SPIKE_PLAN.md) — bounded PASS/FAIL plan for qualifying fixed-step player/companion physical truth before autonomous AI work.
+
+Current working direction for S0 is TypeScript/Vite/Vitest, Phaser for presentation only, a fresh domain World, and Rapier 2D as a provisional collision/query kernel. This is an **experiment selection, not a family-wide architecture commitment**.
 
 These documents are planning evidence, not frozen architecture.
