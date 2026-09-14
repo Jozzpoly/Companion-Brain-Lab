@@ -104,6 +104,17 @@ Acceleration/braking/jerk constraints turn preferred-motion changes into physica
 
 This is likely a strong contributor to perceived embodiment.
 
+Exact isolated realization using the live continuity equations/configuration shows how strongly this can reshape a digital upstream turn:
+
+- a sudden 90° preferred-direction change takes roughly `0.33–0.35 s` to become almost fully aligned and return near full speed;
+- a sudden 180° preferred reversal takes roughly `0.22 s` to cross through the direction reversal and about `0.45 s` to regain near-full speed in the opposite direction.
+
+These are idealized isolated motor measurements, not measured gameplay episode durations.
+
+Implication:
+
+> several hundred milliseconds of apparently intentional body correction can be produced downstream of an instantaneous upstream objective change.
+
 Danger:
 
 > good temporal realization can make a bad upstream decision look convincingly intentional.
@@ -461,17 +472,14 @@ Already live-visible:
 - progress/recovery state;
 - CCC-0 WHERE/PACE/PLAYER FLOW.
 
-Incident capture currently preserves much of the chain but not every live-only diagnostic term.
+Incident v4 plus consecutive-frame derivation already reconstructs most F1–F7 evidence, including target displacement, same-label target motion, player displacement heading, coarse/refined/final divergence, World outcome and retry/reset events. Do **not** extend the causal schema pre-emptively.
 
-Only extend causal schema when a forensic question cannot be reconstructed from existing incident frames. Highest-value likely additions are:
+Only extend it after a forensic episode proves a causal distinction cannot be reconstructed. Highest-value remaining candidates are:
 
-- relationship target displacement at revision;
-- heading angular change at revision;
-- same-label / moved-target evidence;
-- refinement source/angular delta;
-- continuity regime/accel/jerk;
-- local safety state;
-- explicit local-retry/reset event.
+- explicit relationship player-heading evidence at revision;
+- refinement source when coarse/refined happen to be numerically equal;
+- explicit local safety state;
+- exact continuity regime/jerk without offline derivation.
 
 Do not create a second telemetry architecture.
 
