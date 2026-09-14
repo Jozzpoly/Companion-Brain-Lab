@@ -19,6 +19,7 @@ export type ProgressRecoveryState =
   | "BLOCKED_PLAYER"
   | "BLOCKED_STATIC"
   | "NO_PROGRESS"
+  | "ROUTE_INVALID"
   | "TRANSIENT_UNREACHABLE"
   | "PERSISTENT_UNREACHABLE"
   | "RECOVERING";
@@ -27,6 +28,7 @@ export type ProgressRecoveryAction =
   | "NONE"
   | "WAIT_CONFLICT"
   | "RETRY_LOCAL"
+  | "RECONSIDER_OBJECTIVE"
   | "REPORT_UNREACHABLE";
 
 export interface ProgressRecoveryObservation {
@@ -85,6 +87,7 @@ export class ProgressRecoveryMonitor {
   private lastRetryTick = Number.NEGATIVE_INFINITY;
   private previouslyPlayerBlocked = false;
   private reportedPersistentUnreachable = false;
+  private reportedRouteInvalid = false;
 
   reset(): void {
     this.objectiveKeyValue = null;
@@ -96,6 +99,7 @@ export class ProgressRecoveryMonitor {
     this.lastRetryTick = Number.NEGATIVE_INFINITY;
     this.previouslyPlayerBlocked = false;
     this.reportedPersistentUnreachable = false;
+    this.reportedRouteInvalid = false;
   }
 
   observe(observation: ProgressRecoveryObservation): ProgressRecoveryDecision {
@@ -121,6 +125,7 @@ export class ProgressRecoveryMonitor {
       this.noProgressSinceTick = null;
       this.unreachableSinceTick = null;
       this.previouslyPlayerBlocked = false;
+      this.reportedRouteInvalid = false;
       return this.finish(observation, {
         state: "ARRIVED",
         action: "NONE",
@@ -133,7 +138,27 @@ export class ProgressRecoveryMonitor {
       });
     }
 
-    if (observation.routeStatus === "unreachable" || observation.routeStatus === "invalid-target") {
+    if (observation.routeStatus === "invalid-target") {
+      this.noProgressSinceTick = null;
+      this.unreachableSinceTick = null;
+      this.previouslyPlayerBlocked = false;
+      this.reportedPersistentUnreachable = false;
+      const firstInvalid = !this.reportedRouteInvalid;
+      this.reportedRouteInvalid = true;
+      return this.finish(observation, {
+        state: "ROUTE_INVALID",
+        action: firstInvalid ? "RECONSIDER_OBJECTIVE" : "NONE",
+        reason: "current objective cannot contain the actor body in static geometry; upstream objective must be reconsidered",
+        objectiveDistance,
+        progressMetric,
+        progressDelta,
+        playerBlocked,
+        staticBlocked
+      });
+    }
+    this.reportedRouteInvalid = false;
+
+    if (observation.routeStatus === "unreachable") {
       this.noProgressSinceTick = null;
       this.previouslyPlayerBlocked = false;
       this.unreachableSinceTick ??= observation.tick;
@@ -251,15 +276,17 @@ export class ProgressRecoveryMonitor {
       });
     }
 
-    const measurableProgress = progressDelta >= R1_PROGRESS_DISTANCE || observation.actualSpeed >= 0.12;
+    // Body motion is evidence, not objective progress. A companion can move
+    // laterally, orbit or slide indefinitely without getting closer to its
+    // route/objective. Only improvement in the route/objective metric clears
+    // the no-progress episode.
+    const measurableProgress = progressDelta >= R1_PROGRESS_DISTANCE;
     if (measurableProgress) {
       this.noProgressSinceTick = null;
       return this.finish(observation, {
         state: "PROGRESSING",
         action: "NONE",
-        reason: progressDelta >= R1_PROGRESS_DISTANCE
-          ? "rolling route/objective metric is decreasing"
-          : "body has meaningful actual motion while route remains reachable",
+        reason: "rolling route/objective metric is decreasing",
         objectiveDistance,
         progressMetric,
         progressDelta,
@@ -277,7 +304,7 @@ export class ProgressRecoveryMonitor {
         return this.finish(observation, {
           state: "RECOVERING",
           action: "RETRY_LOCAL",
-          reason: "reachable objective has produced no measurable progress for the bounded trigger window",
+          reason: "reachable objective has produced no measurable objective progress for the bounded trigger window",
           objectiveDistance,
           progressMetric,
           progressDelta,
@@ -288,7 +315,7 @@ export class ProgressRecoveryMonitor {
       return this.finish(observation, {
         state: "NO_PROGRESS",
         action: "NONE",
-        reason: "reachable objective remains without measurable progress; local retry budget/cooldown prevents thrash",
+        reason: "reachable objective remains without measurable objective progress; local retry budget/cooldown prevents thrash",
         objectiveDistance,
         progressMetric,
         progressDelta,
@@ -302,7 +329,9 @@ export class ProgressRecoveryMonitor {
       action: "NONE",
       reason: observation.commandedSpeed < 0.03
         ? "objective is unsatisfied but current command is near zero; awaiting bounded progress window"
-        : "insufficient temporal evidence to classify progress yet",
+        : observation.actualSpeed >= 0.12
+          ? "body is moving but objective progress is not yet measurable"
+          : "insufficient temporal evidence to classify progress yet",
       objectiveDistance,
       progressMetric,
       progressDelta,
@@ -324,6 +353,7 @@ export class ProgressRecoveryMonitor {
     this.lastRetryTick = Number.NEGATIVE_INFINITY;
     this.previouslyPlayerBlocked = false;
     this.reportedPersistentUnreachable = false;
+    this.reportedRouteInvalid = false;
   }
 
   private recordProgress(tick: number, metric: number): void {
