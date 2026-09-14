@@ -40,16 +40,20 @@ async function panelText(page) {
   return page.locator("#debug-panel").innerText();
 }
 
+async function waitNoArg(page, predicate, timeout = 10_000) {
+  await page.waitForFunction(predicate, undefined, { timeout });
+}
+
 async function waitForScenario(page, label) {
   await page.waitForFunction(
     (expected) => document.querySelector("#debug-panel")?.textContent?.includes(`scenario ${expected}`),
     label,
     { timeout: 10_000 }
   );
-  await page.waitForFunction(() => {
+  await waitNoArg(page, () => {
     const text = document.querySelector("#debug-panel")?.textContent ?? "";
     return text.includes("CCC-0 shadow · WHERE") && text.includes("sample t") && !text.includes("SHADOW ERROR");
-  }, { timeout: 10_000 });
+  }, 10_000);
 }
 
 async function assertNoFault(page, errors) {
@@ -57,6 +61,18 @@ async function assertNoFault(page, errors) {
   invariant(sentinel === 0, "Runtime fault sentinel became visible during Chromium audit.");
   invariant(errors.page.length === 0, `Page errors observed: ${errors.page.join(" | ")}`);
   invariant(errors.console.length === 0, `Console errors observed: ${errors.console.join(" | ")}`);
+}
+
+async function bootDiagnostics(page, errors) {
+  const panel = await page.locator("#debug-panel").innerText().catch(() => "<debug panel unavailable>");
+  const fault = await page.locator("#runtime-fault-sentinel").innerText().catch(() => "<no runtime fault sentinel>");
+  return JSON.stringify({
+    panel: panel.slice(0, 4000),
+    fault: fault.slice(0, 4000),
+    pageErrors: errors.page,
+    consoleErrors: errors.console,
+    failedRequests: errors.requests
+  });
 }
 
 const server = await preview({
@@ -103,8 +119,13 @@ try {
 
   await page.goto("http://127.0.0.1:4173/", { waitUntil: "networkidle", timeout: 30_000 });
   await page.locator("#game-root canvas").waitFor({ state: "visible", timeout: 15_000 });
-  await page.waitForFunction(() => /\btick \d+\b/.test(document.querySelector("#debug-panel")?.textContent ?? ""), { timeout: 15_000 });
+  try {
+    await waitNoArg(page, () => /\btick \d+\b/.test(document.querySelector("#debug-panel")?.textContent ?? ""), 15_000);
+  } catch (error) {
+    throw new Error(`Workbench did not publish a World tick after canvas boot. ${await bootDiagnostics(page, errors)}`, { cause: error });
+  }
   invariant(errors.requests.length === 0, `Failed network requests: ${errors.requests.join(" | ")}`);
+  await assertNoFault(page, errors);
 
   const initialText = await panelText(page);
   const initialTick = parseTick(initialText);
@@ -143,11 +164,11 @@ try {
   let text = await panelText(page);
   invariant(text.includes("actuator NATURAL"), "Expected NATURAL actuator at browser-audit baseline.");
   await page.locator('[data-action="toggle-actuator"]').click();
-  await page.waitForFunction(() => document.querySelector("#debug-panel")?.textContent?.includes("actuator DIRECT"), { timeout: 5_000 });
+  await waitNoArg(page, () => document.querySelector("#debug-panel")?.textContent?.includes("actuator DIRECT"), 5_000);
   await page.waitForTimeout(250);
   await assertNoFault(page, errors);
   await page.locator('[data-action="toggle-actuator"]').click();
-  await page.waitForFunction(() => document.querySelector("#debug-panel")?.textContent?.includes("actuator NATURAL"), { timeout: 5_000 });
+  await waitNoArg(page, () => document.querySelector("#debug-panel")?.textContent?.includes("actuator NATURAL"), 5_000);
 
   const beforeInput = parseAnchor(await panelText(page));
   await page.keyboard.down("d");
@@ -160,9 +181,6 @@ try {
   invariant(beforeInput && afterInput, "Could not read shadow anchor around keyboard-input probe.");
   invariant(Math.hypot(afterInput.x - beforeInput.x, afterInput.y - beforeInput.y) > 0.05, "Shadow evidence did not respond measurably to real keyboard-driven player motion.");
 
-  // Longer mixed-input/browser run. This is deliberately not a feel oracle; it is
-  // a real rendering/input/runtime survival probe that can catch browser-only faults
-  // and gross stalls which deterministic simulation tests cannot see.
   const longRun = [
     ["w", 500], ["d", 700], ["s", 450], ["a", 650],
     ["w", 350], ["d", 500], ["a", 300], ["s", 550]
