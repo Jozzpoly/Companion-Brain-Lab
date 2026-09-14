@@ -16,6 +16,7 @@ const RADIUS = 0.3;
 const SPEED = 3;
 const EPSILON = 1e-9;
 const HARD_DYNAMIC_MARGIN = 0.002;
+const EGRESS_TOLERANCE = 1e-6;
 
 interface ScenarioCase {
   id: string;
@@ -112,23 +113,43 @@ function comfortHorizonClearance(snapshot: WorldSnapshot, move: Vec2): number {
   });
 }
 
-function currentlyHardSeparated(snapshot: WorldSnapshot): boolean {
+function currentPhysicalClearance(snapshot: WorldSnapshot): number {
   const companion = actor(snapshot, "companion");
   const player = actor(snapshot, "player");
-  return distance(companion.position, player.position) > companion.radius + player.radius + HARD_DYNAMIC_MARGIN;
+  return distance(companion.position, player.position) - (companion.radius + player.radius);
 }
 
-function nearestHardSafeBlend(snapshot: WorldSnapshot, unsafe: Vec2, safe: Vec2): Vec2 {
-  if (hardStepClearance(snapshot, unsafe) >= HARD_DYNAMIC_MARGIN) return { ...unsafe };
-  if (hardStepClearance(snapshot, safe) < HARD_DYNAMIC_MARGIN) {
-    throw new Error("R1-5 hard-step probe requires a hard-safe upstream endpoint.");
+/**
+ * Hard-dynamic equivalent of static initial-overlap/egress semantics.
+ *
+ * Far from contact we keep a tiny numerical hard margin. If World is already
+ * closer than that margin, the current state itself cannot satisfy the normal
+ * target because swept minimum distance includes t=0. In that boundary state
+ * the command may not make physical separation materially worse; an egress
+ * direction is therefore admissible instead of disabling the gate entirely.
+ */
+function requiredHardClearance(snapshot: WorldSnapshot): number {
+  const current = currentPhysicalClearance(snapshot);
+  if (current <= 0) return current - EGRESS_TOLERANCE;
+  return Math.max(0, Math.min(HARD_DYNAMIC_MARGIN, current - EGRESS_TOLERANCE));
+}
+
+function nearestHardSafeBlend(
+  snapshot: WorldSnapshot,
+  unsafe: Vec2,
+  safe: Vec2,
+  required: number
+): Vec2 {
+  if (hardStepClearance(snapshot, unsafe) >= required) return { ...unsafe };
+  if (hardStepClearance(snapshot, safe) < required) {
+    throw new Error("R1-5 hard-step probe requires an egress/hard-safe upstream endpoint.");
   }
   let low = 0;
   let high = 1;
   for (let i = 0; i < 28; i += 1) {
     const alpha = (low + high) / 2;
     const candidate = lerp(unsafe, safe, alpha);
-    if (hardStepClearance(snapshot, candidate) >= HARD_DYNAMIC_MARGIN) high = alpha;
+    if (hardStepClearance(snapshot, candidate) >= required) high = alpha;
     else low = alpha;
   }
   return lerp(unsafe, safe, high);
@@ -210,11 +231,12 @@ async function runCase(testCase: ScenarioCase): Promise<Evidence> {
 
       let finalMove = { ...staticConstrained.finalMove };
       let hardDynamicConstrained = false;
-      if (currentlyHardSeparated(snapshot) && hardStepClearance(snapshot, finalMove) < 0) {
+      const required = requiredHardClearance(snapshot);
+      if (hardStepClearance(snapshot, finalMove) < required) {
         const safe = [refined.refinedMove, preferredIntent.move, { x: 0, y: 0 }]
-          .find((candidate) => hardStepClearance(snapshot, candidate) >= HARD_DYNAMIC_MARGIN);
-        if (!safe) throw new Error(`R1-5 hard-step ${testCase.id}: no hard-safe upstream endpoint.`);
-        const projected = nearestHardSafeBlend(snapshot, finalMove, safe);
+          .find((candidate) => hardStepClearance(snapshot, candidate) >= required);
+        if (!safe) throw new Error(`R1-5 hard-step ${testCase.id}: no hard-safe/egress upstream endpoint.`);
+        const projected = nearestHardSafeBlend(snapshot, finalMove, safe, required);
         maximumCommandCorrection = Math.max(maximumCommandCorrection, distance(finalMove, projected));
         finalMove = projected;
         hardConstraintCount += 1;
@@ -307,13 +329,13 @@ const CASES: ScenarioCase[] = [
 ];
 
 describe("R1-5A hard-dynamic vs comfort-dynamic final authority probe", () => {
-  it("uses one-step physical safety without hardening the broader comfort horizon", async () => {
+  it("uses one-step physical safety with boundary-state egress semantics", async () => {
     const rows: Evidence[] = [];
     for (const testCase of CASES) rows.push(await runCase(testCase));
     console.info(`R1-5A hard-step evidence ${JSON.stringify(rows)}`);
 
     for (const row of rows) {
-      expect(row.minimumHardStepClearance, row.id).toBeGreaterThanOrEqual(-1e-8);
+      expect(row.minimumHardStepClearance, row.id).toBeGreaterThanOrEqual(-1e-5);
       expect(row.contactFrames, row.id).toBe(0);
       expect(row.minimumCenterDistance, row.id).toBeGreaterThan(RADIUS * 2);
       expect(row.maximumPlayerMotionError, row.id).toBeLessThan(0.02);
