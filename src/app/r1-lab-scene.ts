@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import type { FinalCommandConstraintResult } from "../brain/final-command-constraint";
+import type { FinalPlayerCommandConstraintResult } from "../brain/final-player-command-constraint";
 import type { MotionContinuityStepResult } from "../brain/motion-continuity";
 import type { PreferredVelocityRefinement } from "../brain/preferred-velocity-refinement";
 import type { ProgressRecoveryDecision } from "../brain/progress-recovery";
@@ -128,6 +129,7 @@ interface StepDecisionEvidence {
   refinement: PreferredVelocityRefinement | null;
   continuity: MotionContinuityStepResult | null;
   finalConstraint: FinalCommandConstraintResult | null;
+  finalPlayerConstraint: FinalPlayerCommandConstraintResult | null;
 }
 
 export class R1LabScene extends Phaser.Scene {
@@ -152,6 +154,7 @@ export class R1LabScene extends Phaser.Scene {
   private refinementDecision: PreferredVelocityRefinement | null = null;
   private continuityDecision: MotionContinuityStepResult | null = null;
   private finalConstraintDecision: FinalCommandConstraintResult | null = null;
+  private finalPlayerConstraintDecision: FinalPlayerCommandConstraintResult | null = null;
   private progressDecision: ProgressRecoveryDecision | null = null;
   private appliedLocalRetries = 0;
   private decisionRoutePlan: StaticRoutePlan | null = null;
@@ -278,6 +281,7 @@ export class R1LabScene extends Phaser.Scene {
     this.refinementDecision = null;
     this.continuityDecision = null;
     this.finalConstraintDecision = null;
+    this.finalPlayerConstraintDecision = null;
     this.spatialRepairDecision = null;
     this.decisionRoutePlan = null;
 
@@ -331,7 +335,8 @@ export class R1LabScene extends Phaser.Scene {
       repair: this.spatialRepairDecision,
       refinement: this.refinementDecision,
       continuity: this.continuityDecision,
-      finalConstraint: this.finalConstraintDecision
+      finalConstraint: this.finalConstraintDecision,
+      finalPlayerConstraint: this.finalPlayerConstraintDecision
     };
   }
 
@@ -341,6 +346,7 @@ export class R1LabScene extends Phaser.Scene {
     this.refinementDecision = debug.refinement;
     this.continuityDecision = debug.continuity;
     this.finalConstraintDecision = debug.finalConstraint;
+    this.finalPlayerConstraintDecision = debug.finalPlayerConstraint;
     this.progressDecision = debug.progress;
     this.appliedLocalRetries = debug.appliedLocalRetries;
   }
@@ -510,7 +516,14 @@ export class R1LabScene extends Phaser.Scene {
         commandedVelocity: { ...afterCompanion.requestedVelocity },
         finalConstraintSource: evidence.finalConstraint?.source ?? null,
         finalConstrained: evidence.finalConstraint?.constrained ?? null,
-        finalConstraintReason: evidence.finalConstraint?.reason ?? null
+        finalConstraintReason: evidence.finalConstraint?.reason ?? null,
+        finalPlayerConstraintSource: evidence.finalPlayerConstraint?.source ?? null,
+        finalPlayerConstrained: evidence.finalPlayerConstraint?.constrained ?? null,
+        finalPlayerCurrentPhysicalClearance: evidence.finalPlayerConstraint?.currentPhysicalClearance ?? null,
+        finalPlayerRequiredPhysicalClearance: evidence.finalPlayerConstraint?.requiredPhysicalClearance ?? null,
+        finalPlayerOriginalPredictedClearance: evidence.finalPlayerConstraint?.originalPredictedClearance ?? null,
+        finalPlayerFinalPredictedClearance: evidence.finalPlayerConstraint?.finalPredictedClearance ?? null,
+        finalPlayerConstraintReason: evidence.finalPlayerConstraint?.reason ?? null
       },
       outcome: {
         worldTick: after.tick,
@@ -526,6 +539,12 @@ export class R1LabScene extends Phaser.Scene {
       post
     };
     this.causalTrace.record(frame);
+
+    if (evidence.finalPlayerConstraint?.constrained) {
+      this.logEvent(
+        `f${frame.sequence} player hard authority ${evidence.finalPlayerConstraint.source}: predicted ${compact(evidence.finalPlayerConstraint.originalPredictedClearance)} -> ${compact(evidence.finalPlayerConstraint.finalPredictedClearance)} · required ${compact(evidence.finalPlayerConstraint.requiredPhysicalClearance)}`
+      );
+    }
 
     const postSignature = `${post.state}|${post.action ?? "NONE"}|${post.reason}`;
     if (postSignature !== this.lastPostSignature) {
@@ -690,9 +709,11 @@ export class R1LabScene extends Phaser.Scene {
         sy(value.position.y) + refined.y * arrow
       );
     }
-    const commandColor = value.id === "companion" && this.finalConstraintDecision?.constrained
-      ? 0xe3b341
-      : 0x7ee787;
+    const commandColor = value.id === "companion" && this.finalPlayerConstraintDecision?.constrained
+      ? 0xff7b72
+      : value.id === "companion" && this.finalConstraintDecision?.constrained
+        ? 0xe3b341
+        : 0x7ee787;
     this.graphics.lineStyle(3, commandColor, 0.95);
     this.graphics.lineBetween(
       sx(value.position.x), sy(value.position.y),
@@ -718,6 +739,7 @@ export class R1LabScene extends Phaser.Scene {
     const c = this.continuityDecision;
     const repair = this.spatialRepairDecision;
     const constraint = this.finalConstraintDecision;
+    const playerConstraint = this.finalPlayerConstraintDecision;
     const companion = actor(snapshot, "companion");
 
     const sections: CausalPanelModel["sections"] = [
@@ -780,8 +802,8 @@ export class R1LabScene extends Phaser.Scene {
       },
       {
         id: "motion",
-        title: "Motion realization · final hard command",
-        tone: constraint?.constrained ? "warning" : "normal",
+        title: "Motion realization · static + player hard authority",
+        tone: constraint?.constrained || playerConstraint?.constrained ? "warning" : "normal",
         lines: [
           `command/requested ${compact(companion.requestedVelocity.x)}, ${compact(companion.requestedVelocity.y)} · speed ${compact(magnitude(companion.requestedVelocity))}`,
           `actual ${compact(companion.actualVelocity.x)}, ${compact(companion.actualVelocity.y)} · speed ${compact(magnitude(companion.actualVelocity))}`,
@@ -790,9 +812,16 @@ export class R1LabScene extends Phaser.Scene {
             : `${this.naturalActuator ? "NATURAL idle" : "DIRECT"}`,
           c ? `accel ${compact(c.accelerationMagnitude)} · jerk ${compact(c.jerkMagnitude)}` : "accel/jerk unavailable",
           constraint
-            ? `final gate ${constraint.source} · constrained=${constraint.constrained} · blocker ${constraint.blockedBy ?? "none"}`
-            : this.naturalActuator ? "final hard gate unavailable" : "DIRECT command already comes from hard-safe spatial selection",
-          constraint?.reason ?? ""
+            ? `static hard gate ${constraint.source} · constrained=${constraint.constrained} · blocker ${constraint.blockedBy ?? "none"}`
+            : this.naturalActuator ? "static hard gate unavailable" : "DIRECT command already comes from hard-safe spatial selection",
+          constraint?.reason ?? "",
+          playerConstraint
+            ? `player hard gate ${playerConstraint.source} · constrained=${playerConstraint.constrained}`
+            : this.naturalActuator ? "player hard gate unavailable" : "DIRECT: no post-actuator player hard gate",
+          playerConstraint
+            ? `physical clearance current ${compact(playerConstraint.currentPhysicalClearance)} · required ${compact(playerConstraint.requiredPhysicalClearance)} · predicted ${compact(playerConstraint.originalPredictedClearance)} -> ${compact(playerConstraint.finalPredictedClearance)}`
+            : "",
+          playerConstraint?.reason ?? ""
         ].filter((line) => line.length > 0)
       },
       {
@@ -890,7 +919,7 @@ export class R1LabScene extends Phaser.Scene {
     const snapshot = this.snapshotValue;
     if (!snapshot) return;
     const incident = {
-      schema: "companion-brain-lab-r1-causal-incident-v2",
+      schema: "companion-brain-lab-r1-causal-incident-v3",
       scenario: snapshot.scenarioId,
       tick: snapshot.tick,
       mode: this.companionMode,
@@ -918,6 +947,7 @@ export class R1LabScene extends Phaser.Scene {
     this.refinementDecision = null;
     this.continuityDecision = null;
     this.finalConstraintDecision = null;
+    this.finalPlayerConstraintDecision = null;
     this.progressDecision = null;
     this.appliedLocalRetries = 0;
   }
