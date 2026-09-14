@@ -189,7 +189,6 @@ export function evaluateShadowCoordinationFrame(
     snapshot: input.snapshot,
     query: input.query,
     previousRepresentative: history.previousRepresentative,
-    previousCoherentSampleIds: history.previousCoherentSampleIds,
     previousPlayerDirection: freshPlayerDirection,
     previousPlayerDirectionAgeTicks: agedPlayerDirection.ageTicks
   });
