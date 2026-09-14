@@ -18,12 +18,12 @@ function plan(world: LabWorld, target: Vec2, radiusOverride?: number) {
     start: companion.position,
     target,
     radius,
-    query: (from, to, queryRadius) => world.staticCircleTraversal(from, to, queryRadius)
+    query: (from, to, queryRadius, options) => world.staticCircleTraversal(from, to, queryRadius, options)
   });
 }
 
-describe("S2-C0 inspectable deterministic shadow router", () => {
-  it("returns a direct plan in open space", async () => {
+describe("S2-C0 / R1-2A deterministic static router", () => {
+  it("returns a direct unconstrained plan in open space", async () => {
     const world = await LabWorld.create("open");
     const result = plan(world, { x: 3, y: 4 });
 
@@ -31,7 +31,10 @@ describe("S2-C0 inspectable deterministic shadow router", () => {
     expect(result.routeNodeIds).toEqual(["start", "target"]);
     expect(result.waypoints).toEqual([{ x: 3, y: 4 }]);
     expect(result.cost).toBeCloseTo(5, 6);
-    expect(result.queryRadius).toBeCloseTo(0.3 + S2C_ROUTE_CLEARANCE, 6);
+    expect(result.queryRadius).toBeCloseTo(0.3, 6);
+    expect(result.desiredQueryRadius).toBeCloseTo(0.3 + S2C_ROUTE_CLEARANCE, 6);
+    expect(result.clearanceConstrained).toBe(false);
+    expect(result.constrainedEdgeIds).toEqual([]);
     world.dispose();
   });
 
@@ -70,7 +73,7 @@ describe("S2-C0 inspectable deterministic shadow router", () => {
     expect(result.routeNodeIds[0]).toBe("start");
     expect(result.routeNodeIds.at(-1)).toBe("target");
     expect(result.waypoints.length).toBeGreaterThan(1);
-    expect(result.reason).toContain("direct route blocked");
+    expect(result.reason).toContain("hard-body direct route blocked");
     expect(result.edges.some((edge) => !edge.clear && edge.blocker?.label === "door.wall.top")).toBe(true);
     world.dispose();
   });
@@ -86,7 +89,21 @@ describe("S2-C0 inspectable deterministic shadow router", () => {
     world.dispose();
   });
 
-  it("reports a physically valid target as unreachable when the body cannot fit through the doorway", async () => {
+  it("keeps a physically fitting doorway reachable while marking comfort clearance constrained", async () => {
+    const world = await LabWorld.create("doorway");
+    const result = plan(world, { x: 4, y: 4 }, 0.65);
+
+    expect(result.status).toBe("direct");
+    expect(result.clearanceConstrained).toBe(true);
+    expect(result.constrainedEdgeIds).toEqual(["start<->target"]);
+    const direct = result.edges.find((edge) => edge.id === "start<->target");
+    expect(direct?.clear).toBe(true);
+    expect(direct?.comfortClear).toBe(false);
+    expect(direct?.comfortBlocker?.label).toMatch(/door\.wall\.(top|bottom)/);
+    world.dispose();
+  });
+
+  it("reports a physically impossible doorway as unreachable even after comfort is demoted from hard law", async () => {
     const world = await LabWorld.create("doorway");
     const result = plan(world, { x: 4, y: 4 }, 0.8);
 
@@ -94,6 +111,24 @@ describe("S2-C0 inspectable deterministic shadow router", () => {
     expect(result.cost).toBeNull();
     expect(result.routeNodeIds).toHaveLength(0);
     expect(result.edges.some((edge) => !edge.clear)).toBe(true);
+    world.dispose();
+  });
+
+  it("permits hard-feasible egress when the route start is already inside desired clearance", async () => {
+    const world = await LabWorld.create("pillar");
+    const snapshot = world.snapshot();
+    const result = planStaticShadowRoute({
+      snapshot,
+      start: { x: 5.16, y: 4 },
+      target: { x: 3.5, y: 4 },
+      radius: 0.3,
+      query: (from, to, radius, options) => world.staticCircleTraversal(from, to, radius, options)
+    });
+
+    expect(result.status).toBe("direct");
+    expect(result.routeNodeIds).toEqual(["start", "target"]);
+    expect(result.edges.find((edge) => edge.id === "start<->target")?.clear).toBe(true);
+    expect(result.cost).toBeGreaterThan(0);
     world.dispose();
   });
 
@@ -117,7 +152,7 @@ describe("S2-C0 inspectable deterministic shadow router", () => {
       target: { x: 3, y: 4 },
       radius: companion.radius,
       clearance: -0.01,
-      query: (from, to, radius) => world.staticCircleTraversal(from, to, radius)
+      query: (from, to, radius, options) => world.staticCircleTraversal(from, to, radius, options)
     })).toThrow(/clearance/);
     world.dispose();
   });
