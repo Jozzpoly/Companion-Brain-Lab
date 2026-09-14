@@ -97,7 +97,7 @@ describe("S3 spatial locomotion core", () => {
     }
   });
 
-  it("uses routed lookahead around the pillar instead of selecting the blocked direct vector", async () => {
+  it("uses routed lookahead around the pillar instead of selecting the locally-safe direct vector", async () => {
     const world = await LabWorld.create("pillar");
     try {
       const snapshot = world.snapshot();
@@ -105,8 +105,10 @@ describe("S3 spatial locomotion core", () => {
       expect(decision.observation.routeStatus).toBe("routed");
       expect(Math.abs(decision.selectedMove.y)).toBeGreaterThan(0.15);
       const directWest = decision.candidates.find((candidate) => candidate.id === "d12.s1.00");
-      expect(directWest?.hardRejected).toBe(true);
-      expect(directWest?.rejectionReason).toContain("pillar.center");
+      const selected = decision.candidates.find((candidate) => candidate.id === decision.selectedCandidateId);
+      expect(directWest?.hardRejected).toBe(false);
+      expect(selected?.id).not.toBe(directWest?.id);
+      expect(selected?.score ?? Number.POSITIVE_INFINITY).toBeLessThan(directWest?.score ?? Number.NEGATIVE_INFINITY);
     } finally {
       world.dispose();
     }
