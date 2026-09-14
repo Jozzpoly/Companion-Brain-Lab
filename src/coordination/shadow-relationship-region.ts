@@ -67,7 +67,7 @@ export interface ShadowRelationshipRegion {
   playerHeadingStrength: number;
   companionPosition: Vec2;
   samples: readonly ShadowRegionSample[];
-  /** Number of current candidate targets sent through route qualification. */
+  /** Number of candidate targets sent through route qualification. */
   routeEvaluatedCount: number;
   /** Actual static traversal calls issued by direct probes, route graphs and representative revalidation. */
   staticTraversalQueryCount: number;
@@ -84,7 +84,6 @@ export interface ShadowRelationshipRegionInput {
   snapshot: WorldSnapshot;
   query: StaticTraversalQuery;
   previousRepresentative?: Vec2 | null;
-  previousCoherentSampleIds?: readonly string[];
   previousPlayerDirection?: Vec2 | null;
   previousPlayerDirectionAgeTicks?: number | null;
 }
@@ -221,6 +220,9 @@ function localSampleScore(options: {
     : 0;
   const comfortPressure = clamp((COMFORT_CLEARANCE - clearance) / COMFORT_CLEARANCE, 0, 1);
   const terms: ShadowRegionScoreTerms = {
+    // Direction itself remains discrete/noise-filtered, but its semantic weight now
+    // grows continuously above the observation threshold and fades continuously
+    // when the only remaining evidence is recent trajectory memory.
     frontPenalty: frontness * frontness * 4.8 * options.playerHeadingStrength,
     radialPenalty: Math.abs(options.radius - PREFERRED_RADIUS) * 1.4,
     travelPenalty: distance(options.companion.position, options.position) * 0.18,
@@ -322,6 +324,10 @@ function qualifyRoute(
   companion: ActorSnapshot,
   target: Vec2
 ): RouteQualification {
+  // Most useful-region samples are directly reachable. Calling the full visibility
+  // graph before discovering that fact made every sample pay O(global obstacle²)
+  // work even when distant obstacles could not affect the result. Probe the exact
+  // same hard/comfort direct contract first; escalate to the router only if blocked.
   const hard = input.query(
     companion.position,
     target,
@@ -362,17 +368,10 @@ function evaluateRouteShortlist(
   companion: ActorSnapshot,
   samples: ShadowRegionSample[]
 ): void {
-  const fresh = samples
+  const shortlist = samples
     .filter((sample) => sample.hardValid)
     .sort(compareSampleScore)
     .slice(0, CCC0_REGION_ROUTE_SHORTLIST);
-  const selectedIds = new Set(fresh.map((sample) => sample.id));
-  const previousIds = new Set(input.previousCoherentSampleIds ?? []);
-  const carryover = samples
-    .filter((sample) => sample.hardValid && previousIds.has(sample.id) && !selectedIds.has(sample.id))
-    .sort(compareSampleScore)
-    .slice(0, CCC0_REGION_ROUTE_SHORTLIST);
-  const shortlist = [...fresh, ...carryover];
 
   for (const sample of shortlist) {
     const plan = qualifyRoute(input, companion, sample.position);
@@ -493,7 +492,7 @@ export function evaluateShadowRelationshipRegion(
       representativeRouteStatus: "not-evaluated",
       reason: noRegionReason === "NO_HARD_VALID_SAMPLE"
         ? "no hard-valid player-relative sample exists in the bounded field"
-        : "bounded fresh shortlist plus bounded requalified prior region contained no reachable candidate; untested samples are not claimed unreachable"
+        : "bounded route shortlist contained no reachable candidate; untested samples are not claimed unreachable"
     };
   }
 
