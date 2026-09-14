@@ -56,6 +56,15 @@ export class R1NaturalSpatialLocomotionBrain {
   }
 
   reset(): void {
+    this.retryLocalState();
+  }
+
+  /**
+   * R1-4 bounded local recovery seam. This deliberately resets only local
+   * movement realization state. It does not mutate World, route authority,
+   * relationship objective, or progress-monitor episode state.
+   */
+  retryLocalState(): void {
     this.preferredBrain.reset();
     this.continuity.reset();
     this.refinementValue = null;
