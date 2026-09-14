@@ -56,7 +56,10 @@ describe("R1-4 post-outcome recovery authority", () => {
   it("does not spend retry budget during ordinary open-space progress", async () => {
     const world = await LabWorld.create("open");
     const brain = new R1RecoveringNaturalSpatialBrain();
-    const target = { x: 3, y: 4 };
+    // The authored player occupies (3, 4). Keep this nominal-progress target
+    // clear of dynamic player occupancy so the fixture tests recovery overhead,
+    // not the local player's collision-avoidance policy.
+    const target = { x: 5, y: 4 };
     let snapshot = world.snapshot();
     let reached = false;
 
