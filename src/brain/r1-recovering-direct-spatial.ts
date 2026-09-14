@@ -32,7 +32,13 @@ export class R1RecoveringDirectSpatialBrain {
   }
 
   observeOutcome(input: R1RecoveryOutcomeInput): ProgressRecoveryDecision {
-    return this.recovery.observeOutcome(input);
+    const repair = this.movement.repairEvidence();
+    const intentionalHoldReason = input.intentionalHoldReason ?? (
+      repair?.localSafetyState === "NO_SAFE_VELOCITY"
+        ? "NO_SAFE_VELOCITY: local spatial safety found no admissible velocity; fail-closed STOP is intentional"
+        : null
+    );
+    return this.recovery.observeOutcome({ ...input, intentionalHoldReason });
   }
 
   debugState(): R1RecoveringDirectSpatialDebug {
