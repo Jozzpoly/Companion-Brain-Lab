@@ -63,21 +63,22 @@ describe("S3 spatial locomotion core", () => {
     }
   });
 
-  it("generates a true omnidirectional velocity lattice rather than one target vector", async () => {
+  it("generates a true omnidirectional velocity field with adaptive speed resolution", async () => {
     const world = await LabWorld.create("open");
     try {
       const snapshot = world.snapshot();
-      const observation = observeSpatialEnvironment(input(world, snapshot, { x: 4, y: 4 }));
+      const observation = observeSpatialEnvironment(input(world, snapshot, { x: 8.5, y: 4 }));
       const candidates = buildSpatialVelocityCandidates({
         observation,
         query: (from, to, radius) => world.staticCircleTraversal(from, to, radius)
       });
-      expect(candidates).toHaveLength(1 + S3_CANDIDATE_DIRECTIONS * S3_SPEED_LEVELS.length);
+      expect(candidates.length).toBeGreaterThanOrEqual(1 + S3_CANDIDATE_DIRECTIONS * S3_SPEED_LEVELS.length);
       expect(candidates.some((candidate) => candidate.move.x > 0.9)).toBe(true);
       expect(candidates.some((candidate) => candidate.move.x < -0.9)).toBe(true);
       expect(candidates.some((candidate) => candidate.move.y > 0.9)).toBe(true);
       expect(candidates.some((candidate) => candidate.move.y < -0.9)).toBe(true);
       expect(candidates.some((candidate) => candidate.speedFraction === 0)).toBe(true);
+      expect(candidates.some((candidate) => candidate.speedFraction > 0 && candidate.speedFraction < S3_SPEED_LEVELS[0])).toBe(true);
     } finally {
       world.dispose();
     }
