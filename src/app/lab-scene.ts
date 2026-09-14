@@ -8,6 +8,11 @@ import {
 } from "../brain/relational-positioning";
 import { DebugWorkbenchState } from "../debug/debug-workbench";
 import { ResearchTrace, type PublicDebugChannel } from "../debug/research-trace";
+import {
+  S2C_CORNER_EPSILON,
+  planStaticShadowRoute,
+  type StaticRoutePlan
+} from "../navigation/static-router";
 import { S0_STEP_SECONDS } from "../physics/rapier-physical-world";
 import { SCENARIOS } from "../world/scenarios";
 import type {
@@ -54,10 +59,12 @@ export class LabScene extends Phaser.Scene {
   private readonly relationalBrain = new RelationalPositioningBrain();
   private relationalDecision: RelationalDecision | null = null;
   private directTraversalProbe: DirectTraversalResult | null = null;
+  private shadowRoutePlan: StaticRoutePlan | null = null;
   private readonly debugWorkbench = new DebugWorkbenchState("brain");
   private readonly researchTrace = new ResearchTrace();
   private lastBrainSlot: string | null = null;
   private lastTraversalSignature: string | null = null;
+  private lastRouteSignature: string | null = null;
   private previousCompanionContacts = new Set<string>();
   private incidentNotice = "";
 
@@ -72,7 +79,7 @@ export class LabScene extends Phaser.Scene {
 
   create(): void {
     this.graphics = this.add.graphics();
-    this.hud = this.add.text(12, 10, "Loading S2-B movement workbench...", {
+    this.hud = this.add.text(12, 10, "Loading S2-C0 shadow routing workbench...", {
       fontFamily: "monospace",
       fontSize: "15px",
       color: "#e7e9ee",
@@ -81,7 +88,7 @@ export class LabScene extends Phaser.Scene {
     }).setDepth(10);
 
     const keyboard = this.input.keyboard;
-    if (!keyboard) throw new Error("Keyboard input is required for S2-B.");
+    if (!keyboard) throw new Error("Keyboard input is required for S2-C0.");
     this.keys = keyboard.addKeys({
       w: Phaser.Input.Keyboard.KeyCodes.W,
       a: Phaser.Input.Keyboard.KeyCodes.A,
@@ -130,7 +137,7 @@ export class LabScene extends Phaser.Scene {
     if (!this.world) throw new Error("Cannot step without a World.");
     const intents = this.currentIntents();
     this.snapshotValue = this.world.step(intents);
-    this.updateTraversalProbe(this.snapshotValue);
+    this.updateNavigationEvidence(this.snapshotValue);
     this.recordTrace(this.snapshotValue);
   }
 
@@ -158,6 +165,8 @@ export class LabScene extends Phaser.Scene {
       this.observeBrainDecision(this.snapshotValue.tick);
     }
 
+    // S2-C0 invariant: this is still the exact S1/S2-B movement authority path.
+    // The shadow route is computed only after the World step and never changes these intents.
     return [playerIntent, companionIntent];
   }
 
@@ -170,17 +179,34 @@ export class LabScene extends Phaser.Scene {
     return null;
   }
 
-  private updateTraversalProbe(snapshot: WorldSnapshot): void {
+  private updateNavigationEvidence(snapshot: WorldSnapshot): void {
     if (!this.world) return;
     const target = this.navigationTarget(snapshot);
-    if (!target) {
+    const companion = snapshot.actors.find((entry) => entry.id === "companion");
+    if (!target || !companion) {
       this.directTraversalProbe = null;
+      this.shadowRoutePlan = null;
       this.lastTraversalSignature = null;
+      this.lastRouteSignature = null;
       return;
     }
 
     const probe = this.world.directTraversal("companion", target);
     this.directTraversalProbe = probe;
+    this.observeDirectTraversal(snapshot, probe);
+
+    const plan = planStaticShadowRoute({
+      snapshot,
+      start: companion.position,
+      target,
+      radius: companion.radius,
+      query: (from, to, radius) => this.world!.staticCircleTraversal(from, to, radius)
+    });
+    this.shadowRoutePlan = plan;
+    this.observeShadowRoute(snapshot, plan);
+  }
+
+  private observeDirectTraversal(snapshot: WorldSnapshot, probe: DirectTraversalResult): void {
     const signature = probe.clear ? "clear" : `blocked:${probe.blocker?.label ?? "unknown"}`;
     if (signature === this.lastTraversalSignature) return;
 
@@ -218,6 +244,39 @@ export class LabScene extends Phaser.Scene {
           }
         : { previous }
     });
+  }
+
+  private observeShadowRoute(snapshot: WorldSnapshot, plan: StaticRoutePlan): void {
+    const routePath = plan.routeNodeIds.join(">");
+    const signature = `${plan.status}|${routePath}`;
+    if (signature === this.lastRouteSignature) return;
+
+    const previous = this.lastRouteSignature;
+    this.lastRouteSignature = signature;
+    const blockedEdges = plan.edges.filter((edge) => !edge.clear).length;
+    this.researchTrace.recordEvent(
+      snapshot.tick,
+      `nav.shadow.${plan.status}`,
+      `shadow route ${plan.status}: ${plan.reason}`,
+      {
+        actorId: "companion",
+        fields: {
+          previous,
+          status: plan.status,
+          path: routePath || "none",
+          cost: plan.cost === null ? null : compact(plan.cost),
+          nodes: plan.nodes.length,
+          edges: plan.edges.length,
+          blockedEdges,
+          radius: compact(plan.radius),
+          clearance: compact(plan.clearance),
+          queryRadius: compact(plan.queryRadius),
+          cornerEpsilon: compact(S2C_CORNER_EPSILON),
+          reason: plan.reason,
+          controlsMovement: false
+        }
+      }
+    );
   }
 
   private observeBrainDecision(tick: number): void {
@@ -291,13 +350,26 @@ export class LabScene extends Phaser.Scene {
     }
 
     const probe = this.directTraversalProbe;
-    if (probe) {
+    const plan = this.shadowRoutePlan;
+    if (probe && plan) {
       const blocker = probe.blocker;
+      const blockedEdges = plan.edges.filter((edge) => !edge.clear).length;
       channels.push({
         id: "nav",
-        summary: probe.clear ? "direct whole-body traversal clear" : `direct traversal blocked by ${blocker?.label ?? "unknown"}`,
+        summary: `shadow ${plan.status}; direct ${probe.clear ? "clear" : `blocked by ${blocker?.label ?? "unknown"}`}`,
         fields: {
-          routeModel: "none",
+          routeModel: "visibility-graph-shadow-v0",
+          controlsMovement: false,
+          routeStatus: plan.status,
+          routeReason: plan.reason,
+          routePath: plan.routeNodeIds.join(">") || "none",
+          routeCost: plan.cost === null ? null : compact(plan.cost),
+          routeNodes: plan.nodes.length,
+          routeEdges: plan.edges.length,
+          rejectedEdges: blockedEdges,
+          routeClearance: compact(plan.clearance),
+          routeQueryRadius: compact(plan.queryRadius),
+          cornerEpsilon: compact(S2C_CORNER_EPSILON),
           directTraversalKnown: true,
           directClear: probe.clear,
           distance: compact(probe.distance),
@@ -318,8 +390,13 @@ export class LabScene extends Phaser.Scene {
     } else {
       channels.push({
         id: "nav",
-        summary: this.companionMode === "manual" ? "manual mode has no navigation target" : "waiting for first navigation probe",
-        fields: { routeModel: "none", directTraversalKnown: false }
+        summary: this.companionMode === "manual" ? "manual mode has no navigation target" : "waiting for first navigation evidence",
+        fields: {
+          routeModel: "visibility-graph-shadow-v0",
+          controlsMovement: false,
+          directTraversalKnown: false,
+          routeStatus: null
+        }
       });
     }
 
@@ -367,6 +444,13 @@ export class LabScene extends Phaser.Scene {
     this.researchTrace.recordEvent(this.snapshotValue.tick, kind, summary, { fields });
   }
 
+  private resetNavigationEvidence(): void {
+    this.directTraversalProbe = null;
+    this.shadowRoutePlan = null;
+    this.lastTraversalSignature = null;
+    this.lastRouteSignature = null;
+  }
+
   private cycleCompanionMode(): void {
     const currentIndex = COMPANION_MODES.indexOf(this.companionMode);
     const next = COMPANION_MODES[(currentIndex + 1) % COMPANION_MODES.length];
@@ -375,9 +459,8 @@ export class LabScene extends Phaser.Scene {
     this.companionMode = next;
     this.relationalBrain.reset();
     this.relationalDecision = null;
-    this.directTraversalProbe = null;
     this.lastBrainSlot = null;
-    this.lastTraversalSignature = null;
+    this.resetNavigationEvidence();
     this.recordControlEvent("companion.mode", `${previous} -> ${next}`, { previous, next });
   }
 
@@ -420,9 +503,8 @@ export class LabScene extends Phaser.Scene {
       this.singleStepQueued = false;
       this.relationalBrain.reset();
       this.relationalDecision = null;
-      this.directTraversalProbe = null;
       this.lastBrainSlot = null;
-      this.lastTraversalSignature = null;
+      this.resetNavigationEvidence();
       this.previousCompanionContacts.clear();
       this.researchTrace.reset();
       this.incidentNotice = "";
@@ -481,32 +563,7 @@ export class LabScene extends Phaser.Scene {
       }
     }
 
-    if (visibility.nav && this.directTraversalProbe) {
-      const probe = this.directTraversalProbe;
-      const corridorColor = probe.clear ? 0x3fb950 : 0xff7b72;
-      const corridorWidth = Math.max(6, probe.radius * 2 * scale);
-      this.graphics.lineStyle(corridorWidth, corridorColor, 0.12);
-      this.graphics.lineBetween(sx(probe.from.x), sy(probe.from.y), sx(probe.to.x), sy(probe.to.y));
-      this.graphics.lineStyle(3, corridorColor, 0.95);
-      this.graphics.lineBetween(sx(probe.from.x), sy(probe.from.y), sx(probe.to.x), sy(probe.to.y));
-      this.graphics.lineStyle(2, corridorColor, 0.9);
-      this.graphics.strokeCircle(sx(probe.to.x), sy(probe.to.y), probe.radius * scale);
-
-      const blocker = probe.blocker;
-      if (blocker) {
-        this.graphics.lineStyle(3, 0xff5d66, 1);
-        this.graphics.strokeCircle(sx(blocker.hitCenter.x), sy(blocker.hitCenter.y), probe.radius * scale);
-        this.graphics.fillStyle(0xffa657, 1);
-        this.graphics.fillCircle(sx(blocker.contactPoint.x), sy(blocker.contactPoint.y), 5);
-        this.graphics.lineStyle(3, 0x79c0ff, 1);
-        this.graphics.lineBetween(
-          sx(blocker.contactPoint.x),
-          sy(blocker.contactPoint.y),
-          sx(blocker.contactPoint.x + blocker.normal.x * 0.55),
-          sy(blocker.contactPoint.y + blocker.normal.y * 0.55)
-        );
-      }
-    }
+    if (visibility.nav) this.drawNavigationOverlay(sx, sy, scale);
 
     if (visibility.brain && this.companionMode === "chase") {
       const companion = snapshot.actors.find((entry) => entry.id === "companion");
@@ -551,7 +608,8 @@ export class LabScene extends Phaser.Scene {
 
     const scenarioLabel = SCENARIOS[snapshot.scenarioId].label;
     const baseLines = [
-      `S2-B · ${scenarioLabel} · tick ${snapshot.tick} · ${this.paused ? "PAUSED" : "RUNNING"} · companion ${this.companionMode.toUpperCase()} · debug ${this.debugWorkbench.preset().toUpperCase()}`,
+      `S2-C0 · ${scenarioLabel} · tick ${snapshot.tick} · ${this.paused ? "PAUSED" : "RUNNING"} · companion ${this.companionMode.toUpperCase()} · debug ${this.debugWorkbench.preset().toUpperCase()}`,
+      "SHADOW ROUTING ONLY — route planner has NO movement authority",
       "WASD player · M mode · arrows manual companion · 1-4 scenarios · R reset · P pause · O step · B debug preset · I capture incident"
     ];
     if (this.incidentNotice) baseLines.push(this.incidentNotice);
@@ -575,33 +633,7 @@ export class LabScene extends Phaser.Scene {
       }
     }
 
-    if (visibility.nav) {
-      const probe = this.directTraversalProbe;
-      if (!probe) {
-        debugLines.push(
-          this.companionMode === "manual"
-            ? "NAV MANUAL: no autonomous navigation target"
-            : "NAV waiting for first direct whole-body traversal probe",
-          "NAV route model: NONE · dynamic cooperation/yielding: NOT MODELED"
-        );
-      } else if (probe.clear) {
-        debugLines.push(
-          `NAV direct whole-body: CLEAR · distance ${probe.distance.toFixed(2)} · radius ${probe.radius.toFixed(2)}`,
-          `NAV target ${probe.to.x.toFixed(2)},${probe.to.y.toFixed(2)} · route model: NONE`,
-          "NAV static feasibility only · dynamic cooperation/yielding: NOT MODELED"
-        );
-      } else {
-        const blocker = probe.blocker;
-        debugLines.push(
-          `NAV direct whole-body: BLOCKED by ${blocker?.label ?? "unknown"}`,
-          `NAV hit ${blocker?.distance.toFixed(2) ?? "?"}/${probe.distance.toFixed(2)} (${blocker ? (blocker.fraction * 100).toFixed(0) : "?"}%) · radius ${probe.radius.toFixed(2)}`,
-          blocker
-            ? `NAV hit-center ${blocker.hitCenter.x.toFixed(2)},${blocker.hitCenter.y.toFixed(2)} · contact ${blocker.contactPoint.x.toFixed(2)},${blocker.contactPoint.y.toFixed(2)} · normal ${blocker.normal.x.toFixed(2)},${blocker.normal.y.toFixed(2)}`
-            : "NAV blocker geometry unavailable",
-          "NAV route model: NONE · next stage must find an alternate static route"
-        );
-      }
-    }
+    if (visibility.nav) this.appendNavigationHud(debugLines);
 
     if (visibility.motion) {
       debugLines.push("MOTION green=requested velocity · red=actual velocity · red body outline=contact", ...actorLines);
@@ -614,5 +646,131 @@ export class LabScene extends Phaser.Scene {
     }
 
     this.hud.setVisible(true).setText([...baseLines, ...debugLines]);
+  }
+
+  private drawNavigationOverlay(
+    sx: (x: number) => number,
+    sy: (y: number) => number,
+    scale: number
+  ): void {
+    const probe = this.directTraversalProbe;
+    if (probe) {
+      const corridorColor = probe.clear ? 0x3fb950 : 0xff7b72;
+      const corridorWidth = Math.max(6, probe.radius * 2 * scale);
+      this.graphics.lineStyle(corridorWidth, corridorColor, 0.12);
+      this.graphics.lineBetween(sx(probe.from.x), sy(probe.from.y), sx(probe.to.x), sy(probe.to.y));
+      this.graphics.lineStyle(3, corridorColor, 0.95);
+      this.graphics.lineBetween(sx(probe.from.x), sy(probe.from.y), sx(probe.to.x), sy(probe.to.y));
+      this.graphics.lineStyle(2, corridorColor, 0.9);
+      this.graphics.strokeCircle(sx(probe.to.x), sy(probe.to.y), probe.radius * scale);
+
+      const blocker = probe.blocker;
+      if (blocker) {
+        this.graphics.lineStyle(3, 0xff5d66, 1);
+        this.graphics.strokeCircle(sx(blocker.hitCenter.x), sy(blocker.hitCenter.y), probe.radius * scale);
+        this.graphics.fillStyle(0xffa657, 1);
+        this.graphics.fillCircle(sx(blocker.contactPoint.x), sy(blocker.contactPoint.y), 5);
+        this.graphics.lineStyle(3, 0x79c0ff, 1);
+        this.graphics.lineBetween(
+          sx(blocker.contactPoint.x),
+          sy(blocker.contactPoint.y),
+          sx(blocker.contactPoint.x + blocker.normal.x * 0.55),
+          sy(blocker.contactPoint.y + blocker.normal.y * 0.55)
+        );
+      }
+    }
+
+    const plan = this.shadowRoutePlan;
+    if (!plan) return;
+    const nodes = new Map(plan.nodes.map((node) => [node.id, node]));
+    const routeEdges = new Set<string>();
+    for (let i = 0; i < plan.routeNodeIds.length - 1; i += 1) {
+      const a = plan.routeNodeIds[i];
+      const b = plan.routeNodeIds[i + 1];
+      if (!a || !b) continue;
+      routeEdges.add(a < b ? `${a}<->${b}` : `${b}<->${a}`);
+    }
+
+    for (const edge of plan.edges) {
+      if (routeEdges.has(edge.id)) continue;
+      const from = nodes.get(edge.from);
+      const to = nodes.get(edge.to);
+      if (!from || !to) continue;
+      if (edge.clear) {
+        this.graphics.lineStyle(1, 0x8b949e, 0.2);
+      } else {
+        this.graphics.lineStyle(1, 0xff5d66, 0.12);
+      }
+      this.graphics.lineBetween(
+        sx(from.position.x), sy(from.position.y),
+        sx(to.position.x), sy(to.position.y)
+      );
+    }
+
+    for (const edgeId of routeEdges) {
+      const edge = plan.edges.find((candidate) => candidate.id === edgeId);
+      if (!edge) continue;
+      const from = nodes.get(edge.from);
+      const to = nodes.get(edge.to);
+      if (!from || !to) continue;
+      this.graphics.lineStyle(5, 0x58a6ff, 0.9);
+      this.graphics.lineBetween(
+        sx(from.position.x), sy(from.position.y),
+        sx(to.position.x), sy(to.position.y)
+      );
+    }
+
+    for (const node of plan.nodes) {
+      const inRoute = plan.routeNodeIds.includes(node.id);
+      if (node.kind === "start") {
+        this.graphics.fillStyle(0xf2c15c, 0.95);
+      } else if (node.kind === "target") {
+        this.graphics.fillStyle(0xd2a8ff, 0.95);
+      } else if (inRoute) {
+        this.graphics.fillStyle(0x58a6ff, 1);
+      } else {
+        this.graphics.fillStyle(0x8b949e, 0.75);
+      }
+      this.graphics.fillCircle(sx(node.position.x), sy(node.position.y), inRoute ? 5 : 3);
+    }
+  }
+
+  private appendNavigationHud(lines: string[]): void {
+    const probe = this.directTraversalProbe;
+    const plan = this.shadowRoutePlan;
+    if (!probe || !plan) {
+      lines.push(
+        this.companionMode === "manual"
+          ? "NAV MANUAL: no autonomous navigation target"
+          : "NAV waiting for direct traversal + shadow route evidence",
+        "NAV shadow route model exists but currently has no target · dynamic cooperation/yielding: NOT MODELED"
+      );
+      return;
+    }
+
+    const blockedEdges = plan.edges.filter((edge) => !edge.clear).length;
+    const acceptedEdges = plan.edges.length - blockedEdges;
+    if (probe.clear) {
+      lines.push(
+        `NAV direct whole-body: CLEAR · distance ${probe.distance.toFixed(2)} · radius ${probe.radius.toFixed(2)}`,
+        `NAV shadow: ${plan.status.toUpperCase()} · cost ${plan.cost?.toFixed(2) ?? "n/a"} · path ${plan.routeNodeIds.join(" → ") || "none"}`
+      );
+    } else {
+      const blocker = probe.blocker;
+      lines.push(
+        `NAV direct whole-body: BLOCKED by ${blocker?.label ?? "unknown"}`,
+        `NAV hit ${blocker?.distance.toFixed(2) ?? "?"}/${probe.distance.toFixed(2)} (${blocker ? (blocker.fraction * 100).toFixed(0) : "?"}%) · radius ${probe.radius.toFixed(2)}`,
+        blocker
+          ? `NAV hit-center ${blocker.hitCenter.x.toFixed(2)},${blocker.hitCenter.y.toFixed(2)} · contact ${blocker.contactPoint.x.toFixed(2)},${blocker.contactPoint.y.toFixed(2)} · normal ${blocker.normal.x.toFixed(2)},${blocker.normal.y.toFixed(2)}`
+          : "NAV blocker geometry unavailable",
+        `NAV shadow: ${plan.status.toUpperCase()} · cost ${plan.cost?.toFixed(2) ?? "n/a"} · path ${plan.routeNodeIds.join(" → ") || "none"}`
+      );
+    }
+
+    lines.push(
+      `NAV graph ${plan.nodes.length} nodes · ${acceptedEdges} accepted / ${blockedEdges} rejected edges · clearance ${plan.clearance.toFixed(2)} · corner ε ${S2C_CORNER_EPSILON.toFixed(2)}`,
+      `NAV reason: ${plan.reason}`,
+      "NAV SHADOW ONLY: planner does NOT control MotionIntent · dynamic cooperation/yielding: NOT MODELED"
+    );
   }
 }
