@@ -6,6 +6,10 @@ import {
   type ShadowPlayerCorridor
 } from "./shadow-player-corridor";
 import {
+  evaluateShadowPlayerFlowConflict,
+  type ShadowPlayerFlowConflict
+} from "./shadow-player-flow-conflict";
+import {
   evaluateShadowRelationshipRegion,
   type ShadowRelationshipRegion
 } from "./shadow-relationship-region";
@@ -30,6 +34,7 @@ export interface ShadowCoordinationFrame {
   region: ShadowRelationshipRegion;
   pace: ShadowPaceEvidence;
   playerCorridor: ShadowPlayerCorridor;
+  playerFlowConflict: ShadowPlayerFlowConflict;
   legacy: ShadowLegacyComparison;
   nextHistory: ShadowCoordinationHistory;
 }
@@ -109,6 +114,11 @@ export function evaluateShadowCoordinationFrame(
     physicalSpeedCapability: input.physicalSpeedCapability,
     outsideRegionTicks: history.outsideRegionTicks
   });
+  const playerFlowConflict = evaluateShadowPlayerFlowConflict({
+    snapshot: input.snapshot,
+    corridor: playerCorridor,
+    legacyPreferredVelocity: input.legacyPreferredVelocity
+  });
 
   const relationshipTarget = input.legacyRelationshipTarget
     ? { ...input.legacyRelationshipTarget }
@@ -141,6 +151,7 @@ export function evaluateShadowCoordinationFrame(
     region,
     pace,
     playerCorridor,
+    playerFlowConflict,
     legacy: {
       relationshipTarget,
       preferredVelocity,
