@@ -1,3 +1,4 @@
+import { circleFitsStaticWorld } from "../navigation/static-body-geometry";
 import type { ActorSnapshot, MotionIntent, Vec2, WorldSnapshot } from "../world/types";
 
 export type CompanionMode = "manual" | "chase" | "relational" | "spatial";
@@ -83,22 +84,7 @@ function rotate(forward: Vec2, angle: number): Vec2 {
 }
 
 function candidateIsClear(snapshot: WorldSnapshot, point: Vec2, radius: number): boolean {
-  if (
-    point.x - radius < 0 ||
-    point.y - radius < 0 ||
-    point.x + radius > snapshot.width ||
-    point.y + radius > snapshot.height
-  ) {
-    return false;
-  }
-
-  for (const obstacle of snapshot.obstacles) {
-    const nearestX = Math.max(obstacle.x, Math.min(point.x, obstacle.x + obstacle.width));
-    const nearestY = Math.max(obstacle.y, Math.min(point.y, obstacle.y + obstacle.height));
-    if (Math.hypot(point.x - nearestX, point.y - nearestY) < radius) return false;
-  }
-
-  return true;
+  return circleFitsStaticWorld(snapshot, point, radius);
 }
 
 export function evaluateRelationalCandidates(
