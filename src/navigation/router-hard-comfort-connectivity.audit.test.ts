@@ -49,10 +49,45 @@ async function findDivergences(scenarioId: ScenarioId): Promise<Array<{ target: 
   }
 }
 
+function routeFor(world: LabWorld, target: Vec2) {
+  const snapshot = world.snapshot();
+  const companion = snapshot.actors.find((actor) => actor.id === "companion");
+  if (!companion) throw new Error("missing companion");
+  return planStaticShadowRoute({
+    snapshot,
+    start: companion.position,
+    target,
+    radius: companion.radius,
+    query: (from, to, radius, options) => world.staticCircleTraversal(from, to, radius, options)
+  });
+}
+
 describe("behavior-forensics: hard-vs-comfort route connectivity", () => {
   for (const scenarioId of ["pillar", "doorway"] as const) {
     it(`${scenarioId}: desired clearance does not erase a hard-feasible sampled target route`, async () => {
       expect(await findDivergences(scenarioId)).toEqual([]);
     });
   }
+
+  it("pillar: a tiny target perturbation across symmetry flips the chosen route side", async () => {
+    const world = await LabWorld.create("pillar");
+    try {
+      const upper = routeFor(world, { x: 3, y: 3.99 });
+      const center = routeFor(world, { x: 3, y: 4.00 });
+      const lower = routeFor(world, { x: 3, y: 4.01 });
+
+      expect(upper.status).toBe("routed");
+      expect(center.status).toBe("routed");
+      expect(lower.status).toBe("routed");
+      expect(upper.routeNodeIds).toContain("pillar.center.ne");
+      expect(upper.routeNodeIds).toContain("pillar.center.nw");
+      expect(center.routeNodeIds).toContain("pillar.center.ne");
+      expect(center.routeNodeIds).toContain("pillar.center.nw");
+      expect(lower.routeNodeIds).toContain("pillar.center.se");
+      expect(lower.routeNodeIds).toContain("pillar.center.sw");
+      expect(lower.routeNodeIds).not.toEqual(upper.routeNodeIds);
+    } finally {
+      world.dispose();
+    }
+  });
 });
