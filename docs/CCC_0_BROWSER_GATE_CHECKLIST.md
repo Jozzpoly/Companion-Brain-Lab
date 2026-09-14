@@ -6,7 +6,16 @@ Date: 2026-09-14
 
 Exact application runtime under observation:
 
-`bfe30df9298c1aa36dd4db43de70a049804255bc`
+`a2a0e793f01a6fe3b435e473cb9912347f2fcb0d`
+
+Exact runtime validation:
+
+- run `34894184145` — SUCCESS;
+- 39/39 test files PASS;
+- 191/191 tests PASS;
+- strict TypeScript PASS;
+- production build PASS;
+- npm install audit: 0 vulnerabilities.
 
 Pinned browser preview:
 
@@ -18,10 +27,10 @@ Historical Foundation root remains separately preserved at:
 
 Pages composite deployment:
 
-- workflow run `34893943934` — build + deploy PASS;
-- Pages authority commit `1829804cfa7969775714810c42a0638ac6abbe2f`;
+- workflow run `34894499080` — build + deploy PASS;
+- Pages authority commit `5054ffabbe72bc6dedb46196b00da2a32c9b7c29`;
 - root build pinned to Foundation `b217943e027e66993f0010643b2933b01d4b1e6d`;
-- `/ccc0/` build pinned to CCC-0 `bfe30df9298c1aa36dd4db43de70a049804255bc`.
+- `/ccc0/` build pinned to CCC-0 `a2a0e793f01a6fe3b435e473cb9912347f2fcb0d`.
 
 ---
 
