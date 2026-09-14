@@ -1,8 +1,8 @@
 import type { ActorSnapshot, MotionIntent, Vec2, WorldSnapshot } from "../world/types";
 
-export type CompanionMode = "manual" | "chase" | "relational";
+export type CompanionMode = "manual" | "chase" | "relational" | "spatial";
 
-export const COMPANION_MODES: readonly CompanionMode[] = ["manual", "chase", "relational"];
+export const COMPANION_MODES: readonly CompanionMode[] = ["manual", "chase", "relational", "spatial"];
 
 const TACTICAL_INTERVAL_TICKS = 6;
 const PREFERRED_RADIUS = 1.45;
