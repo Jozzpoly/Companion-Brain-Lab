@@ -7,6 +7,8 @@ import { R1NaturalSpatialLocomotionBrain } from "./r1-natural-spatial-locomotion
 
 const RADIUS = 0.3;
 const SPEED = 3;
+const PLAYER_MOTION_ERROR_LIMIT = 0.02;
+const PLAYER_DISPLACEMENT_LIMIT = 0.001;
 
 function distance(a: Vec2, b: Vec2): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
@@ -62,9 +64,6 @@ async function runTrial(mode: TrialEvidence["mode"]): Promise<TrialEvidence> {
   let maximumPlayerMotionError = 0;
 
   try {
-    // Warm one physical frame to create the exact temporal condition under
-    // investigation: the companion body is carrying 3 m/s rightward motion
-    // toward the player before its relationship objective turns upward.
     let actors = physical.step([
       { actorId: "player", move: { x: 0, y: 0 } },
       { actorId: "companion", move: { x: 1, y: 0 } }
@@ -134,19 +133,25 @@ async function runTrial(mode: TrialEvidence["mode"]): Promise<TrialEvidence> {
   }
 }
 
-describe("R1-5A RED — physical consequence of final dynamic-command gap", () => {
-  it("does not create player contact under NATURAL when the equivalent DIRECT path avoids it", async () => {
+describe("R1-5A RED — material player disturbance from final dynamic-command gap", () => {
+  it("does not materially disturb a stationary player when the equivalent DIRECT path is clean", async () => {
     const direct = await runTrial("DIRECT");
     const natural = await runTrial("NATURAL");
 
-    // Isolation baseline: the same route/spatial objective is physically clean
-    // when the accepted spatial command goes directly to World.
-    expect(direct.contactFrames).toBe(0);
+    // Contact manifold presence is evidence, not by itself a failure: S0
+    // deliberately allows bounded actor contact. The R1-5 hard consequence is
+    // loss of player agency: penetration/pushing or requested-vs-actual motion
+    // disturbance caused by the companion.
     expect(direct.minimumCenterDistance).toBeGreaterThanOrEqual(RADIUS * 2);
-    expect(direct.maximumPlayerDisplacement).toBeLessThan(0.01);
+    expect(direct.maximumPlayerDisplacement).toBeLessThan(PLAYER_DISPLACEMENT_LIMIT);
+    expect(direct.maximumPlayerMotionError).toBeLessThan(PLAYER_MOTION_ERROR_LIMIT);
 
-    if (natural.contactFrames > 0 || natural.maximumPlayerDisplacement >= 0.01) {
-      throw new Error(`R1-5A material consequence reproduced: NATURAL turns a DIRECT-clean dynamic encounter into player contact/displacement.\n${JSON.stringify({ direct, natural }, null, 2)}`);
+    if (
+      natural.minimumCenterDistance < RADIUS * 2 - 1e-5 ||
+      natural.maximumPlayerDisplacement >= PLAYER_DISPLACEMENT_LIMIT ||
+      natural.maximumPlayerMotionError >= PLAYER_MOTION_ERROR_LIMIT
+    ) {
+      throw new Error(`R1-5A material consequence reproduced: NATURAL disturbs player authority while the equivalent DIRECT path remains clean.\n${JSON.stringify({ direct, natural }, null, 2)}`);
     }
   });
 });
