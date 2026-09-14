@@ -6,6 +6,7 @@ import type {
   Vec2,
   WorldSnapshot
 } from "../world/types";
+import { circleFitsStaticWorld } from "./static-body-geometry";
 
 export const S2C_ROUTE_CLEARANCE = 0.08;
 export const S2C_CORNER_EPSILON = 0.02;
@@ -70,33 +71,6 @@ function nodeKindRank(kind: RouteNodeKind): number {
   return 2;
 }
 
-function pointInsideExpandedObstacle(point: Vec2, obstacle: ObstacleSpec, margin: number): boolean {
-  return (
-    point.x > obstacle.x - margin &&
-    point.x < obstacle.x + obstacle.width + margin &&
-    point.y > obstacle.y - margin &&
-    point.y < obstacle.y + obstacle.height + margin
-  );
-}
-
-function pointFitsWorld(
-  snapshot: WorldSnapshot,
-  point: Vec2,
-  radius: number,
-  obstacles: readonly ObstacleSpec[]
-): boolean {
-  if (
-    point.x - radius < 0 ||
-    point.y - radius < 0 ||
-    point.x + radius > snapshot.width ||
-    point.y + radius > snapshot.height
-  ) {
-    return false;
-  }
-
-  return !obstacles.some((obstacle) => pointInsideExpandedObstacle(point, obstacle, radius));
-}
-
 function obstacleCornerNodes(
   snapshot: WorldSnapshot,
   obstacle: ObstacleSpec,
@@ -118,11 +92,9 @@ function obstacleCornerNodes(
   ];
 
   return candidates.filter((candidate) => {
-    if (!pointFitsWorld(snapshot, candidate.position, desiredQueryRadius, [])) return false;
-    return !snapshot.obstacles.some((other) => {
-      if (other.id === obstacle.id) return false;
-      return pointInsideExpandedObstacle(candidate.position, other, desiredQueryRadius);
-    });
+    if (!circleFitsStaticWorld(snapshot, candidate.position, desiredQueryRadius, [])) return false;
+    const otherObstacles = snapshot.obstacles.filter((other) => other.id !== obstacle.id);
+    return circleFitsStaticWorld(snapshot, candidate.position, desiredQueryRadius, otherObstacles);
   });
 }
 
@@ -292,7 +264,7 @@ export function planStaticShadowRoute(options: {
     target: { ...options.target }
   };
 
-  if (!pointFitsWorld(options.snapshot, options.target, options.radius, options.snapshot.obstacles)) {
+  if (!circleFitsStaticWorld(options.snapshot, options.target, options.radius)) {
     return {
       ...base,
       status: "invalid-target",
