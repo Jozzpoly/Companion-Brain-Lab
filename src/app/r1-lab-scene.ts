@@ -534,6 +534,7 @@ export class R1LabScene extends Phaser.Scene {
         relationshipLabel: evidence.relationship?.selectedSlot ?? null,
         relationshipState: evidence.relationship?.objectiveState ?? null,
         relationshipTarget: target ? { ...target } : null,
+        relationshipPlayerDirection: evidence.relationship ? { ...evidence.relationship.playerDirection } : null,
         routeStatus: evidence.route?.status ?? null,
         routePath: evidence.route?.routeNodeIds.join(">") ?? "",
         routeCost: evidence.route?.cost ?? null,
