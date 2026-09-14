@@ -18,6 +18,20 @@ import {
 const RADIUS = 0.3;
 const SPEED = 3;
 const EPSILON = 1e-9;
+const PROJECTION_CLEARANCE = 0.002;
+
+type RepairStrategy = "fallback" | "project-to-safe-boundary";
+
+interface RepairEvidence {
+  strategy: RepairStrategy;
+  constraintCount: number;
+  minimumFinalPredictedClearance: number;
+  minimumCenterDistance: number;
+  contactFrames: number;
+  maximumPlayerDisplacement: number;
+  maximumCommandDelta: number;
+  companionEnd: Vec2;
+}
 
 function magnitude(value: Vec2): number {
   return Math.hypot(value.x, value.y);
@@ -33,6 +47,13 @@ function dot(a: Vec2, b: Vec2): number {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+function lerp(a: Vec2, b: Vec2, alpha: number): Vec2 {
+  return {
+    x: a.x + (b.x - a.x) * alpha,
+    y: a.y + (b.y - a.y) * alpha
+  };
 }
 
 function actor(snapshot: WorldSnapshot, id: "player" | "companion"): ActorSnapshot {
@@ -88,144 +109,172 @@ function currentOutsidePlayerBuffer(snapshot: WorldSnapshot): boolean {
   return currentDistance > companion.radius + player.radius + S3_PLAYER_BUFFER;
 }
 
-describe("R1-5A test-only repair comparison", () => {
-  it("candidate A removes the physical contact but exposes the discontinuity cost", async () => {
-    const spec: ScenarioSpec = {
-      id: "open",
-      label: "R1-5A test-only dynamic fallback",
-      width: 12,
-      height: 8,
-      actors: [
-        { id: "player", position: { x: 5, y: 4 }, radius: RADIUS, speed: SPEED },
-        { id: "companion", position: { x: 3.95, y: 4 }, radius: RADIUS, speed: SPEED }
-      ],
-      obstacles: []
-    };
-    const target = { x: 4, y: 6 };
-    const physical = await RapierPhysicalWorld.create(spec);
-    const spatial = new R1HardComfortSpatialBrain();
-    let previousAcceleration: Vec2 = { x: 0, y: 0 };
-    let tick = 0;
-    let fallbackCount = 0;
-    let contactFrames = 0;
-    let minimumCenterDistance = Number.POSITIVE_INFINITY;
-    let maximumPlayerDisplacement = 0;
-    let maximumFallbackCommandDelta = 0;
-    let minimumFinalPredictedClearance = Number.POSITIVE_INFINITY;
+function nearestSafeBlend(snapshot: WorldSnapshot, unsafe: Vec2, safe: Vec2): Vec2 {
+  if (dynamicPlayerClearance(snapshot, unsafe) >= PROJECTION_CLEARANCE) return { ...unsafe };
+  if (dynamicPlayerClearance(snapshot, safe) < PROJECTION_CLEARANCE) {
+    throw new Error("R1-5A projection probe requires a safe upstream endpoint.");
+  }
 
-    try {
-      let actors = physical.step([
-        { actorId: "player", move: { x: 0, y: 0 } },
-        { actorId: "companion", move: { x: 1, y: 0 } }
-      ]);
-      tick += 1;
-      let snapshot = snapshotFor(spec, tick, actors);
+  let low = 0;
+  let high = 1;
+  for (let iteration = 0; iteration < 28; iteration += 1) {
+    const middle = (low + high) / 2;
+    const candidate = lerp(unsafe, safe, middle);
+    if (dynamicPlayerClearance(snapshot, candidate) >= PROJECTION_CLEARANCE) high = middle;
+    else low = middle;
+  }
+  return lerp(unsafe, safe, high);
+}
 
-      for (let step = 0; step < 36; step += 1) {
-        const companion = actor(snapshot, "companion");
-        const routePlan = planStaticShadowRoute({
-          snapshot,
-          start: companion.position,
-          target,
-          radius: companion.radius,
-          query: (from, to, radius, options) => physical.staticCircleTraversal(from, to, radius, options)
-        });
-        expect(routePlan.status).toBe("direct");
+async function runRepairTrial(strategy: RepairStrategy): Promise<RepairEvidence> {
+  const spec: ScenarioSpec = {
+    id: "open",
+    label: `R1-5A test-only ${strategy}`,
+    width: 12,
+    height: 8,
+    actors: [
+      { id: "player", position: { x: 5, y: 4 }, radius: RADIUS, speed: SPEED },
+      { id: "companion", position: { x: 3.95, y: 4 }, radius: RADIUS, speed: SPEED }
+    ],
+    obstacles: []
+  };
+  const target = { x: 4, y: 6 };
+  const physical = await RapierPhysicalWorld.create(spec);
+  const spatial = new R1HardComfortSpatialBrain();
+  let previousAcceleration: Vec2 = { x: 0, y: 0 };
+  let tick = 0;
+  let constraintCount = 0;
+  let contactFrames = 0;
+  let minimumCenterDistance = Number.POSITIVE_INFINITY;
+  let maximumPlayerDisplacement = 0;
+  let maximumCommandDelta = 0;
+  let minimumFinalPredictedClearance = Number.POSITIVE_INFINITY;
 
-        const preferredIntent = spatial.intent({
-          snapshot,
-          relationshipTarget: target,
-          routePlan,
-          query: (from, to, radius, options) => physical.staticCircleTraversal(from, to, radius, options),
-          occupancy: (center, radius) => physical.staticCircleOccupancy(center, radius)
-        });
-        const decision = spatial.debugState();
-        if (!decision) throw new Error("R1-5A repair probe missing spatial decision.");
-        const refinement = refinePreferredVelocity(
-          decision,
-          (from, to, radius, options) => physical.staticCircleTraversal(from, to, radius, options)
-        );
-        const refinedMove = refinement.refinedMove;
+  try {
+    let actors = physical.step([
+      { actorId: "player", move: { x: 0, y: 0 } },
+      { actorId: "companion", move: { x: 1, y: 0 } }
+    ]);
+    tick += 1;
+    let snapshot = snapshotFor(spec, tick, actors);
 
-        const shaped = stepMotionContinuity({
-          currentVelocity: companion.actualVelocity,
-          preferredMove: refinedMove,
-          previousAcceleration,
-          deltaSeconds: S0_STEP_SECONDS,
-          config: { ...S4_DEFAULT_MOTION_CONTINUITY, maxSpeed: S3_EXPERIMENT_MAX_SPEED }
-        });
-        const staticConstrained = constrainFinalCommand({
-          position: companion.position,
-          radius: companion.radius,
-          commandedMove: shaped.commandedMove,
-          preferredMoves: [refinedMove, preferredIntent.move],
-          maxSpeed: S3_EXPERIMENT_MAX_SPEED,
-          deltaSeconds: S0_STEP_SECONDS,
-          query: (from, to, radius, options) => physical.staticCircleTraversal(from, to, radius, options)
-        });
+    for (let step = 0; step < 36; step += 1) {
+      const companion = actor(snapshot, "companion");
+      const routePlan = planStaticShadowRoute({
+        snapshot,
+        start: companion.position,
+        target,
+        radius: companion.radius,
+        query: (from, to, radius, options) => physical.staticCircleTraversal(from, to, radius, options)
+      });
+      expect(routePlan.status).toBe("direct");
 
-        let finalMove = { ...staticConstrained.finalMove };
-        let dynamicallyConstrained = false;
-        if (currentOutsidePlayerBuffer(snapshot) && dynamicPlayerClearance(snapshot, finalMove) < 0) {
-          const fallbacks = [refinedMove, preferredIntent.move, { x: 0, y: 0 }];
-          const safe = fallbacks.find((candidate) => dynamicPlayerClearance(snapshot, candidate) >= 0);
-          if (!safe) throw new Error("R1-5A candidate A found no dynamically safe fallback.");
-          maximumFallbackCommandDelta = Math.max(
-            maximumFallbackCommandDelta,
-            distance(finalMove, safe)
-          );
-          finalMove = { ...safe };
-          dynamicallyConstrained = true;
-          fallbackCount += 1;
-        }
+      const preferredIntent = spatial.intent({
+        snapshot,
+        relationshipTarget: target,
+        routePlan,
+        query: (from, to, radius, options) => physical.staticCircleTraversal(from, to, radius, options),
+        occupancy: (center, radius) => physical.staticCircleOccupancy(center, radius)
+      });
+      const decision = spatial.debugState();
+      if (!decision) throw new Error("R1-5A repair probe missing spatial decision.");
+      const refinement = refinePreferredVelocity(
+        decision,
+        (from, to, radius, options) => physical.staticCircleTraversal(from, to, radius, options)
+      );
+      const refinedMove = refinement.refinedMove;
 
-        minimumFinalPredictedClearance = Math.min(
-          minimumFinalPredictedClearance,
-          dynamicPlayerClearance(snapshot, finalMove)
-        );
-        previousAcceleration = staticConstrained.constrained || dynamicallyConstrained
-          ? { x: 0, y: 0 }
-          : { ...shaped.acceleration };
+      const shaped = stepMotionContinuity({
+        currentVelocity: companion.actualVelocity,
+        preferredMove: refinedMove,
+        previousAcceleration,
+        deltaSeconds: S0_STEP_SECONDS,
+        config: { ...S4_DEFAULT_MOTION_CONTINUITY, maxSpeed: S3_EXPERIMENT_MAX_SPEED }
+      });
+      const staticConstrained = constrainFinalCommand({
+        position: companion.position,
+        radius: companion.radius,
+        commandedMove: shaped.commandedMove,
+        preferredMoves: [refinedMove, preferredIntent.move],
+        maxSpeed: S3_EXPERIMENT_MAX_SPEED,
+        deltaSeconds: S0_STEP_SECONDS,
+        query: (from, to, radius, options) => physical.staticCircleTraversal(from, to, radius, options)
+      });
 
-        actors = physical.step([
-          { actorId: "player", move: { x: 0, y: 0 } },
-          { actorId: "companion", move: finalMove }
-        ]);
-        tick += 1;
-        snapshot = snapshotFor(spec, tick, actors);
+      let finalMove = { ...staticConstrained.finalMove };
+      let dynamicallyConstrained = false;
+      if (currentOutsidePlayerBuffer(snapshot) && dynamicPlayerClearance(snapshot, finalMove) < 0) {
+        const upstreamFallbacks = [refinedMove, preferredIntent.move, { x: 0, y: 0 }];
+        const safe = upstreamFallbacks.find((candidate) => dynamicPlayerClearance(snapshot, candidate) >= PROJECTION_CLEARANCE);
+        if (!safe) throw new Error("R1-5A repair probe found no dynamically safe upstream fallback.");
 
-        const afterPlayer = actor(snapshot, "player");
-        const afterCompanion = actor(snapshot, "companion");
-        minimumCenterDistance = Math.min(
-          minimumCenterDistance,
-          distance(afterPlayer.position, afterCompanion.position)
-        );
-        if (afterCompanion.contacts.some((contact) => contact.with === "player")) contactFrames += 1;
-        maximumPlayerDisplacement = Math.max(
-          maximumPlayerDisplacement,
-          distance(afterPlayer.position, { x: 5, y: 4 })
-        );
+        const repaired = strategy === "fallback"
+          ? { ...safe }
+          : nearestSafeBlend(snapshot, finalMove, safe);
+        maximumCommandDelta = Math.max(maximumCommandDelta, distance(finalMove, repaired));
+        finalMove = repaired;
+        dynamicallyConstrained = true;
+        constraintCount += 1;
       }
 
-      const evidence = {
-        fallbackCount,
+      minimumFinalPredictedClearance = Math.min(
         minimumFinalPredictedClearance,
-        minimumCenterDistance,
-        contactFrames,
-        maximumPlayerDisplacement,
-        maximumFallbackCommandDelta,
-        companionEnd: actor(snapshot, "companion").position
-      };
-      console.info(`R1-5A candidate A probe evidence ${JSON.stringify(evidence)}`);
+        dynamicPlayerClearance(snapshot, finalMove)
+      );
+      previousAcceleration = staticConstrained.constrained || dynamicallyConstrained
+        ? { x: 0, y: 0 }
+        : { ...shaped.acceleration };
 
-      expect(fallbackCount).toBeGreaterThan(0);
-      expect(minimumFinalPredictedClearance).toBeGreaterThanOrEqual(-1e-9);
-      expect(contactFrames).toBe(0);
-      expect(minimumCenterDistance).toBeGreaterThan(RADIUS * 2);
-      expect(maximumPlayerDisplacement).toBeLessThan(0.01);
-      expect(actor(snapshot, "companion").position.y).toBeGreaterThan(4.8);
-    } finally {
-      physical.dispose();
+      actors = physical.step([
+        { actorId: "player", move: { x: 0, y: 0 } },
+        { actorId: "companion", move: finalMove }
+      ]);
+      tick += 1;
+      snapshot = snapshotFor(spec, tick, actors);
+
+      const afterPlayer = actor(snapshot, "player");
+      const afterCompanion = actor(snapshot, "companion");
+      minimumCenterDistance = Math.min(
+        minimumCenterDistance,
+        distance(afterPlayer.position, afterCompanion.position)
+      );
+      if (afterCompanion.contacts.some((contact) => contact.with === "player")) contactFrames += 1;
+      maximumPlayerDisplacement = Math.max(
+        maximumPlayerDisplacement,
+        distance(afterPlayer.position, { x: 5, y: 4 })
+      );
     }
+
+    return {
+      strategy,
+      constraintCount,
+      minimumFinalPredictedClearance,
+      minimumCenterDistance,
+      contactFrames,
+      maximumPlayerDisplacement,
+      maximumCommandDelta,
+      companionEnd: { ...actor(snapshot, "companion").position }
+    };
+  } finally {
+    physical.dispose();
+  }
+}
+
+describe("R1-5A test-only repair comparison", () => {
+  it("compares full fallback against projection toward the safe upstream boundary", async () => {
+    const fallback = await runRepairTrial("fallback");
+    const projection = await runRepairTrial("project-to-safe-boundary");
+    console.info(`R1-5A repair comparison ${JSON.stringify({ fallback, projection })}`);
+
+    for (const evidence of [fallback, projection]) {
+      expect(evidence.constraintCount).toBeGreaterThan(0);
+      expect(evidence.minimumFinalPredictedClearance).toBeGreaterThanOrEqual(0);
+      expect(evidence.contactFrames).toBe(0);
+      expect(evidence.minimumCenterDistance).toBeGreaterThan(RADIUS * 2);
+      expect(evidence.maximumPlayerDisplacement).toBeLessThan(0.01);
+      expect(evidence.companionEnd.y).toBeGreaterThan(4.8);
+    }
+
+    expect(projection.maximumCommandDelta).toBeLessThan(fallback.maximumCommandDelta);
   });
 });
