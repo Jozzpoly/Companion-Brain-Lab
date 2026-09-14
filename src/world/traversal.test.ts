@@ -110,3 +110,72 @@ describe("S2-C0 arbitrary static graph-edge traversal", () => {
     world.dispose();
   });
 });
+
+describe("R1-2 explicit hard / comfort / egress spatial query contract", () => {
+  it("distinguishes a hard-legal position from desired-clearance occupancy", async () => {
+    const world = await LabWorld.create("pillar");
+    const before = world.snapshot();
+    const center = { x: 5.16, y: 4 };
+
+    const hard = world.staticCircleOccupancy(center, 0.3);
+    const comfort = world.staticCircleOccupancy(center, 0.38);
+
+    expect(hard.clear).toBe(true);
+    expect(hard.blockers).toEqual([]);
+    expect(comfort.clear).toBe(false);
+    expect(comfort.blockers).toEqual(["pillar.center"]);
+    expect(world.snapshot()).toEqual(before);
+    world.dispose();
+  });
+
+  it("keeps dynamic actors out of static occupancy classification", async () => {
+    const world = await LabWorld.create("head-on");
+    const player = world.snapshot().actors.find((actor) => actor.id === "player");
+    if (!player) throw new Error("Missing player fixture.");
+
+    const occupancy = world.staticCircleOccupancy(player.position, player.radius);
+    expect(occupancy.clear).toBe(true);
+    expect(occupancy.blockers).toEqual([]);
+    world.dispose();
+  });
+
+  it("preserves blocking semantics by default but permits a desired-clearance egress cast", async () => {
+    const world = await LabWorld.create("pillar");
+    const start = { x: 5.16, y: 4 };
+    const outward = { x: 4.5, y: 4 };
+
+    const blocked = world.staticCircleTraversal(start, outward, 0.38);
+    const egress = world.staticCircleTraversal(start, outward, 0.38, { initialOverlap: "allow-egress" });
+
+    expect(blocked.clear).toBe(false);
+    expect(blocked.blocker?.label).toBe("pillar.center");
+    expect(blocked.blocker?.distance).toBeCloseTo(0, 6);
+    expect(egress.clear).toBe(true);
+    expect(egress.blocker).toBeNull();
+    world.dispose();
+  });
+
+  it("allow-egress ignores only the initial penetration and still reports a later static hit", async () => {
+    const world = await LabWorld.create("pillar");
+    const start = { x: 5.16, y: 4 };
+    const beyondLeftBoundary = { x: -1, y: 4 };
+
+    const result = world.staticCircleTraversal(start, beyondLeftBoundary, 0.38, { initialOverlap: "allow-egress" });
+
+    expect(result.clear).toBe(false);
+    expect(result.blocker?.label).toBe("boundary.left");
+    expect(result.blocker?.distance).toBeGreaterThan(0);
+    expect(result.blocker?.distance).toBeLessThan(result.distance);
+    world.dispose();
+  });
+
+  it("rejects invalid occupancy inputs without advancing World state", async () => {
+    const world = await LabWorld.create("open");
+    const before = world.snapshot();
+
+    expect(() => world.staticCircleOccupancy({ x: Number.NaN, y: 4 }, 0.3)).toThrow(/finite/);
+    expect(() => world.staticCircleOccupancy({ x: 4, y: 4 }, 0)).toThrow(/positive radius/);
+    expect(world.snapshot()).toEqual(before);
+    world.dispose();
+  });
+});
