@@ -11,6 +11,10 @@ export interface RuntimeFaultRecord {
   column: number | null;
 }
 
+export interface RuntimeFaultSentinelOptions {
+  onFirstFault?: (record: RuntimeFaultRecord) => void;
+}
+
 function errorLike(value: unknown): { message: string; stack: string | null } {
   if (value instanceof Error) {
     return { message: value.message || value.name, stack: value.stack ?? null };
@@ -132,12 +136,24 @@ function createFaultSurface(record: RuntimeFaultRecord): HTMLElement {
   return surface;
 }
 
-export function installRuntimeFaultSentinel(): (record: RuntimeFaultRecord) => void {
+export function installRuntimeFaultSentinel(
+  options: RuntimeFaultSentinelOptions = {}
+): (record: RuntimeFaultRecord) => void {
   let firstFault: RuntimeFaultRecord | null = null;
 
   const report = (record: RuntimeFaultRecord): void => {
     if (firstFault) return;
     firstFault = record;
+
+    // The sentinel owns first-fault containment, not recovery. The bootstrap
+    // hook stops the simulation loop while leaving the last rendered evidence
+    // visible behind this independent DOM surface.
+    try {
+      options.onFirstFault?.(record);
+    } catch (containmentError) {
+      console.error("Runtime fault containment hook failed", containmentError);
+    }
+
     const existing = document.querySelector<HTMLElement>("#runtime-fault-sentinel");
     existing?.remove();
     document.body.appendChild(createFaultSurface(record));
