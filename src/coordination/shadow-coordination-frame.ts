@@ -19,6 +19,7 @@ export interface ShadowCoordinationHistory {
   previousPlayerDirection: Vec2 | null;
   previousCorridorDirection: Vec2 | null;
   outsideRegionTicks: number;
+  previousEvaluationTick: number | null;
 }
 
 export interface ShadowLegacyComparison {
@@ -52,7 +53,8 @@ const EMPTY_HISTORY: ShadowCoordinationHistory = {
   previousRepresentative: null,
   previousPlayerDirection: null,
   previousCorridorDirection: null,
-  outsideRegionTicks: 0
+  outsideRegionTicks: 0,
+  previousEvaluationTick: null
 };
 
 function distance(a: Vec2, b: Vec2): number {
@@ -60,6 +62,9 @@ function distance(a: Vec2, b: Vec2): number {
 }
 
 function normalizedHistory(history: ShadowCoordinationFrameInput["history"]): ShadowCoordinationHistory {
+  const previousEvaluationTick = Number.isFinite(history?.previousEvaluationTick)
+    ? Math.floor(history!.previousEvaluationTick!)
+    : null;
   return {
     previousRepresentative: history?.previousRepresentative
       ? { ...history.previousRepresentative }
@@ -70,7 +75,8 @@ function normalizedHistory(history: ShadowCoordinationFrameInput["history"]): Sh
     previousCorridorDirection: history?.previousCorridorDirection
       ? { ...history.previousCorridorDirection }
       : null,
-    outsideRegionTicks: Math.max(0, Math.floor(history?.outsideRegionTicks ?? 0))
+    outsideRegionTicks: Math.max(0, Math.floor(history?.outsideRegionTicks ?? 0)),
+    previousEvaluationTick
   };
 }
 
@@ -90,7 +96,8 @@ export function createEmptyShadowCoordinationHistory(): ShadowCoordinationHistor
     previousRepresentative: null,
     previousPlayerDirection: null,
     previousCorridorDirection: null,
-    outsideRegionTicks: 0
+    outsideRegionTicks: 0,
+    previousEvaluationTick: null
   };
 }
 
@@ -98,6 +105,11 @@ export function evaluateShadowCoordinationFrame(
   input: ShadowCoordinationFrameInput
 ): ShadowCoordinationFrame {
   const history = input.history ? normalizedHistory(input.history) : { ...EMPTY_HISTORY };
+  const elapsedWorldTicks = history.previousEvaluationTick === null
+    ? 1
+    : Math.max(1, input.snapshot.tick - history.previousEvaluationTick);
+  const outsideRegionTicksAtObservation = history.outsideRegionTicks + elapsedWorldTicks;
+
   const region = evaluateShadowRelationshipRegion({
     snapshot: input.snapshot,
     query: input.query,
@@ -112,7 +124,7 @@ export function evaluateShadowCoordinationFrame(
     snapshot: input.snapshot,
     region,
     physicalSpeedCapability: input.physicalSpeedCapability,
-    outsideRegionTicks: history.outsideRegionTicks
+    outsideRegionTicks: outsideRegionTicksAtObservation
   });
   const playerFlowConflict = evaluateShadowPlayerFlowConflict({
     snapshot: input.snapshot,
@@ -142,7 +154,8 @@ export function evaluateShadowCoordinationFrame(
         ? { ...history.previousCorridorDirection }
         : null
       : { ...playerCorridor.direction },
-    outsideRegionTicks: pace.insideUsefulRegion ? 0 : history.outsideRegionTicks + 1
+    outsideRegionTicks: pace.insideUsefulRegion ? 0 : outsideRegionTicksAtObservation,
+    previousEvaluationTick: input.snapshot.tick
   };
 
   return {
