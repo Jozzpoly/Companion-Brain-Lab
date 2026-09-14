@@ -89,6 +89,16 @@ describe("S2-C0 / R1-2A deterministic static router", () => {
     world.dispose();
   });
 
+  it("does not call a physically clear rounded obstacle corner an invalid target", async () => {
+    const world = await LabWorld.create("pillar");
+    // The center lies inside the pillar's square AABB expanded by 0.3 m, but the
+    // actual circle is ~0.354 m from the corner and therefore physically clear.
+    const result = plan(world, { x: 5.25, y: 1.75 });
+
+    expect(result.status).not.toBe("invalid-target");
+    world.dispose();
+  });
+
   it("keeps a physically fitting doorway reachable while marking comfort clearance constrained", async () => {
     const world = await LabWorld.create("doorway");
     const result = plan(world, { x: 4, y: 4 }, 0.65);
