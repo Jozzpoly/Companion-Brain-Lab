@@ -25,7 +25,7 @@ function runMovingTarget(options: {
       routeStatus: "direct",
       routeRemainingDistance: distance,
       commandedSpeed: 1,
-      actualSpeed: 1,
+      actualSpeed: Math.abs(options.companionStep) > 1e-6 ? 1 : 0,
       contacts: []
     });
   }
@@ -57,5 +57,17 @@ describe("R1-4 moving objective semantics", () => {
     expect(result.retryCount).toBeGreaterThan(0);
     expect(result.state).not.toBe("TRACKING_MOVING_OBJECTIVE");
     expect(result.state).not.toBe("PROGRESSING");
+  });
+
+  it("does not credit a stationary companion when the moving target itself closes the distance", () => {
+    const result = runMovingTarget({
+      companionStep: 0,
+      targetStep: -0.02,
+      ticks: R1_NO_PROGRESS_TRIGGER_TICKS + 5
+    });
+
+    expect(result.retryCount).toBeGreaterThan(0);
+    expect(result.state).not.toBe("PROGRESSING");
+    expect(result.state).not.toBe("TRACKING_MOVING_OBJECTIVE");
   });
 });
