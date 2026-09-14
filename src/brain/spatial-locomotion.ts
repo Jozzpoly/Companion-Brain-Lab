@@ -1,4 +1,8 @@
-import type { StaticRoutePlan, StaticTraversalQuery } from "../navigation/static-router";
+import {
+  S2C_ROUTE_CLEARANCE,
+  type StaticRoutePlan,
+  type StaticTraversalQuery
+} from "../navigation/static-router";
 import type { ActorSnapshot, MotionIntent, Vec2, WorldSnapshot } from "../world/types";
 
 export const S3_SPATIAL_INTERVAL_TICKS = 3;
@@ -9,7 +13,8 @@ export const S3_SPEED_LEVELS = [0.35, 0.7, 1] as const;
 export const S3_PREDICTION_HORIZON_SECONDS = 0.55;
 export const S3_ROUTE_LOOKAHEAD_DISTANCE = 1.2;
 export const S3_EXPERIMENT_MAX_SPEED = 3;
-export const S3_STATIC_CLEARANCE = 0.05;
+// Local locomotion must never enter a static envelope the route layer considers impassable.
+export const S3_STATIC_CLEARANCE = S2C_ROUTE_CLEARANCE;
 export const S3_PLAYER_BUFFER = 0.18;
 const HARD_REJECT_SCORE = 1_000_000;
 const EPSILON = 1e-9;
@@ -179,11 +184,7 @@ function routeGuidance(
   }
 
   const last = plan.waypoints[plan.waypoints.length - 1] ?? fallback;
-  return {
-    point: { ...last },
-    lookaheadDistance: requestedLookahead,
-    remainingDistance
-  };
+  return { point: { ...last }, lookaheadDistance: requestedLookahead, remainingDistance };
 }
 
 export function observeSpatialEnvironment(input: SpatialLocomotionInput): SpatialObservation {
@@ -230,10 +231,7 @@ export function observeSpatialEnvironment(input: SpatialLocomotionInput): Spatia
   };
 }
 
-function minimumDynamicClearance(
-  observation: SpatialObservation,
-  candidateVelocity: Vec2
-): number {
+function minimumDynamicClearance(observation: SpatialObservation, candidateVelocity: Vec2): number {
   const relativePosition = {
     x: observation.playerPosition.x - observation.companionPosition.x,
     y: observation.playerPosition.y - observation.companionPosition.y
@@ -247,8 +245,7 @@ function minimumDynamicClearance(
     ? clamp(-dot(relativePosition, relativeVelocity) / relativeSpeedSquared, 0, S3_PREDICTION_HORIZON_SECONDS)
     : 0;
   const closest = addScaled(relativePosition, relativeVelocity, closestTime);
-  const centerDistance = magnitude(closest);
-  return centerDistance - (observation.companionRadius + observation.playerRadius + S3_PLAYER_BUFFER);
+  return magnitude(closest) - (observation.companionRadius + observation.playerRadius + S3_PLAYER_BUFFER);
 }
 
 function scoreCandidate(options: {
@@ -274,10 +271,7 @@ function scoreCandidate(options: {
   const traversal = options.query(options.observation.companionPosition, predictedPosition, queryRadius);
   const ray = nearestRay(options.observation.rays, options.move);
   const staticFreeDistance = ray?.freeDistance ?? S3_SENSOR_RANGE;
-  const currentPlayerCenterDistance = distance(
-    options.observation.companionPosition,
-    options.observation.playerPosition
-  );
+  const currentPlayerCenterDistance = distance(options.observation.companionPosition, options.observation.playerPosition);
   const safePlayerDistance = options.observation.companionRadius + options.observation.playerRadius + S3_PLAYER_BUFFER;
   const minimumPlayerClearance = minimumDynamicClearance(options.observation, worldVelocity);
 
@@ -291,14 +285,10 @@ function scoreCandidate(options: {
   const guideDistance = distance(predictedPosition, options.observation.routeLookahead);
   const relationshipDistance = distance(predictedPosition, options.observation.relationshipTarget);
   const clearanceRatio = clamp(staticFreeDistance / S3_SENSOR_RANGE, 0, 1);
-
-  // The player's soft envelope expands with player motion. A stationary player only
-  // reserves the explicit body+buffer boundary; a moving player gets more predictive room.
   const playerMotionFactor = clamp(magnitude(options.observation.playerVelocity) / 1.2, 0, 1);
   const softPlayerRange = 0.08 + playerMotionFactor * 0.67;
   const playerRisk = clamp((softPlayerRange - minimumPlayerClearance) / softPlayerRange, 0, 1);
   const playerRiskWeight = 1.2 + playerMotionFactor * 3.3;
-
   const continuity = distance(options.move, options.previousMove);
   const relationshipNow = distance(options.observation.companionPosition, options.observation.relationshipTarget);
   const nearRelationship = clamp((0.8 - relationshipNow) / 0.8, 0, 1);
@@ -313,12 +303,8 @@ function scoreCandidate(options: {
   };
   const score = rejectionReason
     ? HARD_REJECT_SCORE
-    : terms.routeDistance +
-      terms.relationshipDistance +
-      terms.clearancePenalty +
-      terms.playerRiskPenalty +
-      terms.continuityPenalty +
-      terms.unnecessaryMotionPenalty;
+    : terms.routeDistance + terms.relationshipDistance + terms.clearancePenalty +
+      terms.playerRiskPenalty + terms.continuityPenalty + terms.unnecessaryMotionPenalty;
 
   return {
     id: options.id,
@@ -334,6 +320,19 @@ function scoreCandidate(options: {
     score,
     terms
   };
+}
+
+function candidateSpeedFractions(observation: SpatialObservation): number[] {
+  const values = [...S3_SPEED_LEVELS] as number[];
+  if (observation.routeRemainingDistance > 0.03) {
+    const adaptive = clamp(
+      observation.routeLookaheadDistance / (S3_EXPERIMENT_MAX_SPEED * S3_PREDICTION_HORIZON_SECONDS),
+      0.08,
+      1
+    );
+    if (!values.some((value) => Math.abs(value - adaptive) < 0.04)) values.push(adaptive);
+  }
+  return values.sort((a, b) => a - b);
 }
 
 export function buildSpatialVelocityCandidates(options: {
@@ -354,10 +353,11 @@ export function buildSpatialVelocityCandidates(options: {
     previousMove
   }));
 
+  const speedFractions = candidateSpeedFractions(options.observation);
   for (let directionIndex = 0; directionIndex < S3_CANDIDATE_DIRECTIONS; directionIndex += 1) {
     const angle = (directionIndex / S3_CANDIDATE_DIRECTIONS) * Math.PI * 2;
     const direction = { x: Math.cos(angle), y: Math.sin(angle) };
-    for (const speedFraction of S3_SPEED_LEVELS) {
+    for (const speedFraction of speedFractions) {
       candidates.push(scoreCandidate({
         observation: options.observation,
         query: options.query,
@@ -419,11 +419,7 @@ export function chooseSpatialVelocity(options: {
 
 export function evaluateSpatialLocomotion(input: SpatialLocomotionInput): SpatialLocomotionDecision {
   const observation = observeSpatialEnvironment(input);
-  const candidates = buildSpatialVelocityCandidates({
-    observation,
-    query: input.query,
-    previousMove: input.previousMove
-  });
+  const candidates = buildSpatialVelocityCandidates({ observation, query: input.query, previousMove: input.previousMove });
   return chooseSpatialVelocity({ observation, candidates });
 }
 
