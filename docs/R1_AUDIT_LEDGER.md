@@ -1,291 +1,173 @@
-# R1 — Audit Ledger
+# R1 — Consolidated Historical Audit Ledger
 
-Status: **LIVE PLANNING LEDGER**
+Status: **HISTORICAL EVIDENCE · R1-4 MECHANICAL PASS PRESERVED · OWNER BROWSER FAIL PRESERVED · SUPERSEDED FOR LIVE AUTHORITY BY FOUNDATION AUDIT**
 
 Date: 2026-09-14
 
-Purpose: keep evidence, hypotheses, process debt and architecture candidates separate while R1 is planned/executed. A future stage must not silently promote a hypothesis because it sounds plausible or because a repair made one fixture green.
+This file is the compact historical ledger for R1. It no longer claims to be the live project authority.
 
----
+Current live state and readiness authority:
+- [`FOUNDATION_RUNTIME_SURVIVAL_AUDIT.md`](FOUNDATION_RUNTIME_SURVIVAL_AUDIT.md)
+- [`FOUNDATION_ACTIVE_AUTHORITY_MAP.md`](FOUNDATION_ACTIVE_AUTHORITY_MAP.md)
 
-## Legend
+Detailed S/R-stage qualification files remain preserved for exact evidence. Git history retains the earlier long-form planning ledger.
 
-- **PASS / demonstrated** — directly supported by automated or Owner evidence within its stated scope.
-- **MATERIAL FINDING** — strong evidence with practical consequence; mechanism may still need narrower reproduction.
-- **LEADING HYPOTHESIS** — plausible causal explanation requiring deterministic falsification.
-- **PROCESS DEBT** — problem in how evidence/gates were carried between stages.
-- **ARCHITECTURE CANDIDATE** — possible repair/reframe; not selected.
-- **DEFERRED** — intentionally outside R1 authority.
+## Evidence legend
 
----
+- **PASS / demonstrated** — directly supported within the stated evidence scope.
+- **OWNER-EVIDENCED** — established by Owner browser/play evidence.
+- **MATERIAL FINDING** — strong evidence with practical architectural consequence.
+- **HISTORICAL MECHANICAL PASS** — automated evidence that remains true for that exact source/runtime, but does not override later Owner evidence.
+- **DEFERRED** — intentionally outside the stage's authority.
 
-## A. Defended foundations
+## Defended foundations carried forward
 
-### A1 — World remains authoritative
+### World remains physical authority
 
-**Status:** PASS / defended.
+**PASS / defended.** Brains request motion; World/Rapier establish actual physical outcome. Debug reports evidence rather than inventing physical truth.
 
-Brains emit MotionIntent; World/Rapier establish actual motion/contact. App rendering mirrors state. Preserve this boundary.
+### Whole-body spatial queries are required
 
-Relevant files:
-- `src/world/world.ts`
-- `src/physics/rapier-physical-world.ts`
-- `src/brain/*`
+**PASS as a primitive.** S1 showed that endpoint validity alone is insufficient. S2 established body-radius traversal evidence and deterministic static routing as useful bounded primitives.
 
-### A2 — fixed-step/headless apparatus remains useful
+### Route guidance and local locomotion are separate responsibilities
 
-**Status:** PASS within research scope.
+**PASS as a seam.** S3 Owner evidence materially improved responsiveness when route output became guidance and local locomotion chose short-horizon omnidirectional motion.
 
-S0 established deterministic local scenario/reset/step contracts and useful requested-vs-actual physical evidence. Nothing in the S4 regression shows the physics kernel is exploding or the simulation clock is broken.
+### Debug is a peer research product
 
-### A3 — whole-body static query is a valuable primitive
+**PASS conceptually.** Owner use repeatedly demonstrated the value of exposing target, route, preferred/commanded/actual movement, blockers, progress and state transitions. Later foundation work strengthens its fault-survival and semantic clarity.
 
-**Status:** PASS as a primitive, not as one universal semantic mode.
+## Owner-evidenced failures that changed the architecture
 
-S2-B proved that center-point reachability is insufficient and that whole-body swept queries expose useful blocker geometry. R1 questions how that primitive is parameterized/semantically reused, not whether whole-body queries are useful.
+### S1 endpoint-valid positioning was insufficient
 
-### A4 — static route/local locomotion separation is valuable
+**OWNER-EVIDENCED.** Doorway play demonstrated that a sensible relationship target does not imply traversability, dynamic cooperation or progress awareness.
 
-**Status:** PASS as responsibility seam.
+### S4 autonomous zero-motion lock was real
 
-S3 Owner evidence materially improved responsiveness after route became corridor/lookahead guidance and local locomotion chose omnidirectional velocity.
+**OWNER-EVIDENCED.** Simulation could continue while the companion remained in an autonomous `UNREACHABLE/HOLD/zero-motion` state after ordinary dynamic play.
 
-### A5 — debug as a peer research product is validated by Owner use
+### In-world debug could hide physical truth
 
-**Status:** PASS conceptually.
+**OWNER-EVIDENCED.** Large HUD/debug presentation interfered with visual diagnosis. R1 moved causal textual inspection into a side workbench while retaining spatial overlays in the world.
 
-The Owner explicitly reported that debug showed its value. Current layout/causal timing is inadequate, but observability investment is justified.
+### Responsiveness had higher value than small feel gains when robustness regressed
 
----
+**OWNER judgement.** This redirected work away from premature naturalness/relationship-field expansion and into R1 robustness.
 
-## B. Owner-evidenced failures
+## R1 findings and repairs
 
-### B1 — in-world HUD can occlude physical truth
+### Desired-clearance prison
 
-**Status:** MATERIAL FINDING.
+**DEMONSTRATED and materially repaired.**
 
-S4 uses a large Phaser text HUD at high depth over the world. The Owner recording shows this is large enough to hide actor motion/position and create apparent disappearance.
+A physically legal body could be inside an enlarged desired-clearance envelope. Treating that comfort envelope as hard connectivity could prevent legal egress.
 
-Consequence: textual inspector must move out of the playfield.
+R1 separated:
+- hard body feasibility / legality;
+- desired comfort clearance / quality evidence.
 
-### B2 — real autonomous zero-motion lock occurs
+Foundation work later extends this into explicit hard-overlap egress semantics.
 
-**Status:** MATERIAL FINDING.
+### Temporal actuation could invalidate spatially safe preferred motion
 
-The S4 Owner recording shows advancing simulation ticks while the autonomous companion enters persistent zero motion associated with route `unreachable` and spatial/motion HOLD.
+**DEMONSTRATED for hard static geometry and repaired in R1-3.**
 
-Consequence: S4 cannot remain classified as an open feel-only gate.
+NATURAL continuity modifies upstream preferred motion. R1 introduced final hard-static command validation and bounded fallback rather than assuming the preferred-motion proof still applied after temporal shaping.
 
-### B3 — S4 natural feel improvement is small relative to robustness regression
+Dynamic player-conflict final authority remained deliberately unresolved rather than being claimed solved by symmetry.
 
-**Status:** OWNER judgement / material prioritization.
+### Unreachable / arrived / hold required post-World temporal semantics
 
-Owner reported only minimal feel improvement while observing random shutdown-like behavior. Further feel tuning is lower priority than robustness.
+**DEMONSTRATED architecture gap; materially repaired in R1-4.**
 
----
+R1-4 added explicit post-outcome states and actions covering arrival, progress, moving-objective tracking, intentional/unexplained hold, player/static blocking, invalid route, transient/persistent unreachable, recovery and no-progress.
 
-## C. Leading causal hypotheses
+### Recovery authority must be bounded
 
-### C1 — desired-clearance prison
+**PASS within R1-4 scope.**
 
-**Status:** LEADING HYPOTHESIS.
+Only local retry resets movement-realization state. It does not mutate World truth, invent objectives, silently take route authority or execute scenario-specific escape scripts.
 
-Evidence:
-- route/local static feasibility often uses physical radius + `0.08` m desired clearance;
-- World static collision owns the physical radius only;
-- physically legal World state may therefore start inside the enlarged query shape;
-- `staticCircleTraversal` currently calls `World.castShape(... stopAtPenetration=true ...)`;
-- Rapier documents that disabling stop-at-penetration allows a cast starting in penetration to continue when its trajectory exits that penetration;
-- moving candidates can be hard-rejected while STOP remains admissible.
+### Qualification claims initially outran coverage
 
-Predicted symptom:
-`legal physical state inside desired margin -> route/local casts hit at t=0 -> unreachable/rejected moves -> STOP/HOLD -> no egress`.
+**MATERIAL PROCESS FINDING.**
 
-Required falsifier:
-deterministic physically-legal / desired-clearance-violating start with target away from wall.
+R1-4 first passed 104 tests. A later claim-vs-code audit deliberately added red regressions that exposed:
+- retry budget behaving as a lifetime cap instead of an episode budget;
+- reversing moving-target tracking being misclassified by endpoint-only displacement;
+- Euclidean arrival winning over invalid/unreachable route truth;
+- a defensive route-metric arrival inconsistency.
 
-### C2 — S4 actuator can create unsafe final command relative to validated preferred motion
+Those cases were repaired and retained as regression evidence.
 
-**Status:** LEADING HYPOTHESIS / code-grounded safety gap.
+Exact audited R1-4 application runtime:
+`8f08761cdfde3f0b5d3e595f4bb844d106104ed4`
 
-Evidence:
-- coarse/refined preferred motion is spatially validated;
-- continuity actuator then modifies the command using current velocity/acceleration history;
-- final commanded MotionIntent is not independently validated against the same spatial constraints.
+Historical mechanical evidence:
+- 21/21 test files PASS;
+- 108/108 tests PASS;
+- strict TypeScript PASS;
+- production build PASS;
+- Pages build/deploy PASS.
 
-Predicted symptom:
-a safe new preferred turn near geometry retains enough old velocity to enter desired-clearance violation, after which C1 can lock the planner.
+This evidence remains valid for that exact scope.
 
-Required falsifier:
-near-wall 90°/reversal fixture comparing preferred, refined, commanded and resulting clearance.
+## Later Owner browser failure — why R1-4 is not the live robustness authority
 
-### C3 — `unreachable` downstream semantics encourage pathological HOLD
+**OWNER-EVIDENCED FAIL / historical mechanical evidence preserved.**
 
-**Status:** MATERIAL CODE FINDING / exact experiential impact unproven.
+A later Owner browser run reproduced a whole-workbench freeze during an ordinary constrained-world interaction. The last completed causal frame stopped advancing while the rendered workbench still appeared `RUNNING`.
 
-Current route guidance for non-routed states falls back to relationship target but reports zero route lookahead/remaining distance. Some local scoring terms therefore receive a representation also compatible with “nothing useful remains to travel”.
+Foundation diagnosis found ordinary world states could still reach exception paths, including:
+- slight hard-body static penetration after physical contact;
+- initial-overlap traversal semantics rejecting outward egress;
+- simultaneous dynamic rejection of STOP;
+- zero admissible local candidates reaching the preserved S3 throw;
+- legacy relationship exhaustion reaching a second ordinary-state throw.
 
-Required repair principle:
-`unreachable != arrived`; explicit failure/progress semantics.
+Therefore the prior statement “R1-4 mechanical pass, Owner gate open” is historical only. It does not authorize new work on the assumption that the runtime substrate is robust.
 
-### C4 — lack of progress/recovery converts transient invalidity into persistent failure
+The active repair/readiness campaign is documented in `FOUNDATION_RUNTIME_SURVIVAL_AUDIT.md`.
 
-**Status:** MATERIAL ARCHITECTURE GAP.
+## Process lessons carried forward
 
-This was already identified in S1/S2 and explicitly deferred in S3. Current autonomous runtime has no general temporal classifier that distinguishes intentional hold, temporary player conflict, static block, clearance violation, route invalidation and recovery.
+### Owner evidence must become regression evidence
 
-Required evidence:
-transient conflict fixtures + bounded resume criteria.
+S1, S4 and the later R1-4 browser failure each exposed behavior outside the then-current automated surface. New failure classes should be promoted into bounded deterministic regressions whenever possible.
 
----
+### Green tests do not widen a claim automatically
 
-## D. Process/evidence debt
+A test suite proves only the exercised contract. Qualification language must remain narrower than the tested behavior surface.
 
-### D1 — Owner rehearsal matrix was not promoted into regression suite
+### Historical experiments are donors, not implicit authority
 
-**Status:** PROCESS DEBT.
+S0–S5 and R1 layers remain valuable evidence. Their modules, docs and tests may be reused selectively, but the presence of old code must not silently restore old top-level authority.
 
-S0 manual qualification already asked the Owner to:
-- ram the companion into a wall;
-- squeeze/pin actors in doorway/contact;
-- reverse repeatedly;
-- scrape walls/corners.
+### DIRECT/NATURAL fine-feel evidence remains limited
 
-S3 Owner gate similarly requested circling, player reversals, cross-front motion and sudden stops.
+The A/B workbench is useful for broad comparison, but exact feel judgement remains an Owner/runtime question and should not be inferred from mechanical regressions alone.
 
-S3/S4 automated integration trials instead focused primarily on fixed targets with a stationary player.
+## Preserved future directions — not R1 claims
 
-Consequence: future Owner-discovered failure classes should become bounded regression fixtures before the next promotion.
+The following remained intentionally unresolved and are now candidates for the post-foundation aggressive redesign rather than cleanup blockers:
 
-### D2 — stage sequence skipped planned robustness work
+- continuous/region-based relationship representation replacing the legacy eight slots;
+- dynamic player movement corridor, right-of-way and chokepoint cooperation;
+- pace / urgency / catch-up speed authority;
+- redesign of the `MotionIntent` contract;
+- multi-companion coordination;
+- commands and combat;
+- selective transplant of old S5 relationship-field research;
+- possible alternative character movement/controller substrate only if evidence justifies escalation.
 
-**Status:** PROCESS DEBT / sequencing correction.
+## Final R1 disposition
 
-S1/S2 identified progress/recovery and constrained-space cooperation. S3 reframe retained an S3-D stage for those topics. After responsiveness improved, work advanced into S4 naturalness and then S5 shadow relationship fields before S3-D was completed.
+R1 produced valuable architecture seams, regression evidence and causal tooling, but its last mechanically qualified runtime did **not** survive the final Owner robustness challenge.
 
-Consequence: R1 restores robustness priority before further upstream authority.
+Therefore:
 
-### D3 — A/B actuator comparison is not perfectly isolated
+> R1 is preserved as a strong research donor and evidence layer, not as the final foundation to build the next large companion architecture on unchanged.
 
-**Status:** PROCESS/EXPERIMENT DESIGN DEBT.
-
-DIRECT and NATURAL have separate spatial-brain state and switching resets motion brains. A clean actuator experiment should, where practical, feed identical upstream preferred-motion evidence into both realization policies.
-
-Consequence: redesign A/B harness before drawing fine feel conclusions.
-
----
-
-## E. Debug/workbench debt
-
-### E1 — textual debug is rendered inside world presentation
-
-**Status:** MATERIAL FINDING.
-
-Fix direction: responsive world + collapsible/resizable side panel; world-space overlays remain spatial.
-
-### E2 — trace phase ambiguity
-
-**Status:** MATERIAL CODE FINDING.
-
-Current scene computes decision/intents from a pre-step snapshot, advances World, then updates some navigation evidence and records a sample against the post-step snapshot. A displayed/recorded “frame” can therefore combine decision evidence and later World/route evidence without explicit phase identity.
-
-Fix direction: observation/decision/command/outcome/progress identities or revisions in trace.
-
-### E3 — debug category selection is too coarse
-
-**Status:** QoL debt with research impact.
-
-Current presets are useful but mostly cycle-based. R1 should allow direct layer toggles and explicit failure-state inspection without forcing the Owner to cycle through unrelated views.
-
----
-
-## F. Architecture candidates — not selected
-
-### F1 — hard feasibility + soft desired clearance
-
-**Status:** ARCHITECTURE CANDIDATE.
-
-Possible model:
-- hard physical sweep determines legal connectivity;
-- desired clearance contributes cost/quality;
-- current desired-clearance violation has explicit egress semantics;
-- too-narrow physical passages remain truly unreachable.
-
-Must be compared against F2.
-
-### F2 — retain hard planning margin but add egress-aware query/recovery
-
-**Status:** ARCHITECTURE CANDIDATE.
-
-Possible model:
-- route margin remains hard under normal planning;
-- queries distinguish initial penetration/egress;
-- recovery state may temporarily leave the normal comfort envelope to restore validity.
-
-Risk: two-mode semantics can become harder to reason about than F1.
-
-### F3 — `stopAtPenetration=false` in explicitly scoped egress queries
-
-**Status:** ARCHITECTURE CANDIDATE / API-grounded.
-
-Official Rapier docs support the needed exit-penetration behavior. Do not apply globally without fixtures; route graph, hard safety and local recovery may need different semantics.
-
-### F4 — final-command projection/revalidation
-
-**Status:** ARCHITECTURE CANDIDATE.
-
-Keep generic motion continuity, then constrain/revalidate final commanded velocity.
-
-Risk: naive clipping/projection can cause wall sliding, oscillation or destroy motion-quality bounds.
-
-### F5 — constraint-aware actuator
-
-**Status:** ARCHITECTURE CANDIDATE.
-
-Actuator shapes temporal motion inside a known admissible motion region.
-
-Risk: coupling/complexity between movement feel and navigation constraints.
-
-### F6 — character-controller substrate comparison
-
-**Status:** CONDITIONAL ESCALATION CANDIDATE, not current decision.
-
-Historical S0 planning considered character-controller/kinematic resolution, while actual S0 baseline uses dynamic Rapier bodies with velocity assignment. Dynamic actor pushing is valuable evidence but can legitimately move actors into planning comfort violations.
-
-Only compare KCC/alternative character movement if R1 evidence shows the current dynamic-body + query contracts cannot be made robust without accumulating special cases.
-
----
-
-## G. Explicitly paused/deferred
-
-### G1 — S5 relationship-field authority
-
-**Status:** PAUSED.
-
-Preserve the qualified shadow field and centroid-collapse/topology finding. Do not allow it to control movement until R1 passes.
-
-### G2 — soft contact
-
-**Status:** DEFERRED.
-
-Hard contact remains useful because it exposes missing cooperation/recovery. Softness may later improve feel but must not mask R1 failures.
-
-### G3 — combat, commands, multiple companions, ORCA/RVO, LLM
-
-**Status:** DEFERRED by R1 scope.
-
-R1 is movement robustness + causal workbench, not a general companion architecture stage.
-
----
-
-## H. Current decision checkpoint
-
-R1 implementation must begin with **red reproductions**, not with query flag changes or recovery code.
-
-First three decisive experiments:
-
-1. **Clearance egress fixture** — physically legal but desired-clearance-violating start; target away from obstacle.
-2. **Push/release fixture** — moving player pushes companion into boundary state, then conflict disappears.
-3. **Actuator boundary fixture** — compare safe preferred/refined motion against final NATURAL commanded motion near geometry.
-
-The result of those experiments determines whether C1, C2, C3/C4 or a different mechanism is primary.
+The foundation-hardening campaign owns the current readiness decision.
