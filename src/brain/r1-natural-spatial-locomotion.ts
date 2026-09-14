@@ -75,11 +75,36 @@ export class R1NaturalSpatialLocomotionBrain {
   intent(input: Omit<R1SpatialLocomotionInput, "previousMove">): MotionIntent {
     const preferredIntent = this.preferredBrain.intent(input);
     const decision = this.preferredBrain.debugState();
+    const repair = this.preferredBrain.repairEvidence();
+    const companion = companionState(input);
+
+    // Starting in true hard overlap is a safety/recovery regime, not a place to
+    // preserve old temporal momentum. The upstream spatial adapter has already
+    // identified an egress-capable candidate using whole-body queries. Execute
+    // that approved move directly under egress-aware final validation, then let
+    // normal refinement/continuity resume after the body is physically clear.
+    if (repair?.localSafetyState === "HARD_EGRESS") {
+      this.continuity.reset();
+      this.refinementValue = null;
+      this.continuityValue = null;
+      const constrained = constrainFinalCommand({
+        position: companion.position,
+        radius: companion.radius,
+        commandedMove: preferredIntent.move,
+        preferredMoves: [preferredIntent.move],
+        maxSpeed: this.config.maxSpeed,
+        deltaSeconds: S0_STEP_SECONDS,
+        query: input.query,
+        allowInitialEgress: true
+      });
+      this.constraintValue = constrained;
+      return { actorId: "companion", move: { ...constrained.finalMove } };
+    }
+
     this.refinementValue = decision
       ? refinePreferredVelocity(decision, input.query)
       : null;
     const refinedMove = this.refinementValue?.refinedMove ?? preferredIntent.move;
-    const companion = companionState(input);
 
     const shaped = this.continuity.step({
       currentVelocity: companion.actualVelocity,
@@ -100,10 +125,6 @@ export class R1NaturalSpatialLocomotionBrain {
     });
     this.constraintValue = constrained;
 
-    // The continuity controller's stored acceleration describes the command it
-    // produced. If the hard gate rejects that command, that temporal state no
-    // longer corresponds to the command World will execute. Reset only that
-    // actuator history; upstream spatial state and the World remain untouched.
     if (constrained.constrained) this.continuity.reset();
 
     return { actorId: "companion", move: { ...constrained.finalMove } };
