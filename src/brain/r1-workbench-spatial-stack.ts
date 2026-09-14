@@ -81,13 +81,20 @@ export class R1WorkbenchSpatialStack {
     natural: boolean,
     input: Omit<R1SpatialLocomotionInput, "previousMove">
   ): MotionIntent {
-    // Authoritative movement is computed first on every physics tick. CCC-0 is a
-    // slower research process: expensive relationship/topology evidence is sampled
-    // on a tactical cadence and can never block or alter the already-selected command.
+    // Authoritative movement is selected first on every physics tick. CCC-0 cannot
+    // alter that selected value, but its synchronous research work may still add
+    // wall-clock latency; browser/perf evidence must qualify that separately.
     const intent = natural ? this.natural.intent(input) : this.direct.intent(input);
     const preferred = natural
       ? this.natural.debugState().movement.preferred
       : this.direct.debugState().preferred;
+
+    // A failed shadow evaluation is event evidence from its originating cognition
+    // tick, not persistent state. Do not let a cached failure masquerade as fresh
+    // same-tick evidence on the intervening motor ticks.
+    if (input.snapshot.tick < this.nextShadowTick && this.shadowError !== null) {
+      this.shadowError = null;
+    }
 
     if (input.snapshot.tick >= this.nextShadowTick) {
       try {
@@ -98,7 +105,7 @@ export class R1WorkbenchSpatialStack {
           history: this.shadowHistory,
           legacyRelationshipTarget: input.relationshipTarget,
           legacyPreferredVelocity: preferred?.selectedVelocity ?? null,
-          // World will apply the same actor speed scale to MotionIntent. Capture
+          // World applies the same workbench speed scale to MotionIntent. Capture
           // the already-selected command as velocity evidence without changing it.
           legacyAuthoritativeVelocity: intentVelocity(intent)
         });
