@@ -1,4 +1,5 @@
 import { RapierPhysicalWorld } from "../physics/rapier-physical-world";
+import { movementCapabilityFromScenario, type MovementCapability } from "./movement-capability";
 import { scenario } from "./scenarios";
 import type {
   ActorId,
@@ -26,6 +27,10 @@ export class LabWorld {
 
   dispose(): void {
     this.physical.dispose();
+  }
+
+  actorMovementCapability(actorId: ActorId): MovementCapability {
+    return movementCapabilityFromScenario(scenario(this.scenarioIdValue), actorId);
   }
 
   directTraversal(actorId: ActorId, target: Vec2): DirectTraversalResult {
