@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Companion Brain Lab — R1 Causal Workbench</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #0d1117;
+        color: #e7e9ee;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #0d1117; }
+      button, input { font: inherit; }
+      #lab-shell { display: flex; width: 100vw; height: 100vh; min-width: 0; min-height: 0; }
+      #game-pane { flex: 1 1 auto; min-width: 0; min-height: 0; display: grid; place-items: center; background: #111318; overflow: hidden; }
+      #game-root { width: 100%; height: 100%; min-width: 0; min-height: 0; }
+      #game-root canvas { display: block; }
+
+      #debug-panel {
+        position: relative;
+        flex: 0 0 clamp(420px, 27vw, 520px);
+        width: clamp(420px, 27vw, 520px);
+        min-width: 0;
+        border-left: 1px solid #30363d;
+        background: #0d1117;
+        overflow: hidden;
+        transition: flex-basis 140ms ease, width 140ms ease;
+      }
+      #debug-panel.is-collapsed { flex-basis: 44px; width: 44px; }
+      .debug-panel-header {
+        min-height: 58px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 8px;
+        align-items: center;
+        padding: 9px 8px 9px 12px;
+        border-bottom: 1px solid #30363d;
+        background: #161b22;
+      }
+      .debug-heading { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+      .debug-heading strong { font-size: 14px; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .debug-subtitle { color: #8b949e; font: 11px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .debug-badge { padding: 4px 7px; border: 1px solid #30363d; border-radius: 999px; color: #c9d1d9; background: #21262d; font: 700 10px/1 ui-monospace, monospace; }
+      .debug-badge[data-tone="success"] { border-color: #2ea043; color: #7ee787; background: rgba(46,160,67,.12); }
+      .debug-badge[data-tone="warning"] { border-color: #9e6a03; color: #e3b341; background: rgba(187,128,9,.12); }
+      .debug-badge[data-tone="danger"] { border-color: #da3633; color: #ff7b72; background: rgba(248,81,73,.12); }
+      .debug-collapse { width: 30px; height: 32px; border: 1px solid #30363d; border-radius: 6px; background: #21262d; color: #c9d1d9; cursor: pointer; }
+      .debug-collapse:hover, .debug-button:hover { background: #30363d; }
+      .debug-panel-content { height: calc(100vh - 58px); overflow-y: auto; overscroll-behavior: contain; padding: 10px; }
+      .debug-section { border: 1px solid #21262d; border-radius: 8px; margin-bottom: 9px; background: #11161d; }
+      .debug-section[data-tone="warning"] { border-color: rgba(187,128,9,.6); }
+      .debug-section[data-tone="danger"] { border-color: rgba(248,81,73,.65); }
+      .debug-section[data-tone="success"] { border-color: rgba(46,160,67,.55); }
+      .debug-section h2, .debug-section summary { margin: 0; padding: 9px 10px; color: #c9d1d9; font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+      .debug-section summary { cursor: pointer; user-select: none; }
+      .debug-lines { border-top: 1px solid #21262d; padding: 8px 10px 10px; color: #9da7b3; font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
+      .debug-lines > div + div { margin-top: 3px; }
+      .debug-controls { padding-bottom: 9px; }
+      .debug-button-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 0 9px; }
+      .debug-scenario-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 6px; }
+      .debug-button { min-height: 32px; border: 1px solid #30363d; border-radius: 6px; padding: 5px 7px; background: #21262d; color: #c9d1d9; cursor: pointer; font-size: 11px; }
+      .debug-layer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 8px; padding: 0 10px 10px; }
+      .debug-layer-toggle { display: flex; align-items: center; gap: 7px; min-width: 0; color: #9da7b3; font-size: 11px; }
+      .debug-layer-toggle input { accent-color: #58a6ff; }
+      .debug-hint { padding: 9px 10px; color: #6e7681; font: 10px/1.45 ui-monospace, monospace; }
+
+      #debug-panel.is-collapsed .debug-heading,
+      #debug-panel.is-collapsed .debug-badge,
+      #debug-panel.is-collapsed .debug-panel-content { display: none; }
+      #debug-panel.is-collapsed .debug-panel-header { grid-template-columns: 1fr; padding: 9px 6px; }
+      #debug-panel.is-collapsed .debug-collapse { width: 30px; justify-self: center; }
+
+      @media (max-width: 980px) {
+        #debug-panel { flex-basis: min(46vw, 460px); width: min(46vw, 460px); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="lab-shell">
+      <main id="game-pane" aria-label="Companion Brain Lab world">
+        <div id="game-root"></div>
+      </main>
+      <aside id="debug-panel" aria-label="Causal debug workbench"></aside>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

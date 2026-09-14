@@ -1,0 +1,21 @@
+name: validate
+
+on:
+  push:
+    branches:
+      - main
+      - planning/initial-research-skeleton
+      - "experiment/**"
+      - "foundation/**"
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run check

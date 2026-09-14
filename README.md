@@ -4,31 +4,75 @@ Experimental sibling laboratory to [`Jozzpoly/Llm-Live-NPC`](https://github.com/
 
 ## Core research question
 
-> Can one or a few companion NPCs become genuinely useful, readable, autonomous partners who react continuously to the world and the player, cooperate without constant micromanagement, and interpret player commands as intent rather than as rigid puppeteering?
+> Can one or a few companion NPCs become genuinely useful, readable, autonomous partners who react continuously to the world and the player, cooperate without constant micromanagement, and interpret player commands as intent rather than rigid puppeteering?
 
-The laboratory begins from the premise that fast local intelligence matters. LLM or other higher cognition may later complement that local brain, but is **not** assumed to be the per-frame controller or the architectural center of the project.
+Fast local intelligence is the primary experimental substrate. LLM or other higher cognition may later complement it, but is not assumed to be the per-frame controller or architectural center.
 
 ## Relationship to LLM Live NPC
 
-This is a **sibling research repository**, not a fork, feature branch, downstream product, or replacement for LLM Live NPC.
+This is a **sibling research repository**, not a fork or downstream product. The laboratories may exchange proven donors and research findings, but neither repository is automatically authoritative over the other.
 
-The two laboratories may exchange proven donors and research findings, but neither repository is automatically authoritative over the other. Shared infrastructure or a common runtime should emerge only when repeated evidence shows that the same abstraction is genuinely useful in both projects.
+Shared principles currently defended here include:
 
-Useful current shared principles include:
-
-- the world owns physical truth and factual outcomes;
-- perception and knowledge remain situated rather than omniscient;
-- intention, execution, and outcome are distinct;
+- World / physics owns physical truth and factual outcomes;
+- intention, execution and outcome are distinct;
 - routine embodied behavior must not depend on per-frame LLM calls;
-- debugging should expose the agent's observable state, inputs, decisions, and causal outcomes without requiring hidden chain-of-thought;
-- donor reuse is selective and provenance-aware rather than wholesale architecture inheritance.
+- debugging exposes observable inputs, decisions, authority and causal outcomes;
+- donor reuse is selective and evidence/provenance-aware.
 
-These are starting constraints for research, not a final AI architecture.
+## Live project state
 
-## Current state
+**FOUNDATION PASS · REWORK-READY**
 
-**Pre-architecture / research framing.**
+The pre-rework survival / causal-hardening campaign is complete. A previous Owner browser run exposed a whole-workbench freeze despite strong automated R1 evidence. That failure was reproduced, decomposed and promoted into deterministic regressions rather than hidden.
 
-The repository is intentionally almost empty. The immediate goal is to define the experimental skeleton, research questions, donor boundaries, evidence strategy, and first playable investigation before committing to behavior trees, utility AI, GOAP, planners, blackboards, squad hierarchies, LLM orchestration, or any other particular decision architecture.
+The current foundation now defends ordinary constrained-world states such as:
 
-The first design pass should remain easy to revise as evidence and Owner playtesting accumulate.
+- `NORMAL`;
+- `HARD_EGRESS`;
+- `NO_SAFE_VELOCITY`;
+- `NO_VALID_RELATIONAL_SLOT`.
+
+The active movement substrate separates hard physical feasibility from desired clearance, preserves traversal options through the real browser adapter, performs post-World progress/recovery, retains an independent catastrophic-fault fail-stop surface, and records phase-coherent causal evidence.
+
+The exact public Owner-tested runtime is:
+
+`b217943e027e66993f0010643b2933b01d4b1e6d`
+
+Public preview:
+
+https://jozzpoly.github.io/Companion-Brain-Lab/
+
+That runtime passed 137/137 tests before deployment and survived an approximately 123-second Owner torture run without an unexplained whole-runtime freeze, spontaneous fault, permanent companion shutdown or sticky recovery state. A later test-only branch head adds a parallel DIRECT 180-step full-chain survival rehearsal; the complete suite passes 138/138 tests.
+
+See [`docs/FOUNDATION_FINAL_READINESS.md`](docs/FOUNDATION_FINAL_READINESS.md) for the final evidence boundary.
+
+## Current authority / evidence documents
+
+- [`docs/FOUNDATION_FINAL_READINESS.md`](docs/FOUNDATION_FINAL_READINESS.md) — final foundation verdict and next-stage boundary;
+- [`docs/FOUNDATION_ACTIVE_AUTHORITY_MAP.md`](docs/FOUNDATION_ACTIVE_AUTHORITY_MAP.md) — current runtime authority at module/symbol level;
+- [`docs/FOUNDATION_RUNTIME_SURVIVAL_AUDIT.md`](docs/FOUNDATION_RUNTIME_SURVIVAL_AUDIT.md) — closed survival/causal audit;
+- [`docs/FOUNDATION_OWNER_FAULT_PROBE_EVIDENCE.md`](docs/FOUNDATION_OWNER_FAULT_PROBE_EVIDENCE.md) — real-browser catastrophic-fault evidence and the preserved probe-UX failure;
+- [`docs/FOUNDATION_PUBLIC_PREVIEW_QUALIFICATION.md`](docs/FOUNDATION_PUBLIC_PREVIEW_QUALIFICATION.md) — exact Pages/public-artifact evidence;
+- [`docs/R1_AUDIT_LEDGER.md`](docs/R1_AUDIT_LEDGER.md) — historical R1 evidence, not current authority;
+- [`docs/INITIAL_RESEARCH_SKELETON.md`](docs/INITIAL_RESEARCH_SKELETON.md) — original Owner intent and broad research framing.
+
+Older S0-S5/R1 plans, qualification files, scenes and tests remain preserved as research history / donor evidence. Their presence does not restore their old top-level authority.
+
+## Next stage — aggressive Companion Coordination Core redesign
+
+Foundation PASS does **not** mean the current companion is good enough. It means the known substrate blockers are no longer a reason to avoid large changes.
+
+The next stage is explicitly allowed to reconsider or replace:
+
+- the legacy eight-slot relationship objective with player-relative region / field reasoning;
+- player movement corridor, right-of-way and chokepoint cooperation;
+- dynamic pace / urgency / catch-up speed authority;
+- the current `MotionIntent` / desired-speed contract;
+- NATURAL temporal realization versus dynamic player-conflict authority;
+- selective ideas from the old S5 continuous relationship-field experiment;
+- later multi-companion coordination, commands and combat.
+
+A preserved R1-5A red experiment already demonstrates one important next-stage finding: NATURAL temporal continuity can transform a player-safe upstream move into a final command that creates real player/companion contact because the current final command gate protects hard static geometry, not the full dynamic player-separation contract. That finding should inform the redesign rather than be patched blindly into the old architecture.
+
+The intended workflow from here is **not incremental polishing of the eight-slot system**. The project is now ready for deliberate, large architectural change while retaining the defended World/physics/evidence boundaries unless new evidence justifies replacing them too.
