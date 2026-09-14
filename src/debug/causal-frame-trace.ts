@@ -18,6 +18,11 @@ export interface CausalShadowCoordinationEvidence {
   regionAnchor: Vec2 | null;
   regionBestSampleId: string | null;
   regionCoherentSampleCount: number;
+  regionRouteEvaluatedCount: number;
+  regionStaticTraversalQueryCount: number;
+  regionTopologyKeyChanged: boolean | null;
+  regionCoherentOverlapRatio: number | null;
+  regionAnchorDisplacement: number | null;
   paceLabel: string;
   paceUrgency: number;
   desiredSpeed: number;
