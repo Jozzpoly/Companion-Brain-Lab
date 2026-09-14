@@ -257,6 +257,7 @@ export class CausalPanel {
 
     for (let index = 0; index < desiredNodes.length; index += 1) {
       const desired = desiredNodes[index];
+      if (!desired) continue;
       const current = this.sectionsRoot.children.item(index);
       if (current !== desired) this.sectionsRoot.insertBefore(desired, current);
     }
