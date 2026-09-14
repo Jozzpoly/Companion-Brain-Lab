@@ -61,7 +61,10 @@ export interface ShadowRelationshipRegion {
   playerHeadingSource: ShadowPlayerHeadingSource;
   companionPosition: Vec2;
   samples: readonly ShadowRegionSample[];
+  /** Number of candidate targets sent through route qualification. */
   routeEvaluatedCount: number;
+  /** Actual static traversal calls issued by all route graphs + representative revalidation. */
+  staticTraversalQueryCount: number;
   bestSampleId: string | null;
   coherentSampleIds: readonly string[];
   topologyKey: string | null;
@@ -359,8 +362,15 @@ function weightedRepresentative(samples: readonly ShadowRegionSample[]): Vec2 | 
 export function evaluateShadowRelationshipRegion(
   input: ShadowRelationshipRegionInput
 ): ShadowRelationshipRegion {
+  let staticTraversalQueryCount = 0;
+  const countedQuery: StaticTraversalQuery = (from, to, radius, options) => {
+    staticTraversalQueryCount += 1;
+    return input.query(from, to, radius, options);
+  };
+  const countedInput: ShadowRelationshipRegionInput = { ...input, query: countedQuery };
+
   const raw = buildSamples(input);
-  evaluateRouteShortlist(input, raw.companion, raw.samples);
+  evaluateRouteShortlist(countedInput, raw.companion, raw.samples);
 
   const reachable = raw.samples
     .filter((sample) => sample.routeEvaluated && sample.reachable)
@@ -383,6 +393,7 @@ export function evaluateShadowRelationshipRegion(
       companionPosition: { ...raw.companion.position },
       samples: raw.samples,
       routeEvaluatedCount,
+      staticTraversalQueryCount,
       bestSampleId: null,
       coherentSampleIds: [],
       topologyKey: null,
@@ -416,7 +427,7 @@ export function evaluateShadowRelationshipRegion(
       target: weighted,
       radius: raw.companion.radius,
       clearance: S2C_ROUTE_CLEARANCE,
-      query: input.query
+      query: countedQuery
     });
     representativeRouteStatus = plan.status;
     if (routeQualifies(plan.status)) {
@@ -438,6 +449,7 @@ export function evaluateShadowRelationshipRegion(
     companionPosition: { ...raw.companion.position },
     samples: raw.samples,
     routeEvaluatedCount,
+    staticTraversalQueryCount,
     bestSampleId: best.id,
     coherentSampleIds: coherent.map((sample) => sample.id),
     topologyKey,
