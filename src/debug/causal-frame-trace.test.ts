@@ -21,12 +21,20 @@ function frame(sequence: number, observationTick: number, outcomeTick: number): 
       spatialState: "ADVANCE",
       spatialCandidate: "d3.s1.00",
       preferredVelocity: { x: 2, y: 1 },
-      refinedVelocity: { x: 1.8, y: 1.1 }
+      refinedVelocity: { x: 1.8, y: 1.1 },
+      routeClearanceConstrained: true,
+      comfortStartViolated: true,
+      comfortStartBlockers: ["door.wall.top"],
+      rehabilitatedCandidateCount: 2,
+      comfortExitCandidateCount: 1
     },
     command: {
       actuator: "natural",
       commandedMove: { x: 0.5, y: 0.2 },
-      commandedVelocity: { x: 1.5, y: 0.6 }
+      commandedVelocity: { x: 1.5, y: 0.6 },
+      finalConstraintSource: "preferred-fallback",
+      finalConstrained: true,
+      finalConstraintReason: "continuity command hard-blocked; using hard-safe preferred move"
     },
     outcome: {
       worldTick: outcomeTick,
@@ -36,13 +44,19 @@ function frame(sequence: number, observationTick: number, outcomeTick: number): 
       companionContacts: ["player"],
       displacement: 0.022,
       postRouteStatus: "routed",
-      postRoutePath: "start>corner>target"
+      postRoutePath: "start>corner>target",
+      postRouteClearanceConstrained: false
     },
     post: {
-      state: "progressing",
-      reason: "diagnostic",
+      state: "RECOVERING",
+      reason: "player conflict cleared; refresh local movement state once before continuing",
       desiredClearanceProbe: "clear",
-      hardProbe: "clear"
+      hardProbe: "clear",
+      action: "RETRY_LOCAL",
+      noProgressTicks: 0,
+      unreachableTicks: 0,
+      retryCount: 1,
+      appliedLocalRetries: 1
     }
   };
 }
@@ -58,26 +72,48 @@ describe("R1 causal frame trace", () => {
     expect(latest?.observation.worldTick).toBe(41);
     expect(latest?.outcome.worldTick).toBe(42);
     expect(latest?.decision.routeStatus).toBe("routed");
-    expect(latest?.post.state).toBe("progressing");
+    expect(latest?.post.state).toBe("RECOVERING");
+  });
+
+  it("preserves the R1-4 hard/comfort, final-command and post-outcome recovery contract", () => {
+    const trace = new CausalFrameTrace();
+    trace.record(frame(trace.nextSequence(), 10, 11));
+
+    const latest = trace.latest();
+    expect(latest?.decision.routeClearanceConstrained).toBe(true);
+    expect(latest?.decision.comfortStartViolated).toBe(true);
+    expect(latest?.decision.comfortStartBlockers).toEqual(["door.wall.top"]);
+    expect(latest?.decision.rehabilitatedCandidateCount).toBe(2);
+    expect(latest?.decision.comfortExitCandidateCount).toBe(1);
+    expect(latest?.command.finalConstraintSource).toBe("preferred-fallback");
+    expect(latest?.command.finalConstrained).toBe(true);
+    expect(latest?.outcome.postRouteClearanceConstrained).toBe(false);
+    expect(latest?.post.action).toBe("RETRY_LOCAL");
+    expect(latest?.post.retryCount).toBe(1);
+    expect(latest?.post.appliedLocalRetries).toBe(1);
   });
 
   it("defensively clones nested public evidence", () => {
     const trace = new CausalFrameTrace();
     const sourceContacts = ["player"];
+    const sourceComfortBlockers = ["door.wall.top"];
     const value = frame(trace.nextSequence(), 1, 2);
     value.outcome.companionContacts = sourceContacts;
+    value.decision.comfortStartBlockers = sourceComfortBlockers;
     trace.record(value);
 
     value.observation.companionPosition.x = 999;
     value.decision.relationshipTarget!.x = 999;
     value.command.commandedMove.x = 999;
     sourceContacts.push("wall");
+    sourceComfortBlockers.push("door.wall.bottom");
 
     const latest = trace.latest();
     expect(latest?.observation.companionPosition.x).toBe(1);
     expect(latest?.decision.relationshipTarget?.x).toBe(3);
     expect(latest?.command.commandedMove.x).toBe(0.5);
     expect(latest?.outcome.companionContacts).toEqual(["player"]);
+    expect(latest?.decision.comfortStartBlockers).toEqual(["door.wall.top"]);
   });
 
   it("bounds history while keeping sequence monotonic", () => {
