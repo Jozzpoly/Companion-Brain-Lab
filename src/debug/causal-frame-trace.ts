@@ -20,12 +20,13 @@ export interface CausalShadowCoordinationEvidence {
   playerCorridorState: string;
   playerCorridorConfidence: number;
   playerCorridorEndpoint: Vec2;
-  playerFlowConflictState: string;
-  playerFlowClosestApproachTime: number | null;
-  playerFlowPhysicalClearance: number | null;
-  playerFlowComfortClearance: number | null;
-  playerFlowCompanionClosest: Vec2 | null;
-  playerFlowPlayerClosest: Vec2 | null;
+  /** Added during CCC-0 conflict falsification; optional only until scene transport is upgraded. */
+  playerFlowConflictState?: string;
+  playerFlowClosestApproachTime?: number | null;
+  playerFlowPhysicalClearance?: number | null;
+  playerFlowComfortClearance?: number | null;
+  playerFlowCompanionClosest?: Vec2 | null;
+  playerFlowPlayerClosest?: Vec2 | null;
   legacyTargetToShadowAnchorDistance: number | null;
   error: string | null;
 }
@@ -97,7 +98,7 @@ export interface CausalFrame {
   post: CausalPostClassification;
 }
 
-function cloneVec(value: Vec2 | null): Vec2 | null {
+function cloneVec(value: Vec2 | null | undefined): Vec2 | null {
   return value ? { ...value } : null;
 }
 
@@ -110,8 +111,12 @@ function cloneShadow(
     ...value,
     regionAnchor: cloneVec(value.regionAnchor),
     playerCorridorEndpoint: { ...value.playerCorridorEndpoint },
-    playerFlowCompanionClosest: cloneVec(value.playerFlowCompanionClosest),
-    playerFlowPlayerClosest: cloneVec(value.playerFlowPlayerClosest)
+    playerFlowCompanionClosest: value.playerFlowCompanionClosest === undefined
+      ? undefined
+      : cloneVec(value.playerFlowCompanionClosest),
+    playerFlowPlayerClosest: value.playerFlowPlayerClosest === undefined
+      ? undefined
+      : cloneVec(value.playerFlowPlayerClosest)
   };
 }
 
