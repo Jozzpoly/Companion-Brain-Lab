@@ -76,9 +76,6 @@ function obstacleCornerNodes(
   obstacle: ObstacleSpec,
   desiredQueryRadius: number
 ): StaticRouteNode[] {
-  // Keep route corners at the preferred clearance even though connectivity is
-  // now decided by hard-body feasibility. This preserves nominal route quality
-  // without turning the preference into an unrecoverable physical law.
   const cornerMargin = desiredQueryRadius + S2C_CORNER_EPSILON;
   const x0 = obstacle.x - cornerMargin;
   const x1 = obstacle.x + obstacle.width + cornerMargin;
@@ -122,7 +119,8 @@ function buildEdges(
   nodes: readonly StaticRouteNode[],
   hardQueryRadius: number,
   desiredQueryRadius: number,
-  query: StaticTraversalQuery
+  query: StaticTraversalQuery,
+  hardStartViolated: boolean
 ): StaticRouteEdge[] {
   const edges: StaticRouteEdge[] = [];
   for (let i = 0; i < nodes.length; i += 1) {
@@ -131,7 +129,14 @@ function buildEdges(
     for (let j = i + 1; j < nodes.length; j += 1) {
       const to = nodes[j];
       if (!to) continue;
-      const hard = query(from.position, to.position, hardQueryRadius);
+      const hard = query(
+        from.position,
+        to.position,
+        hardQueryRadius,
+        hardStartViolated && from.kind === "start"
+          ? { initialOverlap: "allow-egress" }
+          : undefined
+      );
       const comfort = query(
         from.position,
         to.position,
@@ -279,17 +284,20 @@ export function planStaticShadowRoute(options: {
     };
   }
 
+  const hardStartViolated = !circleFitsStaticWorld(options.snapshot, options.start, queryRadius);
   const nodes = buildNodes(options.snapshot, options.start, options.target, desiredQueryRadius);
-  const edges = buildEdges(nodes, queryRadius, desiredQueryRadius, options.query);
+  const edges = buildEdges(nodes, queryRadius, desiredQueryRadius, options.query, hardStartViolated);
   const direct = edges.find((edge) => edge.id === edgeId("start", "target"));
   if (direct?.clear) {
     const constrainedEdgeIds = direct.comfortClear ? [] : [direct.id];
     return {
       ...base,
       status: "direct",
-      reason: direct.comfortClear
-        ? "hard-body direct traversal is clear with desired clearance"
-        : "hard-body direct traversal is clear but desired clearance is constrained",
+      reason: hardStartViolated
+        ? "hard-body direct egress is clear from an initially overlapping start"
+        : direct.comfortClear
+          ? "hard-body direct traversal is clear with desired clearance"
+          : "hard-body direct traversal is clear but desired clearance is constrained",
       clearanceConstrained: constrainedEdgeIds.length > 0,
       constrainedEdgeIds,
       nodes,
@@ -329,11 +337,13 @@ export function planStaticShadowRoute(options: {
   return {
     ...base,
     status: "routed",
-    reason: constrainedEdgeIds.length > 0
-      ? "deterministic hard-feasible graph route found with constrained desired clearance"
-      : direct?.blocker
-        ? `hard-body direct route blocked by ${direct.blocker.label}; deterministic graph route found with desired clearance`
-        : "deterministic graph route found with desired clearance",
+    reason: hardStartViolated
+      ? "deterministic hard-feasible graph egress route found from an initially overlapping start"
+      : constrainedEdgeIds.length > 0
+        ? "deterministic hard-feasible graph route found with constrained desired clearance"
+        : direct?.blocker
+          ? `hard-body direct route blocked by ${direct.blocker.label}; deterministic graph route found with desired clearance`
+          : "deterministic graph route found with desired clearance",
     clearanceConstrained: constrainedEdgeIds.length > 0,
     constrainedEdgeIds,
     nodes,
