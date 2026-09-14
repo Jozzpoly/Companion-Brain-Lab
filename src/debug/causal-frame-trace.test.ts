@@ -63,13 +63,15 @@ describe("R1 causal frame trace", () => {
 
   it("defensively clones nested public evidence", () => {
     const trace = new CausalFrameTrace();
+    const sourceContacts = ["player"];
     const value = frame(trace.nextSequence(), 1, 2);
+    value.outcome.companionContacts = sourceContacts;
     trace.record(value);
 
     value.observation.companionPosition.x = 999;
     value.decision.relationshipTarget!.x = 999;
     value.command.commandedMove.x = 999;
-    value.outcome.companionContacts.push("wall");
+    sourceContacts.push("wall");
 
     const latest = trace.latest();
     expect(latest?.observation.companionPosition.x).toBe(1);
