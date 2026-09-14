@@ -42,6 +42,7 @@ import type {
   WorldSnapshot
 } from "../world/types";
 import { LabWorld } from "../world/world";
+import { bindWorldStaticTraversalQuery } from "./static-traversal-query-adapter";
 
 const VIEW_WIDTH = 1200;
 const VIEW_HEIGHT = 800;
@@ -306,11 +307,12 @@ export class R1LabScene extends Phaser.Scene {
       actuator = this.naturalActuator ? "natural" : "direct";
       const route = this.buildRoute(before, relationship.target);
       this.decisionRoutePlan = route;
+      const traversalQuery = bindWorldStaticTraversalQuery(this.world);
       const input = {
         snapshot: before,
         relationshipTarget: relationship.target,
         routePlan: route,
-        query: (from: Vec2, to: Vec2, radius: number) => this.world!.staticCircleTraversal(from, to, radius),
+        query: traversalQuery,
         occupancy: (center: Vec2, radius: number) => this.world!.staticCircleOccupancy(center, radius)
       };
 
@@ -361,7 +363,7 @@ export class R1LabScene extends Phaser.Scene {
       start: companion.position,
       target,
       radius: companion.radius,
-      query: (from, to, radius) => this.world!.staticCircleTraversal(from, to, radius)
+      query: bindWorldStaticTraversalQuery(this.world)
     });
   }
 
@@ -402,7 +404,9 @@ export class R1LabScene extends Phaser.Scene {
         noProgressTicks: this.progressDecision.noProgressTicks,
         unreachableTicks: this.progressDecision.unreachableTicks,
         retryCount: this.progressDecision.retryCount,
-        appliedLocalRetries: this.appliedLocalRetries
+        appliedLocalRetries: this.appliedLocalRetries,
+        retryBudgetUsedThisEpisode: this.progressDecision.retryCount,
+        cumulativeLocalRetriesSinceReset: this.appliedLocalRetries
       };
     }
 
