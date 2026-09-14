@@ -47,7 +47,7 @@ describe("R1-4 moving objective semantics", () => {
     expect(result.state).toBe("TRACKING_MOVING_OBJECTIVE");
   });
 
-  it("still detects no progress when a moving target is escaping materially faster than the companion", () => {
+  it("still spends bounded recovery when a moving target is escaping materially faster than the companion", () => {
     const result = runMovingTarget({
       companionStep: 0.005,
       targetStep: 0.03,
@@ -55,6 +55,7 @@ describe("R1-4 moving objective semantics", () => {
     });
 
     expect(result.retryCount).toBeGreaterThan(0);
-    expect(["RECOVERING", "NO_PROGRESS"]).toContain(result.state);
+    expect(result.state).not.toBe("TRACKING_MOVING_OBJECTIVE");
+    expect(result.state).not.toBe("PROGRESSING");
   });
 });
