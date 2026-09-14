@@ -124,6 +124,7 @@ describe("CCC-0 shadow relationship region", () => {
   it("produces a region representative away from the player instead of centroid-collapsing to player center", () => {
     const result = evaluateShadowRelationshipRegion({ snapshot: snapshot(), query: clearQuery });
     expect(result.state).toBe("REGION");
+    expect(result.noRegionReason).toBeNull();
     expect(result.representativeAnchor).not.toBeNull();
     const anchor = result.representativeAnchor;
     if (!anchor) throw new Error("Expected a representative anchor.");
@@ -131,13 +132,30 @@ describe("CCC-0 shadow relationship region", () => {
     expect(result.coherentSampleIds.length).toBeGreaterThan(0);
   });
 
-  it("represents route exhaustion as explicit no-region data instead of inventing a player-position fallback", () => {
+  it("labels bounded route-shortlist exhaustion without claiming every untested sample is unreachable", () => {
     const result = evaluateShadowRelationshipRegion({ snapshot: snapshot(), query: blockedQuery });
     expect(result.state).toBe("NO_REACHABLE_REGION");
+    expect(result.noRegionReason).toBe("ROUTE_SHORTLIST_EXHAUSTED");
     expect(result.bestSampleId).toBeNull();
     expect(result.coherentSampleIds).toEqual([]);
     expect(result.representativeAnchor).toBeNull();
     expect(result.representativeSource).toBe("none");
+    expect(result.reason).toContain("untested samples are not claimed unreachable");
+  });
+
+  it("distinguishes a field with no hard-valid body sample from route-shortlist exhaustion", () => {
+    const tiny: WorldSnapshot = {
+      tick: 0,
+      scenarioId: "open",
+      width: 1,
+      height: 1,
+      actors: [actor("companion", 0.5, 0.5), actor("player", 0.5, 0.5)],
+      obstacles: []
+    };
+    const result = evaluateShadowRelationshipRegion({ snapshot: tiny, query: clearQuery });
+    expect(result.state).toBe("NO_REACHABLE_REGION");
+    expect(result.noRegionReason).toBe("NO_HARD_VALID_SAMPLE");
+    expect(result.routeEvaluatedCount).toBe(0);
   });
 
   it("keeps disconnected near-best polar components separate", () => {
