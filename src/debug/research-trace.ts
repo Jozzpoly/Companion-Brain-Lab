@@ -17,6 +17,10 @@ export interface TraceActorSample {
   id: string;
   x: number;
   y: number;
+  requestedVx: number;
+  requestedVy: number;
+  actualVx: number;
+  actualVy: number;
   requestedSpeed: number;
   actualSpeed: number;
   motionError: number;
@@ -114,6 +118,10 @@ export class ResearchTrace {
         id: actor.id,
         x: actor.position.x,
         y: actor.position.y,
+        requestedVx: actor.requestedVelocity.x,
+        requestedVy: actor.requestedVelocity.y,
+        actualVx: actor.actualVelocity.x,
+        actualVy: actor.actualVelocity.y,
         requestedSpeed: speed(actor.requestedVelocity.x, actor.requestedVelocity.y),
         actualSpeed: speed(actor.actualVelocity.x, actor.actualVelocity.y),
         motionError: actor.motionError,
