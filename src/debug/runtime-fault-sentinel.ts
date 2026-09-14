@@ -15,6 +15,11 @@ export interface RuntimeFaultSentinelOptions {
   onFirstFault?: (record: RuntimeFaultRecord) => void;
 }
 
+export interface FirstFaultReporterOptions extends RuntimeFaultSentinelOptions {
+  present: (record: RuntimeFaultRecord) => void;
+  onContainmentError?: (error: unknown) => void;
+}
+
 function errorLike(value: unknown): { message: string; stack: string | null } {
   if (value instanceof Error) {
     return { message: value.message || value.name, stack: value.stack ?? null };
@@ -45,6 +50,27 @@ export function normalizeRuntimeFault(options: {
     filename: options.filename ?? null,
     line: options.line ?? null,
     column: options.column ?? null
+  };
+}
+
+export function createFirstFaultReporter(
+  options: FirstFaultReporterOptions
+): (record: RuntimeFaultRecord) => void {
+  let firstFault: RuntimeFaultRecord | null = null;
+
+  return (record: RuntimeFaultRecord): void => {
+    if (firstFault) return;
+    firstFault = record;
+
+    // Unknown faults fail-stop once. Secondary errors must not replace the
+    // original causal evidence or repeatedly invoke containment.
+    try {
+      options.onFirstFault?.(record);
+    } catch (containmentError) {
+      options.onContainmentError?.(containmentError);
+    }
+
+    options.present(record);
   };
 }
 
@@ -139,25 +165,15 @@ function createFaultSurface(record: RuntimeFaultRecord): HTMLElement {
 export function installRuntimeFaultSentinel(
   options: RuntimeFaultSentinelOptions = {}
 ): (record: RuntimeFaultRecord) => void {
-  let firstFault: RuntimeFaultRecord | null = null;
-
-  const report = (record: RuntimeFaultRecord): void => {
-    if (firstFault) return;
-    firstFault = record;
-
-    // The sentinel owns first-fault containment, not recovery. The bootstrap
-    // hook stops the simulation loop while leaving the last rendered evidence
-    // visible behind this independent DOM surface.
-    try {
-      options.onFirstFault?.(record);
-    } catch (containmentError) {
-      console.error("Runtime fault containment hook failed", containmentError);
+  const report = createFirstFaultReporter({
+    onFirstFault: options.onFirstFault,
+    onContainmentError: (error) => console.error("Runtime fault containment hook failed", error),
+    present: (record) => {
+      const existing = document.querySelector<HTMLElement>("#runtime-fault-sentinel");
+      existing?.remove();
+      document.body.appendChild(createFaultSurface(record));
     }
-
-    const existing = document.querySelector<HTMLElement>("#runtime-fault-sentinel");
-    existing?.remove();
-    document.body.appendChild(createFaultSurface(record));
-  };
+  });
 
   window.addEventListener("error", (event) => {
     report(normalizeRuntimeFault({
