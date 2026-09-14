@@ -1,270 +1,241 @@
 # Foundation Active Authority Map
 
-Status: **MECHANICAL FOUNDATION PASS · LIVE AUTHORITY MAP · BROWSER / OWNER GATES OPEN**
+Status: **FOUNDATION PASS · REWORK-READY · LIVE AUTHORITY MAP**
 
-Mechanically qualified runtime source: `81877d7fab6b52d4ea683c870074cf12e0793c43`.
+Owner-tested public runtime:
 
-This document answers one narrow question before the next large redesign: **which code currently owns behavior, and which code is retained only as history / donor evidence?**
+`b217943e027e66993f0010643b2933b01d4b1e6d`
 
-The repository intentionally preserves experimental strata. File age, an old qualification document, or the continued presence of a class does not make that class current runtime authority.
+Latest test-only foundation head adding DIRECT survival coverage:
 
-## Current browser runtime chain
+`7c2d25dead58ca26d3bb195bc1b91911c60d32a5`
 
-### 1. Bootstrap and catastrophic-fault boundary
+Canonical readiness verdict:
 
-`src/main.ts`
+[`FOUNDATION_FINAL_READINESS.md`](FOUNDATION_FINAL_READINESS.md)
 
-Current authority:
-- installs `runtime-fault-sentinel` before Phaser;
-- creates the Phaser game with `R1LabScene`;
-- first uncaught runtime fault stops the Phaser game loop and leaves the last rendered evidence visible behind the independent fault surface;
-- constructor/startup failure is normalized into the same fault surface;
-- schedules the research-only deterministic fault probe only when the exact query flag `foundationFaultProbe=1` is present.
+This document answers one question: **which code owns the current defended substrate, and which code is preserved only as historical / donor evidence before the next aggressive redesign?**
 
-Supporting authority:
+## Current runtime authority
+
+### Bootstrap / catastrophic fault boundary
+
+Authority:
+
+- `src/main.ts`
 - `src/debug/runtime-fault-sentinel.ts`
 - `src/debug/foundation-fault-probe.ts`
 
-The sentinel is **observability + fail-stop**, not unknown-fault recovery. The fault probe is qualification apparatus, not gameplay behavior.
+Responsibilities:
 
-### 2. Owner-facing orchestration / workbench
+- install fail-stop observability before Phaser;
+- create the active `R1LabScene`;
+- stop the Phaser loop on the first uncaught catastrophic fault;
+- preserve first-fault evidence and expose the independent fault surface;
+- keep the research-only deliberate fault probe one-shot.
 
-`src/app/r1-lab-scene.ts`
+The sentinel is observability + fail-stop, not unknown-fault recovery.
 
-Owns current browser orchestration:
-- input and scenario control;
-- relationship objective request;
-- pre-World route and movement evidence;
-- player + companion `MotionIntent` submission;
-- World step;
-- post-World route/evidence recomputation;
-- recovery observation;
-- causal trace / incident export;
-- workbench visualization.
+### Owner-facing orchestration / workbench
 
-The scene is an apparatus/orchestrator. It should not silently become a second movement brain.
+Authority:
 
-A critical browser boundary is named and test-bound rather than expressed as an ad-hoc lambda:
+- `src/app/r1-lab-scene.ts`
 - `src/app/static-traversal-query-adapter.ts`
 
-`bindWorldStaticTraversalQuery()` forwards the complete `StaticTraversalQuery` signature, including `StaticTraversalOptions`. This prevents the browser scene from silently dropping `initialOverlap: "allow-egress"` while headless tests remain green.
+Responsibilities:
 
-### 3. Relationship objective authority
+- input/scenario controls;
+- pre-step relationship / route / movement orchestration;
+- player + companion MotionIntent submission;
+- World step;
+- post-World route/recovery observation;
+- causal trace / incident export;
+- research visualization.
 
-`src/brain/relational-positioning.ts`
+`bindWorldStaticTraversalQuery()` preserves the full traversal signature, including `StaticTraversalOptions`, so browser authority cannot silently drop egress semantics proven headlessly.
 
-Current temporary authority for the semantic relationship objective. It still uses the legacy eight-slot vocabulary.
+### Temporary relationship objective
 
-Its public decision now distinguishes:
-- `objectiveState: "TARGET"`;
-- `objectiveState: "NO_VALID_RELATIONAL_SLOT"`.
+Authority:
 
-When every legacy slot is illegal, the brain holds current body position and schedules tactical reconsideration rather than throwing. The exhausted vocabulary state is propagated into post-World recovery as `INTENTIONAL_HOLD`; it must not masquerade as `ARRIVED` merely because the temporary hold target equals the current body position.
+- `src/brain/relational-positioning.ts`
 
-The eight-slot policy is deliberately **not** final architecture. It is a bounded current objective provider that the next redesign may replace aggressively.
+Current vocabulary is still the legacy eight-slot model.
 
-Static endpoint validity is delegated to:
-- `src/navigation/static-body-geometry.ts`.
+Public objective states:
 
-### 4. Static point-fit and traversal semantics
+- `TARGET`;
+- `NO_VALID_RELATIONAL_SLOT`.
 
-Point/body fit authority:
+All-slot exhaustion is an intentional hold/reconsider state, not an exception and not fake arrival.
+
+This module is intentionally **temporary authority** and is expected to be replaced aggressively by player-relative region / field reasoning.
+
+### Static point validity / route authority
+
+Authority:
+
 - `src/navigation/static-body-geometry.ts`
+- `src/navigation/static-router.ts`
 
-`circleFitsStaticWorld()` is shared by relationship endpoint validity and static routing.
+Contracts:
 
-Important contract separation:
-- point occupancy/body fit answers whether a circular body can occupy a coordinate;
-- swept traversal answers whether movement between two coordinates is feasible.
+- point/body fit is distinct from swept traversal;
+- hard physical connectivity is distinct from desired/comfort clearance;
+- route targets/corner nodes remain normally hard-valid;
+- every hard edge leaving the live physical `start` uses egress-aware traversal;
+- exact contact can move away from geometry but not into it.
 
-Obstacle tangency is non-penetrating point occupancy. Exact authored world-boundary tangency is also mathematically legal in the domain helper, while Rapier's overlap query may classify exact contact differently. Tests therefore require physical-backend parity on materially clear/penetrating states rather than forcing point-fit semantics to copy an overlap-query edge case.
+The static router does not own dynamic player cooperation/right-of-way.
 
-### 5. Static route authority
+### Local movement authority
 
-`src/navigation/static-router.ts`
+Entry point:
 
-Current static route authority:
-- hard-body graph connectivity;
-- desired/comfort-clearance evidence;
-- deterministic route selection;
-- shared target/body point validity;
-- egress-aware **hard start edges** for the live physical start node.
-
-Every hard edge leaving `start` uses `initialOverlap: "allow-egress"`. This is intentional even when the mathematical point-fit helper says the start is legal, because exact physical contact can still produce a zero-distance Rapier cast hit.
-
-This is bounded by a directionality regression:
-- from exact boundary contact, movement away from the wall clears;
-- movement into the wall remains blocked.
-
-Target/corner nodes do not receive this live-start privilege. Route targets remain physically valid points and ordinary graph nodes use ordinary traversal semantics.
-
-The router does not own dynamic player cooperation.
-
-### 6. Active local movement stack
-
-Browser runtime enters:
 - `src/brain/r1-workbench-spatial-stack.ts`
 
-It selects one of two A/B realization paths while preserving shared spatial/recovery semantics.
+Shared safety / preferred-motion layer:
 
-#### DIRECT path
+- `src/brain/r1-hard-comfort-spatial.ts`
 
-`r1-workbench-spatial-stack.ts`
-→ `r1-recovering-direct-spatial.ts`
-→ `r1-hard-comfort-spatial.ts`
+DIRECT realization:
 
-#### NATURAL path
+- `src/brain/r1-recovering-direct-spatial.ts`
 
-`r1-workbench-spatial-stack.ts`
-→ `r1-recovering-natural-spatial.ts`
-→ `r1-natural-spatial-locomotion.ts`
-→ `r1-hard-comfort-spatial.ts`
-→ optional normal-regime refinement / continuity / final constraint
+NATURAL realization:
 
-Normal NATURAL realization uses:
+- `src/brain/r1-recovering-natural-spatial.ts`
+- `src/brain/r1-natural-spatial-locomotion.ts`
 - `src/brain/preferred-velocity-refinement.ts`
 - `src/brain/motion-continuity.ts`
 - `src/brain/final-command-constraint.ts`
 
-`HARD_EGRESS` is a safety regime: it bypasses temporal refinement/continuity and executes an upstream-approved egress move through egress-aware final validation.
+Foundation safety vocabulary includes:
 
-A body already in true hard penetration cannot classify STOP as an admissible safe velocity. Only a hard-clearing egress move is admissible; if none exists the public state is `NO_SAFE_VELOCITY` and the system fail-closes to STOP without throwing.
+- `NORMAL`;
+- `HARD_EGRESS`;
+- `NO_SAFE_VELOCITY`.
 
-### 7. Important symbol-level dependency on preserved S3 code
+`HARD_EGRESS` is a safety regime: NATURAL bypasses temporal smoothing/continuity and executes the approved outward escape through egress-aware final validation.
 
-`src/brain/spatial-locomotion.ts` is **mixed authority**, not simply active or historical.
+A body in true hard penetration cannot classify STOP as a normal admissible safe result. If no hard-clearing egress exists, the system exposes `NO_SAFE_VELOCITY` and fail-closes without throwing.
 
-Active R1 uses its low-level primitives and data model:
-- spatial observation;
-- candidate generation/scoring;
-- candidate selection when at least one candidate is admissible;
-- constants/types used by the R1 wrapper.
+### Preserved S3 primitive dependency
 
-However these old entry points are **not current browser runtime authority**:
-- raw `evaluateSpatialLocomotion()` ordinary candidate-exhaustion semantics;
-- raw `SpatialLocomotionBrain` as an independently authoritative mover.
+`src/brain/spatial-locomotion.ts` is mixed authority.
 
-The R1 hard/comfort adapter owns the ordinary zero-admissible-candidate boundary before calling the historical selector. Therefore the preserved S3 throw in `chooseSpatialVelocity()` is an internal invariant for callers that violate that boundary, not the current gameplay state machine.
+R1 still uses its low-level observation / candidate generation / scoring / selection primitives and types.
 
-### 8. World / physics authority
+The old raw top-level S3 mover is **not** current browser authority. R1 intercepts ordinary zero-admissible-candidate states before historical invariant throws can become gameplay termination.
 
-Domain boundary:
+### World / physics authority
+
+Authority:
+
 - `src/world/world.ts`
-
-Physical execution:
 - `src/physics/rapier-physical-world.ts`
 
-Rapier owns physical resolution. The brain requests motion; it does not author final body positions.
+World owns domain progression and MotionIntent validation. Rapier owns physical resolution and static scene queries. Brain layers request motion; they do not author final body positions.
 
-Static traversal and occupancy queries also come through the physical world adapter. Dynamic actors are intentionally excluded from static geometry queries.
+### Post-World progress / recovery
 
-### 9. Post-World temporal progress / recovery authority
+Authority:
 
-After each World step:
-- route is recomputed from post-World state;
-- `src/brain/r1-recovery-supervisor.ts`;
-- `src/brain/progress-recovery.ts`.
+- `src/brain/r1-recovery-supervisor.ts`
+- `src/brain/progress-recovery.ts`
 
-The progress monitor owns temporal classification such as:
-- `ARRIVED`;
-- `PROGRESSING`;
-- `TRACKING_MOVING_OBJECTIVE`;
-- `INTENTIONAL_HOLD`;
-- `BLOCKED_PLAYER` / `BLOCKED_STATIC`;
-- `ROUTE_INVALID`;
-- transient/persistent unreachable;
-- `RECOVERING` / `NO_PROGRESS`.
+Public temporal states include arrival, progress, moving-objective tracking, intentional hold, player/static blocking, invalid route, transient/persistent unreachable, no-progress and recovering.
 
-Ordering is part of the contract:
-1. invalid/unreachable route truth outranks all proximity claims;
-2. an explicit upstream intentional hold outranks coincident geometric arrival;
-3. ordinary arrival is considered only after those semantic states.
+Ordering matters:
 
-Only bounded `RETRY_LOCAL` is executed by the R1 wrapper. Higher-level reconsider/report actions remain evidence for an upstream authority rather than hidden movement mutations.
+1. invalid/unreachable route truth outranks arrival;
+2. explicit intentional hold outranks coincident geometric arrival;
+3. ordinary arrival is considered afterwards.
 
-`NO_SAFE_VELOCITY` and `NO_VALID_RELATIONAL_SLOT` are explicitly forwarded as intentional holds so recovery does not invent fake arrival or no-progress.
+Only bounded `RETRY_LOCAL` has local movement authority. Higher-level reconsider/report actions remain evidence for upstream coordination authority.
 
-### 10. Causal evidence authority
+### Causal evidence authority
 
-Current causal evidence:
+Authority:
+
 - `src/debug/causal-frame-trace.ts`
 - `src/debug/causal-panel.ts`
 - incident export in `src/app/r1-lab-scene.ts`.
 
-Decision evidence includes explicit `relationshipState`, so objective-vocabulary exhaustion remains visible in incident files rather than being inferred from a magic slot string.
+Causal evidence preserves:
 
-Incident-v2 legacy recovery fields remain for compatibility:
-- `retryCount`;
-- `appliedLocalRetries`.
+- pre-step relationship/route/motion decision;
+- actual command realization;
+- World outcome;
+- post-World route/recovery state;
+- explicit relationship state;
+- episode retry usage and cumulative local retry count.
 
-Self-describing aliases expose their scopes:
-- `retryBudgetUsedThisEpisode`;
-- `cumulativeLocalRetriesSinceReset`.
+Incident-v2 legacy field names remain for compatibility; self-describing aliases expose their scopes.
 
-`CausalFrameTrace` fills these aliases automatically from legacy fields when needed, and the real scene emits them directly. A future deliberate incident-schema v3 may remove the old names; this foundation campaign does not silently break v2 consumers.
+## Qualification surface
 
-## Mechanically qualified evidence surface
+Owner-tested public runtime `b217943e...`:
 
-Runtime source `81877d7fab6b52d4ea683c870074cf12e0793c43` passed CI run `34872163500`:
-- TypeScript PASS;
 - 31/31 test files PASS;
-- 136/136 tests PASS;
-- production Vite build PASS;
-- npm audit: 0 vulnerabilities.
+- 137/137 tests PASS;
+- TypeScript/build PASS;
+- npm audit 0 vulnerabilities;
+- exact Pages deployment PASS;
+- real-browser fault-containment evidence;
+- approximately 123-second ordinary Owner torture PASS with no unexplained substrate failure.
 
-The suite includes dedicated regressions for:
-- 180-step full-chain hard-egress survival and return to NORMAL;
-- no-safe-velocity fail-closed behavior;
-- exact-contact start-edge routing;
-- egress directionality at world boundaries;
-- full browser traversal-query option forwarding;
-- relationship-vocabulary exhaustion as intentional hold rather than arrival;
-- first-fault containment latch;
-- deterministic fault-probe activation;
-- incident-v2 recovery alias compatibility.
+Later test-only branch head `7c2d25d...`:
 
-This is a **mechanical qualification**, not an Owner browser qualification.
+- 32/32 test files PASS;
+- 138/138 tests PASS;
+- adds the parallel DIRECT 180-step full-chain survival rehearsal;
+- no browser runtime behavior change.
 
-## Preserved historical / donor apparatus — not current browser authority
+## Historical / donor code — not current top-level authority
 
-The following are intentionally retained but are not the current launched scene / top-level movement authority:
+Preserved for research evidence or selective reuse:
+
 - `src/app/lab-scene.ts`;
 - `src/app/s4-lab-scene.ts`;
-- `src/brain/natural-spatial-locomotion.ts` and its old top-level S4 path;
-- raw historical S1/S3/S4 entry points superseded by R1 wrappers;
-- older S0-S5 qualification documents and browser-gate documents;
-- old S5 relationship-field research until it is explicitly transplanted and independently requalified.
+- old S1/S3/S4 top-level movers;
+- old S0-S5/R1 qualification documents;
+- S5 continuous relationship-field research;
+- R1-5A red dynamic player-conflict research.
 
-Historical tests remain useful regression/donor evidence. Their continued success does not automatically promote their old architecture back into current authority.
+Historical success/failure remains evidence but does not restore old architecture to current authority.
 
-## Authority boundaries intentionally left open for the next redesign
+## Explicitly open for aggressive redesign
 
-Foundation readiness does **not** require freezing these interfaces as final architecture:
-- eight-slot relationship objective provider;
-- fixed experiment max-speed policy;
-- `MotionIntent` shape;
-- dynamic player right-of-way / movement corridor ownership;
-- pace / urgency / catch-up policy;
+Foundation PASS does not freeze:
+
+- the eight-slot relationship objective;
+- fixed experiment max speed;
+- pace / urgency / catch-up authority;
+- `MotionIntent` shape / desired-speed contract;
+- dynamic player right-of-way / movement corridor;
+- NATURAL post-continuity dynamic player-conflict handling;
 - multi-companion coordination;
-- combat / command hierarchy.
+- commands;
+- combat.
 
-These are exactly the seams intended for aggressive redesign after the foundation gate.
+These are the intended seams of the next Companion Coordination Core redesign.
 
-## Current call-chain summary
+## Current defended call chain
 
-`main / fault boundary`
-→ `R1LabScene orchestration`
-→ `relationship objective + objectiveState`
-→ `shared static target geometry`
-→ `typed full-signature World traversal adapter`
-→ `static route with egress-aware live start`
-→ `R1 workbench stack`
-→ `R1 hard/comfort local safety`
-→ `DIRECT` **or** `NATURAL realization`
+`bootstrap / fault boundary`
+→ `R1LabScene`
+→ `temporary relationship objective`
+→ `shared static point validity`
+→ `full-signature traversal adapter`
+→ `static route / live-start egress`
+→ `R1 hard-vs-comfort spatial safety`
+→ `DIRECT or NATURAL realization`
 → `World`
 → `Rapier`
 → `post-World route`
-→ `progress/recovery`
-→ `causal evidence / Owner workbench`.
+→ `progress / recovery`
+→ `causal evidence`.
 
-Unknown faults escape this chain only into the global fail-stop sentinel; ordinary constrained-world conditions must remain represented inside the chain as data.
+Unknown programmer/data faults fail-stop through the sentinel. Ordinary constrained-world states remain represented as data inside the chain.
