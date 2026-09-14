@@ -121,7 +121,7 @@ export class R1LabScene extends Phaser.Scene {
   private desiredProbe: StaticCircleTraversalResult | null = null;
 
   private readonly causalTrace = new CausalFrameTrace(480);
-  private readonly events: string[] = [];
+  private readonly eventLog: string[] = [];
   private readonly playerTrail: Vec2[] = [];
   private readonly companionTrail: Vec2[] = [];
   private incidentNotice = "";
@@ -388,8 +388,8 @@ export class R1LabScene extends Phaser.Scene {
     this.causalTrace.record(frame);
 
     const latestEvent = `f${frame.sequence} t${frame.observation.worldTick}->${frame.outcome.worldTick} ${post.state}: ${post.reason}`;
-    const previous = this.events.at(-1);
-    if (previous !== latestEvent && (post.state !== "progressing" || this.events.length === 0)) this.logEvent(latestEvent);
+    const previous = this.eventLog.at(-1);
+    if (previous !== latestEvent && (post.state !== "progressing" || this.eventLog.length === 0)) this.logEvent(latestEvent);
   }
 
   private recordTrail(snapshot: WorldSnapshot): void {
@@ -403,8 +403,8 @@ export class R1LabScene extends Phaser.Scene {
   }
 
   private logEvent(value: string): void {
-    this.events.push(value);
-    if (this.events.length > 80) this.events.splice(0, this.events.length - 80);
+    this.eventLog.push(value);
+    if (this.eventLog.length > 80) this.eventLog.splice(0, this.eventLog.length - 80);
   }
 
   private drawWorld(snapshot: WorldSnapshot): void {
@@ -634,7 +634,7 @@ export class R1LabScene extends Phaser.Scene {
       {
         id: "events",
         title: "Recent semantic markers",
-        lines: this.events.slice(-8).reverse()
+        lines: this.eventLog.slice(-8).reverse()
       }
     ];
 
@@ -722,7 +722,7 @@ export class R1LabScene extends Phaser.Scene {
       actuator: this.naturalActuator ? "natural" : "direct",
       timeScale: TIME_SCALES[this.timeScaleIndex] ?? 1,
       frames: this.causalTrace.recent(240),
-      events: [...this.events]
+      events: [...this.eventLog]
     };
     const blob = new Blob([JSON.stringify(incident, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -766,7 +766,7 @@ export class R1LabScene extends Phaser.Scene {
       this.playerTrail.length = 0;
       this.companionTrail.length = 0;
       this.causalTrace.reset();
-      this.events.length = 0;
+      this.eventLog.length = 0;
       this.incidentNotice = "";
       this.resetBrains();
       this.recordTrail(this.snapshotValue);
