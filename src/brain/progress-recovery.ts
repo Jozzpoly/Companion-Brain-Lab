@@ -9,11 +9,14 @@ export const R1_RECOVERY_COOLDOWN_TICKS = 45;
 export const R1_MAX_LOCAL_RETRIES_PER_EPISODE = 2;
 export const R1_PROGRESS_DISTANCE = 0.06;
 export const R1_ARRIVAL_DISTANCE = 0.2;
+export const R1_MOVING_OBJECTIVE_DISTANCE = 0.12;
+export const R1_TRACKING_MAX_METRIC_REGRESSION = 0.12;
 
 export type ProgressRecoveryState =
   | "UNKNOWN"
   | "ARRIVED"
   | "PROGRESSING"
+  | "TRACKING_MOVING_OBJECTIVE"
   | "INTENTIONAL_HOLD"
   | "HOLDING_UNEXPLAINED"
   | "BLOCKED_PLAYER"
@@ -63,6 +66,15 @@ export interface ProgressRecoveryDecision {
 interface ProgressSample {
   tick: number;
   metric: number;
+  position: Vec2;
+  target: Vec2;
+}
+
+interface WindowEvidence {
+  progressDelta: number;
+  metricRegression: number;
+  bodyDisplacement: number;
+  targetDisplacement: number;
 }
 
 function distance(a: Vec2, b: Vec2): number {
@@ -116,8 +128,9 @@ export class ProgressRecoveryMonitor {
 
     const objectiveDistance = distance(observation.position, observation.target);
     const progressMetric = finiteNonNegative(observation.routeRemainingDistance, objectiveDistance);
-    this.recordProgress(observation.tick, progressMetric);
-    const progressDelta = this.progressDelta();
+    this.recordProgress(observation.tick, progressMetric, observation.position, observation.target);
+    const evidence = this.windowEvidence();
+    const progressDelta = evidence.progressDelta;
     const playerBlocked = observation.contacts.includes("player");
     const staticBlocked = observation.contacts.some((label) => label !== "player");
 
@@ -278,8 +291,8 @@ export class ProgressRecoveryMonitor {
 
     // Body motion is evidence, not objective progress. A companion can move
     // laterally, orbit or slide indefinitely without getting closer to its
-    // route/objective. Only improvement in the route/objective metric clears
-    // the no-progress episode.
+    // route/objective. Only improvement in the route/objective metric counts as
+    // ordinary progress.
     const measurableProgress = progressDelta >= R1_PROGRESS_DISTANCE;
     if (measurableProgress) {
       this.noProgressSinceTick = null;
@@ -287,6 +300,28 @@ export class ProgressRecoveryMonitor {
         state: "PROGRESSING",
         action: "NONE",
         reason: "rolling route/objective metric is decreasing",
+        objectiveDistance,
+        progressMetric,
+        progressDelta,
+        playerBlocked,
+        staticBlocked
+      });
+    }
+
+    // A moving relationship objective has different semantics. Maintaining a
+    // bounded error while both target and companion move is valid tracking even
+    // when distance does not shrink. This is intentionally a separate public
+    // state rather than weakening PROGRESSING.
+    const trackingMovingObjective =
+      evidence.targetDisplacement >= R1_MOVING_OBJECTIVE_DISTANCE &&
+      evidence.bodyDisplacement >= R1_PROGRESS_DISTANCE &&
+      evidence.metricRegression <= R1_TRACKING_MAX_METRIC_REGRESSION;
+    if (trackingMovingObjective) {
+      this.noProgressSinceTick = null;
+      return this.finish(observation, {
+        state: "TRACKING_MOVING_OBJECTIVE",
+        action: "NONE",
+        reason: "objective and body are both moving while route/objective error remains bounded",
         objectiveDistance,
         progressMetric,
         progressDelta,
@@ -330,7 +365,7 @@ export class ProgressRecoveryMonitor {
       reason: observation.commandedSpeed < 0.03
         ? "objective is unsatisfied but current command is near zero; awaiting bounded progress window"
         : observation.actualSpeed >= 0.12
-          ? "body is moving but objective progress is not yet measurable"
+          ? "body is moving but objective progress/tracking is not yet measurable"
           : "insufficient temporal evidence to classify progress yet",
       objectiveDistance,
       progressMetric,
@@ -356,17 +391,25 @@ export class ProgressRecoveryMonitor {
     this.reportedRouteInvalid = false;
   }
 
-  private recordProgress(tick: number, metric: number): void {
-    this.samples.push({ tick, metric });
+  private recordProgress(tick: number, metric: number, position: Vec2, target: Vec2): void {
+    this.samples.push({ tick, metric, position: { ...position }, target: { ...target } });
     const minimumTick = tick - R1_PROGRESS_WINDOW_TICKS;
     while (this.samples.length > 1 && (this.samples[0]?.tick ?? tick) < minimumTick) this.samples.shift();
   }
 
-  private progressDelta(): number {
+  private windowEvidence(): WindowEvidence {
     const first = this.samples[0];
     const last = this.samples.at(-1);
-    if (!first || !last) return 0;
-    return Math.max(0, first.metric - last.metric);
+    if (!first || !last) {
+      return { progressDelta: 0, metricRegression: 0, bodyDisplacement: 0, targetDisplacement: 0 };
+    }
+    const signedMetricDelta = first.metric - last.metric;
+    return {
+      progressDelta: Math.max(0, signedMetricDelta),
+      metricRegression: Math.max(0, -signedMetricDelta),
+      bodyDisplacement: distance(first.position, last.position),
+      targetDisplacement: distance(first.target, last.target)
+    };
   }
 
   private canRetry(tick: number): boolean {
