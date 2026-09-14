@@ -34,7 +34,14 @@ function frame(sequence: number, observationTick: number, outcomeTick: number): 
       commandedVelocity: { x: 1.5, y: 0.6 },
       finalConstraintSource: "preferred-fallback",
       finalConstrained: true,
-      finalConstraintReason: "continuity command hard-blocked; using hard-safe preferred move"
+      finalConstraintReason: "continuity command hard-blocked; using hard-safe preferred move",
+      finalPlayerConstraintSource: "projected-preferred",
+      finalPlayerConstrained: true,
+      finalPlayerCurrentPhysicalClearance: 0.006,
+      finalPlayerRequiredPhysicalClearance: 0.002,
+      finalPlayerOriginalPredictedClearance: -0.011,
+      finalPlayerFinalPredictedClearance: 0.002,
+      finalPlayerConstraintReason: "final command threatened player physical authority; projected toward hard-safe preferred move 0"
     },
     outcome: {
       worldTick: outcomeTick,
@@ -75,7 +82,7 @@ describe("R1 causal frame trace", () => {
     expect(latest?.post.state).toBe("RECOVERING");
   });
 
-  it("preserves the R1-4 hard/comfort, final-command and post-outcome recovery contract", () => {
+  it("preserves hard/comfort, static/player final authority and post-outcome recovery evidence", () => {
     const trace = new CausalFrameTrace();
     trace.record(frame(trace.nextSequence(), 10, 11));
 
@@ -87,6 +94,13 @@ describe("R1 causal frame trace", () => {
     expect(latest?.decision.comfortExitCandidateCount).toBe(1);
     expect(latest?.command.finalConstraintSource).toBe("preferred-fallback");
     expect(latest?.command.finalConstrained).toBe(true);
+    expect(latest?.command.finalPlayerConstraintSource).toBe("projected-preferred");
+    expect(latest?.command.finalPlayerConstrained).toBe(true);
+    expect(latest?.command.finalPlayerCurrentPhysicalClearance).toBe(0.006);
+    expect(latest?.command.finalPlayerRequiredPhysicalClearance).toBe(0.002);
+    expect(latest?.command.finalPlayerOriginalPredictedClearance).toBe(-0.011);
+    expect(latest?.command.finalPlayerFinalPredictedClearance).toBe(0.002);
+    expect(latest?.command.finalPlayerConstraintReason).toContain("player physical authority");
     expect(latest?.outcome.postRouteClearanceConstrained).toBe(false);
     expect(latest?.post.action).toBe("RETRY_LOCAL");
     expect(latest?.post.retryCount).toBe(1);
