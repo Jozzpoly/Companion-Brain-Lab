@@ -29,6 +29,20 @@ function snapshot(tick: number, playerVelocity: Vec2): WorldSnapshot {
   };
 }
 
+function conflictSnapshot(): WorldSnapshot {
+  return {
+    tick: 20,
+    scenarioId: "head-on",
+    width: 12,
+    height: 8,
+    actors: [
+      actor("companion", 5, 4),
+      actor("player", 4, 4, { x: 1, y: 0 })
+    ],
+    obstacles: []
+  };
+}
+
 const clearQuery: StaticTraversalQuery = (from, to, radius): StaticCircleTraversalResult => ({
   from: { ...from },
   to: { ...to },
@@ -46,7 +60,8 @@ describe("CCC-0 shadow coordination frame", () => {
       physicalSpeedCapability: 3,
       history: createEmptyShadowCoordinationHistory(),
       legacyRelationshipTarget: { x: 4.55, y: 4 },
-      legacyPreferredVelocity: { x: 1.5, y: 0 }
+      legacyPreferredVelocity: { x: 1.5, y: 0 },
+      legacyAuthoritativeVelocity: { x: 1.2, y: 0 }
     };
 
     const first = evaluateShadowCoordinationFrame(input);
@@ -54,13 +69,15 @@ describe("CCC-0 shadow coordination frame", () => {
     expect(second).toEqual(first);
     expect(first.kind).toBe("CCC0_SHADOW_COORDINATION");
     expect(first.region.state).toBe("REGION");
-    expect(first.playerFlowConflict.velocitySource).toBe("legacy-preferred");
+    expect(first.preferredPlayerFlowConflict.velocitySource).toBe("legacy-preferred");
+    expect(first.authoritativePlayerFlowConflict.velocitySource).toBe("authoritative-command");
     expect(first.legacy.relationshipTarget).toEqual({ x: 4.55, y: 4 });
     expect(first.legacy.preferredVelocity).toEqual({ x: 1.5, y: 0 });
+    expect(first.legacy.authoritativeVelocity).toEqual({ x: 1.2, y: 0 });
     expect("command" in first).toBe(false);
   });
 
-  it("keeps conflict evidence explicitly unavailable when no legacy preferred velocity exists", () => {
+  it("keeps both conflict channels explicitly unavailable when velocity evidence is absent", () => {
     const result = evaluateShadowCoordinationFrame({
       snapshot: snapshot(0, { x: 2, y: 0 }),
       query: clearQuery,
@@ -68,8 +85,23 @@ describe("CCC-0 shadow coordination frame", () => {
       history: createEmptyShadowCoordinationHistory()
     });
 
-    expect(result.playerFlowConflict.state).toBe("UNAVAILABLE");
-    expect(result.playerFlowConflict.companionVelocity).toBeNull();
+    expect(result.preferredPlayerFlowConflict.state).toBe("UNAVAILABLE");
+    expect(result.authoritativePlayerFlowConflict.state).toBe("UNAVAILABLE");
+  });
+
+  it("distinguishes an upstream-safe preferred velocity from a conflicting final command", () => {
+    const result = evaluateShadowCoordinationFrame({
+      snapshot: conflictSnapshot(),
+      query: clearQuery,
+      physicalSpeedCapability: 3,
+      history: createEmptyShadowCoordinationHistory(),
+      legacyPreferredVelocity: { x: 1, y: 0 },
+      legacyAuthoritativeVelocity: { x: -1, y: 0 }
+    });
+
+    expect(result.preferredPlayerFlowConflict.state).toBe("CLEAR");
+    expect(result.authoritativePlayerFlowConflict.state).toBe("PHYSICAL_CONFLICT");
+    expect(result.authoritativePlayerFlowConflict.physicalClearance).toBeLessThan(0);
   });
 
   it("carries only small explicit history and detects a next-tick reversal", () => {
@@ -92,24 +124,23 @@ describe("CCC-0 shadow coordination frame", () => {
     expect(second.nextHistory.previousCorridorDirection).toEqual(second.playerCorridor.direction);
   });
 
-  it("increments outside-region history instead of creating a hidden mode transition", () => {
+  it("accounts outside-region duration in world ticks rather than cognition evaluations", () => {
     const first = evaluateShadowCoordinationFrame({
       snapshot: snapshot(0, { x: 2, y: 0 }),
       query: clearQuery,
       physicalSpeedCapability: 3,
       history: createEmptyShadowCoordinationHistory()
     });
-    expect(first.nextHistory.outsideRegionTicks).toBeGreaterThanOrEqual(0);
-
     const second = evaluateShadowCoordinationFrame({
-      snapshot: snapshot(1, { x: 2, y: 0 }),
+      snapshot: snapshot(6, { x: 2, y: 0 }),
       query: clearQuery,
       physicalSpeedCapability: 3,
       history: first.nextHistory
     });
 
+    expect(second.nextHistory.previousEvaluationTick).toBe(6);
     if (!second.pace.insideUsefulRegion) {
-      expect(second.nextHistory.outsideRegionTicks).toBe(first.nextHistory.outsideRegionTicks + 1);
+      expect(second.nextHistory.outsideRegionTicks).toBe(first.nextHistory.outsideRegionTicks + 6);
     }
   });
 });
