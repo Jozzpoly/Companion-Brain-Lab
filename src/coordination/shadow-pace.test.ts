@@ -67,6 +67,7 @@ function region(position: Vec2): ShadowRelationshipRegion {
   const entry = sample("region", position);
   return {
     state: "REGION",
+    noRegionReason: null,
     tick: 30,
     playerPosition: { x: 6, y: 4 },
     playerDirection: { x: 1, y: 0 },
@@ -87,6 +88,7 @@ function region(position: Vec2): ShadowRelationshipRegion {
 function noRegion(): ShadowRelationshipRegion {
   return {
     state: "NO_REACHABLE_REGION",
+    noRegionReason: "ROUTE_SHORTLIST_EXHAUSTED",
     tick: 30,
     playerPosition: { x: 6, y: 4 },
     playerDirection: { x: 1, y: 0 },
