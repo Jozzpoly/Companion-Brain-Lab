@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { R1LabScene } from "./app/r1-lab-scene";
+import { scheduleFoundationFaultProbe } from "./debug/foundation-fault-probe";
 import {
   installRuntimeFaultSentinel,
   normalizeRuntimeFault
@@ -25,6 +26,8 @@ try {
     },
     scene: [R1LabScene]
   });
+
+  scheduleFoundationFaultProbe(window.location.search);
 } catch (error) {
   reportRuntimeFault(normalizeRuntimeFault({
     source: "manual",
