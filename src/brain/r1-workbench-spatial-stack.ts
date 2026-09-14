@@ -26,6 +26,8 @@ import {
   type SpatialLocomotionDecision
 } from "./spatial-locomotion";
 
+export const CCC0_SHADOW_INTERVAL_TICKS = 6;
+
 export interface R1WorkbenchSpatialDebug {
   actuator: "direct" | "natural";
   preferred: SpatialLocomotionDecision | null;
@@ -37,6 +39,7 @@ export interface R1WorkbenchSpatialDebug {
   appliedLocalRetries: number;
   shadowCoordination: ShadowCoordinationFrame | null;
   shadowCoordinationError: string | null;
+  shadowNextEvaluationTick: number;
 }
 
 type ShadowCoordinationEvaluator = (input: ShadowCoordinationFrameInput) => ShadowCoordinationFrame;
@@ -47,6 +50,7 @@ export class R1WorkbenchSpatialStack {
   private shadowHistory: ShadowCoordinationHistory = createEmptyShadowCoordinationHistory();
   private shadowFrame: ShadowCoordinationFrame | null = null;
   private shadowError: string | null = null;
+  private nextShadowTick = 0;
 
   constructor(
     private readonly evaluateShadow: ShadowCoordinationEvaluator = evaluateShadowCoordinationFrame
@@ -58,6 +62,7 @@ export class R1WorkbenchSpatialStack {
     this.shadowHistory = createEmptyShadowCoordinationHistory();
     this.shadowFrame = null;
     this.shadowError = null;
+    this.nextShadowTick = 0;
   }
 
   resetActuator(natural: boolean): void {
@@ -69,29 +74,33 @@ export class R1WorkbenchSpatialStack {
     natural: boolean,
     input: Omit<R1SpatialLocomotionInput, "previousMove">
   ): MotionIntent {
-    // Authoritative movement is computed first. CCC-0 shadow evaluation runs only
-    // after the command has already been selected and is fault-contained so the
-    // research probe cannot acquire accidental movement authority.
+    // Authoritative movement is computed first on every physics tick. CCC-0 is a
+    // slower research process: expensive relationship/topology evidence is sampled
+    // on a tactical cadence and can never block or alter the already-selected command.
     const intent = natural ? this.natural.intent(input) : this.direct.intent(input);
     const preferred = natural
       ? this.natural.debugState().movement.preferred
       : this.direct.debugState().preferred;
 
-    try {
-      const frame = this.evaluateShadow({
-        snapshot: input.snapshot,
-        query: input.query,
-        physicalSpeedCapability: S3_EXPERIMENT_MAX_SPEED,
-        history: this.shadowHistory,
-        legacyRelationshipTarget: input.relationshipTarget,
-        legacyPreferredVelocity: preferred?.selectedVelocity ?? null
-      });
-      this.shadowFrame = frame;
-      this.shadowHistory = frame.nextHistory;
-      this.shadowError = null;
-    } catch (error) {
-      this.shadowFrame = null;
-      this.shadowError = error instanceof Error ? error.message : String(error);
+    if (input.snapshot.tick >= this.nextShadowTick) {
+      try {
+        const frame = this.evaluateShadow({
+          snapshot: input.snapshot,
+          query: input.query,
+          physicalSpeedCapability: S3_EXPERIMENT_MAX_SPEED,
+          history: this.shadowHistory,
+          legacyRelationshipTarget: input.relationshipTarget,
+          legacyPreferredVelocity: preferred?.selectedVelocity ?? null
+        });
+        this.shadowFrame = frame;
+        this.shadowHistory = frame.nextHistory;
+        this.shadowError = null;
+      } catch (error) {
+        this.shadowFrame = null;
+        this.shadowError = error instanceof Error ? error.message : String(error);
+      } finally {
+        this.nextShadowTick = input.snapshot.tick + CCC0_SHADOW_INTERVAL_TICKS;
+      }
     }
 
     return intent;
@@ -114,7 +123,8 @@ export class R1WorkbenchSpatialStack {
         progress: value.progress,
         appliedLocalRetries: value.appliedLocalRetries,
         shadowCoordination: this.shadowFrame,
-        shadowCoordinationError: this.shadowError
+        shadowCoordinationError: this.shadowError,
+        shadowNextEvaluationTick: this.nextShadowTick
       };
     }
 
@@ -129,7 +139,8 @@ export class R1WorkbenchSpatialStack {
       progress: value.progress,
       appliedLocalRetries: value.appliedLocalRetries,
       shadowCoordination: this.shadowFrame,
-      shadowCoordinationError: this.shadowError
+      shadowCoordinationError: this.shadowError,
+      shadowNextEvaluationTick: this.nextShadowTick
     };
   }
 }
