@@ -13,7 +13,7 @@ const PROJECTION_ITERATIONS = 28;
 export const R1_FINAL_PLAYER_HARD_MARGIN = 0.002;
 
 export type FinalPlayerCommandConstraintSource =
-  | "continuity"
+  | "unchanged"
   | "projected-preferred"
   | "projected-stop"
   | "preferred-fallback"
@@ -224,7 +224,7 @@ export function constrainFinalPlayerCommand(options: {
 
   if (originalStaticSafe && originalPredictedClearance >= requiredPhysicalClearance) {
     return {
-      source: "continuity",
+      source: "unchanged",
       constrained: false,
       originalMove,
       finalMove: { ...originalMove },
