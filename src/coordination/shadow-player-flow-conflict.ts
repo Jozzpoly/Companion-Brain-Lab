@@ -10,11 +10,16 @@ export type ShadowPlayerFlowConflictState =
   | "COMFORT_CONFLICT"
   | "PHYSICAL_CONFLICT";
 
+export type ShadowPlayerFlowVelocitySource =
+  | "legacy-preferred"
+  | "authoritative-command"
+  | "unavailable";
+
 export interface ShadowPlayerFlowConflict {
   state: ShadowPlayerFlowConflictState;
   tick: number;
   horizon: number;
-  velocitySource: "legacy-preferred" | "unavailable";
+  velocitySource: ShadowPlayerFlowVelocitySource;
   companionVelocity: Vec2 | null;
   playerVelocity: Vec2;
   relativeVelocity: Vec2 | null;
@@ -30,7 +35,8 @@ export interface ShadowPlayerFlowConflict {
 export interface ShadowPlayerFlowConflictInput {
   snapshot: WorldSnapshot;
   corridor: ShadowPlayerCorridor;
-  legacyPreferredVelocity?: Vec2 | null;
+  companionVelocity?: Vec2 | null;
+  velocitySource?: Exclude<ShadowPlayerFlowVelocitySource, "unavailable">;
 }
 
 function actor(snapshot: WorldSnapshot, id: ActorSnapshot["id"]): ActorSnapshot {
@@ -68,7 +74,7 @@ export function evaluateShadowPlayerFlowConflict(
     : STATIONARY_PLAYER_INTERACTION_HORIZON;
   const playerVelocity = { ...input.corridor.observedVelocity };
 
-  if (!finiteVec(input.legacyPreferredVelocity)) {
+  if (!finiteVec(input.companionVelocity)) {
     return {
       state: "UNAVAILABLE",
       tick: input.snapshot.tick,
@@ -83,11 +89,12 @@ export function evaluateShadowPlayerFlowConflict(
       comfortClearance: null,
       companionAtClosestApproach: null,
       playerAtClosestApproach: null,
-      reason: "legacy preferred velocity is unavailable; no motion-conflict claim is made"
+      reason: "companion velocity evidence is unavailable; no motion-conflict claim is made"
     };
   }
 
-  const companionVelocity = { ...input.legacyPreferredVelocity };
+  const velocitySource = input.velocitySource ?? "legacy-preferred";
+  const companionVelocity = { ...input.companionVelocity };
   const relativePosition = {
     x: companion.position.x - player.position.x,
     y: companion.position.y - player.position.y
@@ -129,7 +136,7 @@ export function evaluateShadowPlayerFlowConflict(
     state,
     tick: input.snapshot.tick,
     horizon,
-    velocitySource: "legacy-preferred",
+    velocitySource,
     companionVelocity,
     playerVelocity,
     relativeVelocity,
@@ -140,10 +147,10 @@ export function evaluateShadowPlayerFlowConflict(
     companionAtClosestApproach,
     playerAtClosestApproach,
     reason: state === "PHYSICAL_CONFLICT"
-      ? `legacy preferred motion predicts body overlap within ${horizon.toFixed(2)}s`
+      ? `${velocitySource} predicts body overlap within ${horizon.toFixed(2)}s`
       : state === "COMFORT_CONFLICT"
-        ? `legacy preferred motion enters player comfort envelope within ${horizon.toFixed(2)}s`
-        : `legacy preferred motion remains outside player comfort envelope for ${horizon.toFixed(2)}s`
+        ? `${velocitySource} enters player comfort envelope within ${horizon.toFixed(2)}s`
+        : `${velocitySource} remains outside player comfort envelope for ${horizon.toFixed(2)}s`
   };
 }
 
