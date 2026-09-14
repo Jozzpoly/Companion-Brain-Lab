@@ -63,6 +63,41 @@ async function compareAuthoritativeIntent(natural: boolean): Promise<void> {
   }
 }
 
+async function proveCapturedAuthoritativeVelocityMatchesWorld(natural: boolean): Promise<void> {
+  const world = await LabWorld.create("open");
+  const stack = new R1WorkbenchSpatialStack();
+  try {
+    const snapshot = world.snapshot();
+    const body = companion(snapshot);
+    const target: Vec2 = { x: 5, y: 4 };
+    const query = (from: Vec2, to: Vec2, radius: number) => world.staticCircleTraversal(from, to, radius);
+    const routePlan = planStaticShadowRoute({
+      snapshot,
+      start: body.position,
+      target,
+      radius: body.radius,
+      query
+    });
+    const intent = stack.intent(natural, {
+      snapshot,
+      relationshipTarget: target,
+      routePlan,
+      query,
+      occupancy: (center: Vec2, radius: number) => world.staticCircleOccupancy(center, radius)
+    });
+    const captured = stack.debugState(natural).shadowCoordination?.legacy.authoritativeVelocity;
+    expect(captured).not.toBeNull();
+
+    const after = world.step([
+      { actorId: "player", move: { x: 0, y: 0 } },
+      intent
+    ]);
+    expect(captured).toEqual(companion(after).requestedVelocity);
+  } finally {
+    world.dispose();
+  }
+}
+
 async function compareParallelWorlds(natural: boolean): Promise<void> {
   const baselineWorld = await LabWorld.create("open");
   const shadowWorld = await LabWorld.create("open");
@@ -203,8 +238,6 @@ async function proveShadowFaultIsolation(natural: boolean): Promise<void> {
     expect(failedTick.shadowCoordinationError).toBe("synthetic CCC-0 research failure");
     expect(failedTick.shadowNextEvaluationTick).toBe(snapshot.tick + CCC0_SHADOW_INTERVAL_TICKS);
 
-    // The failure belongs only to the cognition tick that produced it. A following
-    // motor tick must not expose the cached error as fresh same-tick evidence.
     const interveningSnapshot: WorldSnapshot = { ...snapshot, tick: snapshot.tick + 1 };
     stack.intent(natural, { ...input, snapshot: interveningSnapshot });
     const cachedTick = stack.debugState(natural);
@@ -223,6 +256,14 @@ describe("CCC-0 zero-authority runtime contract", () => {
 
   it("leaves NATURAL MotionIntent byte-for-byte equivalent to the pre-shadow authoritative brain", async () => {
     await compareAuthoritativeIntent(true);
+  });
+
+  it("captures DIRECT authoritative velocity in the exact scale World applies", async () => {
+    await proveCapturedAuthoritativeVelocityMatchesWorld(false);
+  });
+
+  it("captures NATURAL authoritative velocity in the exact scale World applies", async () => {
+    await proveCapturedAuthoritativeVelocityMatchesWorld(true);
   });
 
   it("keeps DIRECT commands, recovery and World outcomes identical for a 120-step moving-player run", async () => {
