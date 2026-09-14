@@ -75,6 +75,8 @@ interface WindowEvidence {
   metricRegression: number;
   bodyDisplacement: number;
   targetDisplacement: number;
+  bodyTravelDistance: number;
+  targetTravelDistance: number;
 }
 
 function distance(a: Vec2, b: Vec2): number {
@@ -134,23 +136,9 @@ export class ProgressRecoveryMonitor {
     const playerBlocked = observation.contacts.includes("player");
     const staticBlocked = observation.contacts.some((label) => label !== "player");
 
-    if (objectiveDistance <= R1_ARRIVAL_DISTANCE) {
-      this.noProgressSinceTick = null;
-      this.unreachableSinceTick = null;
-      this.previouslyPlayerBlocked = false;
-      this.reportedRouteInvalid = false;
-      return this.finish(observation, {
-        state: "ARRIVED",
-        action: "NONE",
-        reason: "objective is within arrival tolerance",
-        objectiveDistance,
-        progressMetric,
-        progressDelta,
-        playerBlocked,
-        staticBlocked
-      });
-    }
-
+    // Route validity is authoritative over Euclidean proximity. A target inside
+    // hard geometry, or one with no hard-feasible route, cannot become ARRIVED
+    // merely because its coordinates lie inside the arrival tolerance.
     if (observation.routeStatus === "invalid-target") {
       this.noProgressSinceTick = null;
       this.unreachableSinceTick = null;
@@ -196,6 +184,22 @@ export class ProgressRecoveryMonitor {
     const routeRestored = this.unreachableSinceTick !== null;
     this.unreachableSinceTick = null;
     this.reportedPersistentUnreachable = false;
+
+    if (objectiveDistance <= R1_ARRIVAL_DISTANCE) {
+      this.noProgressSinceTick = null;
+      this.previouslyPlayerBlocked = false;
+      this.rearmRecoveryEpisode();
+      return this.finish(observation, {
+        state: "ARRIVED",
+        action: "NONE",
+        reason: "hard-valid objective is within arrival tolerance",
+        objectiveDistance,
+        progressMetric,
+        progressDelta,
+        playerBlocked,
+        staticBlocked
+      });
+    }
 
     if (observation.intentionalHoldReason) {
       this.noProgressSinceTick = null;
@@ -297,6 +301,7 @@ export class ProgressRecoveryMonitor {
       evidence.bodyDisplacement >= R1_PROGRESS_DISTANCE;
     if (measurableProgress) {
       this.noProgressSinceTick = null;
+      this.rearmRecoveryEpisode();
       return this.finish(observation, {
         state: "PROGRESSING",
         action: "NONE",
@@ -309,16 +314,17 @@ export class ProgressRecoveryMonitor {
       });
     }
 
-    // A moving relationship objective has different semantics. Maintaining a
-    // bounded error while both target and companion move is valid tracking even
-    // when distance does not shrink. This is intentionally a separate public
-    // state rather than weakening PROGRESSING.
+    // Moving-target tracking must measure travel through the rolling window,
+    // not only endpoint displacement. Reversing target/body motion can return
+    // both endpoints near their starts while still representing healthy live
+    // tracking for the entire interval.
     const trackingMovingObjective =
-      evidence.targetDisplacement >= R1_MOVING_OBJECTIVE_DISTANCE &&
-      evidence.bodyDisplacement >= R1_PROGRESS_DISTANCE &&
+      evidence.targetTravelDistance >= R1_MOVING_OBJECTIVE_DISTANCE &&
+      evidence.bodyTravelDistance >= R1_PROGRESS_DISTANCE &&
       evidence.metricRegression <= R1_TRACKING_MAX_METRIC_REGRESSION;
     if (trackingMovingObjective) {
       this.noProgressSinceTick = null;
+      this.rearmRecoveryEpisode();
       return this.finish(observation, {
         state: "TRACKING_MOVING_OBJECTIVE",
         action: "NONE",
@@ -392,6 +398,10 @@ export class ProgressRecoveryMonitor {
     this.reportedRouteInvalid = false;
   }
 
+  private rearmRecoveryEpisode(): void {
+    this.retryCountValue = 0;
+  }
+
   private recordProgress(tick: number, metric: number, position: Vec2, target: Vec2): void {
     this.samples.push({ tick, metric, position: { ...position }, target: { ...target } });
     const minimumTick = tick - R1_PROGRESS_WINDOW_TICKS;
@@ -402,14 +412,34 @@ export class ProgressRecoveryMonitor {
     const first = this.samples[0];
     const last = this.samples.at(-1);
     if (!first || !last) {
-      return { progressDelta: 0, metricRegression: 0, bodyDisplacement: 0, targetDisplacement: 0 };
+      return {
+        progressDelta: 0,
+        metricRegression: 0,
+        bodyDisplacement: 0,
+        targetDisplacement: 0,
+        bodyTravelDistance: 0,
+        targetTravelDistance: 0
+      };
     }
+
+    let bodyTravelDistance = 0;
+    let targetTravelDistance = 0;
+    for (let index = 1; index < this.samples.length; index += 1) {
+      const previous = this.samples[index - 1];
+      const current = this.samples[index];
+      if (!previous || !current) continue;
+      bodyTravelDistance += distance(previous.position, current.position);
+      targetTravelDistance += distance(previous.target, current.target);
+    }
+
     const signedMetricDelta = first.metric - last.metric;
     return {
       progressDelta: Math.max(0, signedMetricDelta),
       metricRegression: Math.max(0, -signedMetricDelta),
       bodyDisplacement: distance(first.position, last.position),
-      targetDisplacement: distance(first.target, last.target)
+      targetDisplacement: distance(first.target, last.target),
+      bodyTravelDistance,
+      targetTravelDistance
     };
   }
 
