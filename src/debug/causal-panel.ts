@@ -45,6 +45,20 @@ const DEFAULT_LAYERS: Readonly<Record<WorldDebugLayer, boolean>> = {
   contacts: true
 };
 
+const DEFAULT_OPEN_SECTION_IDS = new Set(["run", "recovery", "route", "motion"]);
+
+export class CausalPanelDisclosureState {
+  private readonly remembered = new Map<string, boolean>();
+
+  isOpen(sectionId: string): boolean {
+    return this.remembered.get(sectionId) ?? DEFAULT_OPEN_SECTION_IDS.has(sectionId);
+  }
+
+  remember(sectionId: string, open: boolean): void {
+    this.remembered.set(sectionId, open);
+  }
+}
+
 function button(label: string, action: CausalPanelAction): HTMLButtonElement {
   const element = document.createElement("button");
   element.type = "button";
@@ -72,6 +86,7 @@ export class CausalPanel {
   private readonly badge: HTMLElement;
   private readonly sectionsRoot: HTMLElement;
   private readonly layerValues = new Map<WorldDebugLayer, boolean>();
+  private readonly disclosureState = new CausalPanelDisclosureState();
   private collapsed = false;
 
   constructor(onAction: (action: CausalPanelAction) => void) {
@@ -188,13 +203,19 @@ export class CausalPanel {
     this.badge.textContent = model.badge;
     this.badge.dataset.tone = model.badgeTone;
 
+    for (const details of this.sectionsRoot.querySelectorAll<HTMLDetailsElement>("details[data-section-id]")) {
+      const sectionId = details.dataset.sectionId;
+      if (sectionId) this.disclosureState.remember(sectionId, details.open);
+    }
+
     this.sectionsRoot.replaceChildren();
     for (const section of model.sections) {
       const node = document.createElement("section");
       node.className = "debug-section debug-dynamic-section";
       node.dataset.tone = section.tone ?? "normal";
       const details = document.createElement("details");
-      details.open = section.id === "run" || section.id === "recovery" || section.id === "route" || section.id === "motion";
+      details.dataset.sectionId = section.id;
+      details.open = this.disclosureState.isOpen(section.id);
       const summary = document.createElement("summary");
       summary.textContent = section.title;
       const body = document.createElement("div");
