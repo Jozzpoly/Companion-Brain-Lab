@@ -7,6 +7,7 @@ export const S3_SENSOR_RANGE = 2.4;
 export const S3_CANDIDATE_DIRECTIONS = 24;
 export const S3_SPEED_LEVELS = [0.35, 0.7, 1] as const;
 export const S3_PREDICTION_HORIZON_SECONDS = 0.55;
+export const S3_ROUTE_LOOKAHEAD_DISTANCE = 1.2;
 export const S3_EXPERIMENT_MAX_SPEED = 3;
 export const S3_STATIC_CLEARANCE = 0.05;
 export const S3_PLAYER_BUFFER = 0.18;
@@ -39,6 +40,8 @@ export interface SpatialObservation {
   routeStatus: StaticRoutePlan["status"];
   routeNodeIds: readonly string[];
   routeLookahead: Vec2;
+  routeLookaheadDistance: number;
+  routeRemainingDistance: number;
   rays: readonly SpatialRaySample[];
 }
 
@@ -139,12 +142,48 @@ function nearestRay(rays: readonly SpatialRaySample[], direction: Vec2): Spatial
   return best;
 }
 
-function routeLookahead(plan: StaticRoutePlan, fallback: Vec2): Vec2 {
-  if ((plan.status === "direct" || plan.status === "routed") && plan.waypoints.length > 0) {
-    const first = plan.waypoints[0];
-    if (first) return { ...first };
+function routeGuidance(
+  plan: StaticRoutePlan,
+  origin: Vec2,
+  fallback: Vec2
+): { point: Vec2; lookaheadDistance: number; remainingDistance: number } {
+  if ((plan.status !== "direct" && plan.status !== "routed") || plan.waypoints.length === 0) {
+    return { point: { ...fallback }, lookaheadDistance: 0, remainingDistance: 0 };
   }
-  return { ...fallback };
+
+  const remainingDistance = plan.cost ?? distance(origin, fallback);
+  const requestedLookahead = Math.min(S3_ROUTE_LOOKAHEAD_DISTANCE, remainingDistance);
+  let left = requestedLookahead;
+  let cursor = { ...origin };
+
+  for (const waypoint of plan.waypoints) {
+    const segment = { x: waypoint.x - cursor.x, y: waypoint.y - cursor.y };
+    const segmentLength = magnitude(segment);
+    if (segmentLength <= EPSILON) {
+      cursor = { ...waypoint };
+      continue;
+    }
+    if (left <= segmentLength) {
+      const fraction = left / segmentLength;
+      return {
+        point: {
+          x: cursor.x + segment.x * fraction,
+          y: cursor.y + segment.y * fraction
+        },
+        lookaheadDistance: requestedLookahead,
+        remainingDistance
+      };
+    }
+    left -= segmentLength;
+    cursor = { ...waypoint };
+  }
+
+  const last = plan.waypoints[plan.waypoints.length - 1] ?? fallback;
+  return {
+    point: { ...last },
+    lookaheadDistance: requestedLookahead,
+    remainingDistance
+  };
 }
 
 export function observeSpatialEnvironment(input: SpatialLocomotionInput): SpatialObservation {
@@ -170,6 +209,7 @@ export function observeSpatialEnvironment(input: SpatialLocomotionInput): Spatia
     });
   }
 
+  const guidance = routeGuidance(input.routePlan, companion.position, input.relationshipTarget);
   return {
     tick: input.snapshot.tick,
     companionPosition: { ...companion.position },
@@ -183,7 +223,9 @@ export function observeSpatialEnvironment(input: SpatialLocomotionInput): Spatia
     relationshipTarget: { ...input.relationshipTarget },
     routeStatus: input.routePlan.status,
     routeNodeIds: [...input.routePlan.routeNodeIds],
-    routeLookahead: routeLookahead(input.routePlan, companion.position),
+    routeLookahead: guidance.point,
+    routeLookaheadDistance: guidance.lookaheadDistance,
+    routeRemainingDistance: guidance.remainingDistance,
     rays
   };
 }
@@ -249,8 +291,14 @@ function scoreCandidate(options: {
   const guideDistance = distance(predictedPosition, options.observation.routeLookahead);
   const relationshipDistance = distance(predictedPosition, options.observation.relationshipTarget);
   const clearanceRatio = clamp(staticFreeDistance / S3_SENSOR_RANGE, 0, 1);
-  const softPlayerRange = 0.75;
+
+  // The player's soft envelope expands with player motion. A stationary player only
+  // reserves the explicit body+buffer boundary; a moving player gets more predictive room.
+  const playerMotionFactor = clamp(magnitude(options.observation.playerVelocity) / 1.2, 0, 1);
+  const softPlayerRange = 0.08 + playerMotionFactor * 0.67;
   const playerRisk = clamp((softPlayerRange - minimumPlayerClearance) / softPlayerRange, 0, 1);
+  const playerRiskWeight = 1.2 + playerMotionFactor * 3.3;
+
   const continuity = distance(options.move, options.previousMove);
   const relationshipNow = distance(options.observation.companionPosition, options.observation.relationshipTarget);
   const nearRelationship = clamp((0.8 - relationshipNow) / 0.8, 0, 1);
@@ -259,7 +307,7 @@ function scoreCandidate(options: {
     routeDistance: guideDistance * 1.45,
     relationshipDistance: relationshipDistance * 0.35,
     clearancePenalty: (1 - clearanceRatio) * 1.2,
-    playerRiskPenalty: playerRisk * playerRisk * 4.5,
+    playerRiskPenalty: playerRisk * playerRisk * playerRiskWeight,
     continuityPenalty: continuity * 0.38,
     unnecessaryMotionPenalty: options.speedFraction * nearRelationship * 1.35
   };
@@ -361,7 +409,7 @@ export function chooseSpatialVelocity(options: {
     selectedCandidateId: selected.id,
     selectedMove: { ...selected.move },
     selectedVelocity: { ...selected.worldVelocity },
-    reason: `${state} via ${selected.id}; score ${selected.score.toFixed(3)}; route ${options.observation.routeStatus}`,
+    reason: `${state} via ${selected.id}; score ${selected.score.toFixed(3)}; route ${options.observation.routeStatus}; remaining ${options.observation.routeRemainingDistance.toFixed(2)}`,
     observation: options.observation,
     candidates: [...options.candidates],
     acceptedCount: accepted.length,
