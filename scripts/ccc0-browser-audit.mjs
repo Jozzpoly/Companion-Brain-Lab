@@ -40,20 +40,30 @@ async function panelText(page) {
   return page.locator("#debug-panel").innerText();
 }
 
-async function waitNoArg(page, predicate, timeout = 10_000) {
-  await page.waitForFunction(predicate, undefined, { timeout });
+async function waitForPanel(page, predicate, timeout = 10_000, label = "panel condition") {
+  const startedAt = Date.now();
+  let latest = "";
+  while (Date.now() - startedAt < timeout) {
+    latest = await panelText(page).catch(() => "");
+    if (predicate(latest)) return latest;
+    await page.waitForTimeout(100);
+  }
+  throw new Error(`${label} timed out after ${timeout}ms. Latest panel: ${JSON.stringify(latest.slice(0, 4000))}`);
 }
 
 async function waitForScenario(page, label) {
-  await page.waitForFunction(
-    (expected) => document.querySelector("#debug-panel")?.textContent?.includes(`scenario ${expected}`),
-    label,
-    { timeout: 10_000 }
+  await waitForPanel(
+    page,
+    (text) => text.includes(`scenario ${label}`),
+    10_000,
+    `scenario ${label}`
   );
-  await waitNoArg(page, () => {
-    const text = document.querySelector("#debug-panel")?.textContent ?? "";
-    return text.includes("CCC-0 shadow · WHERE") && text.includes("sample t") && !text.includes("SHADOW ERROR");
-  }, 10_000);
+  await waitForPanel(
+    page,
+    (text) => text.includes("CCC-0 shadow · WHERE") && text.includes("sample t") && !text.includes("SHADOW ERROR"),
+    10_000,
+    `${label} CCC-0 evidence`
+  );
 }
 
 async function assertNoFault(page, errors) {
@@ -117,10 +127,10 @@ try {
     requestAnimationFrame(sample);
   });
 
-  await page.goto("http://127.0.0.1:4173/", { waitUntil: "networkidle", timeout: 30_000 });
+  await page.goto("http://127.0.0.1:4173/", { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.locator("#game-root canvas").waitFor({ state: "visible", timeout: 15_000 });
   try {
-    await waitNoArg(page, () => /\btick \d+\b/.test(document.querySelector("#debug-panel")?.textContent ?? ""), 15_000);
+    await waitForPanel(page, (text) => /\btick \d+\b/.test(text), 15_000, "initial World tick");
   } catch (error) {
     throw new Error(`Workbench did not publish a World tick after canvas boot. ${await bootDiagnostics(page, errors)}`, { cause: error });
   }
@@ -164,11 +174,11 @@ try {
   let text = await panelText(page);
   invariant(text.includes("actuator NATURAL"), "Expected NATURAL actuator at browser-audit baseline.");
   await page.locator('[data-action="toggle-actuator"]').click();
-  await waitNoArg(page, () => document.querySelector("#debug-panel")?.textContent?.includes("actuator DIRECT"), 5_000);
+  await waitForPanel(page, (value) => value.includes("actuator DIRECT"), 5_000, "DIRECT actuator toggle");
   await page.waitForTimeout(250);
   await assertNoFault(page, errors);
   await page.locator('[data-action="toggle-actuator"]').click();
-  await waitNoArg(page, () => document.querySelector("#debug-panel")?.textContent?.includes("actuator NATURAL"), 5_000);
+  await waitForPanel(page, (value) => value.includes("actuator NATURAL"), 5_000, "NATURAL actuator toggle");
 
   const beforeInput = parseAnchor(await panelText(page));
   await page.keyboard.down("d");
