@@ -102,7 +102,7 @@ describe("R1-5A final player-command physical authority", () => {
     });
 
     expect(result.constrained).toBe(false);
-    expect(result.source).toBe("continuity");
+    expect(result.source).toBe("unchanged");
     expect(result.finalMove.x).toBeCloseTo(commandedMove.x, 9);
     expect(result.finalMove.y).toBeCloseTo(commandedMove.y, 9);
     expect(result.finalPredictedClearance).toBeGreaterThan(result.requiredPhysicalClearance);
