@@ -44,6 +44,22 @@ describe("CCC-0 shadow player corridor", () => {
     expect(result.endpoint).toEqual(result.origin);
   });
 
+  it("treats low-speed directional jitter as stationary instead of directional intent", () => {
+    for (const velocity of [
+      { x: 0.10, y: 0 },
+      { x: -0.12, y: 0.03 },
+      { x: 0.04, y: -0.09 },
+      { x: -0.02, y: 0.14 }
+    ]) {
+      const result = evaluateShadowPlayerCorridor({
+        snapshot: snapshot(actor("player", { x: 6, y: 4 }, velocity))
+      });
+      expect(result.state).toBe("STATIONARY");
+      expect(result.horizon).toBe(0);
+      expect(result.confidence).toBe(0);
+    }
+  });
+
   it("uses meaningful actual velocity before requested velocity", () => {
     const result = evaluateShadowPlayerCorridor({
       snapshot: snapshot(actor("player", { x: 6, y: 4 }, { x: 2, y: 0 }, { x: 0, y: 2 }))
@@ -63,7 +79,7 @@ describe("CCC-0 shadow player corridor", () => {
 
   it("reduces confidence and horizon after an abrupt reversal", () => {
     const steady = evaluateShadowPlayerCorridor({
-      snapshot: snapshot(actor("player", { x: 6, y: 4 }, { x: 2.5, y: 0 })) ,
+      snapshot: snapshot(actor("player", { x: 6, y: 4 }, { x: 2.5, y: 0 })),
       previousDirection: { x: 1, y: 0 }
     });
     const reversed = evaluateShadowPlayerCorridor({
@@ -75,6 +91,24 @@ describe("CCC-0 shadow player corridor", () => {
     expect(reversed.state).toBe("REVERSAL_UNCERTAIN");
     expect(reversed.confidence).toBeLessThan(steady.confidence);
     expect(reversed.horizon).toBeLessThan(steady.horizon);
+  });
+
+  it("keeps repeated left-right reversals uncertain instead of immediately trusting each new heading", () => {
+    let previousDirection: Vec2 | null = { x: 1, y: 0 };
+    for (const velocity of [
+      { x: -2.5, y: 0 },
+      { x: 2.5, y: 0 },
+      { x: -2.5, y: 0 },
+      { x: 2.5, y: 0 }
+    ]) {
+      const result = evaluateShadowPlayerCorridor({
+        snapshot: snapshot(actor("player", { x: 6, y: 4 }, velocity)),
+        previousDirection
+      });
+      expect(result.state).toBe("REVERSAL_UNCERTAIN");
+      expect(result.confidence).toBeLessThan(0.5);
+      previousDirection = result.direction;
+    }
   });
 
   it("keeps the prediction horizon short and bounded", () => {
