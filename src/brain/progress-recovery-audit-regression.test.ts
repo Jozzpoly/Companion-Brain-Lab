@@ -132,4 +132,21 @@ describe("R1-4 post-qualification claim-vs-code audit regressions", () => {
     expect(unreachable.state).toBe("TRANSIENT_UNREACHABLE");
     expect(unreachable.action).toBe("NONE");
   });
+
+  it("does not report ARRIVED when a close target still requires a materially long routed path", () => {
+    const monitor = new ProgressRecoveryMonitor();
+    const result = monitor.observe(observation({
+      tick: 0,
+      position: { x: 4, y: 4 },
+      target: { x: 4.1, y: 4 },
+      routeStatus: "routed",
+      routeRemainingDistance: 3.5,
+      commandedSpeed: 1,
+      actualSpeed: 0
+    }));
+
+    expect(result.state).not.toBe("ARRIVED");
+    expect(result.objectiveDistance).toBeLessThan(0.2);
+    expect(result.progressMetric).toBeGreaterThan(3);
+  });
 });
