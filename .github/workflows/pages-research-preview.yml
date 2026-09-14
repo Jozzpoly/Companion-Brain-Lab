@@ -1,7 +1,8 @@
 name: deploy-pinned-research-preview
 
 # Operational Pages authority lives on main; application source is explicitly pinned to a qualified experiment SHA.
-# The published application below is the exact S4 natural-motion Owner-debug build, not the main branch application tree.
+# The published application below is the exact R1-1 Causal Workbench v2 browser-gate build.
+# Previous S4 Owner-regression evidence remains recoverable at fb29fd9a76a01eaa03d08ba8b1455aef6a018db7.
 on:
   push:
     branches:
@@ -23,17 +24,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout exact S4 evidence head
+      - name: Checkout exact R1-1 browser-gate head
         uses: actions/checkout@v4
         with:
-          ref: fb29fd9a76a01eaa03d08ba8b1455aef6a018db7
+          ref: 9a72c2237e859d838c183d23d1fc96f475867a45
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Install dependencies
         run: npm install
-      - name: Validate exact S4 source
+      - name: Validate exact R1-1 source
         run: npm run check
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -49,6 +50,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Deploy exact S4 artifact
+      - name: Deploy exact R1-1 artifact
         id: deployment
         uses: actions/deploy-pages@v4
