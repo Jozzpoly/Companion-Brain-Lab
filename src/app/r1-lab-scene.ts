@@ -83,6 +83,10 @@ function compact(value: number): string {
   return Number.isFinite(value) ? value.toFixed(3) : "n/a";
 }
 
+function compactNullable(value: number | null): string {
+  return value === null ? "n/a" : compact(value);
+}
+
 function probeLabel(probe: StaticCircleTraversalResult | null): "clear" | "blocked-zero" | "blocked" | "unknown" {
   if (!probe) return "unknown";
   if (probe.clear) return "clear";
@@ -527,6 +531,8 @@ export class R1LabScene extends Phaser.Scene {
         shadowCoordination: shadow
           ? {
               kind: shadow.kind,
+              shadowTick: shadow.tick,
+              ageTicks: Math.max(0, evidence.before.tick - shadow.tick),
               regionState: shadow.region.state,
               regionAnchor: shadow.region.representativeAnchor ? { ...shadow.region.representativeAnchor } : null,
               regionBestSampleId: shadow.region.bestSampleId,
@@ -537,12 +543,34 @@ export class R1LabScene extends Phaser.Scene {
               playerCorridorState: shadow.playerCorridor.state,
               playerCorridorConfidence: shadow.playerCorridor.confidence,
               playerCorridorEndpoint: { ...shadow.playerCorridor.endpoint },
+              preferredFlowConflictState: shadow.preferredPlayerFlowConflict.state,
+              preferredFlowClosestApproachTime: shadow.preferredPlayerFlowConflict.closestApproachTime,
+              preferredFlowPhysicalClearance: shadow.preferredPlayerFlowConflict.physicalClearance,
+              preferredFlowComfortClearance: shadow.preferredPlayerFlowConflict.comfortClearance,
+              preferredFlowCompanionClosest: shadow.preferredPlayerFlowConflict.companionAtClosestApproach
+                ? { ...shadow.preferredPlayerFlowConflict.companionAtClosestApproach }
+                : null,
+              preferredFlowPlayerClosest: shadow.preferredPlayerFlowConflict.playerAtClosestApproach
+                ? { ...shadow.preferredPlayerFlowConflict.playerAtClosestApproach }
+                : null,
+              authoritativeFlowConflictState: shadow.authoritativePlayerFlowConflict.state,
+              authoritativeFlowClosestApproachTime: shadow.authoritativePlayerFlowConflict.closestApproachTime,
+              authoritativeFlowPhysicalClearance: shadow.authoritativePlayerFlowConflict.physicalClearance,
+              authoritativeFlowComfortClearance: shadow.authoritativePlayerFlowConflict.comfortClearance,
+              authoritativeFlowCompanionClosest: shadow.authoritativePlayerFlowConflict.companionAtClosestApproach
+                ? { ...shadow.authoritativePlayerFlowConflict.companionAtClosestApproach }
+                : null,
+              authoritativeFlowPlayerClosest: shadow.authoritativePlayerFlowConflict.playerAtClosestApproach
+                ? { ...shadow.authoritativePlayerFlowConflict.playerAtClosestApproach }
+                : null,
               legacyTargetToShadowAnchorDistance: shadow.legacy.targetToShadowAnchorDistance,
               error: evidence.shadowCoordinationError
             }
           : evidence.shadowCoordinationError
             ? {
                 kind: "CCC0_SHADOW_COORDINATION",
+                shadowTick: evidence.before.tick,
+                ageTicks: 0,
                 regionState: "ERROR",
                 regionAnchor: null,
                 regionBestSampleId: null,
@@ -553,6 +581,18 @@ export class R1LabScene extends Phaser.Scene {
                 playerCorridorState: "ERROR",
                 playerCorridorConfidence: 0,
                 playerCorridorEndpoint: { ...beforePlayer.position },
+                preferredFlowConflictState: "ERROR",
+                preferredFlowClosestApproachTime: null,
+                preferredFlowPhysicalClearance: null,
+                preferredFlowComfortClearance: null,
+                preferredFlowCompanionClosest: null,
+                preferredFlowPlayerClosest: null,
+                authoritativeFlowConflictState: "ERROR",
+                authoritativeFlowClosestApproachTime: null,
+                authoritativeFlowPhysicalClearance: null,
+                authoritativeFlowComfortClearance: null,
+                authoritativeFlowCompanionClosest: null,
+                authoritativeFlowPlayerClosest: null,
                 legacyTargetToShadowAnchorDistance: null,
                 error: evidence.shadowCoordinationError
               }
@@ -737,6 +777,28 @@ export class R1LabScene extends Phaser.Scene {
       sy(corridor.endpoint.y),
       corridor.physicalRadius * scale
     );
+
+    const finalConflict = shadow.authoritativePlayerFlowConflict;
+    const companionClosest = finalConflict.companionAtClosestApproach;
+    const playerClosest = finalConflict.playerAtClosestApproach;
+    if (finalConflict.state !== "UNAVAILABLE" && companionClosest && playerClosest) {
+      const color = finalConflict.state === "PHYSICAL_CONFLICT"
+        ? 0xff5d66
+        : finalConflict.state === "COMFORT_CONFLICT"
+          ? 0xe3b341
+          : 0x8b949e;
+      const alpha = finalConflict.state === "CLEAR" ? 0.28 : 0.9;
+      this.graphics.lineStyle(finalConflict.state === "CLEAR" ? 1 : 3, color, alpha);
+      this.graphics.lineBetween(
+        sx(companionClosest.x),
+        sy(companionClosest.y),
+        sx(playerClosest.x),
+        sy(playerClosest.y)
+      );
+      this.graphics.fillStyle(color, alpha);
+      this.graphics.fillCircle(sx(companionClosest.x), sy(companionClosest.y), 4);
+      this.graphics.fillCircle(sx(playerClosest.x), sy(playerClosest.y), 4);
+    }
   }
 
   private drawRoute(sx: (x: number) => number, sy: (y: number) => number): void {
@@ -846,6 +908,9 @@ export class R1LabScene extends Phaser.Scene {
     const constraint = this.finalConstraintDecision;
     const companion = actor(snapshot, "companion");
     const shadow = this.shadowCoordination;
+    const preferredConflict = shadow?.preferredPlayerFlowConflict ?? null;
+    const finalConflict = shadow?.authoritativePlayerFlowConflict ?? null;
+    const shadowAge = shadow ? Math.max(0, snapshot.tick - shadow.tick) : null;
 
     const sections: CausalPanelModel["sections"] = [
       {
@@ -880,8 +945,8 @@ export class R1LabScene extends Phaser.Scene {
           ? [`SHADOW ERROR · ${this.shadowCoordinationError}`, "authoritative movement remains unchanged"]
           : shadow
             ? [
-                `state ${shadow.region.state} · heading ${shadow.region.playerHeadingSource}`,
-                `best ${shadow.region.bestSampleId ?? "none"} · coherent ${shadow.region.coherentSampleIds.length} · route queries ${shadow.region.routeEvaluatedCount}`,
+                `sample t${shadow.tick} · age ${shadowAge ?? 0}t · state ${shadow.region.state} · heading ${shadow.region.playerHeadingSource}`,
+                `best ${shadow.region.bestSampleId ?? "none"} · coherent ${shadow.region.coherentSampleIds.length} · route candidates ${shadow.region.routeEvaluatedCount}`,
                 shadow.region.representativeAnchor
                   ? `anchor ${compact(shadow.region.representativeAnchor.x)}, ${compact(shadow.region.representativeAnchor.y)} · ${shadow.region.representativeSource}`
                   : "anchor none",
@@ -898,7 +963,7 @@ export class R1LabScene extends Phaser.Scene {
               `${shadow.pace.label} · urgency ${compact(shadow.pace.urgency)} · desired speed ${compact(shadow.pace.desiredSpeed)}`,
               `distance to region ${shadow.pace.distanceToRegion === null ? "n/a" : compact(shadow.pace.distanceToRegion)} · route ${shadow.pace.routeDistanceToRegion === null ? "n/a" : compact(shadow.pace.routeDistanceToRegion)}`,
               `separation ${shadow.pace.separationTrend} · opening ${shadow.pace.relativeOpeningSpeed === null ? "n/a" : compact(shadow.pace.relativeOpeningSpeed)}`,
-              `outside ${shadow.pace.outsideRegionTicks}t · capability ${compact(shadow.pace.physicalSpeedCapability)}`,
+              `outside ${shadow.pace.outsideRegionTicks} world ticks · capability ${compact(shadow.pace.physicalSpeedCapability)}`,
               shadow.pace.reason
             ]
           : ["shadow pace evidence unavailable"]
@@ -906,14 +971,24 @@ export class R1LabScene extends Phaser.Scene {
       {
         id: "ccc-player",
         title: "CCC-0 shadow · PLAYER FLOW",
-        tone: shadow?.playerCorridor.state === "REVERSAL_UNCERTAIN" ? "warning" : "normal",
-        lines: shadow
+        tone: finalConflict?.state === "PHYSICAL_CONFLICT"
+          ? "danger"
+          : finalConflict?.state === "COMFORT_CONFLICT" ||
+              preferredConflict?.state === "PHYSICAL_CONFLICT" ||
+              shadow?.playerCorridor.state === "REVERSAL_UNCERTAIN"
+            ? "warning"
+            : "normal",
+        lines: shadow && preferredConflict && finalConflict
           ? [
-              `${shadow.playerCorridor.state} · source ${shadow.playerCorridor.velocitySource}`,
-              `confidence ${compact(shadow.playerCorridor.confidence)} · horizon ${compact(shadow.playerCorridor.horizon)}s`,
-              `speed ${compact(shadow.playerCorridor.speed)} · physical r ${compact(shadow.playerCorridor.physicalRadius)} · comfort r ${compact(shadow.playerCorridor.comfortRadius)}`,
-              `endpoint ${compact(shadow.playerCorridor.endpoint.x)}, ${compact(shadow.playerCorridor.endpoint.y)}`,
-              shadow.playerCorridor.reason
+              `${shadow.playerCorridor.state} · source ${shadow.playerCorridor.velocitySource} · confidence ${compact(shadow.playerCorridor.confidence)} · horizon ${compact(shadow.playerCorridor.horizon)}s`,
+              `endpoint ${compact(shadow.playerCorridor.endpoint.x)}, ${compact(shadow.playerCorridor.endpoint.y)} · physical r ${compact(shadow.playerCorridor.physicalRadius)} · comfort r ${compact(shadow.playerCorridor.comfortRadius)}`,
+              `preferred ${preferredConflict.state} · t* ${compactNullable(preferredConflict.closestApproachTime)}s · hard ${compactNullable(preferredConflict.physicalClearance)} · comfort ${compactNullable(preferredConflict.comfortClearance)}`,
+              `final ${finalConflict.state} · t* ${compactNullable(finalConflict.closestApproachTime)}s · hard ${compactNullable(finalConflict.physicalClearance)} · comfort ${compactNullable(finalConflict.comfortClearance)}`,
+              preferredConflict.state !== finalConflict.state
+                ? `diagnostic split ${preferredConflict.state} → ${finalConflict.state}`
+                : `preferred/final agree: ${finalConflict.state}`,
+              `sample t${shadow.tick} · cached age ${shadowAge ?? 0}t`,
+              finalConflict.reason
             ]
           : ["shadow player-flow evidence unavailable"]
       },
@@ -1064,7 +1139,7 @@ export class R1LabScene extends Phaser.Scene {
     const snapshot = this.snapshotValue;
     if (!snapshot) return;
     const incident = {
-      schema: "companion-brain-lab-ccc0-causal-incident-v3",
+      schema: "companion-brain-lab-ccc0-causal-incident-v4",
       scenario: snapshot.scenarioId,
       tick: snapshot.tick,
       mode: this.companionMode,
