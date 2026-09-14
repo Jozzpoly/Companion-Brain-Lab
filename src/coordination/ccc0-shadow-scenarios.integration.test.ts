@@ -27,19 +27,19 @@ async function inspectScenario(id: ScenarioId) {
   }
 }
 
-async function countTraversalQueries(id: ScenarioId): Promise<number> {
+async function countTraversalQueries(id: ScenarioId): Promise<{ external: number; reported: number }> {
   const world = await LabWorld.create(id);
   try {
     const snapshot = world.snapshot();
     let queryCount = 0;
-    evaluateShadowRelationshipRegion({
+    const result = evaluateShadowRelationshipRegion({
       snapshot,
       query: (from, to, radius, options) => {
         queryCount += 1;
         return world.staticCircleTraversal(from, to, radius, options);
       }
     });
-    return queryCount;
+    return { external: queryCount, reported: result.staticTraversalQueryCount };
   } finally {
     world.dispose();
   }
@@ -58,6 +58,7 @@ describe("CCC-0 shadow geometry campaign", () => {
 
         expect(second).toEqual(first);
         expect(first.routeEvaluatedCount).toBeLessThanOrEqual(CCC0_REGION_ROUTE_SHORTLIST);
+        expect(first.staticTraversalQueryCount).toBeGreaterThanOrEqual(first.routeEvaluatedCount);
         expect(first.samples.every((sample) => Number.isFinite(sample.score))).toBe(true);
         expect(first.samples.every((sample) => Number.isFinite(sample.position.x) && Number.isFinite(sample.position.y))).toBe(true);
 
@@ -84,17 +85,21 @@ describe("CCC-0 shadow geometry campaign", () => {
     });
   }
 
-  it("makes the hidden static-traversal cost visible instead of equating 12 route candidates with 12 casts", async () => {
+  it("reports the same hidden static-traversal cost observed by an independent wrapper", async () => {
     const openQueries = await countTraversalQueries("open");
     const pillarQueries = await countTraversalQueries("pillar");
     const doorwayQueries = await countTraversalQueries("doorway");
 
-    expect(openQueries).toBeGreaterThan(CCC0_REGION_ROUTE_SHORTLIST);
-    expect(openQueries).toBeLessThanOrEqual(40);
-    expect(pillarQueries).toBeGreaterThan(100);
-    expect(doorwayQueries).toBeGreaterThan(100);
-    expect(pillarQueries).toBeLessThanOrEqual(500);
-    expect(doorwayQueries).toBeLessThanOrEqual(500);
+    expect(openQueries.reported).toBe(openQueries.external);
+    expect(pillarQueries.reported).toBe(pillarQueries.external);
+    expect(doorwayQueries.reported).toBe(doorwayQueries.external);
+
+    expect(openQueries.reported).toBeGreaterThan(CCC0_REGION_ROUTE_SHORTLIST);
+    expect(openQueries.reported).toBeLessThanOrEqual(40);
+    expect(pillarQueries.reported).toBeGreaterThan(100);
+    expect(doorwayQueries.reported).toBeGreaterThan(100);
+    expect(pillarQueries.reported).toBeLessThanOrEqual(500);
+    expect(doorwayQueries.reported).toBeLessThanOrEqual(500);
   });
 
   it("doorway does not collapse its representative into the player while route-qualifying across the passage", async () => {
