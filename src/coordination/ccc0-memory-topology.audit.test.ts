@@ -58,11 +58,8 @@ function frame(state: WorldSnapshot, history = createEmptyShadowCoordinationHist
   });
 }
 
-function components(samples: readonly ShadowRegionSample[], bestScore: number): ShadowRegionSample[][] {
-  const eligible = samples.filter((sample) =>
-    sample.routeEvaluated && sample.reachable && sample.score <= bestScore + CCC0_REGION_SCORE_WINDOW
-  );
-  const byId = new Map(eligible.map((sample) => [sample.id, sample]));
+function connectedComponents(samples: readonly ShadowRegionSample[]): ShadowRegionSample[][] {
+  const byId = new Map(samples.map((sample) => [sample.id, sample]));
   const remaining = new Set(byId.keys());
   const result: ShadowRegionSample[][] = [];
 
@@ -93,15 +90,48 @@ function components(samples: readonly ShadowRegionSample[], bestScore: number): 
   return result.sort((a, b) => (a[0]?.score ?? Infinity) - (b[0]?.score ?? Infinity));
 }
 
+function scoreWindowComponents(samples: readonly ShadowRegionSample[], bestScore: number): ShadowRegionSample[][] {
+  return connectedComponents(samples.filter((sample) =>
+    sample.routeEvaluated && sample.reachable && sample.score <= bestScore + CCC0_REGION_SCORE_WINDOW
+  ));
+}
+
+function fullBestComponent(samples: readonly ShadowRegionSample[], bestId: string | null): ShadowRegionSample[] {
+  if (!bestId) return [];
+  const groups = connectedComponents(samples.filter((sample) => sample.routeEvaluated && sample.reachable));
+  return groups.find((group) => group.some((sample) => sample.id === bestId)) ?? [];
+}
+
+function weighted(samples: readonly ShadowRegionSample[]): Vec2 | null {
+  const best = [...samples].sort((a, b) => a.score - b.score || a.id.localeCompare(b.id))[0];
+  if (!best) return null;
+  let total = 0;
+  let x = 0;
+  let y = 0;
+  for (const sample of samples) {
+    const weight = Math.exp(-(sample.score - best.score) / 0.28);
+    total += weight;
+    x += sample.position.x * weight;
+    y += sample.position.y * weight;
+  }
+  return total > 1e-9 ? { x: x / total, y: y / total } : { ...best.position };
+}
+
+function gap(a: Vec2 | null, b: Vec2 | null): number | null {
+  if (!a || !b) return null;
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
 function overlapCount(ids: readonly string[], previous: readonly string[]): number {
   const previousIds = new Set(previous);
   return ids.reduce((count, id) => count + (previousIds.has(id) ? 1 : 0), 0);
 }
 
 describe("CCC-0 memory fade topology characterization", () => {
-  it("shows whether a still-good previous component is abandoned during the expiry cliff", () => {
+  it("localizes representative discontinuity between score-window membership and soft connected weighting", () => {
     let current = frame(snapshot(0, 2));
     let previousCoherent = [...current.region.coherentSampleIds];
+    let previousSoft = weighted(fullBestComponent(current.region.samples, current.region.bestSampleId));
     const observations = [];
 
     for (let tick = 6; tick <= 42; tick += 6) {
@@ -110,8 +140,11 @@ describe("CCC-0 memory fade topology characterization", () => {
         .filter((sample) => sample.routeEvaluated && sample.reachable)
         .sort((a, b) => a.score - b.score || a.id.localeCompare(b.id));
       const bestScore = reachable[0]?.score ?? Number.POSITIVE_INFINITY;
-      const groups = Number.isFinite(bestScore) ? components(next.region.samples, bestScore) : [];
+      const groups = Number.isFinite(bestScore) ? scoreWindowComponents(next.region.samples, bestScore) : [];
       const selected = new Set(next.region.coherentSampleIds);
+      const fullComponent = fullBestComponent(next.region.samples, next.region.bestSampleId);
+      const softAnchor = weighted(fullComponent);
+      const softGap = gap(previousSoft, softAnchor);
 
       observations.push({
         tick,
@@ -119,7 +152,13 @@ describe("CCC-0 memory fade topology characterization", () => {
         best: next.region.bestSampleId,
         anchor: next.region.representativeAnchor,
         selectedIds: next.region.coherentSampleIds,
-        components: groups.map((group) => ({
+        routeEvaluatedCount: next.region.routeEvaluatedCount,
+        softConnected: {
+          ids: fullComponent.map((sample) => sample.id),
+          anchor: softAnchor,
+          gapFromPrevious: softGap
+        },
+        scoreWindowComponents: groups.map((group) => ({
           minScore: group[0]?.score ?? null,
           deltaFromBest: (group[0]?.score ?? bestScore) - bestScore,
           ids: group.map((sample) => sample.id),
@@ -129,6 +168,7 @@ describe("CCC-0 memory fade topology characterization", () => {
       });
 
       previousCoherent = [...next.region.coherentSampleIds];
+      previousSoft = softAnchor;
       current = next;
     }
 
