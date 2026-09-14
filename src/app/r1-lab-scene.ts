@@ -106,7 +106,8 @@ function progressTone(state: string | undefined): CausalPanelModel["badgeTone"] 
     normalized === "HOLDING_UNEXPLAINED" ||
     normalized === "HOLDING" ||
     normalized === "BLOCKED" ||
-    normalized === "UNREACHABLE"
+    normalized === "UNREACHABLE" ||
+    normalized === "INTENTIONAL_HOLD"
   ) return "warning";
   if (
     normalized === "PROGRESSING" ||
@@ -250,7 +251,10 @@ export class R1LabScene extends Phaser.Scene {
           snapshot: after,
           objectiveKey: evidence.objectiveKey,
           target: evidence.target,
-          routePlan: this.postRoutePlan
+          routePlan: this.postRoutePlan,
+          intentionalHoldReason: evidence.relationship?.objectiveState === "NO_VALID_RELATIONAL_SLOT"
+            ? evidence.relationship.reason
+            : null
         }
       );
       const postDebug = this.spatialStack.debugState(evidence.actuator === "natural");
@@ -494,6 +498,7 @@ export class R1LabScene extends Phaser.Scene {
       decision: {
         relationshipRevision: evidence.relationship?.reconsiderationCount ?? null,
         relationshipLabel: evidence.relationship?.selectedSlot ?? null,
+        relationshipState: evidence.relationship?.objectiveState ?? null,
         relationshipTarget: target ? { ...target } : null,
         routeStatus: evidence.route?.status ?? null,
         routePath: evidence.route?.routeNodeIds.join(">") ?? "",
@@ -738,9 +743,11 @@ export class R1LabScene extends Phaser.Scene {
       {
         id: "objective",
         title: "Objective",
+        tone: this.relationalDecision?.objectiveState === "NO_VALID_RELATIONAL_SLOT" ? "warning" : "normal",
         lines: this.relationalDecision
           ? [
               `relationship #${this.relationalDecision.reconsiderationCount} · ${this.relationalDecision.selectedSlot}`,
+              `relationship state ${this.relationalDecision.objectiveState}`,
               `semantic objective spatial-slot:${this.relationalDecision.selectedSlot}`,
               `target ${compact(this.relationalDecision.target.x)}, ${compact(this.relationalDecision.target.y)}`,
               this.relationalDecision.reason
