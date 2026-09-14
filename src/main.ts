@@ -1,5 +1,8 @@
 import Phaser from "phaser";
 import { R1LabScene } from "./app/r1-lab-scene";
+import { installRuntimeFaultSentinel } from "./debug/runtime-fault-sentinel";
+
+installRuntimeFaultSentinel();
 
 new Phaser.Game({
   type: Phaser.AUTO,
