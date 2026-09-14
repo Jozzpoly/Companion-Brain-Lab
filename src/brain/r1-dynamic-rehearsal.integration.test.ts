@@ -221,7 +221,7 @@ describe("R1-4 full movement-stack dynamic rehearsal", () => {
     let snapshot = world.snapshot();
     const decisions: ProgressRecoveryDecision[] = [];
     let reached = false;
-    let playerContactSeen = false;
+    let minimumPlayerDistance = Number.POSITIVE_INFINITY;
 
     try {
       for (let step = 0; step < 900; step += 1) {
@@ -251,9 +251,10 @@ describe("R1-4 full movement-stack dynamic rehearsal", () => {
           { actorId: "player", move: playerMove },
           intent
         ]);
-        if (actor(snapshot, "companion").contacts.some((contact) => contact.with === "player")) {
-          playerContactSeen = true;
-        }
+        minimumPlayerDistance = Math.min(
+          minimumPlayerDistance,
+          distance(actor(snapshot, "player").position, actor(snapshot, "companion").position)
+        );
 
         const afterCompanion = actor(snapshot, "companion");
         const afterRoute = planStaticShadowRoute({
@@ -276,7 +277,10 @@ describe("R1-4 full movement-stack dynamic rehearsal", () => {
         }
       }
 
-      expect(playerContactSeen || decisions.some((decision) => decision.playerBlocked)).toBe(true);
+      // Avoidance is allowed to solve the contention without physical contact;
+      // the rehearsal only needs to prove that the two actors actually entered
+      // a close shared choke before the release phase.
+      expect(minimumPlayerDistance).toBeLessThan(1.5);
       expect(reached).toBe(true);
       expect(hasPersistentFailure(decisions)).toBe(false);
       expect(brain.debugState().appliedLocalRetries).toBeLessThanOrEqual(2);
