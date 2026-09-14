@@ -18,7 +18,7 @@ const INVALID_SCORE = 1_000_000;
 const EPSILON = 1e-9;
 
 export type ShadowRegionState = "REGION" | "NO_REACHABLE_REGION";
-export type ShadowPlayerHeadingSource = "actual" | "requested" | "previous" | "default";
+export type ShadowPlayerHeadingSource = "actual" | "requested" | "previous" | "none";
 export type ShadowRegionRouteStatus = StaticRoutePlan["status"] | "not-evaluated";
 
 export interface ShadowRegionScoreTerms {
@@ -120,7 +120,7 @@ function observedPlayerDirection(
   if (previous && magnitude(previous) > 0.5) {
     return { direction: normalized(previous), source: "previous" };
   }
-  return { direction: { x: 1, y: 0 }, source: "default" };
+  return { direction: { x: 0, y: 0 }, source: "none" };
 }
 
 function distanceToObstacle(point: Vec2, obstacle: ObstacleSpec): number {
@@ -168,7 +168,9 @@ function localSampleScore(options: {
   const clearance = localClearance(options.snapshot, options.position, options.companion.radius);
   if (!hardValid) return { hardValid, clearance, score: INVALID_SCORE, terms: emptyTerms() };
 
-  const frontness = Math.max(0, dot(options.direction, options.playerDirection));
+  const frontness = magnitude(options.playerDirection) > 0.5
+    ? Math.max(0, dot(options.direction, options.playerDirection))
+    : 0;
   const comfortPressure = clamp((COMFORT_CLEARANCE - clearance) / COMFORT_CLEARANCE, 0, 1);
   const terms: ShadowRegionScoreTerms = {
     frontPenalty: frontness * frontness * 4.8,
