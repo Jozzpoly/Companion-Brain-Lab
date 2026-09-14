@@ -121,6 +121,29 @@ describe("R1-4 temporal progress/recovery contract", () => {
     expect(result.retryCount).toBe(1);
   });
 
+  it("separates an invalid target from hard unreachable and asks upstream to reconsider it once", () => {
+    const monitor = new ProgressRecoveryMonitor();
+    let result = monitor.observe(observation({
+      tick: 0,
+      routeStatus: "invalid-target",
+      routeRemainingDistance: null
+    }));
+
+    expect(result.state).toBe("ROUTE_INVALID");
+    expect(result.action).toBe("RECONSIDER_OBJECTIVE");
+    expect(result.unreachableTicks).toBe(0);
+    expect(result.retryCount).toBe(0);
+
+    result = monitor.observe(observation({
+      tick: 1,
+      routeStatus: "invalid-target",
+      routeRemainingDistance: null
+    }));
+    expect(result.state).toBe("ROUTE_INVALID");
+    expect(result.action).toBe("NONE");
+    expect(result.unreachableTicks).toBe(0);
+  });
+
   it("reports persistent hard unreachable once without retry thrash", () => {
     const monitor = new ProgressRecoveryMonitor();
     let result = monitor.observe(observation({ tick: 0, routeStatus: "unreachable", routeRemainingDistance: null }));
@@ -149,20 +172,22 @@ describe("R1-4 temporal progress/recovery contract", () => {
     for (let tick = 1; tick < R1_NO_PROGRESS_TRIGGER_TICKS; tick += 1) {
       result = monitor.observe(observation({ tick, commandedSpeed: 1, actualSpeed: 0 }));
     }
+    const firstRetryTick = R1_NO_PROGRESS_TRIGGER_TICKS - 1;
     expect(result.action).toBe("RETRY_LOCAL");
     expect(result.retryCount).toBe(1);
 
-    for (let tick = R1_NO_PROGRESS_TRIGGER_TICKS; tick < R1_NO_PROGRESS_TRIGGER_TICKS + R1_RECOVERY_COOLDOWN_TICKS; tick += 1) {
+    const secondRetryTick = firstRetryTick + R1_RECOVERY_COOLDOWN_TICKS;
+    for (let tick = firstRetryTick + 1; tick < secondRetryTick; tick += 1) {
       result = monitor.observe(observation({ tick, commandedSpeed: 1, actualSpeed: 0 }));
     }
     expect(result.retryCount).toBe(1);
+    expect(result.action).toBe("NONE");
 
-    const secondTick = R1_NO_PROGRESS_TRIGGER_TICKS - 1 + R1_RECOVERY_COOLDOWN_TICKS;
-    result = monitor.observe(observation({ tick: secondTick, commandedSpeed: 1, actualSpeed: 0 }));
+    result = monitor.observe(observation({ tick: secondRetryTick, commandedSpeed: 1, actualSpeed: 0 }));
     expect(result.action).toBe("RETRY_LOCAL");
     expect(result.retryCount).toBe(2);
 
-    for (let tick = secondTick + 1; tick < secondTick + R1_RECOVERY_COOLDOWN_TICKS + R1_NO_PROGRESS_TRIGGER_TICKS + 4; tick += 1) {
+    for (let tick = secondRetryTick + 1; tick < secondRetryTick + R1_RECOVERY_COOLDOWN_TICKS + R1_NO_PROGRESS_TRIGGER_TICKS + 4; tick += 1) {
       result = monitor.observe(observation({ tick, commandedSpeed: 1, actualSpeed: 0 }));
     }
     expect(result.retryCount).toBe(R1_MAX_LOCAL_RETRIES_PER_EPISODE);
