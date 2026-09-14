@@ -4,7 +4,10 @@ import type { MotionIntent, Vec2, WorldSnapshot } from "../world/types";
 import { LabWorld } from "../world/world";
 import { R1RecoveringDirectSpatialBrain } from "./r1-recovering-direct-spatial";
 import { R1RecoveringNaturalSpatialBrain } from "./r1-recovering-natural-spatial";
-import { R1WorkbenchSpatialStack } from "./r1-workbench-spatial-stack";
+import {
+  CCC0_SHADOW_INTERVAL_TICKS,
+  R1WorkbenchSpatialStack
+} from "./r1-workbench-spatial-stack";
 
 function companion(snapshot: WorldSnapshot) {
   const value = snapshot.actors.find((actor) => actor.id === "companion");
@@ -152,7 +155,9 @@ async function compareParallelWorlds(natural: boolean): Promise<void> {
 
       const debug = stack.debugState(natural);
       expect(debug.shadowCoordinationError).toBeNull();
-      expect(debug.shadowCoordination?.tick).toBe(step);
+      const expectedShadowTick = Math.floor(step / CCC0_SHADOW_INTERVAL_TICKS) * CCC0_SHADOW_INTERVAL_TICKS;
+      expect(debug.shadowCoordination?.tick).toBe(expectedShadowTick);
+      expect(debug.shadowNextEvaluationTick).toBe(expectedShadowTick + CCC0_SHADOW_INTERVAL_TICKS);
     }
   } finally {
     baselineWorld.dispose();
@@ -196,6 +201,7 @@ async function proveShadowFaultIsolation(natural: boolean): Promise<void> {
     const debug = stack.debugState(natural);
     expect(debug.shadowCoordination).toBeNull();
     expect(debug.shadowCoordinationError).toBe("synthetic CCC-0 research failure");
+    expect(debug.shadowNextEvaluationTick).toBe(snapshot.tick + CCC0_SHADOW_INTERVAL_TICKS);
   } finally {
     world.dispose();
   }
