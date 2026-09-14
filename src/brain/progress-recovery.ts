@@ -185,6 +185,25 @@ export class ProgressRecoveryMonitor {
     this.unreachableSinceTick = null;
     this.reportedPersistentUnreachable = false;
 
+    // An explicit hold is an upstream semantic decision, not a geometric arrival.
+    // This must precede ARRIVED so fail-closed safety or exhausted objective
+    // vocabularies cannot be mislabeled merely because their hold target equals
+    // the current body position. Invalid/unreachable route truth still outranks it.
+    if (observation.intentionalHoldReason) {
+      this.noProgressSinceTick = null;
+      this.previouslyPlayerBlocked = playerBlocked;
+      return this.finish(observation, {
+        state: "INTENTIONAL_HOLD",
+        action: playerBlocked ? "WAIT_CONFLICT" : "NONE",
+        reason: observation.intentionalHoldReason,
+        objectiveDistance,
+        progressMetric,
+        progressDelta,
+        playerBlocked,
+        staticBlocked
+      });
+    }
+
     if (
       objectiveDistance <= R1_ARRIVAL_DISTANCE &&
       progressMetric <= R1_ARRIVAL_DISTANCE
@@ -196,21 +215,6 @@ export class ProgressRecoveryMonitor {
         state: "ARRIVED",
         action: "NONE",
         reason: "hard-valid objective is within both physical and route arrival tolerance",
-        objectiveDistance,
-        progressMetric,
-        progressDelta,
-        playerBlocked,
-        staticBlocked
-      });
-    }
-
-    if (observation.intentionalHoldReason) {
-      this.noProgressSinceTick = null;
-      this.previouslyPlayerBlocked = playerBlocked;
-      return this.finish(observation, {
-        state: "INTENTIONAL_HOLD",
-        action: playerBlocked ? "WAIT_CONFLICT" : "NONE",
-        reason: observation.intentionalHoldReason,
         objectiveDistance,
         progressMetric,
         progressDelta,
