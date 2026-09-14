@@ -66,8 +66,17 @@ describe("S5 continuous relationship field shadow evaluator", () => {
     try {
       const base = world.snapshot();
       const firstSnapshot = playerVelocity(base, { x: 3, y: 0 });
-      const first = evaluateContinuousRelationshipField({ firstSnapshot: undefined } as never);
-      void first;
+      const first = evaluateContinuousRelationshipField({ snapshot: firstSnapshot, query: query(world) });
+      const radians = 5 * Math.PI / 180;
+      const secondSnapshot = playerVelocity(base, { x: 3 * Math.cos(radians), y: 3 * Math.sin(radians) });
+      const second = evaluateContinuousRelationshipField({
+        snapshot: secondSnapshot,
+        query: query(world),
+        previousTarget: first.representativeTarget,
+        previousPlayerDirection: first.playerDirection
+      });
+      expect(distance(first.representativeTarget, second.representativeTarget)).toBeLessThan(0.65);
+      expect(second.representativeSource).toBe("weighted-region");
     } finally {
       world.dispose();
     }
