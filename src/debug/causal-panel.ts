@@ -13,6 +13,7 @@ export type CausalPanelAction =
 
 export type WorldDebugLayer =
   | "relationship"
+  | "coordination"
   | "route"
   | "spatial"
   | "motion"
@@ -36,6 +37,7 @@ export interface CausalPanelModel {
 
 const DEFAULT_LAYERS: Readonly<Record<WorldDebugLayer, boolean>> = {
   relationship: false,
+  coordination: false,
   route: true,
   spatial: true,
   motion: true,
@@ -54,6 +56,7 @@ function button(label: string, action: CausalPanelAction): HTMLButtonElement {
 
 function layerLabel(layer: WorldDebugLayer): string {
   if (layer === "relationship") return "Relationship";
+  if (layer === "coordination") return "Coordination";
   if (layer === "route") return "Route";
   if (layer === "spatial") return "Spatial";
   if (layer === "motion") return "Motion";
