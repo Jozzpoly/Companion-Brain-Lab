@@ -44,8 +44,11 @@ export interface RelationalCandidate {
   terms: CandidateScoreTerms;
 }
 
+export type RelationalObjectiveState = "TARGET" | "NO_VALID_RELATIONAL_SLOT";
+
 export interface RelationalDecision {
   mode: "relational";
+  objectiveState: RelationalObjectiveState;
   selectedSlot: string;
   target: Vec2;
   playerDirection: Vec2;
@@ -232,6 +235,7 @@ export class RelationalPositioningBrain {
       this.selectedSlot = null;
       this.decisionValue = {
         mode: "relational",
+        objectiveState: "NO_VALID_RELATIONAL_SLOT",
         selectedSlot: HOLD_CURRENT_SLOT,
         target: { ...companion.position },
         playerDirection: { ...this.lastPlayerDirection },
@@ -248,6 +252,7 @@ export class RelationalPositioningBrain {
     this.selectedSlot = selection.candidate.slot;
     this.decisionValue = {
       mode: "relational",
+      objectiveState: "TARGET",
       selectedSlot: selection.candidate.slot,
       target: { ...selection.candidate.position },
       playerDirection: { ...this.lastPlayerDirection },
