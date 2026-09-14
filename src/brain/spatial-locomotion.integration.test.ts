@@ -24,8 +24,10 @@ interface TrialResult {
   snapshot: WorldSnapshot;
   states: Set<SpatialMotionState>;
   stateCounts: Record<SpatialMotionState, number>;
+  routeStatuses: Set<string>;
   staticContacts: string[];
   minDistance: number;
+  maxLateralDeviation: number;
   candidateChanges: number;
   last: TrialDiagnostic[];
 }
@@ -36,8 +38,10 @@ function diagnosticSummary(result: TrialResult): string {
     reached: result.reached,
     final: companion?.position ?? null,
     minDistance: Number(result.minDistance.toFixed(3)),
+    maxLateralDeviation: Number(result.maxLateralDeviation.toFixed(3)),
     candidateChanges: result.candidateChanges,
     stateCounts: result.stateCounts,
+    routeStatuses: [...result.routeStatuses],
     staticContacts: result.staticContacts,
     last: result.last
   }, null, 2);
@@ -52,10 +56,15 @@ async function runToTarget(
   const brain = new SpatialLocomotionBrain();
   const states = new Set<SpatialMotionState>();
   const stateCounts: Record<SpatialMotionState, number> = { HOLD: 0, ADVANCE: 0, SIDESTEP: 0, BACKOFF: 0 };
+  const routeStatuses = new Set<string>();
   const staticContacts: string[] = [];
   const last: TrialDiagnostic[] = [];
   let snapshot = world.snapshot();
+  const initialCompanion = snapshot.actors.find((entry) => entry.id === "companion");
+  if (!initialCompanion) throw new Error("missing initial companion");
+  const initialY = initialCompanion.position.y;
   let minDistance = Number.POSITIVE_INFINITY;
+  let maxLateralDeviation = 0;
   let previousCandidate: string | null = null;
   let candidateChanges = 0;
 
@@ -65,8 +74,20 @@ async function runToTarget(
       if (!companion) throw new Error("missing companion");
       const dist = distance(companion.position, target);
       minDistance = Math.min(minDistance, dist);
+      maxLateralDeviation = Math.max(maxLateralDeviation, Math.abs(companion.position.y - initialY));
       if (dist < 0.28) {
-        return { reached: true, snapshot, states, stateCounts, staticContacts, minDistance, candidateChanges, last };
+        return {
+          reached: true,
+          snapshot,
+          states,
+          stateCounts,
+          routeStatuses,
+          staticContacts,
+          minDistance,
+          maxLateralDeviation,
+          candidateChanges,
+          last
+        };
       }
 
       const plan = planStaticShadowRoute({
@@ -76,6 +97,7 @@ async function runToTarget(
         radius: companion.radius,
         query: (from, to, radius) => world.staticCircleTraversal(from, to, radius)
       });
+      routeStatuses.add(plan.status);
       const intent = brain.intent({
         snapshot,
         relationshipTarget: target,
@@ -113,7 +135,18 @@ async function runToTarget(
       }
     }
 
-    return { reached: false, snapshot, states, stateCounts, staticContacts, minDistance, candidateChanges, last };
+    return {
+      reached: false,
+      snapshot,
+      states,
+      stateCounts,
+      routeStatuses,
+      staticContacts,
+      minDistance,
+      maxLateralDeviation,
+      candidateChanges,
+      last
+    };
   } finally {
     world.dispose();
   }
@@ -123,8 +156,9 @@ describe("S3 spatial locomotion authority integration", () => {
   it("actually routes and moves around the pillar without a pillar contact", async () => {
     const result = await runToTarget("pillar", { x: 4.2, y: 4 });
     if (!result.reached) throw new Error(`pillar trial did not reach target:\n${diagnosticSummary(result)}`);
+    expect(result.routeStatuses.has("routed")).toBe(true);
+    expect(result.maxLateralDeviation).toBeGreaterThan(0.8);
     expect(result.staticContacts).not.toContain("pillar.center");
-    expect(result.states.has("SIDESTEP") || result.states.has("BACKOFF")).toBe(true);
   });
 
   it("actually traverses the doorway opening instead of remaining blocked at the wall", async () => {
