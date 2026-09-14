@@ -81,18 +81,22 @@ function distance(a: Vec2, b: Vec2): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-describe("CCC-0 real Rapier WHERE cost characterization", () => {
-  it("shows the cost of far semantically irrelevant obstacles without conflating it with a policy change", async () => {
+describe("CCC-0 real Rapier WHERE cost regression", () => {
+  it("keeps directly reachable WHERE cost independent of distant semantically irrelevant obstacles", async () => {
     const observations = [];
     for (const count of [0, 4, 8, 12]) observations.push(await measure(count));
 
     const baseline = observations[0]!;
+    expect(baseline.queries).toBe(26);
     for (const entry of observations.slice(1)) {
       expect(entry.bestSampleId).toBe(baseline.bestSampleId);
       expect(distance(entry.anchor, baseline.anchor)).toBeLessThan(1e-8);
-      expect(entry.queries).toBeGreaterThan(baseline.queries);
+      expect(entry.queries).toBe(baseline.queries);
     }
 
-    console.info("[CCC0_AUDIT] rapier-obstacle-cost", JSON.stringify(observations));
+    // CI wall-clock time is intentionally diagnostic only; the hard contract is
+    // query work + identical policy output. This still lets us observe gross stalls
+    // without turning runner noise into a flaky correctness oracle.
+    console.info("[CCC0_REPAIR] rapier-direct-cost", JSON.stringify(observations));
   }, 30_000);
 });
