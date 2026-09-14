@@ -119,8 +119,7 @@ function buildEdges(
   nodes: readonly StaticRouteNode[],
   hardQueryRadius: number,
   desiredQueryRadius: number,
-  query: StaticTraversalQuery,
-  hardStartViolated: boolean
+  query: StaticTraversalQuery
 ): StaticRouteEdge[] {
   const edges: StaticRouteEdge[] = [];
   for (let i = 0; i < nodes.length; i += 1) {
@@ -129,11 +128,17 @@ function buildEdges(
     for (let j = i + 1; j < nodes.length; j += 1) {
       const to = nodes[j];
       if (!to) continue;
+      // The physical start node may legitimately come from contact or slight
+      // penetration even when the domain point-fit helper classifies the authored
+      // position as legal (notably exact world-boundary tangency). Rapier's
+      // allow-egress cast remains directional: movement away from contact clears,
+      // while movement into the wall still reports a blocker. Apply this only to
+      // edges leaving the live start; target/corner nodes remain ordinary casts.
       const hard = query(
         from.position,
         to.position,
         hardQueryRadius,
-        hardStartViolated && from.kind === "start"
+        from.kind === "start"
           ? { initialOverlap: "allow-egress" }
           : undefined
       );
@@ -286,7 +291,7 @@ export function planStaticShadowRoute(options: {
 
   const hardStartViolated = !circleFitsStaticWorld(options.snapshot, options.start, queryRadius);
   const nodes = buildNodes(options.snapshot, options.start, options.target, desiredQueryRadius);
-  const edges = buildEdges(nodes, queryRadius, desiredQueryRadius, options.query, hardStartViolated);
+  const edges = buildEdges(nodes, queryRadius, desiredQueryRadius, options.query);
   const direct = edges.find((edge) => edge.id === edgeId("start", "target"));
   if (direct?.clear) {
     const constrainedEdgeIds = direct.comfortClear ? [] : [direct.id];
