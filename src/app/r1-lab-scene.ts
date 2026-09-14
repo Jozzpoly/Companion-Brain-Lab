@@ -16,6 +16,7 @@ import {
   type R1WorkbenchSpatialDebug
 } from "../brain/r1-workbench-spatial-stack";
 import type { SpatialLocomotionDecision } from "../brain/spatial-locomotion";
+import type { ShadowCoordinationFrame } from "../coordination/shadow-coordination-frame";
 import {
   CausalPanel,
   type CausalPanelAction,
@@ -130,6 +131,8 @@ interface StepDecisionEvidence {
   refinement: PreferredVelocityRefinement | null;
   continuity: MotionContinuityStepResult | null;
   finalConstraint: FinalCommandConstraintResult | null;
+  shadowCoordination: ShadowCoordinationFrame | null;
+  shadowCoordinationError: string | null;
 }
 
 export class R1LabScene extends Phaser.Scene {
@@ -155,6 +158,8 @@ export class R1LabScene extends Phaser.Scene {
   private continuityDecision: MotionContinuityStepResult | null = null;
   private finalConstraintDecision: FinalCommandConstraintResult | null = null;
   private progressDecision: ProgressRecoveryDecision | null = null;
+  private shadowCoordination: ShadowCoordinationFrame | null = null;
+  private shadowCoordinationError: string | null = null;
   private appliedLocalRetries = 0;
   private decisionRoutePlan: StaticRoutePlan | null = null;
   private postRoutePlan: StaticRoutePlan | null = null;
@@ -284,6 +289,8 @@ export class R1LabScene extends Phaser.Scene {
     this.continuityDecision = null;
     this.finalConstraintDecision = null;
     this.spatialRepairDecision = null;
+    this.shadowCoordination = null;
+    this.shadowCoordinationError = null;
     this.decisionRoutePlan = null;
 
     if (this.companionMode === "manual") {
@@ -337,7 +344,9 @@ export class R1LabScene extends Phaser.Scene {
       repair: this.spatialRepairDecision,
       refinement: this.refinementDecision,
       continuity: this.continuityDecision,
-      finalConstraint: this.finalConstraintDecision
+      finalConstraint: this.finalConstraintDecision,
+      shadowCoordination: this.shadowCoordination,
+      shadowCoordinationError: this.shadowCoordinationError
     };
   }
 
@@ -349,6 +358,8 @@ export class R1LabScene extends Phaser.Scene {
     this.finalConstraintDecision = debug.finalConstraint;
     this.progressDecision = debug.progress;
     this.appliedLocalRetries = debug.appliedLocalRetries;
+    this.shadowCoordination = debug.shadowCoordination;
+    this.shadowCoordinationError = debug.shadowCoordinationError;
   }
 
   private navigationTarget(snapshot: WorldSnapshot): Vec2 | null {
@@ -485,6 +496,7 @@ export class R1LabScene extends Phaser.Scene {
         : this.companionMode === "relational"
           ? "relational"
           : evidence.actuator ?? (this.naturalActuator ? "natural" : "direct");
+    const shadow = evidence.shadowCoordination;
 
     const frame: CausalFrame = {
       sequence: this.causalTrace.nextSequence(),
@@ -511,7 +523,40 @@ export class R1LabScene extends Phaser.Scene {
         comfortStartViolated: evidence.repair?.comfortStartViolated ?? null,
         comfortStartBlockers: evidence.repair ? [...evidence.repair.comfortStartBlockers] : [],
         rehabilitatedCandidateCount: evidence.repair?.rehabilitatedCandidateIds.length ?? null,
-        comfortExitCandidateCount: evidence.repair?.comfortExitCandidateIds.length ?? null
+        comfortExitCandidateCount: evidence.repair?.comfortExitCandidateIds.length ?? null,
+        shadowCoordination: shadow
+          ? {
+              kind: shadow.kind,
+              regionState: shadow.region.state,
+              regionAnchor: shadow.region.representativeAnchor ? { ...shadow.region.representativeAnchor } : null,
+              regionBestSampleId: shadow.region.bestSampleId,
+              regionCoherentSampleCount: shadow.region.coherentSampleIds.length,
+              paceLabel: shadow.pace.label,
+              paceUrgency: shadow.pace.urgency,
+              desiredSpeed: shadow.pace.desiredSpeed,
+              playerCorridorState: shadow.playerCorridor.state,
+              playerCorridorConfidence: shadow.playerCorridor.confidence,
+              playerCorridorEndpoint: { ...shadow.playerCorridor.endpoint },
+              legacyTargetToShadowAnchorDistance: shadow.legacy.targetToShadowAnchorDistance,
+              error: evidence.shadowCoordinationError
+            }
+          : evidence.shadowCoordinationError
+            ? {
+                kind: "CCC0_SHADOW_COORDINATION",
+                regionState: "ERROR",
+                regionAnchor: null,
+                regionBestSampleId: null,
+                regionCoherentSampleCount: 0,
+                paceLabel: "ERROR",
+                paceUrgency: 0,
+                desiredSpeed: 0,
+                playerCorridorState: "ERROR",
+                playerCorridorConfidence: 0,
+                playerCorridorEndpoint: { ...beforePlayer.position },
+                legacyTargetToShadowAnchorDistance: null,
+                error: evidence.shadowCoordinationError
+              }
+            : null
       },
       command: {
         actuator,
@@ -577,6 +622,7 @@ export class R1LabScene extends Phaser.Scene {
 
     if (this.panel.layerVisible("trails")) this.drawTrails(sx, sy);
     if (this.panel.layerVisible("relationship")) this.drawRelationship(sx, sy);
+    if (this.panel.layerVisible("coordination")) this.drawCoordination(sx, sy, scale);
     if (this.panel.layerVisible("route")) this.drawRoute(sx, sy);
     if (this.panel.layerVisible("spatial")) this.drawSpatial(sx, sy);
 
@@ -620,6 +666,77 @@ export class R1LabScene extends Phaser.Scene {
       this.graphics.lineStyle(selected ? 3 : 1, candidate.valid ? 0x9da7b3 : 0xff5d66, selected ? 1 : 0.45);
       this.graphics.strokeCircle(sx(candidate.position.x), sy(candidate.position.y), selected ? 8 : 4);
     }
+  }
+
+  private drawCoordination(
+    sx: (x: number) => number,
+    sy: (y: number) => number,
+    scale: number
+  ): void {
+    const shadow = this.shadowCoordination;
+    if (!shadow) return;
+    const coherent = new Set(shadow.region.coherentSampleIds);
+
+    for (const sample of shadow.region.samples) {
+      let color = 0x6e7681;
+      let alpha = 0.18;
+      let radius = 2;
+      if (!sample.hardValid) {
+        color = 0xff5d66;
+        alpha = 0.22;
+      } else if (sample.routeEvaluated && !sample.reachable) {
+        color = 0xe3b341;
+        alpha = 0.34;
+        radius = 2.5;
+      } else if (coherent.has(sample.id)) {
+        color = 0x7ee787;
+        alpha = 0.9;
+        radius = 4;
+      } else if (sample.routeEvaluated && sample.reachable) {
+        color = 0x58a6ff;
+        alpha = 0.48;
+        radius = 3;
+      }
+      this.graphics.fillStyle(color, alpha);
+      this.graphics.fillCircle(sx(sample.position.x), sy(sample.position.y), radius);
+    }
+
+    const anchor = shadow.region.representativeAnchor;
+    if (anchor) {
+      this.graphics.lineStyle(3, 0x7ee787, 0.95);
+      this.graphics.strokeCircle(sx(anchor.x), sy(anchor.y), 9);
+      if (this.relationalDecision) {
+        this.graphics.lineStyle(2, 0xd2a8ff, 0.55);
+        this.graphics.lineBetween(
+          sx(this.relationalDecision.target.x),
+          sy(this.relationalDecision.target.y),
+          sx(anchor.x),
+          sy(anchor.y)
+        );
+      }
+    }
+
+    const corridor = shadow.playerCorridor;
+    const corridorAlpha = corridor.state === "STATIONARY" ? 0.2 : 0.72 * Math.max(0.2, corridor.confidence);
+    this.graphics.lineStyle(4, 0x63a8ff, corridorAlpha);
+    this.graphics.lineBetween(
+      sx(corridor.origin.x),
+      sy(corridor.origin.y),
+      sx(corridor.endpoint.x),
+      sy(corridor.endpoint.y)
+    );
+    this.graphics.lineStyle(1, 0x63a8ff, Math.max(0.18, corridorAlpha * 0.7));
+    this.graphics.strokeCircle(
+      sx(corridor.endpoint.x),
+      sy(corridor.endpoint.y),
+      corridor.comfortRadius * scale
+    );
+    this.graphics.lineStyle(2, 0x63a8ff, Math.max(0.25, corridorAlpha));
+    this.graphics.strokeCircle(
+      sx(corridor.endpoint.x),
+      sy(corridor.endpoint.y),
+      corridor.physicalRadius * scale
+    );
   }
 
   private drawRoute(sx: (x: number) => number, sy: (y: number) => number): void {
@@ -728,6 +845,7 @@ export class R1LabScene extends Phaser.Scene {
     const repair = this.spatialRepairDecision;
     const constraint = this.finalConstraintDecision;
     const companion = actor(snapshot, "companion");
+    const shadow = this.shadowCoordination;
 
     const sections: CausalPanelModel["sections"] = [
       {
@@ -753,6 +871,51 @@ export class R1LabScene extends Phaser.Scene {
               this.relationalDecision.reason
             ]
           : [`${this.companionMode} baseline has no supervised relational objective`]
+      },
+      {
+        id: "ccc-where",
+        title: "CCC-0 shadow · WHERE",
+        tone: this.shadowCoordinationError || shadow?.region.state === "NO_REACHABLE_REGION" ? "warning" : "normal",
+        lines: this.shadowCoordinationError
+          ? [`SHADOW ERROR · ${this.shadowCoordinationError}`, "authoritative movement remains unchanged"]
+          : shadow
+            ? [
+                `state ${shadow.region.state} · heading ${shadow.region.playerHeadingSource}`,
+                `best ${shadow.region.bestSampleId ?? "none"} · coherent ${shadow.region.coherentSampleIds.length} · route queries ${shadow.region.routeEvaluatedCount}`,
+                shadow.region.representativeAnchor
+                  ? `anchor ${compact(shadow.region.representativeAnchor.x)}, ${compact(shadow.region.representativeAnchor.y)} · ${shadow.region.representativeSource}`
+                  : "anchor none",
+                `legacy target Δ ${shadow.legacy.targetToShadowAnchorDistance === null ? "n/a" : compact(shadow.legacy.targetToShadowAnchorDistance)}`,
+                shadow.region.reason
+              ]
+            : ["shadow coordination inactive outside SPATIAL mode"]
+      },
+      {
+        id: "ccc-pace",
+        title: "CCC-0 shadow · PACE",
+        lines: shadow
+          ? [
+              `${shadow.pace.label} · urgency ${compact(shadow.pace.urgency)} · desired speed ${compact(shadow.pace.desiredSpeed)}`,
+              `distance to region ${shadow.pace.distanceToRegion === null ? "n/a" : compact(shadow.pace.distanceToRegion)} · route ${shadow.pace.routeDistanceToRegion === null ? "n/a" : compact(shadow.pace.routeDistanceToRegion)}`,
+              `separation ${shadow.pace.separationTrend} · opening ${shadow.pace.relativeOpeningSpeed === null ? "n/a" : compact(shadow.pace.relativeOpeningSpeed)}`,
+              `outside ${shadow.pace.outsideRegionTicks}t · capability ${compact(shadow.pace.physicalSpeedCapability)}`,
+              shadow.pace.reason
+            ]
+          : ["shadow pace evidence unavailable"]
+      },
+      {
+        id: "ccc-player",
+        title: "CCC-0 shadow · PLAYER FLOW",
+        tone: shadow?.playerCorridor.state === "REVERSAL_UNCERTAIN" ? "warning" : "normal",
+        lines: shadow
+          ? [
+              `${shadow.playerCorridor.state} · source ${shadow.playerCorridor.velocitySource}`,
+              `confidence ${compact(shadow.playerCorridor.confidence)} · horizon ${compact(shadow.playerCorridor.horizon)}s`,
+              `speed ${compact(shadow.playerCorridor.speed)} · physical r ${compact(shadow.playerCorridor.physicalRadius)} · comfort r ${compact(shadow.playerCorridor.comfortRadius)}`,
+              `endpoint ${compact(shadow.playerCorridor.endpoint.x)}, ${compact(shadow.playerCorridor.endpoint.y)}`,
+              shadow.playerCorridor.reason
+            ]
+          : ["shadow player-flow evidence unavailable"]
       },
       {
         id: "route",
@@ -828,7 +991,7 @@ export class R1LabScene extends Phaser.Scene {
     ];
 
     this.panel.update({
-      title: "R1 Robustness Workbench",
+      title: "R1 Robustness Workbench · CCC-0 shadow",
       subtitle: `frame ${latest?.sequence ?? "-"} · observation t${latest?.observation.worldTick ?? "-"} → outcome t${latest?.outcome.worldTick ?? "-"}`,
       badge: post ? post.state.toUpperCase() : "LOADING",
       badgeTone,
@@ -901,7 +1064,7 @@ export class R1LabScene extends Phaser.Scene {
     const snapshot = this.snapshotValue;
     if (!snapshot) return;
     const incident = {
-      schema: "companion-brain-lab-r1-causal-incident-v2",
+      schema: "companion-brain-lab-ccc0-causal-incident-v3",
       scenario: snapshot.scenarioId,
       tick: snapshot.tick,
       mode: this.companionMode,
@@ -914,7 +1077,7 @@ export class R1LabScene extends Phaser.Scene {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `companion-r1-${snapshot.scenarioId}-tick-${snapshot.tick}.json`;
+    anchor.download = `companion-ccc0-${snapshot.scenarioId}-tick-${snapshot.tick}.json`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
@@ -930,6 +1093,8 @@ export class R1LabScene extends Phaser.Scene {
     this.continuityDecision = null;
     this.finalConstraintDecision = null;
     this.progressDecision = null;
+    this.shadowCoordination = null;
+    this.shadowCoordinationError = null;
     this.appliedLocalRetries = 0;
   }
 
