@@ -8,6 +8,7 @@ import {
 } from "../brain/relational-positioning";
 import { NaturalSpatialLocomotionBrain } from "../brain/natural-spatial-locomotion";
 import type { MotionContinuityStepResult } from "../brain/motion-continuity";
+import type { PreferredVelocityRefinement } from "../brain/preferred-velocity-refinement";
 import {
   SpatialLocomotionBrain,
   type SpatialLocomotionDecision,
@@ -81,6 +82,7 @@ export class S4LabScene extends Phaser.Scene {
   private readonly naturalSpatialBrain = new NaturalSpatialLocomotionBrain();
   private relationalDecision: RelationalDecision | null = null;
   private spatialDecision: SpatialLocomotionDecision | null = null;
+  private refinementDecision: PreferredVelocityRefinement | null = null;
   private continuityDecision: MotionContinuityStepResult | null = null;
   private directTraversalProbe: DirectTraversalResult | null = null;
   private routePlan: StaticRoutePlan | null = null;
@@ -180,6 +182,7 @@ export class S4LabScene extends Phaser.Scene {
     };
 
     let companionIntent: MotionIntent;
+    this.refinementDecision = null;
     this.continuityDecision = null;
     if (this.companionMode === "manual") {
       this.relationalDecision = null;
@@ -211,6 +214,7 @@ export class S4LabScene extends Phaser.Scene {
         companionIntent = this.naturalSpatialBrain.intent(input);
         const debug = this.naturalSpatialBrain.debugState();
         this.spatialDecision = debug.preferred;
+        this.refinementDecision = debug.refinement;
         this.continuityDecision = debug.continuity;
       } else {
         companionIntent = this.spatialBrain.intent(input);
@@ -273,7 +277,8 @@ export class S4LabScene extends Phaser.Scene {
   private observeSpatialChoice(tick: number): void {
     const decision = this.spatialDecision;
     if (!decision) return;
-    const signature = `${decision.state}|${decision.selectedCandidateId}`;
+    const refinement = this.refinementDecision;
+    const signature = `${decision.state}|${decision.selectedCandidateId}|${refinement?.source ?? "direct"}`;
     if (signature === this.lastSpatialSignature) return;
     const previous = this.lastSpatialSignature;
     this.lastSpatialSignature = signature;
@@ -283,7 +288,10 @@ export class S4LabScene extends Phaser.Scene {
         previous,
         state: decision.state,
         candidate: decision.selectedCandidateId,
-        naturalActuator: this.naturalActuator
+        naturalActuator: this.naturalActuator,
+        refinement: refinement?.source ?? "none",
+        refinementAngle: refinement ? compact(refinement.angularDeltaDegrees) : null,
+        contributors: refinement?.contributorIds.join(",") ?? "none"
       }
     });
   }
@@ -303,6 +311,7 @@ export class S4LabScene extends Phaser.Scene {
   private publicDebugChannels(snapshot: WorldSnapshot): PublicDebugChannel[] {
     const channels: PublicDebugChannel[] = [];
     const spatial = this.spatialDecision;
+    const refinement = this.refinementDecision;
     if (this.relationalDecision) {
       channels.push({
         id: "brain",
@@ -331,13 +340,18 @@ export class S4LabScene extends Phaser.Scene {
     if (spatial) {
       channels.push({
         id: "spatial",
-        summary: `${spatial.state} via ${spatial.selectedCandidateId}`,
+        summary: `${spatial.state} via ${spatial.selectedCandidateId}; refinement ${refinement?.source ?? "off"}`,
         fields: {
           candidate: spatial.selectedCandidateId,
           accepted: spatial.acceptedCount,
           rejected: spatial.rejectedCount,
-          preferredVx: compact(spatial.selectedVelocity.x),
-          preferredVy: compact(spatial.selectedVelocity.y),
+          coarseVx: compact(spatial.selectedVelocity.x),
+          coarseVy: compact(spatial.selectedVelocity.y),
+          refinementSource: refinement?.source ?? "none",
+          refinedMoveX: refinement ? compact(refinement.refinedMove.x) : null,
+          refinedMoveY: refinement ? compact(refinement.refinedMove.y) : null,
+          refinementAngleDeg: refinement ? compact(refinement.angularDeltaDegrees) : null,
+          refinementContributors: refinement?.contributorIds.join(",") ?? "none",
           routeRemaining: compact(spatial.observation.routeRemainingDistance)
         }
       });
@@ -348,10 +362,16 @@ export class S4LabScene extends Phaser.Scene {
       channels.push({
         id: "motion",
         summary: continuity
-          ? `${continuity.regime}; preferred ${continuity.preferredSpeed.toFixed(2)} -> commanded ${continuity.speed.toFixed(2)}`
+          ? `${continuity.regime}; refined preferred ${continuity.preferredSpeed.toFixed(2)} -> commanded ${continuity.speed.toFixed(2)} -> actual ${speed(companion.actualVelocity).toFixed(2)}`
           : `${this.naturalActuator ? "natural idle" : "direct actuator"}; actual ${speed(companion.actualVelocity).toFixed(2)}`,
         fields: {
           actuator: this.naturalActuator ? "natural" : "direct",
+          refinedPreferredVx: continuity ? compact(continuity.preferredVelocity.x) : null,
+          refinedPreferredVy: continuity ? compact(continuity.preferredVelocity.y) : null,
+          commandedVx: continuity ? compact(continuity.commandedVelocity.x) : compact(companion.requestedVelocity.x),
+          commandedVy: continuity ? compact(continuity.commandedVelocity.y) : compact(companion.requestedVelocity.y),
+          actualVx: compact(companion.actualVelocity.x),
+          actualVy: compact(companion.actualVelocity.y),
           preferredSpeed: continuity ? compact(continuity.preferredSpeed) : null,
           commandedSpeed: continuity ? compact(continuity.speed) : compact(speed(companion.requestedVelocity)),
           actualSpeed: compact(speed(companion.actualVelocity)),
@@ -447,6 +467,7 @@ export class S4LabScene extends Phaser.Scene {
     this.spatialBrain.reset();
     this.naturalSpatialBrain.reset();
     this.spatialDecision = null;
+    this.refinementDecision = null;
     this.continuityDecision = null;
     this.lastSpatialSignature = null;
   }
@@ -618,10 +639,15 @@ export class S4LabScene extends Phaser.Scene {
     scale: number
   ): void {
     const arrowScale = scale * 0.18;
+    if (actorId === "companion" && this.spatialDecision) {
+      const coarse = this.spatialDecision.selectedVelocity;
+      this.graphics.lineStyle(2, 0x8b949e, 0.85);
+      this.graphics.lineBetween(sx(position.x), sy(position.y), sx(position.x) + coarse.x * arrowScale, sy(position.y) + coarse.y * arrowScale);
+    }
     if (actorId === "companion" && this.continuityDecision) {
-      const preferred = this.continuityDecision.preferredVelocity;
-      this.graphics.lineStyle(4, 0xd2a8ff, 0.9);
-      this.graphics.lineBetween(sx(position.x), sy(position.y), sx(position.x) + preferred.x * arrowScale, sy(position.y) + preferred.y * arrowScale);
+      const refined = this.continuityDecision.preferredVelocity;
+      this.graphics.lineStyle(4, 0xd2a8ff, 0.95);
+      this.graphics.lineBetween(sx(position.x), sy(position.y), sx(position.x) + refined.x * arrowScale, sy(position.y) + refined.y * arrowScale);
     }
     this.graphics.lineStyle(3, 0x7ee787, 0.95);
     this.graphics.lineBetween(sx(position.x), sy(position.y), sx(position.x) + requested.x * arrowScale, sy(position.y) + requested.y * arrowScale);
@@ -658,9 +684,13 @@ export class S4LabScene extends Phaser.Scene {
       return;
     }
     const top = topAcceptedCandidates(decision).map((candidate) => `${candidate.id}:${candidate.score.toFixed(2)}`).join("  ");
+    const refinement = this.refinementDecision;
     lines.push(
-      `SPATIAL ${decision.state} · preferred ${decision.selectedCandidateId} · ${decision.acceptedCount} accepted / ${decision.rejectedCount} rejected`,
+      `SPATIAL ${decision.state} · coarse ${decision.selectedCandidateId} · ${decision.acceptedCount} accepted / ${decision.rejectedCount} rejected`,
       `SPATIAL lookahead ${decision.observation.routeLookahead.x.toFixed(2)},${decision.observation.routeLookahead.y.toFixed(2)} · remaining ${decision.observation.routeRemainingDistance.toFixed(2)}`,
+      refinement
+        ? `SPATIAL refinement ${refinement.source} · Δheading ${refinement.angularDeltaDegrees.toFixed(1)}° · contributors ${refinement.contributorIds.join(",") || "none"}`
+        : "SPATIAL refinement OFF (DIRECT actuator baseline)",
       `SPATIAL top ${top}`
     );
   }
@@ -669,10 +699,10 @@ export class S4LabScene extends Phaser.Scene {
     const companion = snapshot.actors.find((actor) => actor.id === "companion");
     if (!companion) return;
     const c = this.continuityDecision;
-    lines.push("MOTION purple=preferred · green=commanded/requested · red=actual · trails last ~4s");
+    lines.push("MOTION gray=coarse preferred · purple=refined preferred · green=commanded/requested · red=actual · trails last ~4s");
     if (c) {
       lines.push(
-        `MOTION ${c.regime} · preferred ${c.preferredSpeed.toFixed(2)} · commanded ${c.speed.toFixed(2)} · actual ${speed(companion.actualVelocity).toFixed(2)} · response error ${c.velocityError.toFixed(2)}`,
+        `MOTION ${c.regime} · refined preferred ${c.preferredSpeed.toFixed(2)} · commanded ${c.speed.toFixed(2)} · actual ${speed(companion.actualVelocity).toFixed(2)} · response error ${c.velocityError.toFixed(2)}`,
         `MOTION accel ${c.accelerationMagnitude.toFixed(2)} m/s² · jerk ${c.jerkMagnitude.toFixed(1)} m/s³ · actuator NATURAL`
       );
     } else {
