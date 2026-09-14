@@ -8,6 +8,22 @@ export interface CausalObservationPhase {
   companionContacts: readonly string[];
 }
 
+export interface CausalShadowCoordinationEvidence {
+  kind: "CCC0_SHADOW_COORDINATION";
+  regionState: string;
+  regionAnchor: Vec2 | null;
+  regionBestSampleId: string | null;
+  regionCoherentSampleCount: number;
+  paceLabel: string;
+  paceUrgency: number;
+  desiredSpeed: number;
+  playerCorridorState: string;
+  playerCorridorConfidence: number;
+  playerCorridorEndpoint: Vec2;
+  legacyTargetToShadowAnchorDistance: number | null;
+  error: string | null;
+}
+
 export interface CausalDecisionPhase {
   relationshipRevision: number | null;
   relationshipLabel: string | null;
@@ -25,6 +41,8 @@ export interface CausalDecisionPhase {
   comfortStartBlockers?: readonly string[];
   rehabilitatedCandidateCount?: number | null;
   comfortExitCandidateCount?: number | null;
+  /** Explicitly non-authoritative CCC-0 research evidence from the same observation tick. */
+  shadowCoordination?: CausalShadowCoordinationEvidence | null;
 }
 
 export interface CausalCommandPhase {
@@ -77,6 +95,18 @@ function cloneVec(value: Vec2 | null): Vec2 | null {
   return value ? { ...value } : null;
 }
 
+function cloneShadow(
+  value: CausalShadowCoordinationEvidence | null | undefined
+): CausalShadowCoordinationEvidence | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  return {
+    ...value,
+    regionAnchor: cloneVec(value.regionAnchor),
+    playerCorridorEndpoint: { ...value.playerCorridorEndpoint }
+  };
+}
+
 function cloneFrame(frame: CausalFrame): CausalFrame {
   return {
     sequence: frame.sequence,
@@ -94,7 +124,8 @@ function cloneFrame(frame: CausalFrame): CausalFrame {
       refinedVelocity: cloneVec(frame.decision.refinedVelocity),
       comfortStartBlockers: frame.decision.comfortStartBlockers
         ? [...frame.decision.comfortStartBlockers]
-        : undefined
+        : undefined,
+      shadowCoordination: cloneShadow(frame.decision.shadowCoordination)
     },
     command: {
       ...frame.command,
