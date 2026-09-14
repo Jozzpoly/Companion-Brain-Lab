@@ -9,12 +9,20 @@ function frame(sequence: number, observationTick: number, outcomeTick: number): 
       companionPosition: { x: 1, y: 2 },
       playerPosition: { x: 4, y: 5 },
       companionActualVelocity: { x: 0.5, y: 0 },
-      companionContacts: []
+      companionContacts: [],
+      companionRequestedVelocity: { x: 0.4, y: 0 },
+      companionMotionError: 0.1,
+      playerRequestedVelocity: { x: 1.5, y: 0 },
+      playerActualVelocity: { x: 1.2, y: 0.1 },
+      playerMotionError: 0.31,
+      playerContacts: ["companion"],
+      playerInputMove: { x: 0.5, y: 0 }
     },
     decision: {
       relationshipRevision: 3,
       relationshipLabel: "back-left",
       relationshipTarget: { x: 3, y: 4 },
+      relationshipPlayerDirection: { x: -1, y: 0 },
       routeStatus: "routed",
       routePath: "start>corner>target",
       routeCost: 5,
@@ -22,6 +30,13 @@ function frame(sequence: number, observationTick: number, outcomeTick: number): 
       spatialCandidate: "d3.s1.00",
       preferredVelocity: { x: 2, y: 1 },
       refinedVelocity: { x: 1.8, y: 1.1 },
+      localSafetyState: "NORMAL",
+      coarseLocalVelocity: { x: 2, y: 1 },
+      refinementSource: "weighted-local-refinement",
+      refinementContributorIds: ["d3.s1.00", "d4.s1.00"],
+      naturalRegime: "STEER",
+      naturalPreferredVelocity: { x: 1.8, y: 1.1 },
+      naturalPreConstraintVelocity: { x: 1.6, y: 0.9 },
       routeClearanceConstrained: true,
       comfortStartViolated: true,
       comfortStartBlockers: ["door.wall.top"],
@@ -66,6 +81,8 @@ function frame(sequence: number, observationTick: number, outcomeTick: number): 
       actuator: "natural",
       commandedMove: { x: 0.5, y: 0.2 },
       commandedVelocity: { x: 1.5, y: 0.6 },
+      preConstraintVelocity: { x: 1.6, y: 0.9 },
+      finalConstraintVelocity: { x: 1.5, y: 0.6 },
       finalConstraintSource: "preferred-fallback",
       finalConstrained: true,
       finalConstraintReason: "continuity command hard-blocked; using hard-safe preferred move"
@@ -76,7 +93,14 @@ function frame(sequence: number, observationTick: number, outcomeTick: number): 
       companionRequestedVelocity: { x: 1.5, y: 0.6 },
       companionActualVelocity: { x: 1.2, y: 0.5 },
       companionContacts: ["player"],
+      companionMotionError: 0.32,
       displacement: 0.022,
+      playerPosition: { x: 4.02, y: 5 },
+      playerRequestedVelocity: { x: 1.5, y: 0 },
+      playerActualVelocity: { x: 1.0, y: 0.2 },
+      playerMotionError: 0.54,
+      playerContacts: ["companion"],
+      playerDisplacement: 0.02,
       postRouteStatus: "routed",
       postRoutePath: "start>corner>target",
       postRouteClearanceConstrained: false
@@ -151,6 +175,27 @@ describe("R1 causal frame trace", () => {
     expect(latest?.command.commandedMove).toEqual({ x: 0.5, y: 0.2 });
   });
 
+  it("preserves incident-v5 action and player-agency provenance", () => {
+    const trace = new CausalFrameTrace();
+    trace.record(frame(trace.nextSequence(), 30, 31));
+
+    const latest = trace.latest();
+    expect(latest?.observation.playerInputMove).toEqual({ x: 0.5, y: 0 });
+    expect(latest?.observation.playerMotionError).toBe(0.31);
+    expect(latest?.decision.relationshipPlayerDirection).toEqual({ x: -1, y: 0 });
+    expect(latest?.decision.localSafetyState).toBe("NORMAL");
+    expect(latest?.decision.coarseLocalVelocity).toEqual({ x: 2, y: 1 });
+    expect(latest?.decision.refinementSource).toBe("weighted-local-refinement");
+    expect(latest?.decision.naturalRegime).toBe("STEER");
+    expect(latest?.decision.naturalPreConstraintVelocity).toEqual({ x: 1.6, y: 0.9 });
+    expect(latest?.command.preConstraintVelocity).toEqual({ x: 1.6, y: 0.9 });
+    expect(latest?.command.finalConstraintVelocity).toEqual({ x: 1.5, y: 0.6 });
+    expect(latest?.outcome.companionMotionError).toBe(0.32);
+    expect(latest?.outcome.playerActualVelocity).toEqual({ x: 1.0, y: 0.2 });
+    expect(latest?.outcome.playerMotionError).toBe(0.54);
+    expect(latest?.outcome.playerDisplacement).toBe(0.02);
+  });
+
   it("adds self-describing recovery aliases to legacy incident-v2 frames", () => {
     const trace = new CausalFrameTrace();
     trace.record(frame(trace.nextSequence(), 20, 21));
@@ -163,14 +208,22 @@ describe("R1 causal frame trace", () => {
   it("defensively clones nested public evidence", () => {
     const trace = new CausalFrameTrace();
     const sourceContacts = ["player"];
+    const sourcePlayerContacts = ["companion"];
     const sourceComfortBlockers = ["door.wall.top"];
+    const sourceContributors = ["d3.s1.00", "d4.s1.00"];
     const value = frame(trace.nextSequence(), 1, 2);
     value.outcome.companionContacts = sourceContacts;
+    value.outcome.playerContacts = sourcePlayerContacts;
     value.decision.comfortStartBlockers = sourceComfortBlockers;
+    value.decision.refinementContributorIds = sourceContributors;
     trace.record(value);
 
     value.observation.companionPosition.x = 999;
+    value.observation.playerInputMove!.x = 999;
     value.decision.relationshipTarget!.x = 999;
+    value.decision.relationshipPlayerDirection!.x = 999;
+    value.decision.coarseLocalVelocity!.x = 999;
+    value.decision.naturalPreConstraintVelocity!.x = 999;
     value.decision.shadowCoordination!.regionAnchor!.x = 999;
     value.decision.shadowCoordination!.playerCorridorEndpoint.x = 999;
     value.decision.shadowCoordination!.preferredFlowCompanionClosest!.x = 999;
@@ -178,12 +231,21 @@ describe("R1 causal frame trace", () => {
     value.decision.shadowCoordination!.authoritativeFlowCompanionClosest!.x = 999;
     value.decision.shadowCoordination!.authoritativeFlowPlayerClosest!.x = 999;
     value.command.commandedMove.x = 999;
+    value.command.preConstraintVelocity!.x = 999;
+    value.command.finalConstraintVelocity!.x = 999;
+    value.outcome.playerActualVelocity!.x = 999;
     sourceContacts.push("wall");
+    sourcePlayerContacts.push("wall");
     sourceComfortBlockers.push("door.wall.bottom");
+    sourceContributors.push("d5.s1.00");
 
     const latest = trace.latest();
     expect(latest?.observation.companionPosition.x).toBe(1);
+    expect(latest?.observation.playerInputMove?.x).toBe(0.5);
     expect(latest?.decision.relationshipTarget?.x).toBe(3);
+    expect(latest?.decision.relationshipPlayerDirection?.x).toBe(-1);
+    expect(latest?.decision.coarseLocalVelocity?.x).toBe(2);
+    expect(latest?.decision.naturalPreConstraintVelocity?.x).toBe(1.6);
     expect(latest?.decision.shadowCoordination?.regionAnchor?.x).toBe(2.2);
     expect(latest?.decision.shadowCoordination?.playerCorridorEndpoint.x).toBe(4.7);
     expect(latest?.decision.shadowCoordination?.preferredFlowCompanionClosest?.x).toBe(2.5);
@@ -191,8 +253,13 @@ describe("R1 causal frame trace", () => {
     expect(latest?.decision.shadowCoordination?.authoritativeFlowCompanionClosest?.x).toBe(2.55);
     expect(latest?.decision.shadowCoordination?.authoritativeFlowPlayerClosest?.x).toBe(3.20);
     expect(latest?.command.commandedMove.x).toBe(0.5);
+    expect(latest?.command.preConstraintVelocity?.x).toBe(1.6);
+    expect(latest?.command.finalConstraintVelocity?.x).toBe(1.5);
+    expect(latest?.outcome.playerActualVelocity?.x).toBe(1.0);
     expect(latest?.outcome.companionContacts).toEqual(["player"]);
+    expect(latest?.outcome.playerContacts).toEqual(["companion"]);
     expect(latest?.decision.comfortStartBlockers).toEqual(["door.wall.top"]);
+    expect(latest?.decision.refinementContributorIds).toEqual(["d3.s1.00", "d4.s1.00"]);
   });
 
   it("bounds history while keeping sequence monotonic", () => {

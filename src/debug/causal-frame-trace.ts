@@ -6,6 +6,15 @@ export interface CausalObservationPhase {
   playerPosition: Vec2;
   companionActualVelocity: Vec2;
   companionContacts: readonly string[];
+  /** Incident-v5 provenance: state that existed before the current World step. */
+  companionRequestedVelocity?: Vec2;
+  companionMotionError?: number;
+  playerRequestedVelocity?: Vec2;
+  playerActualVelocity?: Vec2;
+  playerMotionError?: number;
+  playerContacts?: readonly string[];
+  /** Same-step owner input that will be submitted to World after this observation. */
+  playerInputMove?: Vec2;
 }
 
 export interface CausalShadowCoordinationEvidence {
@@ -50,6 +59,8 @@ export interface CausalDecisionPhase {
   relationshipLabel: string | null;
   relationshipState?: string | null;
   relationshipTarget: Vec2 | null;
+  /** Exact heading evidence consumed by the legacy relationship decision. */
+  relationshipPlayerDirection?: Vec2 | null;
   routeStatus: string | null;
   routePath: string;
   routeCost: number | null;
@@ -57,6 +68,14 @@ export interface CausalDecisionPhase {
   spatialCandidate: string | null;
   preferredVelocity: Vec2 | null;
   refinedVelocity: Vec2 | null;
+  /** Incident-v5 aliases that make the movement stack's provenance explicit. */
+  localSafetyState?: string | null;
+  coarseLocalVelocity?: Vec2 | null;
+  refinementSource?: string | null;
+  refinementContributorIds?: readonly string[];
+  naturalRegime?: string | null;
+  naturalPreferredVelocity?: Vec2 | null;
+  naturalPreConstraintVelocity?: Vec2 | null;
   routeClearanceConstrained?: boolean | null;
   comfortStartViolated?: boolean | null;
   comfortStartBlockers?: readonly string[];
@@ -70,6 +89,10 @@ export interface CausalCommandPhase {
   actuator: "direct" | "natural" | "manual" | "chase" | "relational";
   commandedMove: Vec2;
   commandedVelocity: Vec2;
+  /** Velocity immediately before the final static command authority. */
+  preConstraintVelocity?: Vec2 | null;
+  /** Velocity actually approved by the final command stage / submitted to World. */
+  finalConstraintVelocity?: Vec2 | null;
   finalConstraintSource?: string | null;
   finalConstrained?: boolean | null;
   finalConstraintReason?: string | null;
@@ -81,7 +104,15 @@ export interface CausalOutcomePhase {
   companionRequestedVelocity: Vec2;
   companionActualVelocity: Vec2;
   companionContacts: readonly string[];
+  companionMotionError?: number;
   displacement: number;
+  /** Incident-v5 player outcome closes the input -> physics -> observation chain. */
+  playerPosition?: Vec2;
+  playerRequestedVelocity?: Vec2;
+  playerActualVelocity?: Vec2;
+  playerMotionError?: number;
+  playerContacts?: readonly string[];
+  playerDisplacement?: number;
   postRouteStatus: string | null;
   postRoutePath: string;
   postRouteClearanceConstrained?: boolean | null;
@@ -116,6 +147,11 @@ function cloneVec(value: Vec2 | null | undefined): Vec2 | null {
   return value ? { ...value } : null;
 }
 
+function cloneOptionalVec(value: Vec2 | null | undefined): Vec2 | null | undefined {
+  if (value === undefined) return undefined;
+  return value === null ? null : { ...value };
+}
+
 function cloneShadow(
   value: CausalShadowCoordinationEvidence | null | undefined
 ): CausalShadowCoordinationEvidence | null | undefined {
@@ -140,13 +176,27 @@ function cloneFrame(frame: CausalFrame): CausalFrame {
       companionPosition: { ...frame.observation.companionPosition },
       playerPosition: { ...frame.observation.playerPosition },
       companionActualVelocity: { ...frame.observation.companionActualVelocity },
-      companionContacts: [...frame.observation.companionContacts]
+      companionContacts: [...frame.observation.companionContacts],
+      companionRequestedVelocity: cloneOptionalVec(frame.observation.companionRequestedVelocity) ?? undefined,
+      playerRequestedVelocity: cloneOptionalVec(frame.observation.playerRequestedVelocity) ?? undefined,
+      playerActualVelocity: cloneOptionalVec(frame.observation.playerActualVelocity) ?? undefined,
+      playerContacts: frame.observation.playerContacts
+        ? [...frame.observation.playerContacts]
+        : undefined,
+      playerInputMove: cloneOptionalVec(frame.observation.playerInputMove) ?? undefined
     },
     decision: {
       ...frame.decision,
       relationshipTarget: cloneVec(frame.decision.relationshipTarget),
+      relationshipPlayerDirection: cloneOptionalVec(frame.decision.relationshipPlayerDirection),
       preferredVelocity: cloneVec(frame.decision.preferredVelocity),
       refinedVelocity: cloneVec(frame.decision.refinedVelocity),
+      coarseLocalVelocity: cloneOptionalVec(frame.decision.coarseLocalVelocity),
+      refinementContributorIds: frame.decision.refinementContributorIds
+        ? [...frame.decision.refinementContributorIds]
+        : undefined,
+      naturalPreferredVelocity: cloneOptionalVec(frame.decision.naturalPreferredVelocity),
+      naturalPreConstraintVelocity: cloneOptionalVec(frame.decision.naturalPreConstraintVelocity),
       comfortStartBlockers: frame.decision.comfortStartBlockers
         ? [...frame.decision.comfortStartBlockers]
         : undefined,
@@ -155,14 +205,22 @@ function cloneFrame(frame: CausalFrame): CausalFrame {
     command: {
       ...frame.command,
       commandedMove: { ...frame.command.commandedMove },
-      commandedVelocity: { ...frame.command.commandedVelocity }
+      commandedVelocity: { ...frame.command.commandedVelocity },
+      preConstraintVelocity: cloneOptionalVec(frame.command.preConstraintVelocity),
+      finalConstraintVelocity: cloneOptionalVec(frame.command.finalConstraintVelocity)
     },
     outcome: {
       ...frame.outcome,
       companionPosition: { ...frame.outcome.companionPosition },
       companionRequestedVelocity: { ...frame.outcome.companionRequestedVelocity },
       companionActualVelocity: { ...frame.outcome.companionActualVelocity },
-      companionContacts: [...frame.outcome.companionContacts]
+      companionContacts: [...frame.outcome.companionContacts],
+      playerPosition: cloneOptionalVec(frame.outcome.playerPosition) ?? undefined,
+      playerRequestedVelocity: cloneOptionalVec(frame.outcome.playerRequestedVelocity) ?? undefined,
+      playerActualVelocity: cloneOptionalVec(frame.outcome.playerActualVelocity) ?? undefined,
+      playerContacts: frame.outcome.playerContacts
+        ? [...frame.outcome.playerContacts]
+        : undefined
     },
     post: {
       ...frame.post,

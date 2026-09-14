@@ -483,16 +483,27 @@ export class R1LabScene extends Phaser.Scene {
     const beforeCompanion = actor(evidence.before, "companion");
     const beforePlayer = actor(evidence.before, "player");
     const afterCompanion = actor(after, "companion");
+    const afterPlayer = actor(after, "player");
+    const playerIntent = evidence.intents.find((intent) => intent.actorId === "player") ?? {
+      actorId: "player" as const,
+      move: { x: 0, y: 0 }
+    };
     const companionIntent = evidence.intents.find((intent) => intent.actorId === "companion") ?? {
       actorId: "companion" as const,
       move: { x: 0, y: 0 }
     };
     const target = evidence.target;
     const displacement = distance(beforeCompanion.position, afterCompanion.position);
+    const playerDisplacement = distance(beforePlayer.position, afterPlayer.position);
     const post = this.classifyPost(target, companionIntent.move, displacement);
 
     const refinedVelocity = evidence.continuity?.preferredVelocity
       ?? (evidence.refinement ? scaled(evidence.refinement.refinedMove, EXPERIMENT_SPEED) : null);
+    const preConstraintVelocity = evidence.continuity?.commandedVelocity
+      ?? (evidence.spatial ? { ...evidence.spatial.selectedVelocity } : null);
+    const finalConstraintVelocity = evidence.finalConstraint
+      ? scaled(evidence.finalConstraint.finalMove, EXPERIMENT_SPEED)
+      : { ...afterCompanion.requestedVelocity };
     const actuator: CausalFrame["command"]["actuator"] = this.companionMode === "manual"
       ? "manual"
       : this.companionMode === "chase"
@@ -509,13 +520,21 @@ export class R1LabScene extends Phaser.Scene {
         companionPosition: { ...beforeCompanion.position },
         playerPosition: { ...beforePlayer.position },
         companionActualVelocity: { ...beforeCompanion.actualVelocity },
-        companionContacts: beforeCompanion.contacts.map((contact) => contact.with)
+        companionContacts: beforeCompanion.contacts.map((contact) => contact.with),
+        companionRequestedVelocity: { ...beforeCompanion.requestedVelocity },
+        companionMotionError: beforeCompanion.motionError,
+        playerRequestedVelocity: { ...beforePlayer.requestedVelocity },
+        playerActualVelocity: { ...beforePlayer.actualVelocity },
+        playerMotionError: beforePlayer.motionError,
+        playerContacts: beforePlayer.contacts.map((contact) => contact.with),
+        playerInputMove: { ...playerIntent.move }
       },
       decision: {
         relationshipRevision: evidence.relationship?.reconsiderationCount ?? null,
         relationshipLabel: evidence.relationship?.selectedSlot ?? null,
         relationshipState: evidence.relationship?.objectiveState ?? null,
         relationshipTarget: target ? { ...target } : null,
+        relationshipPlayerDirection: evidence.relationship ? { ...evidence.relationship.playerDirection } : null,
         routeStatus: evidence.route?.status ?? null,
         routePath: evidence.route?.routeNodeIds.join(">") ?? "",
         routeCost: evidence.route?.cost ?? null,
@@ -524,6 +543,13 @@ export class R1LabScene extends Phaser.Scene {
         spatialCandidate: evidence.spatial?.selectedCandidateId ?? null,
         preferredVelocity: evidence.spatial ? { ...evidence.spatial.selectedVelocity } : null,
         refinedVelocity,
+        localSafetyState: evidence.repair?.localSafetyState ?? null,
+        coarseLocalVelocity: evidence.spatial ? { ...evidence.spatial.selectedVelocity } : null,
+        refinementSource: evidence.refinement?.source ?? null,
+        refinementContributorIds: evidence.refinement ? [...evidence.refinement.contributorIds] : [],
+        naturalRegime: evidence.continuity?.regime ?? null,
+        naturalPreferredVelocity: evidence.continuity ? { ...evidence.continuity.preferredVelocity } : null,
+        naturalPreConstraintVelocity: evidence.continuity ? { ...evidence.continuity.commandedVelocity } : null,
         comfortStartViolated: evidence.repair?.comfortStartViolated ?? null,
         comfortStartBlockers: evidence.repair ? [...evidence.repair.comfortStartBlockers] : [],
         rehabilitatedCandidateCount: evidence.repair?.rehabilitatedCandidateIds.length ?? null,
@@ -612,6 +638,8 @@ export class R1LabScene extends Phaser.Scene {
         actuator,
         commandedMove: { ...companionIntent.move },
         commandedVelocity: { ...afterCompanion.requestedVelocity },
+        preConstraintVelocity,
+        finalConstraintVelocity,
         finalConstraintSource: evidence.finalConstraint?.source ?? null,
         finalConstrained: evidence.finalConstraint?.constrained ?? null,
         finalConstraintReason: evidence.finalConstraint?.reason ?? null
@@ -622,7 +650,14 @@ export class R1LabScene extends Phaser.Scene {
         companionRequestedVelocity: { ...afterCompanion.requestedVelocity },
         companionActualVelocity: { ...afterCompanion.actualVelocity },
         companionContacts: afterCompanion.contacts.map((contact) => contact.with),
+        companionMotionError: afterCompanion.motionError,
         displacement,
+        playerPosition: { ...afterPlayer.position },
+        playerRequestedVelocity: { ...afterPlayer.requestedVelocity },
+        playerActualVelocity: { ...afterPlayer.actualVelocity },
+        playerMotionError: afterPlayer.motionError,
+        playerContacts: afterPlayer.contacts.map((contact) => contact.with),
+        playerDisplacement,
         postRouteStatus: this.postRoutePlan?.status ?? null,
         postRoutePath: this.postRoutePlan?.routeNodeIds.join(">") ?? "",
         postRouteClearanceConstrained: this.postRoutePlan?.clearanceConstrained ?? null
@@ -1150,7 +1185,7 @@ export class R1LabScene extends Phaser.Scene {
     const snapshot = this.snapshotValue;
     if (!snapshot) return;
     const incident = {
-      schema: "companion-brain-lab-ccc0-causal-incident-v4",
+      schema: "companion-brain-lab-ccc0-causal-incident-v5",
       scenario: snapshot.scenarioId,
       tick: snapshot.tick,
       mode: this.companionMode,
