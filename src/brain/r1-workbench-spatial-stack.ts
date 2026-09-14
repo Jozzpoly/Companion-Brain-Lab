@@ -2,6 +2,7 @@ import {
   createEmptyShadowCoordinationHistory,
   evaluateShadowCoordinationFrame,
   type ShadowCoordinationFrame,
+  type ShadowCoordinationFrameInput,
   type ShadowCoordinationHistory
 } from "../coordination/shadow-coordination-frame";
 import type { MotionIntent } from "../world/types";
@@ -38,12 +39,18 @@ export interface R1WorkbenchSpatialDebug {
   shadowCoordinationError: string | null;
 }
 
+type ShadowCoordinationEvaluator = (input: ShadowCoordinationFrameInput) => ShadowCoordinationFrame;
+
 export class R1WorkbenchSpatialStack {
   private readonly direct = new R1RecoveringDirectSpatialBrain();
   private readonly natural = new R1RecoveringNaturalSpatialBrain();
   private shadowHistory: ShadowCoordinationHistory = createEmptyShadowCoordinationHistory();
   private shadowFrame: ShadowCoordinationFrame | null = null;
   private shadowError: string | null = null;
+
+  constructor(
+    private readonly evaluateShadow: ShadowCoordinationEvaluator = evaluateShadowCoordinationFrame
+  ) {}
 
   reset(): void {
     this.direct.reset();
@@ -71,7 +78,7 @@ export class R1WorkbenchSpatialStack {
       : this.direct.debugState().preferred;
 
     try {
-      const frame = evaluateShadowCoordinationFrame({
+      const frame = this.evaluateShadow({
         snapshot: input.snapshot,
         query: input.query,
         physicalSpeedCapability: S3_EXPERIMENT_MAX_SPEED,
