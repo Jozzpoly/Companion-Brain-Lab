@@ -1,107 +1,140 @@
 # Foundation Runtime Survival / Pre-Rework Audit
 
-Status: **MECHANICAL FOUNDATION PASS · BROWSER / OWNER QUALIFICATION OPEN · NOT YET REWORK-READY**
+Status: **MECHANICAL FOUNDATION PASS · EXACT PUBLIC ARTIFACT DEPLOYED · BROWSER / OWNER QUALIFICATION OPEN · NOT YET REWORK-READY**
 
-Mechanically qualified runtime source: `81877d7fab6b52d4ea683c870074cf12e0793c43`.
+Mechanically qualified application runtime:
 
-Qualification CI: run `34872163500` — TypeScript PASS, 31/31 test files PASS, 136/136 tests PASS, production build PASS, 0 npm vulnerabilities.
+`81877d7fab6b52d4ea683c870074cf12e0793c43`
 
-This document is the live gate between R1 research history and the next intentionally aggressive companion-system redesign.
+Runtime qualification CI:
 
-The exit condition is not “the latest bug seems fixed.” The exit condition is a sufficiently clean, legible and fault-tolerant foundation that large changes to relationship reasoning, pace/catch-up and player cooperation can be made without inheriting known hidden failure semantics.
+`34872163500`
 
-## Owner evidence that reopened the foundation
+Public Pages authority:
 
-The R1-4 audited runtime had strong mechanical evidence, but the Owner browser gate reproduced a whole-workbench freeze. The visible panel remained `RUNNING`; the last completed causal frame stopped at `observation t1886 -> outcome t1887`; player and companion input ceased to produce further World outcomes.
+- workflow: `.github/workflows/pages-research-preview.yml` on `main`;
+- operational workflow commit: `6cad9a9b526dd9f798e68641e636346665406397`;
+- final deployment run: `34873093904` — PASS;
+- public URL: `https://jozzpoly.github.io/Companion-Brain-Lab/`;
+- deterministic fault rehearsal: `https://jozzpoly.github.io/Companion-Brain-Lab/?foundationFaultProbe=1`.
 
-This invalidated the prior open Owner gate while preserving the earlier automated evidence as historical evidence.
+This document is the live gate between the R1 research line and the next intentionally aggressive Companion Coordination Core redesign.
 
-A separately captured pillar incident at tick 2027 was not the freeze incident. Its retained tail was mostly healthy `PROGRESSING -> ARRIVED`, but its event history demonstrated repeated tracking, transient unreachable, player blocking, persistent unreachable and recovery episodes. It also exposed a debug-semantics ambiguity: `retryCount` was per semantic episode while `appliedLocalRetries` was cumulative since stack reset.
+The exit condition is not “the latest bug seems fixed.” The exit condition is a substrate whose ordinary constrained-world states are represented as data rather than fatal exceptions, whose browser adapter preserves the same contracts tested headlessly, whose catastrophic faults remain observable after fail-stop, and whose exact public artifact survives Owner browser stress without unexplained whole-runtime shutdown.
 
-## Freeze causal chain — current status
+## Why the foundation campaign was reopened
 
-**High-confidence mechanism, now bound by deterministic regressions and full-chain rehearsal:**
+The prior audited R1-4 runtime had strong mechanical evidence, but the Owner browser gate reproduced a whole-workbench freeze.
+
+Observed evidence:
+- panel remained visibly `RUNNING`;
+- last completed causal frame stopped at `observation t1886 -> outcome t1887`;
+- player and companion input ceased to produce further World outcomes;
+- no independent fatal-fault surface explained the stop.
+
+That browser evidence invalidated the prior open Owner gate while preserving the earlier automated evidence as historical evidence.
+
+A separately captured pillar incident at tick 2027 was not the freeze incident. Its tail was mostly healthy, but its history helped expose ambiguity in recovery counters and several constrained-state transitions. It remains supporting historical evidence, not the causal proof of the freeze.
+
+## Reconstructed freeze-class mechanism
+
+High-confidence mechanism now bound by deterministic regressions and a full-chain rehearsal:
 
 1. ordinary Rapier contact can leave the dynamic companion in slight hard-body penetration/tolerance against static geometry;
-2. the pre-foundation R1 local hard check treated initial hard overlap as an immediate blocked sweep even for outward motion;
-3. the player prediction layer could simultaneously reject STOP as a future player collision;
-4. candidate exhaustion reached the preserved S3 invariant `Spatial locomotion produced no admissible candidates`;
-5. that uncaught exception could terminate the Phaser scene update before the next World tick, leaving the last rendered panel at `RUNNING`.
+2. pre-foundation local hard traversal treated initial overlap/contact as an immediate blocked sweep even for outward motion;
+3. player prediction could simultaneously make STOP dynamically inadmissible;
+4. zero admissible candidates reached the preserved S3 invariant `Spatial locomotion produced no admissible candidates`;
+5. that uncaught exception could terminate the Phaser update path before the next World outcome, leaving the last rendered panel stale at `RUNNING`.
 
-A second ordinary-state termination seam existed in the legacy relationship brain: all eight authored relational slots being illegal reached `No valid relational positioning candidate`.
+A second ordinary-state termination seam existed independently in the legacy relationship brain: all eight authored relational slots being illegal could reach `No valid relational positioning candidate`.
 
-Both ordinary-state exception paths are now intercepted by typed foundation semantics before those historical throws can become browser runtime termination.
+Both classes are now intercepted as typed ordinary states before historical invariant throws can become current browser-runtime termination.
 
 ## Foundation survival vocabulary
 
-Normal constrained-world states must be data, not exceptions.
+Normal constrained-world states are data, not programmer errors.
 
 Current public vocabulary:
 - `NORMAL` — ordinary local movement regime;
-- `HARD_EGRESS` — body starts in physical contact/overlap and a whole-body escape is available;
-- `NO_SAFE_VELOCITY` — no admissible local velocity; fail-closed STOP without runtime termination;
-- `NO_VALID_RELATIONAL_SLOT` — legacy eight-slot objective vocabulary is exhausted; hold current position and reconsider tactically.
+- `HARD_EGRESS` — the live body starts in hard contact/overlap and a safe outward whole-body escape exists;
+- `NO_SAFE_VELOCITY` — no admissible local velocity exists; fail closed with STOP rather than terminate;
+- `NO_VALID_RELATIONAL_SLOT` — the temporary legacy eight-slot objective vocabulary is exhausted; hold current position and reconsider tactically.
 
-`NO_SAFE_VELOCITY` is propagated into progress/recovery as an intentional safety hold. It does not masquerade as unexplained no-progress or spend retry budget merely because the system consciously chose fail-closed STOP.
+`NO_SAFE_VELOCITY` is propagated into progress/recovery as an intentional safety hold. It does not masquerade as unexplained no-progress and does not consume retry budget merely because safety deliberately chose STOP.
 
-`NO_VALID_RELATIONAL_SLOT` is now an explicit `RelationalDecision.objectiveState`. It is also propagated as an intentional hold, so a temporary `target == current position` cannot be mislabeled as `ARRIVED`.
+`NO_VALID_RELATIONAL_SLOT` is an explicit `RelationalDecision.objectiveState`. It is propagated as an intentional hold so `target == current position` cannot be mislabeled as `ARRIVED`.
 
-Invalid/unreachable route truth still outranks any intentional hold.
+Invalid/unreachable route truth still outranks an intentional hold.
 
-## Hard/contact egress contract — current status
+## Hard-contact / hard-overlap egress contract
 
-Hard egress is not a local-brain-only exception.
+Hard egress is a shared chain contract, not a local-brain exception.
 
-The foundation maintains coherent semantics across:
+Authority path:
 
-`static route -> local spatial choice -> NATURAL realization -> final hard validation -> World -> post-outcome recovery`.
+`static route -> local spatial choice -> NATURAL realization -> final hard validation -> World -> post-World recovery`
 
 Current contract:
-- route targets/corner nodes must be physically valid points;
-- every hard route edge leaving the **live start node** uses `initialOverlap: "allow-egress"`;
-- this start-edge rule applies even when mathematical point fit says the body is legal, because exact physical contact can still produce a Rapier zero-distance cast hit;
-- directionality is regression-bound: from exact world-boundary contact an egress-aware cast clears motion away from the wall but still blocks motion into the wall;
-- local candidate repair uses egress-aware hard traversal plus a hard-clear predicted endpoint before rehabilitating a candidate;
-- while already hard-penetrating, STOP is not considered an admissible safe velocity;
-- NATURAL treats `HARD_EGRESS` as a safety regime: temporal refinement/continuity is bypassed, the approved egress move is executed directly, and final validation uses explicit egress semantics;
-- normal NATURAL behavior resumes after physical clearance is restored.
+- route targets and graph corner nodes must be hard-valid points;
+- every hard graph edge leaving the live `start` node uses `initialOverlap: "allow-egress"`;
+- this start-edge rule also covers exact physical contact even when mathematical point fit still says the body is legal;
+- directionality is regression-bound: from exact world-boundary contact, egress-aware traversal permits motion away from the wall and still blocks motion into the wall;
+- local candidate repair requires egress-aware hard traversal plus a hard-clear predicted endpoint before rehabilitation;
+- STOP is not considered a safe local result while the body is already hard-penetrating and a real egress move is required;
+- NATURAL treats `HARD_EGRESS` as a safety regime, bypassing temporal refinement/continuity and executing the upstream-approved escape through egress-aware final validation;
+- ordinary NATURAL behavior resumes after physical clearance is restored.
 
-The full Rapier + route + R1 NATURAL + World + post-World recovery chain now has a 180-step deterministic survival rehearsal that actually enters hard egress, leaves it and returns to NORMAL with finite state throughout.
+A deterministic 180-step Rapier + route + R1 NATURAL + World + post-World recovery rehearsal actually enters `HARD_EGRESS`, leaves it, returns to `NORMAL`, and remains finite throughout.
 
-**Dynamic survival rehearsal: PASS.**
+**Dynamic full-chain survival rehearsal: PASS.**
 
-## Browser adapter contract — repaired
+## Browser traversal adapter contract
 
-A late claim-vs-code audit found a browser-only gap that headless tests could not expose:
+A late claim-vs-code audit exposed a browser-only gap that headless movement tests could not reveal.
 
-`R1LabScene` had wrapped `World.staticCircleTraversal()` in a three-argument callback, silently discarding the optional fourth `StaticTraversalOptions` argument. Headless egress tests could therefore pass while the real browser scene still executed default initial-overlap blocking.
+`R1LabScene` had wrapped `World.staticCircleTraversal()` in a three-argument closure and silently dropped the optional fourth `StaticTraversalOptions` argument. Therefore headless egress tests could pass while the real scene still executed default initial-overlap blocking.
 
-The browser boundary is now explicit:
-- `src/app/static-traversal-query-adapter.ts`
-- `bindWorldStaticTraversalQuery()`
+The current browser boundary is explicit:
 
-A dedicated regression proves `initialOverlap: "allow-egress"` reaches World unchanged, and the real scene uses this adapter for both route construction and active local movement input.
+`src/app/static-traversal-query-adapter.ts`
 
-**Browser/headless traversal contract parity: mechanical PASS.**
+`bindWorldStaticTraversalQuery()` preserves the complete query signature. A dedicated regression proves `initialOverlap: "allow-egress"` reaches World unchanged. The real scene uses the adapter for route construction and active local movement input.
 
-## Shared static point-validity contract
+**Browser/headless traversal-contract parity: mechanical PASS.**
 
-The old code had two different meanings of “this body fits at this target.”
+## Static point-fit versus traversal contact semantics
 
-Legacy relationship used exact circle-vs-AABB endpoint geometry. The router used a square AABB expanded by body radius, which was overly conservative around obstacle corners and could produce `relationship valid -> route invalid-target` disagreement.
+`circleFitsStaticWorld()` is the shared domain authority for static endpoint/body fit used by the router and the temporary legacy relationship objective provider.
 
-Foundation hardening centralizes point fit in `circleFitsStaticWorld()` using body-circle vs obstacle-AABB geometry plus authored world-boundary fit. Router and legacy relationship now consume the same primitive.
+It intentionally answers a different question from a swept traversal query.
 
-A later falsifier clarified an important boundary:
-- obstacle exact tangency is non-penetrating point occupancy in both domain helper and Rapier occupancy query;
-- exact authored world-boundary tangency is mathematically legal in the domain helper while Rapier's shape-overlap query may classify exact contact as occupied;
-- therefore parity is required on materially clear/penetrating placements, while exact backend contact semantics remain the responsibility of traversal/egress queries.
+Bound distinctions:
+- obstacle exact tangency is non-penetrating point occupancy;
+- exact authored world-boundary tangency is mathematically legal point fit;
+- Rapier overlap/cast APIs may still report exact physical contact at that same boundary;
+- therefore domain point-fit parity is required for materially clear/penetrating placements, while exact contact behavior belongs to traversal/egress semantics.
 
-This is intentionally a **point-validity** contract only. Whole-path feasibility remains the responsibility of whole-body traversal queries.
+This distinction was directly falsified against the backend. The router no longer turns legal exact boundary contact into false `unreachable` merely because a default swept cast reports a zero-distance start contact.
 
-## Runtime fault containment
+## Relationship exhaustion semantics
 
-Ordinary world states have been removed from the known exception paths, but genuine programmer/data/runtime faults must remain visible rather than leaving a frozen canvas with stale `RUNNING` text.
+The legacy eight-slot relationship model is still temporary authority and is intentionally not being polished into the final companion architecture.
+
+Foundation requirement is narrower: exhausting that vocabulary must not terminate the runtime or fabricate causal success.
+
+Current behavior:
+- no valid authored slot -> `objectiveState: NO_VALID_RELATIONAL_SLOT`;
+- target becomes hold-current;
+- tactical reconsideration continues;
+- recovery reports `INTENTIONAL_HOLD` when route truth is otherwise valid;
+- causal trace exposes `relationshipState` explicitly;
+- route invalid/unreachable states remain authoritative over the hold.
+
+**Relationship exhaustion survival + causal truth: PASS.**
+
+## Runtime catastrophic-fault containment
+
+Known ordinary world states have been removed from the active exception paths, but genuine programmer/data/runtime faults must remain visible.
 
 `runtime-fault-sentinel` is installed before Phaser and listens for:
 - `window.error`;
@@ -109,82 +142,87 @@ Ordinary world states have been removed from the known exception paths, but genu
 
 On the first catastrophic fault:
 - first-fault evidence is latched;
-- the Phaser game loop is actually stopped;
-- the last rendered canvas remains visible;
-- an independent DOM surface reports `RUNTIME FAULT — SIMULATION FAIL-STOPPED`;
+- Phaser game loop is stopped;
+- last rendered canvas remains available behind the independent DOM surface;
+- the surface reports `RUNTIME FAULT — SIMULATION FAIL-STOPPED`;
 - message, stack/location, fault JSON download and reload controls remain available;
-- subsequent secondary faults do not overwrite the original evidence.
+- secondary faults do not overwrite first-fault evidence.
 
-Constructor/startup exceptions are normalized into the same surface.
+Constructor/startup exceptions are normalized into the same fail-stop surface.
 
-A deterministic browser-only probe now exists:
-- query parameter: `foundationFaultProbe=1`;
-- after a short startup delay it deliberately throws outside Phaser;
-- normal URLs remain inert.
+A deterministic browser-only probe is implemented:
 
-This lets the exact published artifact exercise the real `window.error -> sentinel -> game.loop.stop()` chain without DevTools and without manufacturing a gameplay fault.
+`?foundationFaultProbe=1`
 
-**Fault containment code/unit evidence: PASS.**
+After a short startup delay it deliberately throws outside Phaser. The normal URL is inert.
 
-**Published-browser visual/behavior proof: OPEN until the exact runtime is deployed and rehearsed.**
+Unit/regression coverage binds activation and first-fault behavior.
+
+**Fault-containment code/unit evidence: PASS.**
+
+**Real published-browser fail-stop rehearsal: OPEN.**
 
 ## Causal / incident semantics
 
-Incident schema remains `companion-brain-lab-r1-causal-incident-v2`; the foundation does not silently introduce a breaking v3 migration.
+Incident schema remains:
+
+`companion-brain-lab-r1-causal-incident-v2`
+
+The foundation does not silently migrate consumers to a breaking v3.
 
 Legacy recovery fields remain:
-- `retryCount` — episode-local retry budget use;
+- `retryCount` — retry budget used in the current semantic episode;
 - `appliedLocalRetries` — cumulative local retries since stack reset.
 
-Self-describing aliases are available and emitted by the real scene:
+Self-describing aliases are emitted by the real scene:
 - `retryBudgetUsedThisEpisode`;
 - `cumulativeLocalRetriesSinceReset`.
 
-`CausalFrameTrace` also fills aliases automatically when a producer supplies only legacy fields, preserving compatibility with v2-style frames.
+`CausalFrameTrace` also fills those aliases automatically when a producer supplies only legacy fields.
 
-Relationship evidence now exposes explicit `relationshipState`, so `NO_VALID_RELATIONAL_SLOT` does not have to be inferred from a magic slot string.
+Relationship evidence includes explicit `relationshipState`.
 
-**Debug counter ambiguity: CLOSED.**
+**Recovery-counter ambiguity: CLOSED.**
 
-## Active-path throw audit
+## Active-path exception boundary
 
-### Ordinary world states — throws forbidden
+### Ordinary states — exceptions forbidden
 
-Resolved / regression-covered:
+Regression-covered ordinary classes include:
 - local velocity candidate exhaustion;
 - no legal legacy relationship slot;
 - desired-clearance overlap;
-- hard-overlap/contact outward egress;
+- hard contact/overlap outward egress;
 - exact world-boundary contact routing;
-- temporary route loss / persistent unreachable;
+- temporary and persistent route loss;
 - player/static blocking;
 - intentional fail-closed hold;
 - relationship-vocabulary exhaustion hold.
 
-### Programmer / data invariants — throws allowed, sentinel-visible in browser
+### Programmer / data invariants — exceptions allowed
 
-Examples in active authority:
-- required player/companion actor missing from a World snapshot;
-- duplicate motion intent for one actor;
-- non-finite motion/query coordinates;
-- non-positive body radius, dt or configured speed where the API contract requires positive values;
-- impossible router internal reference to a node that was not built;
-- invalid progress-monitor tick/objective key;
+Examples:
+- required actor missing from a snapshot;
+- duplicate MotionIntent for one actor;
+- non-finite coordinates;
+- non-positive radius/dt/speed where contracts require positive values;
+- impossible internal router reference;
+- invalid recovery tick/objective key;
 - invalid trace capacity.
 
-These are not gameplay states and should fail loudly rather than fabricate behavior.
+These are not gameplay states. They should fail loudly into the browser sentinel rather than fabricate plausible behavior.
 
 ### Startup / environment faults — fail-stop allowed
 
 Examples:
-- required DOM/keyboard startup apparatus unavailable;
+- required DOM/keyboard apparatus unavailable;
 - physics/runtime initialization failure.
 
-The global fault sentinel is the final browser evidence surface for uncaught faults in these classes.
+The sentinel is observability + fail-stop, not unknown-fault recovery.
 
 ## Mechanically qualified runtime
 
-Exact runtime source:
+Exact application source:
 
 `81877d7fab6b52d4ea683c870074cf12e0793c43`
 
@@ -194,79 +232,174 @@ CI run:
 
 Evidence:
 - Node 22.23.2 / npm 10.9.8;
-- `npm install`: 42 packages added, 43 audited, 0 vulnerabilities;
+- 42 packages added, 43 audited, 0 vulnerabilities;
 - TypeScript `tsc --noEmit`: PASS;
 - Vitest: **31/31 files PASS**;
 - Vitest: **136/136 tests PASS**;
 - Vite 8.2.2 production build: PASS;
-- only remaining build note is the existing large-chunk warning, treated as non-blocking research bundling debt.
+- remaining Vite large-chunk note is non-blocking research bundling debt.
 
-Important included regressions:
-- 180-step full-chain egress survival and return to NORMAL;
+Important included falsifiers/regressions:
+- 180-step full-chain hard-egress survival and return to `NORMAL`;
 - hard-overlap STOP inadmissibility;
-- exact-contact route start recovery;
-- egress directionality at world boundary;
-- browser traversal-option forwarding;
-- relationship exhaustion as intentional hold, not arrival;
+- exact-contact route-start recovery;
+- exact-boundary egress directionality;
+- browser traversal-options forwarding;
+- relationship exhaustion as hold rather than arrival;
 - fault-sentinel first-fault latch;
-- deterministic browser fault-probe activation;
+- deterministic fault-probe activation;
 - incident-v2 alias compatibility;
-- preserved prior R1 dynamic movement/recovery rehearsals.
+- preserved prior R1 moving-objective and doorway recovery rehearsals.
 
-This supports **MECHANICAL FOUNDATION PASS**. It does not by itself support Owner/browser qualification.
+**Mechanical foundation verdict: PASS.**
 
-## Cleanup completed during this campaign
+## Exact public Pages qualification
 
-- removed stale package version label `0.0.0-s1`; current lab prerelease is `0.1.0-foundation.0`;
-- validation workflow explicitly includes `foundation/**` pushes;
-- GitHub Actions checkout/setup-node moved from v4 to v5;
-- R1-4 PR is explicitly marked Owner FAIL / evidence preserved rather than retaining a stale open-gate claim;
-- runtime survival has dedicated deterministic regressions rather than relying on manual reproduction only;
-- static body point validity is centralized;
-- hard-egress semantics are propagated end-to-end rather than patched at one layer;
-- browser traversal callback truncation was replaced by a typed full-signature adapter;
-- README no longer presents S0 as current project state;
-- R1 audit ledger is explicitly historical evidence rather than live authority;
-- executable historical S0 Pages workflow was removed from the active foundation branch;
-- foundation branch ancestry includes the final R1 evidence line (`behind=0`);
-- active authority is documented at symbol level in `FOUNDATION_ACTIVE_AUTHORITY_MAP.md`.
+Operational Pages workflow is intentionally separate from the experiment branch and pins immutable application source.
 
-## Known non-blocking research history
+Current operational workflow commit on `main`:
 
-The repository intentionally retains older S0-S5 modules/tests as research baselines. Their behavior is not automatically current runtime authority.
+`6cad9a9b526dd9f798e68641e636346665406397`
 
-In particular, the preserved S3 `chooseSpatialVelocity()` may still throw on zero accepted candidates because it is a historical baseline. The active post-R1 foundation adapter must never forward ordinary candidate exhaustion into that throw. Tests bind this boundary.
+Final refreshed Pages run:
 
-Do not “clean” historical evidence by rewriting every old experiment to modern semantics. Clean authority boundaries instead.
+`34873093904`
 
-## Remaining gates before readiness can be claimed
+That run independently:
+- checked out exact `81877d7fab6b52d4ea683c870074cf12e0793c43`;
+- installed dependencies;
+- reran `npm run check` successfully;
+- configured Pages;
+- uploaded the artifact;
+- deployed successfully.
 
-The broad mechanical/claim-vs-code campaign has stopped producing an unaddressed code blocker and the exact runtime suite is green. The remaining gates are deliberately browser/Owner-facing:
+Public environment URL reported by GitHub:
 
-1. **Pin exact mechanically qualified runtime** — operational Pages must publish source `81877d7fab6b52d4ea683c870074cf12e0793c43`, not a moving branch head.
-2. **Fault-sentinel browser proof** — open the exact public artifact with `?foundationFaultProbe=1`; verify independent fail-stop UI, frozen simulation loop, preserved canvas and fault JSON evidence.
-3. **Normal public-artifact sanity** — reload without the probe parameter and verify the same exact build runs normally.
-4. **Owner torture gate** — wall pin/push/release, boundary scrape/contact, doorway contention, rapid reversals, longer continuous movement, DIRECT/NATURAL comparison and incident capture must complete without silent whole-runtime freeze or unexplained shutdown.
-5. **Final readiness verdict** — reconcile Owner evidence against this audit and only then decide whether the foundation is safe enough for the aggressive Companion Coordination Core redesign.
+`https://jozzpoly.github.io/Companion-Brain-Lab/`
 
-## Explicitly deferred to the next aggressive redesign, not blockers to foundation readiness
+Operational action majors were refreshed without changing application source:
+- `actions/checkout@v5`;
+- `actions/setup-node@v5`;
+- `actions/configure-pages@v6`;
+- `actions/upload-pages-artifact@v5`;
+- `actions/deploy-pages@v5`.
 
-These are important product limitations but are intentionally **not** to be solved inside cleanup:
-- replacing the legacy eight-slot relationship model with Relationship Field v2 / region reasoning;
-- player movement corridor, right-of-way and chokepoint cooperation;
-- dynamic pace / urgency / catch-up speed budget;
-- redesigning `MotionIntent` around explicit desired velocity / speed authority;
-- combat, commands and multiple companions;
-- promotion/transplant of old S5 shadow research.
+The exact final Pages artifact was downloaded after deployment; its production JS bundle contains both `foundationFaultProbe` and `FOUNDATION_FAULT_PROBE` markers.
 
-Those are the next large-change layer. The purpose of this campaign is to make the substrate safe enough to change them aggressively.
+**Exact-source pin/build/upload/deploy gate: PASS.**
+
+This does not imply browser behavior PASS.
+
+## Automated browser evidence limitation
+
+A real Chromium/Playwright attempt was made against the exact downloaded production artifact.
+
+The execution environment blocks navigation before application startup with browser policy error:
+
+`ERR_BLOCKED_BY_ADMINISTRATOR`
+
+This occurs for both localhost HTTP and direct file navigation, before Phaser or the fault probe can execute.
+
+Therefore:
+- it is an environment limitation, not an application failure;
+- it is not counted as browser PASS;
+- policy bypasses, altered app source, or synthetic non-browser substitutes are not accepted as equivalent evidence.
+
+The binding browser gate remains the real public artifact in an ordinary user browser.
+
+## Repo / evidence hygiene
+
+Current evidence roles:
+- `FOUNDATION_RUNTIME_SURVIVAL_AUDIT.md` — live foundation truth and readiness boundary;
+- `FOUNDATION_ACTIVE_AUTHORITY_MAP.md` — current runtime authority at module/symbol level;
+- `FOUNDATION_BROWSER_OWNER_GATE.md` — exact browser/Owner procedure;
+- `FOUNDATION_PUBLIC_PREVIEW_QUALIFICATION.md` — Pages deployment evidence and public-artifact boundary;
+- `R1_AUDIT_LEDGER.md` — historical R1 evidence, not current authority.
+
+Historical S0-S5/R1 modules and tests remain donor/regression evidence. Their continued existence does not restore superseded top-level authority.
+
+The branch retains the final R1 evidence ancestry; cleanup did not fork away from the previous qualified line.
+
+## Closed foundation gates
+
+The following are now closed:
+- deterministic ordinary-state regressions for the reproduced freeze class;
+- hard-contact/overlap egress semantics across the active movement chain;
+- 180-step full-chain survival rehearsal;
+- relationship-slot exhaustion survival semantics;
+- browser traversal callback contract parity;
+- static point-fit semantic consolidation;
+- recovery/incident counter semantics;
+- active authority mapping;
+- broad claim-vs-code / adapter-boundary sweep;
+- exact mechanically qualified runtime pin;
+- exact Pages rebuild/upload/deploy.
+
+No currently known mechanical code blocker remains unresolved inside the foundation scope.
+
+## Remaining gates before rework readiness
+
+Only evidence that genuinely requires a real browser / Owner remains open.
+
+### 1. Deterministic browser fault-probe rehearsal
+
+Open:
+
+`https://jozzpoly.github.io/Companion-Brain-Lab/?foundationFaultProbe=1`
+
+Required observations:
+- independent fault surface appears;
+- message contains `FOUNDATION_FAULT_PROBE`;
+- simulation stops rather than continuing behind the overlay;
+- last canvas remains visible;
+- fault JSON can be downloaded;
+- secondary faults do not replace first-fault evidence.
+
+### 2. Normal public-artifact sanity
+
+Reload without the query parameter:
+
+`https://jozzpoly.github.io/Companion-Brain-Lab/`
+
+Verify normal workbench startup, advancing ticks, player input, SPATIAL/NATURAL operation, scenario controls, pause/single-step/reset and incident export without spontaneous fault surface.
+
+### 3. Owner torture run
+
+Deliberately stress:
+- wall pin / push / release;
+- boundary scrape and corner contact;
+- doorway/chokepoint contention;
+- rapid player reversals and moving objectives;
+- long continuous runs, including 2x after ordinary 1x sanity;
+- DIRECT/NATURAL comparison for at least one difficult sequence.
+
+Capture incident JSON immediately for suspicious zero motion, wrong `PERSISTENT_UNREACHABLE`, sticky `NO_SAFE_VELOCITY`, recovery loops, incorrect arrival/hold semantics, teleport/disappearance, freeze or fault surface. Video remains valuable for timing/visual failures.
+
+### 4. Final readiness verdict
+
+Owner evidence must be reconciled against this audit. Only then may the foundation campaign be declared complete and the aggressive Companion Coordination Core redesign begin.
+
+## Explicitly deferred beyond foundation
+
+These are important product limitations, but they are not foundation blockers unless they reveal a substrate/survival/causal-truth defect:
+- replacement of the legacy eight-slot relationship objective with Relationship Field / region reasoning;
+- player movement corridor and right-of-way cooperation;
+- dynamic pace / urgency / catch-up policy;
+- redesign of `MotionIntent` and speed authority;
+- multi-companion coordination;
+- command hierarchy;
+- combat;
+- LLM cognition;
+- selective promotion/transplant of older S5 research.
+
+Do not spend the foundation campaign polishing these deferred systems.
 
 ## Readiness exit statement
 
-The campaign may be declared complete only when the evidence supports the following statement without qualification:
+The campaign may be declared complete only when the evidence supports this statement without qualification:
 
-> Ordinary constrained-world states cannot terminate the active runtime; contact/overlap egress is coherent through route, local motion and actuation; browser adapters preserve the tested contracts; catastrophic faults become a real observable fail-stop instead of a silent frozen `RUNNING` canvas; static geometry semantics are explicit; current authority is known; the full automated suite and dynamic survival rehearsals are green; and an Owner torture gate shows no unexplained whole-runtime shutdown.
+> Ordinary constrained-world states cannot terminate the active runtime; contact/overlap egress is coherent through route, local motion and actuation; browser adapters preserve the tested contracts; catastrophic faults become a real observable fail-stop instead of a silent frozen `RUNNING` canvas; static geometry semantics are explicit; current authority is known; the full automated suite and dynamic survival rehearsals are green; the exact qualified artifact is deployed; and an Owner browser torture gate shows no unexplained whole-runtime shutdown or material contradiction between world behavior and causal evidence.
 
-**We have reached the mechanical half of that statement. The browser/Owner half remains open.**
+**The mechanical and deployment portions now pass. The browser/Owner portion remains open.**
 
-Only after those remaining gates should the project move to the large Companion Coordination Core redesign.
+Only after that final evidence should the project enter the large Companion Coordination Core redesign.
