@@ -11,9 +11,9 @@ export interface CausalObservationPhase {
 export interface CausalShadowCoordinationEvidence {
   kind: "CCC0_SHADOW_COORDINATION";
   /** Tactical cognition tick that produced this evidence. */
-  shadowTick?: number;
+  shadowTick: number;
   /** Observation tick minus shadowTick. Zero means true same-observation comparison. */
-  ageTicks?: number;
+  ageTicks: number;
   regionState: string;
   regionAnchor: Vec2 | null;
   regionBestSampleId: string | null;
@@ -24,18 +24,18 @@ export interface CausalShadowCoordinationEvidence {
   playerCorridorState: string;
   playerCorridorConfidence: number;
   playerCorridorEndpoint: Vec2;
-  preferredFlowConflictState?: string;
-  preferredFlowClosestApproachTime?: number | null;
-  preferredFlowPhysicalClearance?: number | null;
-  preferredFlowComfortClearance?: number | null;
-  preferredFlowCompanionClosest?: Vec2 | null;
-  preferredFlowPlayerClosest?: Vec2 | null;
-  authoritativeFlowConflictState?: string;
-  authoritativeFlowClosestApproachTime?: number | null;
-  authoritativeFlowPhysicalClearance?: number | null;
-  authoritativeFlowComfortClearance?: number | null;
-  authoritativeFlowCompanionClosest?: Vec2 | null;
-  authoritativeFlowPlayerClosest?: Vec2 | null;
+  preferredFlowConflictState: string;
+  preferredFlowClosestApproachTime: number | null;
+  preferredFlowPhysicalClearance: number | null;
+  preferredFlowComfortClearance: number | null;
+  preferredFlowCompanionClosest: Vec2 | null;
+  preferredFlowPlayerClosest: Vec2 | null;
+  authoritativeFlowConflictState: string;
+  authoritativeFlowClosestApproachTime: number | null;
+  authoritativeFlowPhysicalClearance: number | null;
+  authoritativeFlowComfortClearance: number | null;
+  authoritativeFlowCompanionClosest: Vec2 | null;
+  authoritativeFlowPlayerClosest: Vec2 | null;
   legacyTargetToShadowAnchorDistance: number | null;
   error: string | null;
 }
@@ -111,11 +111,6 @@ function cloneVec(value: Vec2 | null | undefined): Vec2 | null {
   return value ? { ...value } : null;
 }
 
-function optionalCloneVec(value: Vec2 | null | undefined): Vec2 | null | undefined {
-  if (value === undefined) return undefined;
-  return cloneVec(value);
-}
-
 function cloneShadow(
   value: CausalShadowCoordinationEvidence | null | undefined
 ): CausalShadowCoordinationEvidence | null | undefined {
@@ -125,10 +120,10 @@ function cloneShadow(
     ...value,
     regionAnchor: cloneVec(value.regionAnchor),
     playerCorridorEndpoint: { ...value.playerCorridorEndpoint },
-    preferredFlowCompanionClosest: optionalCloneVec(value.preferredFlowCompanionClosest),
-    preferredFlowPlayerClosest: optionalCloneVec(value.preferredFlowPlayerClosest),
-    authoritativeFlowCompanionClosest: optionalCloneVec(value.authoritativeFlowCompanionClosest),
-    authoritativeFlowPlayerClosest: optionalCloneVec(value.authoritativeFlowPlayerClosest)
+    preferredFlowCompanionClosest: cloneVec(value.preferredFlowCompanionClosest),
+    preferredFlowPlayerClosest: cloneVec(value.preferredFlowPlayerClosest),
+    authoritativeFlowCompanionClosest: cloneVec(value.authoritativeFlowCompanionClosest),
+    authoritativeFlowPlayerClosest: cloneVec(value.authoritativeFlowPlayerClosest)
   };
 }
 
