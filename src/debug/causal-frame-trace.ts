@@ -55,8 +55,10 @@ export interface CausalPostClassification {
   action?: string | null;
   noProgressTicks?: number | null;
   unreachableTicks?: number | null;
-  retryCount?: number | null;
-  appliedLocalRetries?: number | null;
+  /** Retry budget already consumed in the current recoverable episode. */
+  retryBudgetUsedThisEpisode?: number | null;
+  /** Cumulative RETRY_LOCAL applications since the current movement stack reset. */
+  cumulativeLocalRetriesSinceReset?: number | null;
 }
 
 export interface CausalFrame {
