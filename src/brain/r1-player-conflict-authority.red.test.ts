@@ -156,10 +156,18 @@ describe("R1-5A RED — final dynamic player-conflict authority", () => {
     expect(naturalDebug.finalConstraint?.constrained).toBe(false);
     expect(naturalDebug.finalConstraint?.source).toBe("continuity");
 
-    // R1-5A invariant under test: if the spatial/refinement stages accepted a
-    // player-safe command, temporal realization must not silently produce a
-    // command that violates the same predicted player separation contract.
-    // This assertion is expected to go RED if H1 is real.
-    expect(finalClearance).toBeGreaterThanOrEqual(0);
+    if (finalClearance < 0) {
+      throw new Error(`R1-5A H1 reproduced: player-safe upstream motion became dynamically unsafe after NATURAL realization.\n${JSON.stringify({
+        directMove: directIntent.move,
+        directClearance,
+        coarseMove: naturalDebug.preferred?.selectedMove ?? null,
+        refinedMove,
+        refinedClearance,
+        continuityMove: naturalDebug.continuity?.commandedMove ?? null,
+        finalStaticConstraint: naturalDebug.finalConstraint,
+        finalMove: naturalIntent.move,
+        finalClearance
+      }, null, 2)}`);
+    }
   });
 });
