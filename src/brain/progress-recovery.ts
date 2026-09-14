@@ -185,14 +185,17 @@ export class ProgressRecoveryMonitor {
     this.unreachableSinceTick = null;
     this.reportedPersistentUnreachable = false;
 
-    if (objectiveDistance <= R1_ARRIVAL_DISTANCE) {
+    if (
+      objectiveDistance <= R1_ARRIVAL_DISTANCE &&
+      progressMetric <= R1_ARRIVAL_DISTANCE
+    ) {
       this.noProgressSinceTick = null;
       this.previouslyPlayerBlocked = false;
       this.rearmRecoveryEpisode();
       return this.finish(observation, {
         state: "ARRIVED",
         action: "NONE",
-        reason: "hard-valid objective is within arrival tolerance",
+        reason: "hard-valid objective is within both physical and route arrival tolerance",
         objectiveDistance,
         progressMetric,
         progressDelta,
