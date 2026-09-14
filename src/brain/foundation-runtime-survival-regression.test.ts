@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planStaticShadowRoute } from "../navigation/static-router";
+import { planStaticShadowRoute, type StaticRoutePlan } from "../navigation/static-router";
 import { RapierPhysicalWorld } from "../physics/rapier-physical-world";
 import type {
   ActorSnapshot,
@@ -11,6 +11,7 @@ import type {
 } from "../world/types";
 import { RelationalPositioningBrain } from "./relational-positioning";
 import { evaluateR1SpatialLocomotion } from "./r1-hard-comfort-spatial";
+import { R1RecoveringDirectSpatialBrain } from "./r1-recovering-direct-spatial";
 
 const RADIUS = 0.3;
 const SPEED = 3;
@@ -52,6 +53,59 @@ function occupied(center: Vec2, radius: number, label = "sealed.fixture"): Stati
     clear: false,
     blockers: [label]
   };
+}
+
+function directRoute(start: Vec2, target: Vec2): StaticRoutePlan {
+  const cost = Math.hypot(target.x - start.x, target.y - start.y);
+  return {
+    status: "direct",
+    reason: "foundation synthetic direct route",
+    radius: RADIUS,
+    clearance: 0.08,
+    queryRadius: RADIUS,
+    desiredQueryRadius: RADIUS + 0.08,
+    clearanceConstrained: false,
+    constrainedEdgeIds: [],
+    start: { ...start },
+    target: { ...target },
+    nodes: [],
+    edges: [],
+    routeNodeIds: ["start", "target"],
+    waypoints: [{ ...target }],
+    cost
+  };
+}
+
+function sealedWorld(): { spec: ScenarioSpec; world: WorldSnapshot; target: Vec2 } {
+  const spec: ScenarioSpec = {
+    id: "pillar",
+    label: "foundation sealed local state",
+    width: 12,
+    height: 8,
+    actors: [],
+    obstacles: [{ id: "sealed.fixture", x: 4, y: 0, width: 4, height: 8 }]
+  };
+  const world = snapshot(spec, [
+    {
+      id: "companion",
+      position: { x: 6, y: 4 },
+      radius: RADIUS,
+      requestedVelocity: { x: 0, y: 0 },
+      actualVelocity: { x: 0, y: 0 },
+      motionError: 0,
+      contacts: []
+    },
+    {
+      id: "player",
+      position: { x: 7.1, y: 4 },
+      radius: RADIUS,
+      requestedVelocity: { x: -3, y: 0 },
+      actualVelocity: { x: -3, y: 0 },
+      motionError: 0,
+      contacts: []
+    }
+  ]);
+  return { spec, world, target: { x: 9, y: 4 } };
 }
 
 describe("foundation runtime-survival regressions", () => {
@@ -110,35 +164,7 @@ describe("foundation runtime-survival regressions", () => {
   });
 
   it("represents genuine local candidate exhaustion as NO_SAFE_VELOCITY fail-closed STOP", () => {
-    const spec: ScenarioSpec = {
-      id: "pillar",
-      label: "foundation sealed local state",
-      width: 12,
-      height: 8,
-      actors: [],
-      obstacles: [{ id: "sealed.fixture", x: 4, y: 0, width: 4, height: 8 }]
-    };
-    const world = snapshot(spec, [
-      {
-        id: "companion",
-        position: { x: 6, y: 4 },
-        radius: RADIUS,
-        requestedVelocity: { x: 0, y: 0 },
-        actualVelocity: { x: 0, y: 0 },
-        motionError: 0,
-        contacts: []
-      },
-      {
-        id: "player",
-        position: { x: 7.1, y: 4 },
-        radius: RADIUS,
-        requestedVelocity: { x: -3, y: 0 },
-        actualVelocity: { x: -3, y: 0 },
-        motionError: 0,
-        contacts: []
-      }
-    ]);
-    const target = { x: 9, y: 4 };
+    const { world, target } = sealedWorld();
     const query = (from: Vec2, to: Vec2, radius: number) => blockedTraversal(from, to, radius);
     const occupancy = (center: Vec2, radius: number) => occupied(center, radius);
     const route = planStaticShadowRoute({
@@ -164,6 +190,45 @@ describe("foundation runtime-survival regressions", () => {
     expect(evaluation.decision.state).toBe("HOLD");
     expect(evaluation.decision.selectedMove).toEqual({ x: 0, y: 0 });
     expect(evaluation.decision.reason).toContain("NO_SAFE_VELOCITY");
+  });
+
+  it("propagates NO_SAFE_VELOCITY as intentional post-World hold instead of fake no-progress", () => {
+    const { world, target } = sealedWorld();
+    const query = (from: Vec2, to: Vec2, radius: number) => blockedTraversal(from, to, radius);
+    const occupancy = (center: Vec2, radius: number) => occupied(center, radius);
+    const route = directRoute({ x: 6, y: 4 }, target);
+    const brain = new R1RecoveringDirectSpatialBrain();
+
+    const intent = brain.intent({
+      snapshot: world,
+      relationshipTarget: target,
+      routePlan: route,
+      query,
+      occupancy
+    });
+    expect(intent.move).toEqual({ x: 0, y: 0 });
+    expect(brain.debugState().repair?.localSafetyState).toBe("NO_SAFE_VELOCITY");
+
+    const postWorld: WorldSnapshot = {
+      ...world,
+      tick: 1,
+      actors: world.actors.map((actor) => actor.id === "companion"
+        ? { ...actor, requestedVelocity: { x: 0, y: 0 }, actualVelocity: { x: 0, y: 0 } }
+        : actor
+      )
+    };
+    const progress = brain.observeOutcome({
+      snapshot: postWorld,
+      objectiveKey: "foundation:no-safe",
+      target,
+      routePlan: route
+    });
+
+    expect(progress.state).toBe("INTENTIONAL_HOLD");
+    expect(progress.action).toBe("NONE");
+    expect(progress.reason).toContain("NO_SAFE_VELOCITY");
+    expect(progress.noProgressTicks).toBe(0);
+    expect(progress.retryCount).toBe(0);
   });
 
   it("does not terminate relationship evaluation when no authored slot is currently legal", () => {
