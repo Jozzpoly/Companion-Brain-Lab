@@ -1,20 +1,22 @@
-export type DebugPreset = "play" | "brain" | "nav" | "motion" | "all";
+export type DebugPreset = "play" | "brain" | "nav" | "spatial" | "motion" | "all";
 
-export const DEBUG_PRESETS: readonly DebugPreset[] = ["play", "brain", "nav", "motion", "all"];
+export const DEBUG_PRESETS: readonly DebugPreset[] = ["play", "brain", "nav", "spatial", "motion", "all"];
 
 export interface DebugVisibility {
   brain: boolean;
   nav: boolean;
+  spatial: boolean;
   motion: boolean;
   events: boolean;
 }
 
 const VISIBILITY: Readonly<Record<DebugPreset, DebugVisibility>> = {
-  play: { brain: false, nav: false, motion: false, events: false },
-  brain: { brain: true, nav: false, motion: false, events: true },
-  nav: { brain: false, nav: true, motion: false, events: true },
-  motion: { brain: false, nav: false, motion: true, events: true },
-  all: { brain: true, nav: true, motion: true, events: true }
+  play: { brain: false, nav: false, spatial: false, motion: false, events: false },
+  brain: { brain: true, nav: false, spatial: false, motion: false, events: true },
+  nav: { brain: false, nav: true, spatial: false, motion: false, events: true },
+  spatial: { brain: false, nav: true, spatial: true, motion: false, events: true },
+  motion: { brain: false, nav: false, spatial: false, motion: true, events: true },
+  all: { brain: true, nav: true, spatial: true, motion: true, events: true }
 };
 
 export class DebugWorkbenchState {
