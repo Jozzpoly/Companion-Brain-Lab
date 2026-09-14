@@ -6,7 +6,9 @@ import type {
   DirectTraversalResult,
   MotionIntent,
   ScenarioSpec,
+  StaticCircleOccupancyResult,
   StaticCircleTraversalResult,
+  StaticTraversalOptions,
   Vec2
 } from "../world/types";
 
@@ -35,6 +37,15 @@ function unit(input: Vec2): Vec2 {
   return magnitude > TRAVERSAL_EPSILON
     ? { x: input.x / magnitude, y: input.y / magnitude }
     : { x: 0, y: 0 };
+}
+
+function validateCircle(center: Vec2, radius: number, label: string): void {
+  if (!Number.isFinite(center.x) || !Number.isFinite(center.y)) {
+    throw new Error(`${label} requires finite center components.`);
+  }
+  if (!Number.isFinite(radius) || radius <= 0) {
+    throw new Error(`${label} requires a finite positive radius.`);
+  }
 }
 
 interface PhysicalActor {
@@ -119,7 +130,42 @@ export class RapierPhysicalWorld {
     };
   }
 
-  staticCircleTraversal(from: Vec2, target: Vec2, radius: number): StaticCircleTraversalResult {
+  staticCircleOccupancy(center: Vec2, radius: number): StaticCircleOccupancyResult {
+    validateCircle(center, radius, "Static occupancy");
+    const shape = new RAPIER.Ball(radius);
+    const blockers = new Set<string>();
+
+    this.world.intersectionsWithShape(
+      center,
+      0,
+      shape,
+      (collider) => {
+        const label = this.colliderLabels.get(collider.handle);
+        if (label) blockers.add(label);
+        return true;
+      },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      (collider) => this.isStaticCollider(collider)
+    );
+
+    const sorted = [...blockers].sort((a, b) => a.localeCompare(b));
+    return {
+      center: { ...center },
+      radius,
+      clear: sorted.length === 0,
+      blockers: sorted
+    };
+  }
+
+  staticCircleTraversal(
+    from: Vec2,
+    target: Vec2,
+    radius: number,
+    options: StaticTraversalOptions = {}
+  ): StaticCircleTraversalResult {
     if (
       !Number.isFinite(from.x) ||
       !Number.isFinite(from.y) ||
@@ -130,6 +176,11 @@ export class RapierPhysicalWorld {
     }
     if (!Number.isFinite(radius) || radius <= 0) {
       throw new Error("Static traversal requires a finite positive radius.");
+    }
+
+    const initialOverlap = options.initialOverlap ?? "block";
+    if (initialOverlap !== "block" && initialOverlap !== "allow-egress") {
+      throw new Error("Static traversal initial-overlap policy must be block or allow-egress.");
     }
 
     const start = { ...from };
@@ -156,15 +207,12 @@ export class RapierPhysicalWorld {
       shape,
       0,
       distance,
-      true,
+      initialOverlap === "block",
       undefined,
       undefined,
       undefined,
       undefined,
-      (collider) => {
-        const label = this.colliderLabels.get(collider.handle);
-        return label !== "player" && label !== "companion";
-      }
+      (collider) => this.isStaticCollider(collider)
     );
 
     if (!hit) return { ...base, clear: true, blocker: null };
@@ -250,6 +298,11 @@ export class RapierPhysicalWorld {
           contacts: this.contactsFor(actor)
         };
       });
+  }
+
+  private isStaticCollider(collider: RAPIER.Collider): boolean {
+    const label = this.colliderLabels.get(collider.handle);
+    return label !== "player" && label !== "companion";
   }
 
   private contactsFor(actor: PhysicalActor): ContactRecord[] {
