@@ -19,14 +19,18 @@ function actor(
   };
 }
 
-function snapshot(playerVelocity: Vec2, companionVelocity: Vec2 = { x: 0, y: 0 }): WorldSnapshot {
+function snapshot(
+  playerVelocity: Vec2,
+  companionVelocity: Vec2 = { x: 0, y: 0 },
+  companionPosition: Vec2 = { x: 4, y: 4 }
+): WorldSnapshot {
   return {
     tick: 30,
     scenarioId: "open",
     width: 12,
     height: 8,
     actors: [
-      actor("companion", { x: 4, y: 4 }, companionVelocity),
+      actor("companion", companionPosition, companionVelocity),
       actor("player", { x: 6, y: 4 }, playerVelocity)
     ],
     obstacles: []
@@ -144,6 +148,28 @@ describe("CCC-0 shadow pace", () => {
 
     expect(movingToward.separationTrend).toBe("closing");
     expect(movingToward.urgency).toBeLessThan(movingAway.urgency);
+  });
+
+  it("reduces pressure while the companion is already closing on the region before overshoot", () => {
+    const fixedRegion = region({ x: 6.5, y: 4 });
+    const far = evaluateShadowPace({
+      snapshot: snapshot({ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 4, y: 4 }),
+      region: fixedRegion,
+      physicalSpeedCapability: 3,
+      outsideRegionTicks: 30
+    });
+    const approaching = evaluateShadowPace({
+      snapshot: snapshot({ x: 0, y: 0 }, { x: 1.5, y: 0 }, { x: 5.8, y: 4 }),
+      region: fixedRegion,
+      physicalSpeedCapability: 3,
+      outsideRegionTicks: 30
+    });
+
+    expect(approaching.insideUsefulRegion).toBe(false);
+    expect(approaching.separationTrend).toBe("closing");
+    expect(approaching.distanceToRegion).toBeLessThan(far.distanceToRegion ?? Number.POSITIVE_INFINITY);
+    expect(approaching.urgency).toBeLessThan(far.urgency);
+    expect(approaching.desiredSpeed).toBeLessThanOrEqual(far.desiredSpeed);
   });
 
   it("settles instead of inventing locomotion when already in-region beside a stationary player", () => {
