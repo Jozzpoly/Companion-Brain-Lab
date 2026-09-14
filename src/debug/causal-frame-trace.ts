@@ -10,6 +10,10 @@ export interface CausalObservationPhase {
 
 export interface CausalShadowCoordinationEvidence {
   kind: "CCC0_SHADOW_COORDINATION";
+  /** Tactical cognition tick that produced this evidence. */
+  shadowTick?: number;
+  /** Observation tick minus shadowTick. Zero means true same-observation comparison. */
+  ageTicks?: number;
   regionState: string;
   regionAnchor: Vec2 | null;
   regionBestSampleId: string | null;
@@ -53,7 +57,7 @@ export interface CausalDecisionPhase {
   comfortStartBlockers?: readonly string[];
   rehabilitatedCandidateCount?: number | null;
   comfortExitCandidateCount?: number | null;
-  /** Explicitly non-authoritative CCC-0 research evidence from the same observation tick. */
+  /** Explicitly non-authoritative CCC-0 research evidence; ageTicks exposes cached multi-rate evidence. */
   shadowCoordination?: CausalShadowCoordinationEvidence | null;
 }
 
