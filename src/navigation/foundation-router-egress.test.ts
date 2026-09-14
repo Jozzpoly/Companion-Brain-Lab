@@ -90,10 +90,13 @@ describe("foundation route egress semantics", () => {
         query: (from, to, radius, options) => physical.staticCircleTraversal(from, to, radius, options)
       });
 
+      expect(defaultSweep.clear).toBe(false);
+      expect(defaultSweep.blocker?.label).toBe("boundary.left");
+      expect(defaultSweep.blocker?.distance).toBeCloseTo(0, 6);
       expect(egressSweep.clear).toBe(true);
       expect(result.status).toBe("direct");
       expect(result.routeNodeIds).toEqual(["start", "target"]);
-      expect(defaultSweep.clear || result.reason.includes("egress")).toBe(true);
+      expect(result.edges.find((edge) => edge.id === "start<->target")?.clear).toBe(true);
     } finally {
       physical.dispose();
     }
