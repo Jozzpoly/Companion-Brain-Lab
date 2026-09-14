@@ -1,23 +1,25 @@
 # CCC-0 — Owner Browser Observation Gate
 
-Status: **OWNER GATE OPEN · SHADOW ONLY · ZERO MOVEMENT-OUTPUT AUTHORITY**
+Status: **OWNER GATE READY · AUDITED SHADOW ONLY · ZERO MOVEMENT-OUTPUT AUTHORITY**
 
 Date: 2026-09-14
 
-Exact application runtime under observation:
+Exact **application runtime** under observation:
 
-`a2a0e793f01a6fe3b435e473cb9912347f2fcb0d`
+`857620b758bdaafcbfbab48da06ff89e7fc238cd`
 
-Exact runtime validation:
+Exact clean-runtime validation:
 
-- run `34894184145` — SUCCESS;
-- 39/39 test files PASS;
-- 191/191 tests PASS;
+- repair push run `34904396219` — SUCCESS;
+- fresh PR #17 merge-ref run `34904538403` — SUCCESS;
+- **52/52 test files PASS**;
+- **221/221 tests PASS**;
 - strict TypeScript PASS;
 - production build PASS;
-- npm install audit: 0 vulnerabilities.
+- npm audit: 0 vulnerabilities;
+- real Chromium black-box audit PASS.
 
-Pinned browser preview:
+Pinned Owner preview:
 
 `https://jozzpoly.github.io/Companion-Brain-Lab/ccc0/`
 
@@ -25,13 +27,21 @@ Historical Foundation root remains separately preserved at:
 
 `https://jozzpoly.github.io/Companion-Brain-Lab/`
 
-Pages composite deployment:
+Current Pages authority:
 
-- workflow run `34894499080` — build + deploy PASS;
-- Pages authority commit `5054ffabbe72bc6dedb46196b00da2a32c9b7c29`;
-- root build pinned to Foundation `b217943e027e66993f0010643b2933b01d4b1e6d`;
-- `/ccc0/` build pinned to CCC-0 `a2a0e793f01a6fe3b435e473cb9912347f2fcb0d`;
-- uploaded artifact independently verified to contain distinct relative root and `/ccc0/` bundles.
+- `main` authority commit `fac371ef4d5b21ae17dc0a83219ed9cecab316bf`;
+- composite Pages run `34904811263` — build PASS + deploy PASS;
+- `main` validation run `34904811235` — PASS;
+- root build pinned to exact Foundation `b217943e027e66993f0010643b2933b01d4b1e6d`;
+- `/ccc0/` build pinned to exact CCC-0 runtime `857620b758bdaafcbfbab48da06ff89e7fc238cd`;
+- uploaded `github-pages` artifact `10371678833`, digest `sha256:69426ec25dffa8f9c8ccfe71d312d04cb5ca8e7d038c76283784737df2ef9a5b`.
+
+Independent artifact inspection confirmed:
+
+- root still loads historical Foundation bundle `./assets/index--Hpz3nOi.js`;
+- `/ccc0/` loads repaired CCC bundle `./assets/index--b-VEI1S.js`;
+- Foundation bundle contains no CCC markers;
+- `/ccc0/` bundle contains CCC shadow markers and the repaired heading/disclosure implementation.
 
 ---
 
@@ -39,39 +49,42 @@ Pages composite deployment:
 
 CCC-0 still cannot change companion movement output.
 
-The Owner gate therefore does **not** ask whether the companion feels smarter or behaves better.
+The Owner gate therefore does **not** ask whether the companion is finally smart, useful in combat or ready for authority.
 
-It asks whether the new research evidence is useful enough to design the first authority experiment:
+It asks whether the shadow research substrate is good enough to design the next experiment:
 
-- **WHERE** — does the coherent player-relative region look like a plausible place a useful companion could occupy?
-- **PACE** — does urgency / desired pace rise and fall in ways that match the changing relationship rather than only raw distance?
-- **PLAYER FLOW** — does the corridor represent where the player is actually using space, including uncertainty after reversals?
-- **CAUSALITY** — when shadow disagrees with legacy movement, can we see whether disagreement is upstream preferred motion, downstream authoritative motion, topology, pace or stale multi-rate evidence?
-- **RUNTIME COST** — does the 6-tick (~10 Hz) synchronous shadow evaluation cause visible periodic hitching or degraded interaction despite zero semantic movement-output authority?
+- **WHERE** — does the coherent player-relative region represent plausible useful space around the player?
+- **PACE** — does urgency / desired pace react to the changing relationship rather than merely raw distance?
+- **PLAYER FLOW** — does the corridor represent space the player is actually using, including stop/reversal uncertainty?
+- **CAUSALITY** — when shadow and legacy disagree, can we tell whether the cause is region choice, pace, player flow, topology, cached evidence or downstream authoritative motion?
+- **RUNTIME COST** — on the Owner's real browser/machine, is the current ~10 Hz synchronous shadow cognition perceptibly disruptive?
 
 Bad shadow decisions are useful evidence. Do not protect the implementation from a FAIL.
+
+Automated Chromium has already removed several infrastructure uncertainties: the production build boots, all four scenarios switch, DIRECT/NATURAL toggles, WASD produces live evidence, CCC sections remain interactable during live updates, no runtime-fault surface appears, and no >250 ms rendering stall appeared in the qualified CI runs. **That is not a substitute for Owner perception.**
 
 ---
 
 ## 2. Setup
 
-1. Open the `/ccc0/` preview, not the Foundation root.
+1. Open the `/ccc0/` preview above, not the Foundation root.
 2. Keep companion mode on the normal spatial workbench path.
-3. Enable the **Coordination** overlay when you want to inspect geometry; it is intentionally default OFF.
-4. Expand the three CCC-0 panel sections as needed:
+3. Enable **Coordination** when you want the geometry overlay; it is intentionally default OFF.
+4. Open the CCC sections as needed:
    - `CCC-0 shadow · WHERE`
    - `CCC-0 shadow · PACE`
    - `CCC-0 shadow · PLAYER FLOW`
-5. Use the existing open / pillar / doorway / head-on scenarios.
-6. Capture an incident whenever something looks causally suspicious rather than trying to reproduce it from memory.
+5. Opened sections should now **stay open while the simulation runs**. The audit found and repaired the old per-frame DOM reconstruction bug that previously made live sections effectively unclickable/unreadable.
+6. Use Open / Pillar / Doorway / Head-on freely.
+7. Capture an incident whenever something looks causally suspicious instead of trying to reconstruct it from memory.
 
 Expected multi-rate behavior:
 
-- CCC-0 evaluates every 6 World ticks;
-- `sample t...` identifies the cognition tick that produced a successful cached shadow frame;
-- `age ...t` may therefore rise between successful evaluations;
-- this is expected and must not be confused with same-tick evidence;
-- a shadow evaluator failure is tick-local event evidence and is intentionally not cached across intervening motor ticks.
+- CCC-0 evaluates every 6 World ticks (~10 Hz at the current fixed step);
+- `sample t...` identifies the cognition observation that produced the cached shadow frame;
+- `age ...t` can rise between evaluations;
+- this is expected and must not be mistaken for same-tick evidence;
+- evaluator failure is tick-local evidence and should not persist as a fresh error on intervening motor ticks.
 
 ---
 
@@ -79,51 +92,55 @@ Expected multi-rate behavior:
 
 ### A — open-space WHERE / PACE
 
-Move naturally around the companion: steady travel, slow travel, stop, move away, return toward it.
+Move naturally around the companion: steady travel, slow travel, stop, move away, return, arc around it.
 
 Look for:
 
 - region remains around the player rather than collapsing through player center;
-- no arbitrary front/back bias while player has no meaningful heading;
-- small heading changes usually produce overlapping/coherent regions rather than violent anchor teleporting;
-- topology-change / overlap / anchor-displacement evidence agrees with what overlay visibly did;
-- PACE pressure grows when useful region is escaping and falls as companion/region relationship closes;
-- desired speed remains bounded rather than behaving like a binary catch-up switch.
+- no arbitrary front/back bias when player direction evidence is genuinely absent;
+- small ordinary velocity changes do not cause repeated violent target thrashing;
+- topology-change / overlap / anchor-displacement evidence broadly agrees with what the overlay did;
+- PACE pressure grows when useful space is escaping and falls as the relationship closes;
+- desired speed remains bounded rather than acting like a binary catch-up switch.
 
-### B — reversal / jitter PLAYER FLOW
+### B — stop / memory fade / reversal / jitter
 
-Travel steadily, stop, reverse 180°, then make several short left/right reversals.
+Travel steadily, stop for about a second, reverse 180°, then make several short left/right reversals.
 
 Look for:
 
-- steady motion produces a clear short corridor;
-- a real stop does not fabricate a new world-axis flow direction;
-- abrupt reversal visibly reduces confidence / produces uncertainty before confidently committing to new direction;
-- repeated jitter does not produce a wildly long high-confidence corridor;
-- corridor physical core and comfort envelope remain visibly distinct.
+- steady motion produces a readable short corridor;
+- recent direction survives a brief stop rather than disappearing instantly;
+- old velocity direction then fades out rather than becoming permanent pseudo-facing;
+- abrupt reversal reduces confidence / exposes uncertainty before confidently committing to the new direction;
+- repeated tiny jitter does not create a wildly long high-confidence corridor.
 
-### C — preferred vs authoritative conflict
+**Known limitation to look at deliberately:** automated qualification observed a maximum shadow-anchor change of about **0.815 m in one 6-tick cognition observation** during the stop/fade transition. A previous audit oracle demanding `<0.5 m` was falsified as too strict; the transition is strongly cadence-dependent and is still substantially smaller than the ~2.051 m one-step legacy reversal snap measured in the same research sequence. Do not ignore the 0.815 m transition: tell us whether it is visually meaningful or objectionable in real play.
 
-In open/head-on play, cut across the companion and reverse while it is moving.
+### C — preferred vs authoritative PLAYER FLOW
 
-The PLAYER FLOW section exposes separate conflict channels for:
+In Open or Head-on, cut across the companion and reverse while it is moving.
 
-- legacy preferred velocity;
+PLAYER FLOW exposes separate channels for:
+
+- upstream preferred movement;
 - final authoritative command.
 
-Interesting evidence includes either direction of disagreement. In particular, note cases where preferred is clear but authoritative becomes conflicting, or vice versa. CCC-0 must report this difference; it must not repair it.
+Interesting evidence includes disagreement in either direction. CCC-0 should report the split; it must not silently repair movement.
 
 ### D — pillar / topology
 
-Move around and across the pillar so good player-relative space exists on changing sides.
+Move around and across the pillar so useful player-relative space changes sides.
 
 Look for:
 
-- coherent region does not average disconnected sides through obstacle;
-- representative anchor stays inside displayed coherent component;
-- topology change is explicit when good region genuinely changes component;
-- small ordinary motion does not constantly report catastrophic topology churn;
-- static traversal/query count rises relative to open space but browser remains responsive.
+- coherent region does not average disconnected sides through the obstacle;
+- representative anchor stays inside the displayed coherent component;
+- genuine topology changes are explicit;
+- trivial motion does not constantly claim catastrophic topology churn;
+- browser remains responsive.
+
+The repaired WHERE path first proves direct static traversal and escalates to the full router only when needed. Therefore the old expectation that ordinary pillar geometry must always show >100 traversal queries is obsolete.
 
 ### E — doorway / constrained passage
 
@@ -132,82 +149,82 @@ Approach, enter, stop in, reverse through and clear the doorway several times.
 Look for:
 
 - WHERE respects passage topology rather than only Euclidean proximity;
-- region/anchor does not collapse into player because samples exist on both sides;
-- corridor remains readable through reversals in the choke;
-- higher route/static-query cost does not create obvious rhythmic hitching;
-- shadow evidence can be wrong, but its wrongness should be inspectable.
+- region/anchor does not collapse through player or walls;
+- PLAYER FLOW remains readable through reversals in the choke;
+- full-router fallback, when genuinely required, does not create an obvious rhythmic hitch;
+- wrong shadow evidence remains inspectable rather than mysteriously wrong.
 
 ---
 
 ## 4. Runtime-cost / cadence gate
 
-This is a first-class Owner question because automated semantic/output zero-authority cannot prove presentation-time smoothness.
+This remains a first-class Owner question even after automated Chromium PASS.
 
-During all scenarios, watch specifically for a ~10 Hz periodic disturbance:
+Qualified CI browser runs showed no >250 ms or >1000 ms rendering stalls, but hosted headless Chromium is not your machine and not your perception.
+
+During all scenarios watch for a rhythm around the ~10 Hz cognition cadence:
 
 - input hitch;
 - animation hitch;
 - panel hitch;
-- noticeable frame-pacing pulse;
+- frame-pacing pulse;
 - interaction lag synchronized with shadow updates.
 
-The WHERE panel shows both:
+WHERE exposes both route-target count and actual static traversal count. Directly reachable research fixtures are now defended at **26 traversal queries** even with irrelevant distant obstacles, but full-router fallback can still cost more when geometry requires it.
 
-- route target count;
-- actual static traversal query count.
-
-Open geometry should be much cheaper than pillar/doorway geometry. High query count is not automatically a failure; visible runtime disturbance is.
-
-If a hitch appears, capture an incident and note scenario + approximate player motion. Do not solve it by silently increasing interval before understanding the cost.
+If a hitch appears, capture an incident and note the scenario / motion. Do not solve it by blindly increasing the cognition interval.
 
 ---
 
 ## 5. Causal legibility gate
 
-When something looks wrong, panel/incident should let us distinguish at least:
+When something looks wrong, panel/incident evidence should let us distinguish at least:
 
-- current World observation vs cached successful shadow observation (`shadowTick`, `ageTicks`);
+- current World observation vs cached shadow observation (`shadowTick`, `ageTicks`);
+- recent velocity-memory influence vs no remaining direction evidence;
 - region topology change vs ordinary anchor movement;
-- route target count vs real static traversal cost;
-- preferred player-flow conflict vs authoritative-command conflict;
-- shadow reasoning vs legacy authoritative command;
-- tick-local shadow evaluator failure vs runtime/brain failure.
+- shortlisted route targets vs actual traversal work;
+- preferred player-flow conflict vs final authoritative-command conflict;
+- shadow reasoning vs legacy authoritative movement;
+- tick-local shadow evaluator failure vs a runtime/brain failure.
 
-A visually bad region with good causal evidence can still be useful CCC-0 research.
+A visually bad region with strong causal evidence can still be valuable CCC-0 research.
 
-A visually plausible region whose cause cannot be reconstructed is a more serious CCC-0 failure.
+A visually plausible region whose cause cannot be reconstructed is more serious.
 
 ---
 
 ## 6. PASS / FAIL boundary
 
-### Owner PASS for CCC-0 research substrate
+### Owner PASS for the CCC-0 research substrate
 
 Reasonable if, across ordinary and adversarial play:
 
 - WHERE/PACE/PLAYER FLOW are readable enough to criticize;
 - their mistakes have visible causal explanations;
 - topology and reversal uncertainty are represented rather than hidden;
-- multi-rate age/provenance is understandable;
-- no obvious periodic browser hitch is introduced;
+- stop/fade memory behavior is acceptable or at least clearly diagnosable;
+- cached age/provenance is understandable;
+- no material periodic browser hitch is perceptible;
 - no evidence suggests shadow computation changed authoritative movement output;
-- incidents contain enough information to investigate interesting disagreements.
+- incidents contain enough truth to investigate interesting disagreements.
 
-### Owner FAIL / continue CCC-0
+### Owner FAIL / remain in CCC-0
 
 Any material instance of:
 
 - region repeatedly teleporting for trivial motion without explanatory topology evidence;
+- the known stop/fade transition being visibly unacceptable;
 - systematic region collapse through obstacles/player center;
 - PACE behaving mainly as raw-distance mapping despite motion evidence;
-- corridor hallucinating stable flow during stop/reversal/jitter;
+- corridor hallucinating stable flow through stop/reversal/jitter;
 - preferred/final conflict channels being misleading or unreadable;
 - cached evidence looking indistinguishable from fresh evidence;
-- stale shadow failures appearing as fresh errors on intervening motor ticks;
-- obvious ~10 Hz runtime hitching;
-- debug density making system harder, not easier, to understand.
+- stale shadow failures appearing fresh on intervening ticks;
+- obvious periodic cognition hitching;
+- CCC panel/overlay making the system harder rather than easier to understand.
 
-Do not promote CCC-1 authority after a material FAIL.
+A material FAIL does not mean the audit failed. It means CCC-0 did its job by exposing a bad representation before authority.
 
 ---
 
@@ -215,9 +232,9 @@ Do not promote CCC-1 authority after a material FAIL.
 
 Even a clean Owner PASS means only:
 
-> CCC-0 is a sufficiently useful research substrate to design the next experiment.
+> CCC-0 is a sufficiently useful research substrate to design the next coordination experiment.
 
-It does **not** freeze:
+It does **not** freeze or authorize:
 
 - 32 × 3 sampling;
 - current radii/weights;
@@ -225,7 +242,8 @@ It does **not** freeze:
 - 6-tick cadence;
 - WHERE/PACE/PLAYER FLOW decomposition;
 - current representative-anchor algorithm;
-- current static router as long-term WHERE substrate;
-- any future movement authority shape.
+- current router as long-term WHERE substrate;
+- current player corridor;
+- any current shadow output as movement authority.
 
-Post-gate CCC-1 must be replanned from actual Owner observations and may delete or replace major parts of CCC-0.
+Post-gate work must be replanned from actual Owner observations. Major parts of CCC-0 may be deleted or replaced if the evidence says so.
