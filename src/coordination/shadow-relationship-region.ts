@@ -6,6 +6,7 @@ import {
   type StaticTraversalQuery
 } from "../navigation/static-router";
 import type { ActorSnapshot, ObstacleSpec, Vec2, WorldSnapshot } from "../world/types";
+import { CCC0_CORRIDOR_DIRECTION_MEMORY_STRENGTH } from "./shadow-player-corridor";
 
 export const CCC0_REGION_DIRECTIONS = 32;
 export const CCC0_REGION_RADII = [1.15, 1.45, 1.8] as const;
@@ -18,6 +19,7 @@ const PLAYER_HEADING_THRESHOLD = 0.15;
 const PLAYER_HEADING_FULL_STRENGTH_SPEED = 0.6;
 const INVALID_SCORE = 1_000_000;
 const EPSILON = 1e-9;
+const SCORE_TIE_EPSILON = 1e-9;
 
 export type ShadowRegionState = "REGION" | "NO_REACHABLE_REGION";
 export type ShadowNoRegionReason = "NO_HARD_VALID_SAMPLE" | "ROUTE_SHORTLIST_EXHAUSTED";
@@ -83,6 +85,7 @@ export interface ShadowRelationshipRegionInput {
   query: StaticTraversalQuery;
   previousRepresentative?: Vec2 | null;
   previousPlayerDirection?: Vec2 | null;
+  previousPlayerDirectionAgeTicks?: number | null;
 }
 
 interface RouteQualification {
@@ -133,7 +136,8 @@ function headingStrength(speed: number): number {
 
 function observedPlayerDirection(
   player: ActorSnapshot,
-  previous: Vec2 | null | undefined
+  previous: Vec2 | null | undefined,
+  previousAgeTicks: number | null | undefined
 ): { direction: Vec2; source: ShadowPlayerHeadingSource; strength: number } {
   const actualSpeed = magnitude(player.actualVelocity);
   if (actualSpeed > PLAYER_HEADING_THRESHOLD) {
@@ -152,9 +156,17 @@ function observedPlayerDirection(
     };
   }
   if (previous && magnitude(previous) > 0.5) {
-    return { direction: normalized(previous), source: "previous", strength: 1 };
+    const strength = CCC0_CORRIDOR_DIRECTION_MEMORY_STRENGTH(previousAgeTicks);
+    if (strength > EPSILON) {
+      return { direction: normalized(previous), source: "previous", strength };
+    }
   }
   return { direction: { x: 0, y: 0 }, source: "none", strength: 0 };
+}
+
+function compareSampleScore(a: ShadowRegionSample, b: ShadowRegionSample): number {
+  const delta = a.score - b.score;
+  return Math.abs(delta) > SCORE_TIE_EPSILON ? delta : a.id.localeCompare(b.id);
 }
 
 function distanceToObstacle(point: Vec2, obstacle: ObstacleSpec): number {
@@ -209,8 +221,8 @@ function localSampleScore(options: {
   const comfortPressure = clamp((COMFORT_CLEARANCE - clearance) / COMFORT_CLEARANCE, 0, 1);
   const terms: ShadowRegionScoreTerms = {
     // Direction itself remains discrete/noise-filtered, but its semantic weight now
-    // grows continuously above the observation threshold instead of jumping from
-    // zero to full front/back policy on an infinitesimal speed change.
+    // grows continuously above the observation threshold and fades continuously
+    // when the only remaining evidence is recent trajectory memory.
     frontPenalty: frontness * frontness * 4.8 * options.playerHeadingStrength,
     radialPenalty: Math.abs(options.radius - PREFERRED_RADIUS) * 1.4,
     travelPenalty: distance(options.companion.position, options.position) * 0.18,
@@ -249,7 +261,11 @@ function buildSamples(input: ShadowRelationshipRegionInput): {
 } {
   const companion = actor(input.snapshot, "companion");
   const player = actor(input.snapshot, "player");
-  const heading = observedPlayerDirection(player, input.previousPlayerDirection);
+  const heading = observedPlayerDirection(
+    player,
+    input.previousPlayerDirection,
+    input.previousPlayerDirectionAgeTicks
+  );
   const samples: ShadowRegionSample[] = [];
 
   for (let radiusIndex = 0; radiusIndex < CCC0_REGION_RADII.length; radiusIndex += 1) {
@@ -354,7 +370,7 @@ function evaluateRouteShortlist(
 ): void {
   const shortlist = samples
     .filter((sample) => sample.hardValid)
-    .sort((a, b) => a.score - b.score || a.id.localeCompare(b.id))
+    .sort(compareSampleScore)
     .slice(0, CCC0_REGION_ROUTE_SHORTLIST);
 
   for (const sample of shortlist) {
@@ -411,7 +427,7 @@ export function coherentShadowRegion(
     }
   }
 
-  return region.sort((a, b) => a.score - b.score || a.id.localeCompare(b.id));
+  return region.sort(compareSampleScore);
 }
 
 function weightedRepresentative(samples: readonly ShadowRegionSample[]): Vec2 | null {
@@ -447,7 +463,7 @@ export function evaluateShadowRelationshipRegion(
 
   const reachable = raw.samples
     .filter((sample) => sample.routeEvaluated && sample.reachable)
-    .sort((a, b) => a.score - b.score || a.id.localeCompare(b.id));
+    .sort(compareSampleScore);
   const best = reachable[0] ?? null;
   const routeEvaluatedCount = raw.samples.filter((sample) => sample.routeEvaluated).length;
 
@@ -530,3 +546,4 @@ export function evaluateShadowRelationshipRegion(
 
 export const CCC0_REGION_HEADING_THRESHOLD = PLAYER_HEADING_THRESHOLD;
 export const CCC0_REGION_HEADING_FULL_STRENGTH_SPEED = PLAYER_HEADING_FULL_STRENGTH_SPEED;
+export const CCC0_REGION_SCORE_TIE_EPSILON = SCORE_TIE_EPSILON;
