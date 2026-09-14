@@ -11,6 +11,7 @@ export interface CausalObservationPhase {
 export interface CausalDecisionPhase {
   relationshipRevision: number | null;
   relationshipLabel: string | null;
+  relationshipState?: string | null;
   relationshipTarget: Vec2 | null;
   routeStatus: string | null;
   routePath: string;
@@ -55,13 +56,11 @@ export interface CausalPostClassification {
   action?: string | null;
   noProgressTicks?: number | null;
   unreachableTicks?: number | null;
-  /** Legacy incident-v2 name: retry budget consumed in the current episode. */
   retryCount?: number | null;
-  /** Legacy incident-v2 name: cumulative RETRY_LOCAL applications since stack reset. */
   appliedLocalRetries?: number | null;
-  /** Explicit alias for retryCount; self-describing for new evidence consumers. */
+  /** Self-describing alias for the episode-local legacy retryCount field. */
   retryBudgetUsedThisEpisode?: number | null;
-  /** Explicit alias for appliedLocalRetries; self-describing for new evidence consumers. */
+  /** Self-describing alias for the cumulative legacy appliedLocalRetries field. */
   cumulativeLocalRetriesSinceReset?: number | null;
 }
 
@@ -76,17 +75,6 @@ export interface CausalFrame {
 
 function cloneVec(value: Vec2 | null): Vec2 | null {
   return value ? { ...value } : null;
-}
-
-function clonePost(post: CausalPostClassification): CausalPostClassification {
-  const retryBudgetUsedThisEpisode = post.retryBudgetUsedThisEpisode ?? post.retryCount ?? null;
-  const cumulativeLocalRetriesSinceReset =
-    post.cumulativeLocalRetriesSinceReset ?? post.appliedLocalRetries ?? null;
-  return {
-    ...post,
-    retryBudgetUsedThisEpisode,
-    cumulativeLocalRetriesSinceReset
-  };
 }
 
 function cloneFrame(frame: CausalFrame): CausalFrame {
@@ -120,7 +108,7 @@ function cloneFrame(frame: CausalFrame): CausalFrame {
       companionActualVelocity: { ...frame.outcome.companionActualVelocity },
       companionContacts: [...frame.outcome.companionContacts]
     },
-    post: clonePost(frame.post)
+    post: { ...frame.post }
   };
 }
 
