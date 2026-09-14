@@ -36,6 +36,14 @@ function timingSummary(values) {
   };
 }
 
+async function readDownloadJson(download) {
+  const stream = await download.createReadStream();
+  invariant(stream, "Browser incident download did not expose a readable stream.");
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+}
+
 async function panelText(page) {
   return page.locator("#debug-panel").innerText();
 }
@@ -138,7 +146,7 @@ const server = await preview({
 let browser;
 try {
   browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
+  const context = await browser.newContext({ viewport: { width: 1600, height: 1000 }, acceptDownloads: true });
   const page = await context.newPage();
   const errors = { page: [], console: [], requests: [] };
 
@@ -242,11 +250,33 @@ try {
 
   const beforeInput = parseAnchor(await panelText(page));
   await page.keyboard.down("d");
-  await page.waitForTimeout(650);
+  await page.waitForTimeout(350);
+  const [incidentDownload] = await Promise.all([
+    page.waitForEvent("download", { timeout: 10_000 }),
+    page.locator('[data-action="capture-incident"]').click()
+  ]);
+  const incident = await readDownloadJson(incidentDownload);
   text = await panelText(page);
   invariant(text.includes("source actual") || text.includes("source requested"), "WASD input did not appear as visible player-flow velocity evidence.");
   await page.keyboard.up("d");
-  await page.waitForTimeout(450);
+  await page.waitForTimeout(300);
+
+  invariant(incident.schema === "companion-brain-lab-ccc0-causal-incident-v5", `Unexpected incident schema: ${incident.schema}`);
+  invariant(Array.isArray(incident.frames) && incident.frames.length > 0, "Incident v5 contained no causal frames.");
+  const incidentFrame = incident.frames.at(-1);
+  invariant(incidentFrame?.observation?.playerInputMove?.x > 0.5, "Incident v5 did not preserve same-step owner movement input.");
+  invariant(Number.isFinite(incidentFrame?.observation?.playerMotionError), "Incident v5 missing pre-step player motionError.");
+  invariant(typeof incidentFrame?.decision?.localSafetyState === "string", "Incident v5 missing local safety provenance.");
+  invariant(incidentFrame?.decision?.coarseLocalVelocity && Number.isFinite(incidentFrame.decision.coarseLocalVelocity.x), "Incident v5 missing coarse local velocity.");
+  invariant("refinementSource" in incidentFrame.decision, "Incident v5 missing refinement provenance field.");
+  invariant("naturalRegime" in incidentFrame.decision, "Incident v5 missing NATURAL regime provenance field.");
+  invariant(incidentFrame?.command?.preConstraintVelocity && Number.isFinite(incidentFrame.command.preConstraintVelocity.x), "Incident v5 missing pre-constraint velocity.");
+  invariant(incidentFrame?.command?.finalConstraintVelocity && Number.isFinite(incidentFrame.command.finalConstraintVelocity.x), "Incident v5 missing final-constraint velocity.");
+  invariant(Number.isFinite(incidentFrame?.outcome?.companionMotionError), "Incident v5 missing companion outcome motionError.");
+  invariant(incidentFrame?.outcome?.playerActualVelocity && Number.isFinite(incidentFrame.outcome.playerActualVelocity.x), "Incident v5 missing post-World player actual velocity.");
+  invariant(Number.isFinite(incidentFrame?.outcome?.playerMotionError), "Incident v5 missing post-World player motionError.");
+  invariant(Number.isFinite(incidentFrame?.outcome?.playerDisplacement), "Incident v5 missing post-World player displacement.");
+
   const afterInput = parseAnchor(await panelText(page));
   invariant(beforeInput && afterInput, "Could not read shadow anchor around keyboard-input probe.");
   invariant(Math.hypot(afterInput.x - beforeInput.x, afterInput.y - beforeInput.y) > 0.05, "Shadow evidence did not respond measurably to real keyboard-driven player motion.");
@@ -285,6 +315,17 @@ try {
     initialTick,
     runningTick,
     scenarioEvidence,
+    incidentV5: {
+      schema: incident.schema,
+      frameCount: incident.frames.length,
+      capturedTick: incident.tick,
+      lastFrameSequence: incidentFrame?.sequence ?? null,
+      ownerInputMove: incidentFrame?.observation?.playerInputMove ?? null,
+      localSafetyState: incidentFrame?.decision?.localSafetyState ?? null,
+      refinementSource: incidentFrame?.decision?.refinementSource ?? null,
+      naturalRegime: incidentFrame?.decision?.naturalRegime ?? null,
+      playerMotionErrorAfter: incidentFrame?.outcome?.playerMotionError ?? null
+    },
     finalTick: parseTick(finalText),
     coordinationLayerEnabled: await coordinationToggle.isChecked(),
     persistentDisclosure: {
