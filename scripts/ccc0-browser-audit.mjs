@@ -303,13 +303,17 @@ try {
   invariant(await sectionDetails(page, "ccc-player").evaluate((element) => element.open), "CCC-0 PLAYER FLOW disclosure did not survive the long browser run.");
 
   // One bounded real-browser rehearsal of the confirmed solver-motion -> semantic-objective leak.
-  // The companion is manually driven into a zero-input player, World-generated player velocity is frozen by pause,
-  // then RELATIONAL gets exactly one step to consume that snapshot. This does not alter runtime authority.
+  // Freeze the old scenario first so Head-on loads at canonical tick zero. Then let only the manual companion create the contact.
+  await page.locator('[data-action="toggle-pause"]').click();
+  await waitForPanel(page, (value) => value.includes("PAUSED"), 5_000, "pause before canonical Head-on load");
   await page.locator('[data-action="scenario-head-on"]').click();
-  await waitForScenario(page, "Head-on contact");
+  await waitForPanel(page, (value) => value.includes("scenario Head-on contact") && value.includes("PAUSED"), 10_000, "paused canonical Head-on scenario");
   await page.locator('[data-action="cycle-mode"]').click();
-  await waitForPanel(page, (value) => value.includes("mode MANUAL"), 5_000, "MANUAL mode for solver-motion rehearsal");
+  await waitForPanel(page, (value) => value.includes("mode MANUAL") && value.includes("PAUSED"), 5_000, "MANUAL mode for solver-motion rehearsal");
+
   await page.keyboard.down("ArrowLeft");
+  await page.locator('[data-action="toggle-pause"]').click();
+  await waitForPanel(page, (value) => value.includes("RUNNING"), 5_000, "unpause manual push from canonical geometry");
   await page.waitForTimeout(1_050);
   await page.locator('[data-action="toggle-pause"]').click();
   await waitForPanel(page, (value) => value.includes("PAUSED"), 5_000, "pause at manual player contact");
