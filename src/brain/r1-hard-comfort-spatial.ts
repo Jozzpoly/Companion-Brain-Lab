@@ -14,6 +14,7 @@ import {
   observeSpatialEnvironment,
   type SpatialLocomotionDecision,
   type SpatialLocomotionInput,
+  type SpatialObservation,
   type SpatialVelocityCandidate
 } from "./spatial-locomotion";
 
@@ -30,7 +31,13 @@ export interface R1SpatialLocomotionInput extends SpatialLocomotionInput {
   occupancy: StaticOccupancyQuery;
 }
 
+export type R1LocalSafetyState = "NORMAL" | "HARD_EGRESS" | "NO_SAFE_VELOCITY";
+
 export interface R1SpatialRepairEvidence {
+  localSafetyState: R1LocalSafetyState;
+  hardStartViolated: boolean;
+  hardStartBlockers: readonly string[];
+  hardEgressCandidateIds: readonly string[];
   comfortRadius: number;
   comfortStartViolated: boolean;
   comfortStartBlockers: readonly string[];
@@ -68,6 +75,32 @@ function cloneCandidate(candidate: SpatialVelocityCandidate): SpatialVelocityCan
   };
 }
 
+function noSafeVelocityDecision(
+  observation: SpatialObservation,
+  candidates: readonly SpatialVelocityCandidate[]
+): SpatialLocomotionDecision {
+  const stop = candidates.find((candidate) => candidate.id === "stop");
+  const reasons = [...new Set(
+    candidates
+      .map((candidate) => candidate.rejectionReason)
+      .filter((reason): reason is string => reason !== null)
+  )].slice(0, 4);
+
+  return {
+    mode: "spatial",
+    tick: observation.tick,
+    state: "HOLD",
+    selectedCandidateId: stop?.id ?? "fail-safe-stop",
+    selectedMove: { x: 0, y: 0 },
+    selectedVelocity: { x: 0, y: 0 },
+    reason: `NO_SAFE_VELOCITY: no admissible local velocity; fail-closed STOP${reasons.length > 0 ? `; ${reasons.join(" | ")}` : ""}`,
+    observation,
+    candidates: [...candidates],
+    acceptedCount: 0,
+    rejectedCount: candidates.length
+  };
+}
+
 export function repairHardComfortCandidates(options: {
   input: R1SpatialLocomotionInput;
   candidates: readonly SpatialVelocityCandidate[];
@@ -75,11 +108,14 @@ export function repairHardComfortCandidates(options: {
   const companion = options.input.snapshot.actors.find((actor) => actor.id === "companion");
   if (!companion) throw new Error("R1 hard/comfort adapter requires companion state.");
 
+  const hardStart = options.input.occupancy(companion.position, companion.radius);
+  const hardStartViolated = !hardStart.clear;
   const comfortRadius = companion.radius + S2C_ROUTE_CLEARANCE;
   const comfortStart = options.input.occupancy(companion.position, comfortRadius);
   const comfortStartViolated = !comfortStart.clear;
   const rehabilitatedCandidateIds: string[] = [];
   const hardRejectedCandidateIds: string[] = [];
+  const hardEgressCandidateIds: string[] = [];
   const comfortExitCandidateIds: string[] = [];
   const comfortViolatedCandidateIds: string[] = [];
 
@@ -91,10 +127,19 @@ export function repairHardComfortCandidates(options: {
       const hardTraversal = options.input.query(
         companion.position,
         candidate.predictedPosition,
-        companion.radius
+        companion.radius,
+        hardStartViolated ? { initialOverlap: "allow-egress" } : undefined
       );
-      if (!hardTraversal.clear) {
-        candidate.rejectionReason = `hard-static:${hardTraversal.blocker?.label ?? "unknown"}`;
+      const hardEnd = hardStartViolated
+        ? options.input.occupancy(candidate.predictedPosition, companion.radius)
+        : null;
+      const hardEgressClear = hardStartViolated
+        ? hardTraversal.clear && hardEnd?.clear === true
+        : hardTraversal.clear;
+
+      if (!hardEgressClear) {
+        const blocker = hardTraversal.blocker?.label ?? hardEnd?.blockers[0] ?? "unknown";
+        candidate.rejectionReason = `hard-static:${blocker}`;
         hardRejectedCandidateIds.push(candidate.id);
         return candidate;
       }
@@ -103,6 +148,7 @@ export function repairHardComfortCandidates(options: {
       candidate.rejectionReason = null;
       candidate.score = baseScore(candidate);
       rehabilitatedCandidateIds.push(candidate.id);
+      if (hardStartViolated) hardEgressCandidateIds.push(candidate.id);
     }
 
     if (candidate.hardRejected) return candidate;
@@ -132,6 +178,10 @@ export function repairHardComfortCandidates(options: {
   return {
     candidates: repaired,
     evidence: {
+      localSafetyState: hardStartViolated && hardEgressCandidateIds.length > 0 ? "HARD_EGRESS" : "NORMAL",
+      hardStartViolated,
+      hardStartBlockers: [...hardStart.blockers],
+      hardEgressCandidateIds,
       comfortRadius,
       comfortStartViolated,
       comfortStartBlockers: [...comfortStart.blockers],
@@ -151,6 +201,13 @@ export function evaluateR1SpatialLocomotion(input: R1SpatialLocomotionInput): R1
     previousMove: input.previousMove
   });
   const repaired = repairHardComfortCandidates({ input, candidates: original });
+  const acceptedCount = repaired.candidates.filter((candidate) => !candidate.hardRejected).length;
+  if (acceptedCount === 0) {
+    return {
+      decision: noSafeVelocityDecision(observation, repaired.candidates),
+      repair: { ...repaired.evidence, localSafetyState: "NO_SAFE_VELOCITY" }
+    };
+  }
   return {
     decision: chooseSpatialVelocity({ observation, candidates: repaired.candidates }),
     repair: repaired.evidence
@@ -188,6 +245,8 @@ export class R1HardComfortSpatialBrain {
   repairEvidence(): R1SpatialRepairEvidence | null {
     return this.repairValue ? {
       ...this.repairValue,
+      hardStartBlockers: [...this.repairValue.hardStartBlockers],
+      hardEgressCandidateIds: [...this.repairValue.hardEgressCandidateIds],
       comfortStartBlockers: [...this.repairValue.comfortStartBlockers],
       rehabilitatedCandidateIds: [...this.repairValue.rehabilitatedCandidateIds],
       hardRejectedCandidateIds: [...this.repairValue.hardRejectedCandidateIds],
