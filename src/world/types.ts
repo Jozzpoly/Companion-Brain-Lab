@@ -68,6 +68,12 @@ export interface DirectTraversalBlocker {
   normal: Vec2;
 }
 
+export type StaticTraversalInitialOverlapPolicy = "block" | "allow-egress";
+
+export interface StaticTraversalOptions {
+  initialOverlap?: StaticTraversalInitialOverlapPolicy;
+}
+
 export interface StaticCircleTraversalResult {
   from: Vec2;
   to: Vec2;
@@ -75,6 +81,13 @@ export interface StaticCircleTraversalResult {
   distance: number;
   clear: boolean;
   blocker: DirectTraversalBlocker | null;
+}
+
+export interface StaticCircleOccupancyResult {
+  center: Vec2;
+  radius: number;
+  clear: boolean;
+  blockers: readonly string[];
 }
 
 export interface DirectTraversalResult extends StaticCircleTraversalResult {
