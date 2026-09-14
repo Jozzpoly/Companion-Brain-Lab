@@ -55,9 +55,13 @@ export interface CausalPostClassification {
   action?: string | null;
   noProgressTicks?: number | null;
   unreachableTicks?: number | null;
-  /** Retry budget already consumed in the current recoverable episode. */
+  /** Legacy incident-v2 name: retry budget consumed in the current episode. */
+  retryCount?: number | null;
+  /** Legacy incident-v2 name: cumulative RETRY_LOCAL applications since stack reset. */
+  appliedLocalRetries?: number | null;
+  /** Explicit alias for retryCount; self-describing for new evidence consumers. */
   retryBudgetUsedThisEpisode?: number | null;
-  /** Cumulative RETRY_LOCAL applications since the current movement stack reset. */
+  /** Explicit alias for appliedLocalRetries; self-describing for new evidence consumers. */
   cumulativeLocalRetriesSinceReset?: number | null;
 }
 
@@ -72,6 +76,17 @@ export interface CausalFrame {
 
 function cloneVec(value: Vec2 | null): Vec2 | null {
   return value ? { ...value } : null;
+}
+
+function clonePost(post: CausalPostClassification): CausalPostClassification {
+  const retryBudgetUsedThisEpisode = post.retryBudgetUsedThisEpisode ?? post.retryCount ?? null;
+  const cumulativeLocalRetriesSinceReset =
+    post.cumulativeLocalRetriesSinceReset ?? post.appliedLocalRetries ?? null;
+  return {
+    ...post,
+    retryBudgetUsedThisEpisode,
+    cumulativeLocalRetriesSinceReset
+  };
 }
 
 function cloneFrame(frame: CausalFrame): CausalFrame {
@@ -105,7 +120,7 @@ function cloneFrame(frame: CausalFrame): CausalFrame {
       companionActualVelocity: { ...frame.outcome.companionActualVelocity },
       companionContacts: [...frame.outcome.companionContacts]
     },
-    post: { ...frame.post }
+    post: clonePost(frame.post)
   };
 }
 
