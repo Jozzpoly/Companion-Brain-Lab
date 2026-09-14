@@ -198,10 +198,19 @@ async function proveShadowFaultIsolation(natural: boolean): Promise<void> {
     const isolatedIntent = stack.intent(natural, input);
     expect(isolatedIntent).toEqual(baselineIntent);
 
-    const debug = stack.debugState(natural);
-    expect(debug.shadowCoordination).toBeNull();
-    expect(debug.shadowCoordinationError).toBe("synthetic CCC-0 research failure");
-    expect(debug.shadowNextEvaluationTick).toBe(snapshot.tick + CCC0_SHADOW_INTERVAL_TICKS);
+    const failedTick = stack.debugState(natural);
+    expect(failedTick.shadowCoordination).toBeNull();
+    expect(failedTick.shadowCoordinationError).toBe("synthetic CCC-0 research failure");
+    expect(failedTick.shadowNextEvaluationTick).toBe(snapshot.tick + CCC0_SHADOW_INTERVAL_TICKS);
+
+    // The failure belongs only to the cognition tick that produced it. A following
+    // motor tick must not expose the cached error as fresh same-tick evidence.
+    const interveningSnapshot: WorldSnapshot = { ...snapshot, tick: snapshot.tick + 1 };
+    stack.intent(natural, { ...input, snapshot: interveningSnapshot });
+    const cachedTick = stack.debugState(natural);
+    expect(cachedTick.shadowCoordination).toBeNull();
+    expect(cachedTick.shadowCoordinationError).toBeNull();
+    expect(cachedTick.shadowNextEvaluationTick).toBe(snapshot.tick + CCC0_SHADOW_INTERVAL_TICKS);
   } finally {
     world.dispose();
   }
