@@ -71,17 +71,30 @@ function observedVelocity(player: ActorSnapshot): { velocity: Vec2; source: Shad
   return { velocity: { x: 0, y: 0 }, source: "stationary" };
 }
 
-function freshPreviousDirection(input: ShadowPlayerCorridorInput): Vec2 | null {
-  if (!input.previousDirection || magnitude(input.previousDirection) <= 0.5) return null;
-  const age = Math.max(0, Math.floor(input.previousDirectionAgeTicks ?? 0));
-  return age <= DIRECTION_MEMORY_TICKS ? normalized(input.previousDirection) : null;
+function directionMemoryStrength(ageTicks: number | null | undefined): number {
+  const age = Math.max(0, Math.floor(ageTicks ?? 0));
+  return clamp(1 - age / DIRECTION_MEMORY_TICKS, 0, 1);
+}
+
+function previousDirectionEvidence(input: ShadowPlayerCorridorInput): {
+  direction: Vec2 | null;
+  strength: number;
+} {
+  if (!input.previousDirection || magnitude(input.previousDirection) <= 0.5) {
+    return { direction: null, strength: 0 };
+  }
+  const strength = directionMemoryStrength(input.previousDirectionAgeTicks);
+  return strength > EPSILON
+    ? { direction: normalized(input.previousDirection), strength }
+    : { direction: null, strength: 0 };
 }
 
 export function evaluateShadowPlayerCorridor(input: ShadowPlayerCorridorInput): ShadowPlayerCorridor {
   const player = actor(input.snapshot, "player");
   const observed = observedVelocity(player);
   const speed = magnitude(observed.velocity);
-  const previousDirection = freshPreviousDirection(input);
+  const previous = previousDirectionEvidence(input);
+  const previousDirection = previous.direction;
 
   if (observed.source === "stationary") {
     return {
@@ -100,7 +113,7 @@ export function evaluateShadowPlayerCorridor(input: ShadowPlayerCorridorInput): 
       physicalRadius: player.radius,
       comfortRadius: player.radius + COMFORT_EXPANSION,
       reason: previousDirection
-        ? "player motion is below the corridor threshold; recent trajectory direction is retained only as bounded history"
+        ? `player motion is below the corridor threshold; recent trajectory memory is fading (${previous.strength.toFixed(2)})`
         : "player motion is below the corridor threshold; no directional flow is fabricated"
     };
   }
@@ -109,12 +122,17 @@ export function evaluateShadowPlayerCorridor(input: ShadowPlayerCorridorInput): 
   const directionDotPrevious = previousDirection ? clamp(dot(direction, previousDirection), -1, 1) : null;
 
   // Motion just above the noise threshold should carry almost no predictive
-  // confidence. The old minimum of 0.15 created a second hard semantic jump at
-  // exactly the same boundary used to decide stationary vs moving.
+  // confidence. The old minimum of 0.15 created a hard semantic jump at exactly
+  // the same boundary used to decide stationary vs moving.
   const speedConfidence = clamp((speed - MOTION_THRESHOLD) / (1.2 - MOTION_THRESHOLD), 0, 1);
-  const persistenceConfidence = directionDotPrevious === null
+  const rawPersistence = directionDotPrevious === null
     ? 1
     : clamp((directionDotPrevious + 1) / 2, 0.15, 1);
+  // Old velocity evidence fades continuously toward neutral persistence instead of
+  // retaining full reversal authority until one abrupt expiry tick.
+  const persistenceConfidence = directionDotPrevious === null
+    ? 1
+    : 1 - previous.strength * (1 - rawPersistence);
   const confidence = clamp(speedConfidence * persistenceConfidence, 0, 1);
 
   const speedRatio = clamp(speed / MAX_REFERENCE_SPEED, 0, 1);
@@ -124,7 +142,9 @@ export function evaluateShadowPlayerCorridor(input: ShadowPlayerCorridorInput): 
     x: player.position.x + observed.velocity.x * horizon,
     y: player.position.y + observed.velocity.y * horizon
   };
-  const reversalUncertain = directionDotPrevious !== null && directionDotPrevious < -0.25;
+  const reversalUncertain = directionDotPrevious !== null &&
+    directionDotPrevious < -0.25 &&
+    previous.strength > EPSILON;
 
   return {
     state: reversalUncertain ? "REVERSAL_UNCERTAIN" : "MOVING",
@@ -142,7 +162,7 @@ export function evaluateShadowPlayerCorridor(input: ShadowPlayerCorridorInput): 
     physicalRadius: player.radius,
     comfortRadius: player.radius + COMFORT_EXPANSION,
     reason: reversalUncertain
-      ? "recent heading reversal reduces corridor confidence and shortens prediction"
+      ? `recent heading reversal is weighted by fading trajectory memory (${previous.strength.toFixed(2)})`
       : `short deterministic corridor from ${observed.source} player velocity`
   };
 }
@@ -151,3 +171,4 @@ export const CCC0_CORRIDOR_MOTION_THRESHOLD = MOTION_THRESHOLD;
 export const CCC0_CORRIDOR_MAX_HORIZON = MAX_MOVING_HORIZON;
 export const CCC0_CORRIDOR_COMFORT_EXPANSION = COMFORT_EXPANSION;
 export const CCC0_CORRIDOR_DIRECTION_MEMORY_TICKS = DIRECTION_MEMORY_TICKS;
+export const CCC0_CORRIDOR_DIRECTION_MEMORY_STRENGTH = directionMemoryStrength;
