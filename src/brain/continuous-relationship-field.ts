@@ -166,7 +166,6 @@ function emptyTerms(): RelationshipFieldTerms {
 function localScore(options: {
   snapshot: WorldSnapshot;
   companion: ActorSnapshot;
-  player: ActorSnapshot;
   playerDirection: Vec2;
   position: Vec2;
   direction: Vec2;
@@ -220,7 +219,6 @@ function buildRawSamples(input: ContinuousRelationshipFieldInput): {
       const local = localScore({
         snapshot: input.snapshot,
         companion,
-        player,
         playerDirection,
         position,
         direction,
@@ -282,6 +280,41 @@ function evaluateRouteShortlist(
   }
 }
 
+function circularAngleDistance(a: number, b: number): number {
+  const raw = Math.abs(a - b);
+  return Math.min(raw, S5_FIELD_DIRECTIONS - raw);
+}
+
+function adjacentFieldSamples(a: RelationshipFieldSample, b: RelationshipFieldSample): boolean {
+  const angleDistance = circularAngleDistance(a.angleIndex, b.angleIndex);
+  const radiusDistance = Math.abs(a.radiusIndex - b.radiusIndex);
+  if (angleDistance === 0 && radiusDistance === 1) return true;
+  return angleDistance <= 2 && radiusDistance <= 1;
+}
+
+function coherentGoodRegion(
+  reachable: readonly RelationshipFieldSample[],
+  best: RelationshipFieldSample
+): RelationshipFieldSample[] {
+  const eligible = reachable.filter((sample) => sample.score <= best.score + S5_GOOD_REGION_SCORE_WINDOW);
+  const byId = new Map(eligible.map((sample) => [sample.id, sample]));
+  const visited = new Set<string>();
+  const queue: RelationshipFieldSample[] = [best];
+  const region: RelationshipFieldSample[] = [];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || visited.has(current.id) || !byId.has(current.id)) continue;
+    visited.add(current.id);
+    region.push(current);
+    for (const candidate of eligible) {
+      if (!visited.has(candidate.id) && adjacentFieldSamples(current, candidate)) queue.push(candidate);
+    }
+  }
+
+  return region.sort((a, b) => a.score - b.score || a.id.localeCompare(b.id));
+}
+
 function weightedRegionTarget(samples: readonly RelationshipFieldSample[]): Vec2 | null {
   if (samples.length === 0) return null;
   const best = samples[0];
@@ -327,14 +360,14 @@ export function evaluateContinuousRelationshipField(
     };
   }
 
-  const goodRegion = reachable.filter((sample) => sample.score <= best.score + S5_GOOD_REGION_SCORE_WINDOW);
+  const goodRegion = coherentGoodRegion(reachable, best);
   for (const sample of goodRegion) sample.inGoodRegion = true;
   const interpolated = weightedRegionTarget(goodRegion) ?? { ...best.position };
 
   let representativeTarget = { ...best.position };
   let representativeSource: ContinuousRelationshipFieldDecision["representativeSource"] = "best-sample-fallback";
   let representativeRouteStatus: ContinuousRelationshipFieldDecision["representativeRouteStatus"] = best.routeStatus;
-  let reason = `best reachable field sample ${best.id}; weighted region interpolation unavailable`;
+  let reason = `best reachable field sample ${best.id}; coherent-region interpolation unavailable`;
 
   if (pointFits(input.snapshot, interpolated, raw.companion.radius)) {
     const interpolatedPlan = planStaticShadowRoute({
@@ -348,12 +381,12 @@ export function evaluateContinuousRelationshipField(
     if (routeQualifies(interpolatedPlan.status)) {
       representativeTarget = interpolated;
       representativeSource = "weighted-region";
-      reason = `weighted representative of ${goodRegion.length} near-best reachable field samples`;
+      reason = `weighted representative of coherent ${goodRegion.length}-sample reachable field component`;
     } else {
-      reason = `weighted representative was ${interpolatedPlan.status}; fell back to ${best.id}`;
+      reason = `coherent weighted representative was ${interpolatedPlan.status}; fell back to ${best.id}`;
     }
   } else {
-    reason = `weighted representative failed local geometry; fell back to ${best.id}`;
+    reason = `coherent weighted representative failed local geometry; fell back to ${best.id}`;
   }
 
   return {
