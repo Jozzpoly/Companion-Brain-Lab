@@ -18,6 +18,7 @@ const INVALID_SCORE = 1_000_000;
 const EPSILON = 1e-9;
 
 export type ShadowRegionState = "REGION" | "NO_REACHABLE_REGION";
+export type ShadowNoRegionReason = "NO_HARD_VALID_SAMPLE" | "ROUTE_SHORTLIST_EXHAUSTED";
 export type ShadowPlayerHeadingSource = "actual" | "requested" | "previous" | "none";
 export type ShadowRegionRouteStatus = StaticRoutePlan["status"] | "not-evaluated";
 
@@ -53,6 +54,7 @@ export interface ShadowRegionSample {
 
 export interface ShadowRelationshipRegion {
   state: ShadowRegionState;
+  noRegionReason: ShadowNoRegionReason | null;
   tick: number;
   playerPosition: Vec2;
   playerDirection: Vec2;
@@ -367,8 +369,13 @@ export function evaluateShadowRelationshipRegion(
   const routeEvaluatedCount = raw.samples.filter((sample) => sample.routeEvaluated).length;
 
   if (!best) {
+    const hardValidCount = raw.samples.filter((sample) => sample.hardValid).length;
+    const noRegionReason: ShadowNoRegionReason = hardValidCount === 0
+      ? "NO_HARD_VALID_SAMPLE"
+      : "ROUTE_SHORTLIST_EXHAUSTED";
     return {
       state: "NO_REACHABLE_REGION",
+      noRegionReason,
       tick: input.snapshot.tick,
       playerPosition: { ...raw.player.position },
       playerDirection: { ...raw.playerDirection },
@@ -382,7 +389,9 @@ export function evaluateShadowRelationshipRegion(
       representativeAnchor: null,
       representativeSource: "none",
       representativeRouteStatus: "not-evaluated",
-      reason: "no route-qualified sample survived the bounded shadow shortlist"
+      reason: noRegionReason === "NO_HARD_VALID_SAMPLE"
+        ? "no hard-valid player-relative sample exists in the bounded field"
+        : "bounded route shortlist contained no reachable candidate; untested samples are not claimed unreachable"
     };
   }
 
@@ -421,6 +430,7 @@ export function evaluateShadowRelationshipRegion(
 
   return {
     state: "REGION",
+    noRegionReason: null,
     tick: input.snapshot.tick,
     playerPosition: { ...raw.player.position },
     playerDirection: { ...raw.playerDirection },
