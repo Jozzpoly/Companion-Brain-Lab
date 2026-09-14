@@ -4,73 +4,75 @@ Experimental sibling laboratory to [`Jozzpoly/Llm-Live-NPC`](https://github.com/
 
 ## Core research question
 
-> Can one or a few companion NPCs become genuinely useful, readable, autonomous partners who react continuously to the world and the player, cooperate without constant micromanagement, and interpret player commands as intent rather than as rigid puppeteering?
+> Can one or a few companion NPCs become genuinely useful, readable, autonomous partners who react continuously to the world and the player, cooperate without constant micromanagement, and interpret player commands as intent rather than rigid puppeteering?
 
 Fast local intelligence is the primary experimental substrate. LLM or other higher cognition may later complement it, but is not assumed to be the per-frame controller or architectural center.
 
 ## Relationship to LLM Live NPC
 
-This is a **sibling research repository**, not a fork, feature branch, downstream product, or replacement for LLM Live NPC.
+This is a **sibling research repository**, not a fork or downstream product. The laboratories may exchange proven donors and research findings, but neither repository is automatically authoritative over the other.
 
-The laboratories may exchange proven donors and research findings, but neither repository is automatically authoritative over the other. Shared infrastructure should emerge only when repeated evidence shows that the same abstraction is genuinely useful in both projects.
+Shared principles currently defended here include:
 
-Useful shared principles include:
-
-- the world owns physical truth and factual outcomes;
+- World / physics owns physical truth and factual outcomes;
 - intention, execution and outcome are distinct;
 - routine embodied behavior must not depend on per-frame LLM calls;
-- debugging should expose observable inputs, decisions, authority and causal outcomes without requiring hidden chain-of-thought;
-- donor reuse is selective and provenance-aware rather than wholesale architecture inheritance.
-
-These are research constraints, not a final AI architecture.
+- debugging exposes observable inputs, decisions, authority and causal outcomes;
+- donor reuse is selective and evidence/provenance-aware.
 
 ## Live project state
 
-**Foundation hardening / pre-rework cleanup is active. The project is not yet declared redesign-ready.**
+**FOUNDATION PASS · REWORK-READY**
 
-The previous R1-4 line achieved strong automated mechanical evidence, then failed the Owner browser gate by reproducing a whole-workbench freeze during an ordinary constrained-world interaction. That failure is preserved as evidence rather than hidden behind the prior green suite.
+The pre-rework survival / causal-hardening campaign is complete. A previous Owner browser run exposed a whole-workbench freeze despite strong automated R1 evidence. That failure was reproduced, decomposed and promoted into deterministic regressions rather than hidden.
 
-The current `foundation/runtime-survival-cleanup` campaign is removing failure semantics that would make a large redesign unsafe or difficult to diagnose. Current foundation work includes:
+The current foundation now defends ordinary constrained-world states such as:
 
-- ordinary local candidate exhaustion represented as `NO_SAFE_VELOCITY` rather than an exception;
-- hard static penetration represented as an explicit `HARD_EGRESS` safety regime when escape exists;
-- legacy relationship-slot exhaustion represented as `NO_VALID_RELATIONAL_SLOT` / hold-and-reconsider;
-- shared static circle/body point-validity semantics across relationship and routing;
-- egress semantics propagated coherently through route → local spatial selection → NATURAL final command → World;
-- post-World progress/recovery kept distinct from pre-step decision authority;
-- an independent runtime fault sentinel intended to fail-stop catastrophic faults while preserving visible evidence;
-- explicit active-authority mapping so historical experiments do not silently become current architecture;
-- dedicated multi-tick survival regressions for the freeze-class interaction.
+- `NORMAL`;
+- `HARD_EGRESS`;
+- `NO_SAFE_VELOCITY`;
+- `NO_VALID_RELATIONAL_SLOT`.
 
-The current goal is deliberately **not** another feature milestone. The gate is to reach a clean substrate where the next aggressive redesign can change relationship reasoning, pace/catch-up, player cooperation and movement contracts without inheriting known hidden crash semantics or contradictory authority.
+The active movement substrate separates hard physical feasibility from desired clearance, preserves traversal options through the real browser adapter, performs post-World progress/recovery, retains an independent catastrophic-fault fail-stop surface, and records phase-coherent causal evidence.
 
-### Public preview
+The exact public Owner-tested runtime is:
 
-Public Pages: https://jozzpoly.github.io/Companion-Brain-Lab/
+`b217943e027e66993f0010643b2933b01d4b1e6d`
 
-**Important:** the public preview is still pinned by `main` to the previous audited R1-4 runtime. It is historical Owner evidence and is **not yet the current foundation-hardening branch**. Foundation work will be published only after an exact source SHA passes the mechanical/readiness gate.
+Public preview:
 
-## Current authority / readiness documents
+https://jozzpoly.github.io/Companion-Brain-Lab/
 
-- [`docs/FOUNDATION_RUNTIME_SURVIVAL_AUDIT.md`](docs/FOUNDATION_RUNTIME_SURVIVAL_AUDIT.md) — live foundation blockers, survival contract, throw classification and readiness exit criteria;
-- [`docs/FOUNDATION_ACTIVE_AUTHORITY_MAP.md`](docs/FOUNDATION_ACTIVE_AUTHORITY_MAP.md) — current runtime authority at module/symbol level versus preserved historical baselines;
-- [`docs/R1_AUDIT_LEDGER.md`](docs/R1_AUDIT_LEDGER.md) — R1 evidence history and qualification boundaries;
-- [`docs/R1_4_PROGRESS_RECOVERY_QUALIFICATION.md`](docs/R1_4_PROGRESS_RECOVERY_QUALIFICATION.md) — preserved mechanical R1-4 evidence; it does not override the later Owner failure;
-- [`docs/R1_CAUSAL_WORKBENCH_V2_SPEC.md`](docs/R1_CAUSAL_WORKBENCH_V2_SPEC.md) — causal workbench/evidence model;
-- [`docs/INITIAL_RESEARCH_SKELETON.md`](docs/INITIAL_RESEARCH_SKELETON.md) — original Owner intent and broad research framing;
-- [`docs/SIBLING_DONOR_AUDIT.md`](docs/SIBLING_DONOR_AUDIT.md) and [`docs/CROSS_REPO_COLLABORATION.md`](docs/CROSS_REPO_COLLABORATION.md) — sibling donor boundaries and provenance rules.
+That runtime passed 137/137 tests before deployment and survived an approximately 123-second Owner torture run without an unexplained whole-runtime freeze, spontaneous fault, permanent companion shutdown or sticky recovery state. A later test-only branch head adds a parallel DIRECT 180-step full-chain survival rehearsal; the complete suite passes 138/138 tests.
 
-Older S0–S5 plans, qualification files, scenes and tests remain deliberately preserved as research history/donor evidence. Their presence does not make their old top-level architecture current runtime authority.
+See [`docs/FOUNDATION_FINAL_READINESS.md`](docs/FOUNDATION_FINAL_READINESS.md) for the final evidence boundary.
 
-## What is intentionally deferred until the foundation gate closes
+## Current authority / evidence documents
 
-Important product limitations are **not** being disguised as cleanup work. The next aggressive redesign is expected to reconsider or replace, among other things:
+- [`docs/FOUNDATION_FINAL_READINESS.md`](docs/FOUNDATION_FINAL_READINESS.md) — final foundation verdict and next-stage boundary;
+- [`docs/FOUNDATION_ACTIVE_AUTHORITY_MAP.md`](docs/FOUNDATION_ACTIVE_AUTHORITY_MAP.md) — current runtime authority at module/symbol level;
+- [`docs/FOUNDATION_RUNTIME_SURVIVAL_AUDIT.md`](docs/FOUNDATION_RUNTIME_SURVIVAL_AUDIT.md) — closed survival/causal audit;
+- [`docs/FOUNDATION_OWNER_FAULT_PROBE_EVIDENCE.md`](docs/FOUNDATION_OWNER_FAULT_PROBE_EVIDENCE.md) — real-browser catastrophic-fault evidence and the preserved probe-UX failure;
+- [`docs/FOUNDATION_PUBLIC_PREVIEW_QUALIFICATION.md`](docs/FOUNDATION_PUBLIC_PREVIEW_QUALIFICATION.md) — exact Pages/public-artifact evidence;
+- [`docs/R1_AUDIT_LEDGER.md`](docs/R1_AUDIT_LEDGER.md) — historical R1 evidence, not current authority;
+- [`docs/INITIAL_RESEARCH_SKELETON.md`](docs/INITIAL_RESEARCH_SKELETON.md) — original Owner intent and broad research framing.
 
-- the legacy eight-slot relationship objective model;
-- player movement corridor / right-of-way / chokepoint cooperation;
-- pace, urgency and catch-up speed authority;
-- the current `MotionIntent` contract;
-- later command hierarchy, combat and multi-companion coordination;
-- any promotion of older S5 relationship-field research.
+Older S0-S5/R1 plans, qualification files, scenes and tests remain preserved as research history / donor evidence. Their presence does not restore their old top-level authority.
 
-The foundation campaign is complete only when ordinary constrained-world states cannot terminate the active runtime, fault evidence survives catastrophic failure, current authority is explicit, the broad automated campaign is green, and a new Owner torture gate produces no unexplained whole-runtime shutdown.
+## Next stage — aggressive Companion Coordination Core redesign
+
+Foundation PASS does **not** mean the current companion is good enough. It means the known substrate blockers are no longer a reason to avoid large changes.
+
+The next stage is explicitly allowed to reconsider or replace:
+
+- the legacy eight-slot relationship objective with player-relative region / field reasoning;
+- player movement corridor, right-of-way and chokepoint cooperation;
+- dynamic pace / urgency / catch-up speed authority;
+- the current `MotionIntent` / desired-speed contract;
+- NATURAL temporal realization versus dynamic player-conflict authority;
+- selective ideas from the old S5 continuous relationship-field experiment;
+- later multi-companion coordination, commands and combat.
+
+A preserved R1-5A red experiment already demonstrates one important next-stage finding: NATURAL temporal continuity can transform a player-safe upstream move into a final command that creates real player/companion contact because the current final command gate protects hard static geometry, not the full dynamic player-separation contract. That finding should inform the redesign rather than be patched blindly into the old architecture.
+
+The intended workflow from here is **not incremental polishing of the eight-slot system**. The project is now ready for deliberate, large architectural change while retaining the defended World/physics/evidence boundaries unless new evidence justifies replacing them too.
