@@ -35,6 +35,13 @@ export interface CausalPanelModel {
   sections: readonly CausalPanelSection[];
 }
 
+interface RenderedCausalPanelSection {
+  node: HTMLElement;
+  details: HTMLDetailsElement;
+  summary: HTMLElement;
+  body: HTMLElement;
+}
+
 const DEFAULT_LAYERS: Readonly<Record<WorldDebugLayer, boolean>> = {
   relationship: false,
   coordination: false,
@@ -87,6 +94,7 @@ export class CausalPanel {
   private readonly sectionsRoot: HTMLElement;
   private readonly layerValues = new Map<WorldDebugLayer, boolean>();
   private readonly disclosureState = new CausalPanelDisclosureState();
+  private readonly renderedSections = new Map<string, RenderedCausalPanelSection>();
   private collapsed = false;
 
   constructor(onAction: (action: CausalPanelAction) => void) {
@@ -197,37 +205,60 @@ export class CausalPanel {
     return this.layerValues.get(layer) ?? false;
   }
 
+  private createRenderedSection(sectionId: string): RenderedCausalPanelSection {
+    const node = document.createElement("section");
+    node.className = "debug-section debug-dynamic-section";
+
+    const details = document.createElement("details");
+    details.dataset.sectionId = sectionId;
+    details.open = this.disclosureState.isOpen(sectionId);
+    details.addEventListener("toggle", () => this.disclosureState.remember(sectionId, details.open));
+
+    const summary = document.createElement("summary");
+    const body = document.createElement("div");
+    body.className = "debug-lines";
+    details.append(summary, body);
+    node.append(details);
+
+    const rendered = { node, details, summary, body };
+    this.renderedSections.set(sectionId, rendered);
+    return rendered;
+  }
+
   update(model: CausalPanelModel): void {
     this.title.textContent = model.title;
     this.subtitle.textContent = model.subtitle;
     this.badge.textContent = model.badge;
     this.badge.dataset.tone = model.badgeTone;
 
-    for (const details of this.sectionsRoot.querySelectorAll<HTMLDetailsElement>("details[data-section-id]")) {
-      const sectionId = details.dataset.sectionId;
-      if (sectionId) this.disclosureState.remember(sectionId, details.open);
-    }
+    const seen = new Set<string>();
+    const desiredNodes: HTMLElement[] = [];
 
-    this.sectionsRoot.replaceChildren();
     for (const section of model.sections) {
-      const node = document.createElement("section");
-      node.className = "debug-section debug-dynamic-section";
-      node.dataset.tone = section.tone ?? "normal";
-      const details = document.createElement("details");
-      details.dataset.sectionId = section.id;
-      details.open = this.disclosureState.isOpen(section.id);
-      const summary = document.createElement("summary");
-      summary.textContent = section.title;
-      const body = document.createElement("div");
-      body.className = "debug-lines";
+      seen.add(section.id);
+      const rendered = this.renderedSections.get(section.id) ?? this.createRenderedSection(section.id);
+      rendered.node.dataset.tone = section.tone ?? "normal";
+      rendered.summary.textContent = section.title;
+      rendered.body.replaceChildren();
       for (const line of section.lines) {
         const row = document.createElement("div");
         row.textContent = line;
-        body.append(row);
+        rendered.body.append(row);
       }
-      details.append(summary, body);
-      node.append(details);
-      this.sectionsRoot.append(node);
+      desiredNodes.push(rendered.node);
+    }
+
+    for (const [sectionId, rendered] of this.renderedSections) {
+      if (seen.has(sectionId)) continue;
+      this.disclosureState.remember(sectionId, rendered.details.open);
+      rendered.node.remove();
+      this.renderedSections.delete(sectionId);
+    }
+
+    for (let index = 0; index < desiredNodes.length; index += 1) {
+      const desired = desiredNodes[index];
+      const current = this.sectionsRoot.children.item(index);
+      if (current !== desired) this.sectionsRoot.insertBefore(desired, current);
     }
   }
 }
