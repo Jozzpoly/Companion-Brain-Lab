@@ -144,7 +144,7 @@ function createFaultSurface(record: RuntimeFaultRecord): HTMLElement {
   save.addEventListener("click", () => downloadFault(record));
   const reload = document.createElement("button");
   reload.type = "button";
-  reload.textContent = "Reload workbench";
+  reload.textContent = "Reload normally";
   reload.addEventListener("click", () => window.location.reload());
   for (const button of [save, reload]) {
     Object.assign(button.style, {
