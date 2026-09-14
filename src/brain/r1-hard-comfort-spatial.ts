@@ -123,6 +123,17 @@ export function repairHardComfortCandidates(options: {
     const candidate = cloneCandidate(source);
     const moving = candidate.speedFraction > 0.001;
 
+    // Remaining stationary while already penetrating hard static geometry is not
+    // an admissible "safe velocity". The only admissible responses are explicit
+    // egress moves that leave the endpoint hard-clear. If none exists, the layer
+    // reports NO_SAFE_VELOCITY and fail-closes rather than pretending NORMAL.
+    if (hardStartViolated && !moving) {
+      candidate.hardRejected = true;
+      candidate.rejectionReason = `hard-static:${hardStart.blockers[0] ?? "initial-overlap"}:hold-inside-penetration`;
+      hardRejectedCandidateIds.push(candidate.id);
+      return candidate;
+    }
+
     if (moving && isStaticReject(candidate)) {
       const hardTraversal = options.input.query(
         companion.position,
