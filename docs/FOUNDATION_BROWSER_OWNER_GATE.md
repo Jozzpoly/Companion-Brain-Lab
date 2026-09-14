@@ -1,8 +1,12 @@
 # Foundation Browser / Owner Gate
 
-Status: **OPEN — NORMAL-RUNTIME TORTURE GATE REMAINS**
+Status: **PASS · CLOSED**
 
-Current exact public Owner-gate runtime:
+Canonical final verdict:
+
+[`FOUNDATION_FINAL_READINESS.md`](FOUNDATION_FINAL_READINESS.md)
+
+Owner-tested public runtime:
 
 `b217943e027e66993f0010643b2933b01d4b1e6d`
 
@@ -10,118 +14,76 @@ Public URL:
 
 `https://jozzpoly.github.io/Companion-Brain-Lab/`
 
-The previous deterministic fault rehearsal on runtime `81877d7...` produced valid real-browser containment evidence, but also exposed a serious apparatus UX defect: `Reload workbench` preserved `?foundationFaultProbe=1`, so the deliberate fault re-armed after every reload. That Owner finding is preserved in `FOUNDATION_OWNER_FAULT_PROBE_EVIDENCE.md`.
+## Gate A — catastrophic-fault observability
 
-The probe is one-shot in the current runtime. The Owner does **not** need to repeat the fault rehearsal before continuing. The remaining gate is the ordinary runtime itself.
+An earlier public candidate was exercised with the deliberate `FOUNDATION_FAULT_PROBE`.
 
-## Gate A — normal public-artifact sanity
+Real-browser evidence confirmed:
 
-Open the ordinary URL and verify:
-- workbench loads without a spontaneous fault surface;
-- World ticks advance;
-- player input works;
-- companion spatial/NATURAL mode runs;
-- scenario switching works;
-- pause/single-step/reset work;
-- incident capture still downloads JSON.
+- the expected fault reached the independent sentinel surface;
+- a valid fault JSON was downloadable;
+- catastrophic failure did not remain an unexplained stale `RUNNING` screen.
 
-Any spontaneous fault on the ordinary URL is a foundation FAIL and should be preserved immediately.
+That rehearsal also exposed an apparatus UX failure: the probe query parameter survived reload and repeatedly re-armed the deliberate fault. The failure is preserved in `FOUNDATION_OWNER_FAULT_PROBE_EVIDENCE.md`.
 
-## Gate B — Owner torture run
+The current public runtime makes the probe one-shot and labels recovery `Reload normally`.
 
-Primary mode: `SPATIAL + NATURAL`.
+Gate classification:
 
-Use DIRECT selectively as a comparison, not as a replacement for the NATURAL gate.
+**CONTAINMENT PASS · PROBE UX FAILURE PRESERVED AND REPAIRED.**
 
-The run does not need to be scripted frame-for-frame. Deliberately create the classes that historically broke the substrate.
+## Gate B — ordinary public-runtime torture
 
-### Wall / boundary contact
+The Owner exercised the ordinary current public runtime for approximately 123 seconds.
 
-- push or drive the companion into static geometry;
-- pin it briefly;
-- scrape along boundaries/corners;
-- release and reverse away;
-- repeat from different approach angles.
+The run included multiple scenarios and sustained constrained interactions. Review specifically searched for:
 
-Require:
-- recovery rather than permanent zero-motion;
-- no silent runtime termination;
-- contact/egress state remaining causally understandable.
+- wall/boundary contact and release failures;
+- doorway / chokepoint contention;
+- rapid moving-objective reversals;
+- permanent zero-motion states;
+- sticky `NO_SAFE_VELOCITY`;
+- persistent-unreachable / retry thrash;
+- actor disappearance / teleportation;
+- spontaneous fault surfaces;
+- whole-runtime freeze.
 
-### Doorway / choke contention
+Observed result:
 
-- enter and reverse repeatedly through the doorway;
-- block the companion with the player;
-- release the conflict;
-- alternate which side of the opening the player occupies;
-- force repeated contention rather than one clean pass.
+- no spontaneous fault surface;
+- no unexplained whole-runtime freeze;
+- no permanent companion shutdown;
+- no sticky no-safe-velocity or recovery loop;
+- movement remained live throughout the run apart from explicit scenario resets and intentional stops;
+- the longest suspicious both-actors-still section was approximately 1.6 seconds, but the workbench explicitly reported `ARRIVED`, direct/clear route state, zero requested/actual motion, and movement later resumed.
 
-Require:
-- temporary blocking/unreachable states remain temporary when geometry allows recovery;
-- no whole-workbench freeze;
-- no uncontrolled retry thrash.
+The Owner reported that they were unable to destroy the runtime in this run.
 
-### Rapid player reversals / moving objective
+Primary Owner actuator was NATURAL.
 
-- move back and forth repeatedly;
-- stop abruptly;
-- cross in front of the companion;
-- reverse again before it has fully settled.
+A later dedicated DIRECT 180-step full-chain hard-egress/player-pressure rehearsal passes on branch head `7c2d25dead58ca26d3bb195bc1b91911c60d32a5`, closing the survival-contract A/B coverage gap without requiring another Owner recording.
 
-Require:
-- moving-objective tracking remains live;
-- no autonomous zero-motion lock;
-- retry budget does not behave like a lifetime cap.
+Gate classification:
 
-### Long continuous run
+**OWNER ORDINARY-RUNTIME TORTURE PASS.**
 
-- keep the simulation active substantially longer than a single interaction;
-- use multiple scenarios rather than resetting after one short success;
-- use 2x time scale as additional stress after ordinary 1x behavior looks sane.
+## Boundary of the PASS
 
-The purpose is to expose delayed/stale state and repeated independent recovery episodes.
+This gate validates the substrate, not the quality of the current companion design.
 
-### DIRECT / NATURAL comparison
+The following remain intentionally open for the next aggressive redesign:
 
-Repeat at least one difficult contact/choke sequence in each actuator mode.
+- legacy eight-slot relationship positioning;
+- player right-of-way / movement corridor;
+- pace / urgency / catch-up;
+- desired-speed / MotionIntent redesign;
+- NATURAL temporal realization versus dynamic player-conflict authority;
+- later multi-companion coordination, commands and combat.
 
-Do not require identical feel. Require both to preserve the shared survival/recovery contract.
+Those limitations do not reopen this foundation gate unless they reveal a new substrate survival / authority / causal-truth failure.
 
-## Evidence to capture
+## Final result
 
-If anything looks suspicious, capture an incident immediately with `I` / the incident control.
+The browser/Owner gate is closed.
 
-Especially preserve:
-- unexpected zero motion;
-- physically wrong `PERSISTENT_UNREACHABLE`;
-- `NO_SAFE_VELOCITY` that does not clear after the conflict clears;
-- repeated recovery loops;
-- incorrect ARRIVED / intentional-hold semantics;
-- disappearance / teleportation;
-- any spontaneous fault surface or freeze.
-
-Useful incident evidence includes:
-- observation tick and outcome tick;
-- relationship state/target;
-- route status/path;
-- hard vs comfort evidence;
-- preferred/refined/final command evidence;
-- recovery state/action;
-- `retryBudgetUsedThisEpisode`;
-- `cumulativeLocalRetriesSinceReset`.
-
-Video remains important for timing and visual/feel failures.
-
-## Overall foundation PASS
-
-The foundation passes only if the normal public artifact survives the torture run without unexplained whole-runtime shutdown and constrained contact states either recover or fail closed with understandable evidence.
-
-Minor feel problems, the simplistic eight-slot relationship policy, lack of player right-of-way and missing catch-up pace do not automatically fail this substrate gate unless they expose a survival / contract / causal-truth defect.
-
-## If the gate passes
-
-Record the final readiness verdict and freeze the foundation evidence boundary. Then begin the intentionally aggressive Companion Coordination Core redesign rather than polishing the legacy eight-slot system.
-
-## If the gate fails
-
-Preserve the exact public runtime SHA, incident/video/fault JSON and last visible causal state. Classify the failure before repair and promote the newly observed class into a deterministic regression whenever practical.
+**FOUNDATION PASS · REWORK-READY.**
