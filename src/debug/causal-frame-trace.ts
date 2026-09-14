@@ -20,6 +20,12 @@ export interface CausalShadowCoordinationEvidence {
   playerCorridorState: string;
   playerCorridorConfidence: number;
   playerCorridorEndpoint: Vec2;
+  playerFlowConflictState: string;
+  playerFlowClosestApproachTime: number | null;
+  playerFlowPhysicalClearance: number | null;
+  playerFlowComfortClearance: number | null;
+  playerFlowCompanionClosest: Vec2 | null;
+  playerFlowPlayerClosest: Vec2 | null;
   legacyTargetToShadowAnchorDistance: number | null;
   error: string | null;
 }
@@ -103,7 +109,9 @@ function cloneShadow(
   return {
     ...value,
     regionAnchor: cloneVec(value.regionAnchor),
-    playerCorridorEndpoint: { ...value.playerCorridorEndpoint }
+    playerCorridorEndpoint: { ...value.playerCorridorEndpoint },
+    playerFlowCompanionClosest: cloneVec(value.playerFlowCompanionClosest),
+    playerFlowPlayerClosest: cloneVec(value.playerFlowPlayerClosest)
   };
 }
 
