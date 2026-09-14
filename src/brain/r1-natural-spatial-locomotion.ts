@@ -2,6 +2,10 @@ import { S0_STEP_SECONDS } from "../physics/rapier-physical-world";
 import type { MotionIntent, Vec2 } from "../world/types";
 import { constrainFinalCommand, type FinalCommandConstraintResult } from "./final-command-constraint";
 import {
+  constrainFinalPlayerCommand,
+  type FinalPlayerCommandConstraintResult
+} from "./final-player-command-constraint";
+import {
   R1HardComfortSpatialBrain,
   type R1SpatialLocomotionInput,
   type R1SpatialRepairEvidence
@@ -27,6 +31,7 @@ export interface R1NaturalSpatialLocomotionDebug {
   refinement: PreferredVelocityRefinement | null;
   continuity: MotionContinuityStepResult | null;
   finalConstraint: FinalCommandConstraintResult | null;
+  finalPlayerConstraint: FinalPlayerCommandConstraintResult | null;
 }
 
 function companionState(input: Omit<R1SpatialLocomotionInput, "previousMove">): {
@@ -50,6 +55,7 @@ export class R1NaturalSpatialLocomotionBrain {
   private refinementValue: PreferredVelocityRefinement | null = null;
   private continuityValue: MotionContinuityStepResult | null = null;
   private constraintValue: FinalCommandConstraintResult | null = null;
+  private playerConstraintValue: FinalPlayerCommandConstraintResult | null = null;
 
   constructor(config: MotionContinuityConfig = S4_DEFAULT_MOTION_CONTINUITY) {
     this.config = { ...config, maxSpeed: S3_EXPERIMENT_MAX_SPEED };
@@ -70,6 +76,7 @@ export class R1NaturalSpatialLocomotionBrain {
     this.refinementValue = null;
     this.continuityValue = null;
     this.constraintValue = null;
+    this.playerConstraintValue = null;
   }
 
   intent(input: Omit<R1SpatialLocomotionInput, "previousMove">): MotionIntent {
@@ -100,13 +107,23 @@ export class R1NaturalSpatialLocomotionBrain {
     });
     this.constraintValue = constrained;
 
-    // The continuity controller's stored acceleration describes the command it
-    // produced. If the hard gate rejects that command, that temporal state no
-    // longer corresponds to the command World will execute. Reset only that
-    // actuator history; upstream spatial state and the World remain untouched.
-    if (constrained.constrained) this.continuity.reset();
+    const playerConstrained = constrainFinalPlayerCommand({
+      snapshot: input.snapshot,
+      commandedMove: constrained.finalMove,
+      preferredMoves: [refinedMove, preferredIntent.move],
+      maxSpeed: this.config.maxSpeed,
+      deltaSeconds: S0_STEP_SECONDS,
+      query: input.query
+    });
+    this.playerConstraintValue = playerConstrained;
 
-    return { actorId: "companion", move: { ...constrained.finalMove } };
+    // The continuity controller's stored acceleration describes the command it
+    // produced. If either hard authority layer changes that command, the
+    // temporal state no longer corresponds to what World will execute. Reset
+    // only actuator history; upstream spatial state and World remain untouched.
+    if (constrained.constrained || playerConstrained.constrained) this.continuity.reset();
+
+    return { actorId: "companion", move: { ...playerConstrained.finalMove } };
   }
 
   debugState(): R1NaturalSpatialLocomotionDebug {
@@ -131,6 +148,11 @@ export class R1NaturalSpatialLocomotionBrain {
         ...this.constraintValue,
         originalMove: { ...this.constraintValue.originalMove },
         finalMove: { ...this.constraintValue.finalMove }
+      } : null,
+      finalPlayerConstraint: this.playerConstraintValue ? {
+        ...this.playerConstraintValue,
+        originalMove: { ...this.playerConstraintValue.originalMove },
+        finalMove: { ...this.playerConstraintValue.finalMove }
       } : null
     };
   }
