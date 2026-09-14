@@ -1,22 +1,16 @@
-import type { StaticRoutePlan } from "../navigation/static-router";
-import type { MotionIntent, Vec2, WorldSnapshot } from "../world/types";
-import {
-  ProgressRecoveryMonitor,
-  type ProgressRecoveryDecision
-} from "./progress-recovery";
+import type { MotionIntent } from "../world/types";
+import type { ProgressRecoveryDecision } from "./progress-recovery";
+import type { R1SpatialLocomotionInput } from "./r1-hard-comfort-spatial";
 import {
   R1NaturalSpatialLocomotionBrain,
   type R1NaturalSpatialLocomotionDebug
 } from "./r1-natural-spatial-locomotion";
-import type { R1SpatialLocomotionInput } from "./r1-hard-comfort-spatial";
+import {
+  R1RecoverySupervisor,
+  type R1RecoveryOutcomeInput
+} from "./r1-recovery-supervisor";
 
-export interface R1RecoveryOutcomeInput {
-  snapshot: WorldSnapshot;
-  objectiveKey: string;
-  target: Vec2;
-  routePlan: StaticRoutePlan;
-  intentionalHoldReason?: string | null;
-}
+export type { R1RecoveryOutcomeInput } from "./r1-recovery-supervisor";
 
 export interface R1RecoveringNaturalSpatialDebug {
   movement: R1NaturalSpatialLocomotionDebug;
@@ -24,31 +18,13 @@ export interface R1RecoveringNaturalSpatialDebug {
   appliedLocalRetries: number;
 }
 
-function magnitude(value: Vec2): number {
-  return Math.hypot(value.x, value.y);
-}
-
-function companion(snapshot: WorldSnapshot) {
-  const value = snapshot.actors.find((actor) => actor.id === "companion");
-  if (!value) throw new Error("R1 recovery coordinator requires companion state.");
-  return value;
-}
-
-function copyProgress(value: ProgressRecoveryDecision | null): ProgressRecoveryDecision | null {
-  return value ? { ...value } : null;
-}
-
 export class R1RecoveringNaturalSpatialBrain {
   private readonly movement = new R1NaturalSpatialLocomotionBrain();
-  private readonly progress = new ProgressRecoveryMonitor();
-  private progressValue: ProgressRecoveryDecision | null = null;
-  private appliedLocalRetriesValue = 0;
+  private readonly recovery = new R1RecoverySupervisor(() => this.movement.retryLocalState());
 
   reset(): void {
     this.movement.reset();
-    this.progress.reset();
-    this.progressValue = null;
-    this.appliedLocalRetriesValue = 0;
+    this.recovery.reset();
   }
 
   intent(input: Omit<R1SpatialLocomotionInput, "previousMove">): MotionIntent {
@@ -61,39 +37,15 @@ export class R1RecoveringNaturalSpatialBrain {
    * actions such as RECONSIDER_OBJECTIVE are exposed but never executed here.
    */
   observeOutcome(input: R1RecoveryOutcomeInput): ProgressRecoveryDecision {
-    const actor = companion(input.snapshot);
-    const routeRemainingDistance =
-      input.routePlan.status === "direct" || input.routePlan.status === "routed"
-        ? input.routePlan.cost
-        : null;
-
-    const decision = this.progress.observe({
-      tick: input.snapshot.tick,
-      objectiveKey: input.objectiveKey,
-      position: actor.position,
-      target: input.target,
-      routeStatus: input.routePlan.status,
-      routeRemainingDistance,
-      commandedSpeed: magnitude(actor.requestedVelocity),
-      actualSpeed: magnitude(actor.actualVelocity),
-      contacts: actor.contacts.map((contact) => contact.with),
-      intentionalHoldReason: input.intentionalHoldReason ?? null
-    });
-
-    if (decision.action === "RETRY_LOCAL") {
-      this.movement.retryLocalState();
-      this.appliedLocalRetriesValue += 1;
-    }
-
-    this.progressValue = decision;
-    return { ...decision };
+    return this.recovery.observeOutcome(input);
   }
 
   debugState(): R1RecoveringNaturalSpatialDebug {
+    const recovery = this.recovery.debugState();
     return {
       movement: this.movement.debugState(),
-      progress: copyProgress(this.progressValue),
-      appliedLocalRetries: this.appliedLocalRetriesValue
+      progress: recovery.progress,
+      appliedLocalRetries: recovery.appliedLocalRetries
     };
   }
 }
