@@ -70,7 +70,7 @@ async function runActuator(natural: boolean) {
   }
 }
 
-describe("R1-4 workbench DIRECT/NATURAL A/B contract", () => {
+describe("R1-4/R1-5A workbench DIRECT/NATURAL A/B contract", () => {
   it("runs DIRECT through the repaired R1 spatial and post-outcome recovery contract", async () => {
     const result = await runActuator(false);
 
@@ -83,9 +83,10 @@ describe("R1-4 workbench DIRECT/NATURAL A/B contract", () => {
     expect(result.debug.refinement).toBeNull();
     expect(result.debug.continuity).toBeNull();
     expect(result.debug.finalConstraint).toBeNull();
+    expect(result.debug.finalPlayerConstraint).toBeNull();
   });
 
-  it("runs NATURAL through the same repaired R1 spatial and recovery contract with temporal actuator evidence", async () => {
+  it("runs NATURAL through the same repaired contract with temporal and both final-authority evidence layers", async () => {
     const result = await runActuator(true);
 
     expect(result.reached).toBe(true);
@@ -97,5 +98,8 @@ describe("R1-4 workbench DIRECT/NATURAL A/B contract", () => {
     expect(result.debug.refinement).not.toBeNull();
     expect(result.debug.continuity).not.toBeNull();
     expect(result.debug.finalConstraint).not.toBeNull();
+    expect(result.debug.finalPlayerConstraint).not.toBeNull();
+    expect(result.debug.finalPlayerConstraint?.source).toBe("unchanged");
+    expect(result.debug.finalPlayerConstraint?.constrained).toBe(false);
   });
 });
