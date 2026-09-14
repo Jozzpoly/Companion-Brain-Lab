@@ -1,0 +1,56 @@
+name: deploy-pinned-research-preview
+
+# Operational Pages authority lives on main; application source is explicitly pinned to a mechanically qualified runtime SHA.
+# The published application below is the exact Foundation Runtime Survival / pre-rework Owner-gate candidate.
+# Previous foundation candidate remains recoverable at 81877d7fab6b52d4ea683c870074cf12e0793c43.
+# Previous audited R1-4 runtime remains recoverable at 8f08761cdfde3f0b5d3e595f4bb844d106104ed4.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/pages-research-preview.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-research-preview
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact foundation Owner-gate runtime
+        uses: actions/checkout@v5
+        with:
+          ref: b217943e027e66993f0010643b2933b01d4b1e6d
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Validate exact foundation source
+        run: npm run check
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy exact foundation artifact
+        id: deployment
+        uses: actions/deploy-pages@v5
