@@ -10,6 +10,7 @@ const MOTOR_STOP_RADIUS = 0.12;
 const MOTOR_SLOW_RADIUS = 0.65;
 const HYSTERESIS_MARGIN = 0.28;
 const INVALID_SCORE = 1_000_000;
+const HOLD_CURRENT_SLOT = "hold-current";
 
 interface SlotDefinition {
   id: string;
@@ -233,9 +234,32 @@ export class RelationalPositioningBrain {
   private reconsider(snapshot: WorldSnapshot): void {
     this.lastPlayerDirection = observedPlayerDirection(snapshot, this.lastPlayerDirection);
     const candidates = evaluateRelationalCandidates(snapshot, this.lastPlayerDirection, this.selectedSlot);
+    const hasValidCandidate = candidates.some((candidate) => candidate.valid);
+    this.reconsiderationCount += 1;
+
+    if (!hasValidCandidate) {
+      const companion = actor(snapshot, "companion");
+      // Exhausting the legacy eight-slot vocabulary is an ordinary constrained-world
+      // state, not a program error. Hold the current body position and surface the
+      // condition explicitly until the next tactical reconsideration. The planned
+      // relationship-field replacement can later provide a richer fallback region.
+      this.selectedSlot = null;
+      this.decisionValue = {
+        mode: "relational",
+        selectedSlot: HOLD_CURRENT_SLOT,
+        target: { ...companion.position },
+        playerDirection: { ...this.lastPlayerDirection },
+        candidates,
+        reconsiderationCount: this.reconsiderationCount,
+        reconsideredAtTick: snapshot.tick,
+        reason: "NO_VALID_RELATIONAL_SLOT: all legacy slots are currently illegal; hold current position and reconsider"
+      };
+      this.nextReconsiderTick = snapshot.tick + TACTICAL_INTERVAL_TICKS;
+      return;
+    }
+
     const selection = selectRelationalCandidate(candidates, this.selectedSlot);
     this.selectedSlot = selection.candidate.slot;
-    this.reconsiderationCount += 1;
     this.decisionValue = {
       mode: "relational",
       selectedSlot: selection.candidate.slot,
