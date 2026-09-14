@@ -158,4 +158,25 @@ describe("CCC-0 shadow relationship region", () => {
     expect(result.playerDirection.x).toBeCloseTo(0);
     expect(result.playerDirection.y).toBeCloseTo(1);
   });
+
+  it("does not invent a world-axis heading when the player is stationary and has no heading history", () => {
+    const player = actor("player", 6, 4);
+    const result = evaluateShadowRelationshipRegion({ snapshot: snapshot({ player }), query: clearQuery });
+    expect(result.playerHeadingSource).toBe("none");
+    expect(result.playerDirection).toEqual({ x: 0, y: 0 });
+    expect(result.samples.every((sample) => sample.terms.frontPenalty === 0)).toBe(true);
+  });
+
+  it("preserves a previous meaningful heading while the player is temporarily stationary", () => {
+    const player = actor("player", 6, 4);
+    const result = evaluateShadowRelationshipRegion({
+      snapshot: snapshot({ player }),
+      query: clearQuery,
+      previousPlayerDirection: { x: 0, y: -1 }
+    });
+    expect(result.playerHeadingSource).toBe("previous");
+    expect(result.playerDirection.x).toBeCloseTo(0);
+    expect(result.playerDirection.y).toBeCloseTo(-1);
+    expect(result.samples.some((sample) => sample.terms.frontPenalty > 0)).toBe(true);
+  });
 });
