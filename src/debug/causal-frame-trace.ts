@@ -20,13 +20,18 @@ export interface CausalShadowCoordinationEvidence {
   playerCorridorState: string;
   playerCorridorConfidence: number;
   playerCorridorEndpoint: Vec2;
-  /** Added during CCC-0 conflict falsification; optional only until scene transport is upgraded. */
-  playerFlowConflictState?: string;
-  playerFlowClosestApproachTime?: number | null;
-  playerFlowPhysicalClearance?: number | null;
-  playerFlowComfortClearance?: number | null;
-  playerFlowCompanionClosest?: Vec2 | null;
-  playerFlowPlayerClosest?: Vec2 | null;
+  preferredFlowConflictState?: string;
+  preferredFlowClosestApproachTime?: number | null;
+  preferredFlowPhysicalClearance?: number | null;
+  preferredFlowComfortClearance?: number | null;
+  preferredFlowCompanionClosest?: Vec2 | null;
+  preferredFlowPlayerClosest?: Vec2 | null;
+  authoritativeFlowConflictState?: string;
+  authoritativeFlowClosestApproachTime?: number | null;
+  authoritativeFlowPhysicalClearance?: number | null;
+  authoritativeFlowComfortClearance?: number | null;
+  authoritativeFlowCompanionClosest?: Vec2 | null;
+  authoritativeFlowPlayerClosest?: Vec2 | null;
   legacyTargetToShadowAnchorDistance: number | null;
   error: string | null;
 }
@@ -102,6 +107,11 @@ function cloneVec(value: Vec2 | null | undefined): Vec2 | null {
   return value ? { ...value } : null;
 }
 
+function optionalCloneVec(value: Vec2 | null | undefined): Vec2 | null | undefined {
+  if (value === undefined) return undefined;
+  return cloneVec(value);
+}
+
 function cloneShadow(
   value: CausalShadowCoordinationEvidence | null | undefined
 ): CausalShadowCoordinationEvidence | null | undefined {
@@ -111,12 +121,10 @@ function cloneShadow(
     ...value,
     regionAnchor: cloneVec(value.regionAnchor),
     playerCorridorEndpoint: { ...value.playerCorridorEndpoint },
-    playerFlowCompanionClosest: value.playerFlowCompanionClosest === undefined
-      ? undefined
-      : cloneVec(value.playerFlowCompanionClosest),
-    playerFlowPlayerClosest: value.playerFlowPlayerClosest === undefined
-      ? undefined
-      : cloneVec(value.playerFlowPlayerClosest)
+    preferredFlowCompanionClosest: optionalCloneVec(value.preferredFlowCompanionClosest),
+    preferredFlowPlayerClosest: optionalCloneVec(value.preferredFlowPlayerClosest),
+    authoritativeFlowCompanionClosest: optionalCloneVec(value.authoritativeFlowCompanionClosest),
+    authoritativeFlowPlayerClosest: optionalCloneVec(value.authoritativeFlowPlayerClosest)
   };
 }
 
