@@ -26,7 +26,22 @@ function frame(sequence: number, observationTick: number, outcomeTick: number): 
       comfortStartViolated: true,
       comfortStartBlockers: ["door.wall.top"],
       rehabilitatedCandidateCount: 2,
-      comfortExitCandidateCount: 1
+      comfortExitCandidateCount: 1,
+      shadowCoordination: {
+        kind: "CCC0_SHADOW_COORDINATION",
+        regionState: "REGION",
+        regionAnchor: { x: 2.2, y: 3.1 },
+        regionBestSampleId: "r1.d12",
+        regionCoherentSampleCount: 7,
+        paceLabel: "FOLLOWING",
+        paceUrgency: 0.42,
+        desiredSpeed: 2.1,
+        playerCorridorState: "MOVING",
+        playerCorridorConfidence: 0.86,
+        playerCorridorEndpoint: { x: 4.7, y: 5 },
+        legacyTargetToShadowAnchorDistance: 1.12,
+        error: null
+      }
     },
     command: {
       actuator: "natural",
@@ -95,6 +110,18 @@ describe("R1 causal frame trace", () => {
     expect(latest?.post.cumulativeLocalRetriesSinceReset).toBe(9);
   });
 
+  it("preserves explicitly shadow-labelled CCC-0 evidence without confusing it with command authority", () => {
+    const trace = new CausalFrameTrace();
+    trace.record(frame(trace.nextSequence(), 12, 13));
+
+    const latest = trace.latest();
+    expect(latest?.decision.shadowCoordination?.kind).toBe("CCC0_SHADOW_COORDINATION");
+    expect(latest?.decision.shadowCoordination?.regionState).toBe("REGION");
+    expect(latest?.decision.shadowCoordination?.paceUrgency).toBe(0.42);
+    expect(latest?.decision.shadowCoordination?.playerCorridorConfidence).toBe(0.86);
+    expect(latest?.command.commandedMove).toEqual({ x: 0.5, y: 0.2 });
+  });
+
   it("adds self-describing recovery aliases to legacy incident-v2 frames", () => {
     const trace = new CausalFrameTrace();
     trace.record(frame(trace.nextSequence(), 20, 21));
@@ -115,6 +142,8 @@ describe("R1 causal frame trace", () => {
 
     value.observation.companionPosition.x = 999;
     value.decision.relationshipTarget!.x = 999;
+    value.decision.shadowCoordination!.regionAnchor!.x = 999;
+    value.decision.shadowCoordination!.playerCorridorEndpoint.x = 999;
     value.command.commandedMove.x = 999;
     sourceContacts.push("wall");
     sourceComfortBlockers.push("door.wall.bottom");
@@ -122,6 +151,8 @@ describe("R1 causal frame trace", () => {
     const latest = trace.latest();
     expect(latest?.observation.companionPosition.x).toBe(1);
     expect(latest?.decision.relationshipTarget?.x).toBe(3);
+    expect(latest?.decision.shadowCoordination?.regionAnchor?.x).toBe(2.2);
+    expect(latest?.decision.shadowCoordination?.playerCorridorEndpoint.x).toBe(4.7);
     expect(latest?.command.commandedMove.x).toBe(0.5);
     expect(latest?.outcome.companionContacts).toEqual(["player"]);
     expect(latest?.decision.comfortStartBlockers).toEqual(["door.wall.top"]);
