@@ -73,7 +73,12 @@ function observedVelocity(player: ActorSnapshot): { velocity: Vec2; source: Shad
 
 function directionMemoryStrength(ageTicks: number | null | undefined): number {
   const age = Math.max(0, Math.floor(ageTicks ?? 0));
-  return clamp(1 - age / DIRECTION_MEMORY_TICKS, 0, 1);
+  const remaining = clamp(1 - age / DIRECTION_MEMORY_TICKS, 0, 1);
+  // Smoothstep keeps the same bounded memory horizon while reducing the semantic
+  // step size at both ends. In particular, expiry approaches zero with a zero
+  // derivative instead of retaining a material linear remainder until the last
+  // cognition observation.
+  return remaining * remaining * (3 - 2 * remaining);
 }
 
 function previousDirectionEvidence(input: ShadowPlayerCorridorInput): {
