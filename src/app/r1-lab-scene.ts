@@ -1,4 +1,8 @@
 import Phaser from "phaser";
+import type { FinalCommandConstraintResult } from "../brain/final-command-constraint";
+import type { MotionContinuityStepResult } from "../brain/motion-continuity";
+import type { PreferredVelocityRefinement } from "../brain/preferred-velocity-refinement";
+import type { ProgressRecoveryDecision } from "../brain/progress-recovery";
 import {
   COMPANION_MODES,
   RelationalPositioningBrain,
@@ -6,13 +10,12 @@ import {
   type CompanionMode,
   type RelationalDecision
 } from "../brain/relational-positioning";
-import { NaturalSpatialLocomotionBrain } from "../brain/natural-spatial-locomotion";
-import type { MotionContinuityStepResult } from "../brain/motion-continuity";
-import type { PreferredVelocityRefinement } from "../brain/preferred-velocity-refinement";
+import type { R1SpatialRepairEvidence } from "../brain/r1-hard-comfort-spatial";
 import {
-  SpatialLocomotionBrain,
-  type SpatialLocomotionDecision
-} from "../brain/spatial-locomotion";
+  R1WorkbenchSpatialStack,
+  type R1WorkbenchSpatialDebug
+} from "../brain/r1-workbench-spatial-stack";
+import type { SpatialLocomotionDecision } from "../brain/spatial-locomotion";
 import {
   CausalPanel,
   type CausalPanelAction,
@@ -84,14 +87,47 @@ function probeLabel(probe: StaticCircleTraversalResult | null): "clear" | "block
   return (probe.blocker?.distance ?? Number.POSITIVE_INFINITY) < 1e-5 ? "blocked-zero" : "blocked";
 }
 
+function hardProbeLabel(probe: StaticCircleTraversalResult | null): "clear" | "blocked" | "unknown" {
+  const value = probeLabel(probe);
+  return value === "clear" ? "clear" : value === "unknown" ? "unknown" : "blocked";
+}
+
+function progressTone(state: string | undefined): CausalPanelModel["badgeTone"] {
+  if (!state) return "normal";
+  const normalized = state.toUpperCase();
+  if (normalized === "PERSISTENT_UNREACHABLE" || normalized === "ROUTE_INVALID") return "danger";
+  if (
+    normalized === "NO_PROGRESS" ||
+    normalized === "BLOCKED_PLAYER" ||
+    normalized === "BLOCKED_STATIC" ||
+    normalized === "RECOVERING" ||
+    normalized === "TRANSIENT_UNREACHABLE" ||
+    normalized === "HOLDING_UNEXPLAINED" ||
+    normalized === "HOLDING" ||
+    normalized === "BLOCKED" ||
+    normalized === "UNREACHABLE"
+  ) return "warning";
+  if (
+    normalized === "PROGRESSING" ||
+    normalized === "TRACKING_MOVING_OBJECTIVE" ||
+    normalized === "ARRIVED"
+  ) return "success";
+  return "normal";
+}
+
 interface StepDecisionEvidence {
   before: WorldSnapshot;
   intents: MotionIntent[];
   route: StaticRoutePlan | null;
   relationship: RelationalDecision | null;
+  target: Vec2 | null;
+  objectiveKey: string | null;
+  actuator: "direct" | "natural" | null;
   spatial: SpatialLocomotionDecision | null;
+  repair: R1SpatialRepairEvidence | null;
   refinement: PreferredVelocityRefinement | null;
   continuity: MotionContinuityStepResult | null;
+  finalConstraint: FinalCommandConstraintResult | null;
 }
 
 export class R1LabScene extends Phaser.Scene {
@@ -109,12 +145,15 @@ export class R1LabScene extends Phaser.Scene {
   private timeScaleIndex = 2;
 
   private readonly relationalBrain = new RelationalPositioningBrain();
-  private readonly spatialBrain = new SpatialLocomotionBrain();
-  private readonly naturalSpatialBrain = new NaturalSpatialLocomotionBrain();
+  private readonly spatialStack = new R1WorkbenchSpatialStack();
   private relationalDecision: RelationalDecision | null = null;
   private spatialDecision: SpatialLocomotionDecision | null = null;
+  private spatialRepairDecision: R1SpatialRepairEvidence | null = null;
   private refinementDecision: PreferredVelocityRefinement | null = null;
   private continuityDecision: MotionContinuityStepResult | null = null;
+  private finalConstraintDecision: FinalCommandConstraintResult | null = null;
+  private progressDecision: ProgressRecoveryDecision | null = null;
+  private appliedLocalRetries = 0;
   private decisionRoutePlan: StaticRoutePlan | null = null;
   private postRoutePlan: StaticRoutePlan | null = null;
   private hardProbe: StaticCircleTraversalResult | null = null;
@@ -125,6 +164,7 @@ export class R1LabScene extends Phaser.Scene {
   private readonly playerTrail: Vec2[] = [];
   private readonly companionTrail: Vec2[] = [];
   private incidentNotice = "";
+  private lastPostSignature = "";
 
   private keys!: Record<
     "w" | "a" | "s" | "d" | "up" | "down" | "left" | "right" |
@@ -194,7 +234,31 @@ export class R1LabScene extends Phaser.Scene {
     const evidence = this.computeIntents(this.snapshotValue);
     const after = this.world.step(evidence.intents);
     this.snapshotValue = after;
-    this.updatePostEvidence(after);
+    this.updatePostEvidence(after, evidence.target);
+
+    if (
+      this.companionMode === "spatial" &&
+      evidence.target &&
+      evidence.objectiveKey &&
+      evidence.actuator &&
+      this.postRoutePlan
+    ) {
+      this.progressDecision = this.spatialStack.observeOutcome(
+        evidence.actuator === "natural",
+        {
+          snapshot: after,
+          objectiveKey: evidence.objectiveKey,
+          target: evidence.target,
+          routePlan: this.postRoutePlan
+        }
+      );
+      const postDebug = this.spatialStack.debugState(evidence.actuator === "natural");
+      this.appliedLocalRetries = postDebug.appliedLocalRetries;
+    } else {
+      this.progressDecision = null;
+      this.appliedLocalRetries = 0;
+    }
+
     this.recordTrail(after);
     this.recordCausalFrame(evidence, after);
   }
@@ -208,8 +272,13 @@ export class R1LabScene extends Phaser.Scene {
     };
 
     let companionIntent: MotionIntent;
+    let target: Vec2 | null = null;
+    let objectiveKey: string | null = null;
+    let actuator: "direct" | "natural" | null = null;
     this.refinementDecision = null;
     this.continuityDecision = null;
+    this.finalConstraintDecision = null;
+    this.spatialRepairDecision = null;
     this.decisionRoutePlan = null;
 
     if (this.companionMode === "manual") {
@@ -222,33 +291,32 @@ export class R1LabScene extends Phaser.Scene {
     } else if (this.companionMode === "chase") {
       this.relationalDecision = null;
       this.spatialDecision = null;
+      target = { ...actor(before, "player").position };
       companionIntent = chaseIntent(before);
     } else if (this.companionMode === "relational") {
       companionIntent = this.relationalBrain.intent(before);
       this.relationalDecision = this.relationalBrain.debugState();
+      target = this.relationalDecision ? { ...this.relationalDecision.target } : null;
       this.spatialDecision = null;
     } else {
       const relationship = this.relationalBrain.decision(before);
       this.relationalDecision = relationship;
+      target = { ...relationship.target };
+      objectiveKey = `spatial-slot:${relationship.selectedSlot}`;
+      actuator = this.naturalActuator ? "natural" : "direct";
       const route = this.buildRoute(before, relationship.target);
       this.decisionRoutePlan = route;
       const input = {
         snapshot: before,
         relationshipTarget: relationship.target,
         routePlan: route,
-        query: (from: Vec2, to: Vec2, radius: number) => this.world!.staticCircleTraversal(from, to, radius)
+        query: (from: Vec2, to: Vec2, radius: number) => this.world!.staticCircleTraversal(from, to, radius),
+        occupancy: (center: Vec2, radius: number) => this.world!.staticCircleOccupancy(center, radius)
       };
 
-      if (this.naturalActuator) {
-        companionIntent = this.naturalSpatialBrain.intent(input);
-        const debug = this.naturalSpatialBrain.debugState();
-        this.spatialDecision = debug.preferred;
-        this.refinementDecision = debug.refinement;
-        this.continuityDecision = debug.continuity;
-      } else {
-        companionIntent = this.spatialBrain.intent(input);
-        this.spatialDecision = this.spatialBrain.debugState();
-      }
+      companionIntent = this.spatialStack.intent(this.naturalActuator, input);
+      const debug = this.spatialStack.debugState(this.naturalActuator);
+      this.captureSpatialDebug(debug);
     }
 
     return {
@@ -256,10 +324,25 @@ export class R1LabScene extends Phaser.Scene {
       intents: [playerIntent, companionIntent],
       route: this.decisionRoutePlan,
       relationship: this.relationalDecision,
+      target,
+      objectiveKey,
+      actuator,
       spatial: this.spatialDecision,
+      repair: this.spatialRepairDecision,
       refinement: this.refinementDecision,
-      continuity: this.continuityDecision
+      continuity: this.continuityDecision,
+      finalConstraint: this.finalConstraintDecision
     };
+  }
+
+  private captureSpatialDebug(debug: R1WorkbenchSpatialDebug): void {
+    this.spatialDecision = debug.preferred;
+    this.spatialRepairDecision = debug.repair;
+    this.refinementDecision = debug.refinement;
+    this.continuityDecision = debug.continuity;
+    this.finalConstraintDecision = debug.finalConstraint;
+    this.progressDecision = debug.progress;
+    this.appliedLocalRetries = debug.appliedLocalRetries;
   }
 
   private navigationTarget(snapshot: WorldSnapshot): Vec2 | null {
@@ -282,9 +365,9 @@ export class R1LabScene extends Phaser.Scene {
     });
   }
 
-  private updatePostEvidence(snapshot: WorldSnapshot): void {
+  private updatePostEvidence(snapshot: WorldSnapshot, targetOverride: Vec2 | null = null): void {
     if (!this.world) return;
-    const target = this.navigationTarget(snapshot);
+    const target = targetOverride ?? this.navigationTarget(snapshot);
     if (!target) {
       this.postRoutePlan = null;
       this.hardProbe = null;
@@ -306,34 +389,82 @@ export class R1LabScene extends Phaser.Scene {
     commandedMove: Vec2,
     displacement: number
   ): CausalPostClassification {
-    const route = this.postRoutePlan;
-    const hard = probeLabel(this.hardProbe);
+    const hard = hardProbeLabel(this.hardProbe);
     const desired = probeLabel(this.desiredProbe);
+
+    if (this.companionMode === "spatial" && this.progressDecision) {
+      return {
+        state: this.progressDecision.state,
+        action: this.progressDecision.action,
+        reason: this.progressDecision.reason,
+        hardProbe: hard,
+        desiredClearanceProbe: desired,
+        noProgressTicks: this.progressDecision.noProgressTicks,
+        unreachableTicks: this.progressDecision.unreachableTicks,
+        retryCount: this.progressDecision.retryCount,
+        appliedLocalRetries: this.appliedLocalRetries
+      };
+    }
+
+    const route = this.postRoutePlan;
     if (!target || !this.snapshotValue) {
-      return { state: "unknown", reason: "no autonomous navigation target", hardProbe: hard === "clear" ? "clear" : hard === "unknown" ? "unknown" : "blocked", desiredClearanceProbe: desired };
+      return {
+        state: "unknown",
+        reason: "baseline mode has no supervised spatial navigation target",
+        hardProbe: hard,
+        desiredClearanceProbe: desired
+      };
     }
     const companion = actor(this.snapshotValue, "companion");
     if (distance(companion.position, target) < 0.16) {
-      return { state: "arrived", reason: "relationship/navigation target satisfied", hardProbe: hard === "clear" ? "clear" : hard === "unknown" ? "unknown" : "blocked", desiredClearanceProbe: desired };
+      return {
+        state: "arrived",
+        reason: "baseline diagnostic: navigation target satisfied",
+        hardProbe: hard,
+        desiredClearanceProbe: desired
+      };
     }
     if (route?.status === "unreachable" || route?.status === "invalid-target") {
-      return { state: "unreachable", reason: route.reason, hardProbe: hard === "clear" ? "clear" : hard === "unknown" ? "unknown" : "blocked", desiredClearanceProbe: desired };
+      return {
+        state: "unreachable",
+        reason: `baseline diagnostic: ${route.reason}`,
+        hardProbe: hard,
+        desiredClearanceProbe: desired
+      };
     }
     if (magnitude(commandedMove) < 0.03) {
-      return { state: "holding", reason: "commanded move is approximately zero; diagnostic only", hardProbe: hard === "clear" ? "clear" : hard === "unknown" ? "unknown" : "blocked", desiredClearanceProbe: desired };
+      return {
+        state: "holding",
+        reason: "baseline diagnostic: commanded move is approximately zero",
+        hardProbe: hard,
+        desiredClearanceProbe: desired
+      };
     }
     if (displacement < 0.002) {
-      return { state: "blocked", reason: "nonzero command produced negligible displacement; diagnostic only", hardProbe: hard === "clear" ? "clear" : hard === "unknown" ? "unknown" : "blocked", desiredClearanceProbe: desired };
+      return {
+        state: "blocked",
+        reason: "baseline diagnostic: nonzero command produced negligible displacement",
+        hardProbe: hard,
+        desiredClearanceProbe: desired
+      };
     }
-    return { state: "progressing", reason: "nonzero command produced physical displacement; diagnostic only", hardProbe: hard === "clear" ? "clear" : hard === "unknown" ? "unknown" : "blocked", desiredClearanceProbe: desired };
+    return {
+      state: "moving",
+      reason: "baseline diagnostic: nonzero command produced physical displacement; not R1 progress semantics",
+      hardProbe: hard,
+      desiredClearanceProbe: desired
+    };
   }
 
   private recordCausalFrame(evidence: StepDecisionEvidence, after: WorldSnapshot): void {
     const beforeCompanion = actor(evidence.before, "companion");
     const beforePlayer = actor(evidence.before, "player");
     const afterCompanion = actor(after, "companion");
-    const companionIntent = evidence.intents.find((intent) => intent.actorId === "companion") ?? { actorId: "companion" as const, move: { x: 0, y: 0 } };
-    const target = evidence.relationship?.target ?? (this.companionMode === "chase" ? beforePlayer.position : null);
+    const companionIntent = evidence.intents.find((intent) => intent.actorId === "companion") ?? {
+      actorId: "companion" as const,
+      move: { x: 0, y: 0 }
+    };
+    const target = evidence.target;
     const displacement = distance(beforeCompanion.position, afterCompanion.position);
     const post = this.classifyPost(target, companionIntent.move, displacement);
 
@@ -345,7 +476,7 @@ export class R1LabScene extends Phaser.Scene {
         ? "chase"
         : this.companionMode === "relational"
           ? "relational"
-          : this.naturalActuator ? "natural" : "direct";
+          : evidence.actuator ?? (this.naturalActuator ? "natural" : "direct");
 
     const frame: CausalFrame = {
       sequence: this.causalTrace.nextSequence(),
@@ -359,19 +490,27 @@ export class R1LabScene extends Phaser.Scene {
       decision: {
         relationshipRevision: evidence.relationship?.reconsiderationCount ?? null,
         relationshipLabel: evidence.relationship?.selectedSlot ?? null,
-        relationshipTarget: evidence.relationship ? { ...evidence.relationship.target } : target ? { ...target } : null,
+        relationshipTarget: target ? { ...target } : null,
         routeStatus: evidence.route?.status ?? null,
         routePath: evidence.route?.routeNodeIds.join(">") ?? "",
         routeCost: evidence.route?.cost ?? null,
+        routeClearanceConstrained: evidence.route?.clearanceConstrained ?? null,
         spatialState: evidence.spatial?.state ?? null,
         spatialCandidate: evidence.spatial?.selectedCandidateId ?? null,
         preferredVelocity: evidence.spatial ? { ...evidence.spatial.selectedVelocity } : null,
-        refinedVelocity
+        refinedVelocity,
+        comfortStartViolated: evidence.repair?.comfortStartViolated ?? null,
+        comfortStartBlockers: evidence.repair ? [...evidence.repair.comfortStartBlockers] : [],
+        rehabilitatedCandidateCount: evidence.repair?.rehabilitatedCandidateIds.length ?? null,
+        comfortExitCandidateCount: evidence.repair?.comfortExitCandidateIds.length ?? null
       },
       command: {
         actuator,
         commandedMove: { ...companionIntent.move },
-        commandedVelocity: { ...afterCompanion.requestedVelocity }
+        commandedVelocity: { ...afterCompanion.requestedVelocity },
+        finalConstraintSource: evidence.finalConstraint?.source ?? null,
+        finalConstrained: evidence.finalConstraint?.constrained ?? null,
+        finalConstraintReason: evidence.finalConstraint?.reason ?? null
       },
       outcome: {
         worldTick: after.tick,
@@ -381,15 +520,20 @@ export class R1LabScene extends Phaser.Scene {
         companionContacts: afterCompanion.contacts.map((contact) => contact.with),
         displacement,
         postRouteStatus: this.postRoutePlan?.status ?? null,
-        postRoutePath: this.postRoutePlan?.routeNodeIds.join(">") ?? ""
+        postRoutePath: this.postRoutePlan?.routeNodeIds.join(">") ?? "",
+        postRouteClearanceConstrained: this.postRoutePlan?.clearanceConstrained ?? null
       },
       post
     };
     this.causalTrace.record(frame);
 
-    const latestEvent = `f${frame.sequence} t${frame.observation.worldTick}->${frame.outcome.worldTick} ${post.state}: ${post.reason}`;
-    const previous = this.eventLog.at(-1);
-    if (previous !== latestEvent && (post.state !== "progressing" || this.eventLog.length === 0)) this.logEvent(latestEvent);
+    const postSignature = `${post.state}|${post.action ?? "NONE"}|${post.reason}`;
+    if (postSignature !== this.lastPostSignature) {
+      this.lastPostSignature = postSignature;
+      this.logEvent(
+        `f${frame.sequence} t${frame.observation.worldTick}->${frame.outcome.worldTick} ${post.state}${post.action ? ` / ${post.action}` : ""}: ${post.reason}`
+      );
+    }
   }
 
   private recordTrail(snapshot: WorldSnapshot): void {
@@ -434,7 +578,8 @@ export class R1LabScene extends Phaser.Scene {
       this.graphics.lineStyle(3, contact && this.panel.layerVisible("contacts") ? 0xff5d66 : 0xe7e9ee, 0.95);
       this.graphics.strokeCircle(sx(value.position.x), sy(value.position.y), value.radius * scale);
       if (value.id === "companion" && this.panel.layerVisible("route")) {
-        this.graphics.lineStyle(1, 0xf2c15c, 0.2);
+        const comfortViolated = this.spatialRepairDecision?.comfortStartViolated ?? false;
+        this.graphics.lineStyle(2, comfortViolated ? 0xe3b341 : 0xf2c15c, comfortViolated ? 0.8 : 0.25);
         this.graphics.strokeCircle(
           sx(value.position.x),
           sy(value.position.y),
@@ -472,16 +617,17 @@ export class R1LabScene extends Phaser.Scene {
     const plan = this.postRoutePlan ?? this.decisionRoutePlan;
     if (!plan) return;
     const nodes = new Map(plan.nodes.map((node) => [node.id, node]));
+    const routeColor = plan.clearanceConstrained ? 0xe3b341 : 0x58a6ff;
     for (let index = 0; index < plan.routeNodeIds.length - 1; index += 1) {
       const a = nodes.get(plan.routeNodeIds[index] ?? "");
       const b = nodes.get(plan.routeNodeIds[index + 1] ?? "");
       if (!a || !b) continue;
-      this.graphics.lineStyle(5, 0x58a6ff, 0.8);
+      this.graphics.lineStyle(5, routeColor, 0.85);
       this.graphics.lineBetween(sx(a.position.x), sy(a.position.y), sx(b.position.x), sy(b.position.y));
     }
     for (const node of plan.nodes) {
       const selected = plan.routeNodeIds.includes(node.id);
-      this.graphics.fillStyle(selected ? 0x58a6ff : 0x8b949e, selected ? 0.9 : 0.28);
+      this.graphics.fillStyle(selected ? routeColor : 0x8b949e, selected ? 0.9 : 0.28);
       this.graphics.fillCircle(sx(node.position.x), sy(node.position.y), selected ? 4 : 2);
     }
   }
@@ -490,6 +636,7 @@ export class R1LabScene extends Phaser.Scene {
     const decision = this.spatialDecision;
     if (!decision) return;
     const origin = decision.observation.companionPosition;
+    const rehabilitated = new Set(this.spatialRepairDecision?.rehabilitatedCandidateIds ?? []);
     for (const ray of decision.observation.rays) {
       const end = {
         x: origin.x + ray.direction.x * ray.freeDistance,
@@ -500,8 +647,14 @@ export class R1LabScene extends Phaser.Scene {
     }
     for (const candidate of decision.candidates) {
       if (candidate.id === decision.selectedCandidateId) continue;
-      this.graphics.fillStyle(candidate.hardRejected ? 0xff5d66 : 0x8b949e, candidate.hardRejected ? 0.16 : 0.22);
-      this.graphics.fillCircle(sx(candidate.predictedPosition.x), sy(candidate.predictedPosition.y), 2);
+      const color = candidate.hardRejected
+        ? 0xff5d66
+        : rehabilitated.has(candidate.id)
+          ? 0xe3b341
+          : 0x8b949e;
+      const alpha = candidate.hardRejected ? 0.16 : rehabilitated.has(candidate.id) ? 0.5 : 0.22;
+      this.graphics.fillStyle(color, alpha);
+      this.graphics.fillCircle(sx(candidate.predictedPosition.x), sy(candidate.predictedPosition.y), rehabilitated.has(candidate.id) ? 3 : 2);
     }
     this.graphics.lineStyle(3, 0xd2a8ff, 0.9);
     this.graphics.lineBetween(
@@ -522,14 +675,25 @@ export class R1LabScene extends Phaser.Scene {
     if (value.id === "companion" && this.spatialDecision) {
       const coarse = this.spatialDecision.selectedVelocity;
       this.graphics.lineStyle(2, 0x8b949e, 0.85);
-      this.graphics.lineBetween(sx(value.position.x), sy(value.position.y), sx(value.position.x) + coarse.x * arrow, sy(value.position.y) + coarse.y * arrow);
+      this.graphics.lineBetween(
+        sx(value.position.x), sy(value.position.y),
+        sx(value.position.x) + coarse.x * arrow,
+        sy(value.position.y) + coarse.y * arrow
+      );
     }
     if (value.id === "companion" && this.continuityDecision) {
       const refined = this.continuityDecision.preferredVelocity;
       this.graphics.lineStyle(4, 0xd2a8ff, 0.95);
-      this.graphics.lineBetween(sx(value.position.x), sy(value.position.y), sx(value.position.x) + refined.x * arrow, sy(value.position.y) + refined.y * arrow);
+      this.graphics.lineBetween(
+        sx(value.position.x), sy(value.position.y),
+        sx(value.position.x) + refined.x * arrow,
+        sy(value.position.y) + refined.y * arrow
+      );
     }
-    this.graphics.lineStyle(3, 0x7ee787, 0.95);
+    const commandColor = value.id === "companion" && this.finalConstraintDecision?.constrained
+      ? 0xe3b341
+      : 0x7ee787;
+    this.graphics.lineStyle(3, commandColor, 0.95);
     this.graphics.lineBetween(
       sx(value.position.x), sy(value.position.y),
       sx(value.position.x) + value.requestedVelocity.x * arrow,
@@ -547,18 +711,13 @@ export class R1LabScene extends Phaser.Scene {
     const latest = this.causalTrace.latest();
     const timeScale = TIME_SCALES[this.timeScaleIndex] ?? 1;
     const post = latest?.post;
-    const badgeTone: CausalPanelModel["badgeTone"] = post?.state === "unreachable" || post?.desiredClearanceProbe === "blocked-zero"
-      ? "danger"
-      : post?.state === "holding" || post?.state === "blocked"
-        ? "warning"
-        : post?.state === "progressing" || post?.state === "arrived"
-          ? "success"
-          : "normal";
-
+    const badgeTone = progressTone(post?.state);
     const route = latest?.decision;
     const outcome = latest?.outcome;
     const spatial = this.spatialDecision;
     const c = this.continuityDecision;
+    const repair = this.spatialRepairDecision;
+    const constraint = this.finalConstraintDecision;
     const companion = actor(snapshot, "companion");
 
     const sections: CausalPanelModel["sections"] = [
@@ -578,68 +737,87 @@ export class R1LabScene extends Phaser.Scene {
         lines: this.relationalDecision
           ? [
               `relationship #${this.relationalDecision.reconsiderationCount} · ${this.relationalDecision.selectedSlot}`,
+              `semantic objective spatial-slot:${this.relationalDecision.selectedSlot}`,
               `target ${compact(this.relationalDecision.target.x)}, ${compact(this.relationalDecision.target.y)}`,
               this.relationalDecision.reason
             ]
-          : [`${this.companionMode} baseline has no relational objective`]
+          : [`${this.companionMode} baseline has no supervised relational objective`]
       },
       {
         id: "route",
         title: "Route · pre-decision vs post-outcome",
-        tone: post?.state === "unreachable" ? "danger" : "normal",
+        tone: post?.state === "PERSISTENT_UNREACHABLE" || post?.state === "ROUTE_INVALID" ? "danger" : "normal",
         lines: [
           `used at observation t${latest?.observation.worldTick ?? "-"}: ${route?.routeStatus ?? "none"} · ${route?.routePath || "none"}`,
+          `pre comfort-constrained ${route?.routeClearanceConstrained ?? "n/a"} · cost ${route?.routeCost ?? "n/a"}`,
           `after World t${outcome?.worldTick ?? "-"}: ${outcome?.postRouteStatus ?? "none"} · ${outcome?.postRoutePath || "none"}`,
+          `post comfort-constrained ${outcome?.postRouteClearanceConstrained ?? "n/a"}`,
           `hard target corridor ${post?.hardProbe ?? "unknown"}`,
           `desired +${S2C_ROUTE_CLEARANCE.toFixed(2)} corridor ${post?.desiredClearanceProbe ?? "unknown"}`
         ]
       },
       {
         id: "spatial",
-        title: "Local spatial decision",
+        title: "Local spatial decision · hard vs comfort",
+        tone: repair?.comfortStartViolated ? "warning" : "normal",
         lines: spatial
           ? [
               `${spatial.state} via ${spatial.selectedCandidateId}`,
               `${spatial.acceptedCount} accepted / ${spatial.rejectedCount} rejected`,
               `coarse preferred ${compact(spatial.selectedVelocity.x)}, ${compact(spatial.selectedVelocity.y)}`,
               `route remaining ${compact(spatial.observation.routeRemainingDistance)}`,
+              repair
+                ? `comfort start ${repair.comfortStartViolated ? "VIOLATED" : "clear"} · blockers ${repair.comfortStartBlockers.join(", ") || "none"}`
+                : "R1 hard/comfort evidence unavailable",
+              repair
+                ? `rehabilitated hard-safe ${repair.rehabilitatedCandidateIds.length} · hard rejects ${repair.hardRejectedCandidateIds.length} · exits ${repair.comfortExitCandidateIds.length}`
+                : "candidate repair unavailable",
               this.refinementDecision
                 ? `refinement ${this.refinementDecision.source} · Δ ${this.refinementDecision.angularDeltaDegrees.toFixed(1)}°`
-                : "refinement off / unavailable"
+                : this.naturalActuator ? "refinement unavailable" : "DIRECT: no temporal refinement"
             ]
           : ["spatial layer inactive"]
       },
       {
         id: "motion",
-        title: "Motion realization",
+        title: "Motion realization · final hard command",
+        tone: constraint?.constrained ? "warning" : "normal",
         lines: [
           `command/requested ${compact(companion.requestedVelocity.x)}, ${compact(companion.requestedVelocity.y)} · speed ${compact(magnitude(companion.requestedVelocity))}`,
           `actual ${compact(companion.actualVelocity.x)}, ${compact(companion.actualVelocity.y)} · speed ${compact(magnitude(companion.actualVelocity))}`,
           c
-            ? `NATURAL ${c.regime} · preferred ${compact(c.preferredSpeed)} · commanded ${compact(c.speed)} · error ${compact(c.velocityError)}`
+            ? `NATURAL ${c.regime} · preferred ${compact(c.preferredSpeed)} · continuity ${compact(c.speed)} · error ${compact(c.velocityError)}`
             : `${this.naturalActuator ? "NATURAL idle" : "DIRECT"}`,
-          c ? `accel ${compact(c.accelerationMagnitude)} · jerk ${compact(c.jerkMagnitude)}` : "accel/jerk unavailable"
-        ]
+          c ? `accel ${compact(c.accelerationMagnitude)} · jerk ${compact(c.jerkMagnitude)}` : "accel/jerk unavailable",
+          constraint
+            ? `final gate ${constraint.source} · constrained=${constraint.constrained} · blocker ${constraint.blockedBy ?? "none"}`
+            : this.naturalActuator ? "final hard gate unavailable" : "DIRECT command already comes from hard-safe spatial selection",
+          constraint?.reason ?? ""
+        ].filter((line) => line.length > 0)
       },
       {
         id: "recovery",
-        title: "Progress / recovery diagnostic",
+        title: "Progress / recovery · post-World authority",
         tone: badgeTone,
         lines: [
-          `state ${post?.state ?? "unknown"}`,
+          `state ${post?.state ?? "unknown"} · action ${post?.action ?? "NONE"}`,
+          `no-progress ${post?.noProgressTicks ?? 0}t · unreachable ${post?.unreachableTicks ?? 0}t`,
+          `retry episode ${post?.retryCount ?? 0} · applied local retries ${post?.appliedLocalRetries ?? 0}`,
           post?.reason ?? "no completed causal frame yet",
-          "R1-1 classification is diagnostic only — no recovery authority yet"
+          this.companionMode === "spatial"
+            ? "classification comes from post-World R1-4 monitor"
+            : "baseline mode: diagnostic fallback only"
         ]
       },
       {
         id: "events",
-        title: "Recent semantic markers",
+        title: "Recent semantic transitions",
         lines: this.eventLog.slice(-8).reverse()
       }
     ];
 
     this.panel.update({
-      title: "R1 Causal Workbench",
+      title: "R1 Robustness Workbench",
       subtitle: `frame ${latest?.sequence ?? "-"} · observation t${latest?.observation.worldTick ?? "-"} → outcome t${latest?.outcome.worldTick ?? "-"}`,
       badge: post ? post.state.toUpperCase() : "LOADING",
       badgeTone,
@@ -698,12 +876,9 @@ export class R1LabScene extends Phaser.Scene {
 
   private toggleActuator(): void {
     this.naturalActuator = !this.naturalActuator;
-    this.spatialBrain.reset();
-    this.naturalSpatialBrain.reset();
-    this.spatialDecision = null;
-    this.refinementDecision = null;
-    this.continuityDecision = null;
-    this.logEvent(`control actuator ${this.naturalActuator ? "NATURAL" : "DIRECT"} (motion state reset)`);
+    this.spatialStack.reset();
+    this.clearSpatialDebug();
+    this.logEvent(`control actuator ${this.naturalActuator ? "NATURAL" : "DIRECT"} (shared R1 movement/recovery state reset)`);
   }
 
   private cycleTimeScale(): void {
@@ -715,7 +890,7 @@ export class R1LabScene extends Phaser.Scene {
     const snapshot = this.snapshotValue;
     if (!snapshot) return;
     const incident = {
-      schema: "companion-brain-lab-r1-causal-incident-v1",
+      schema: "companion-brain-lab-r1-causal-incident-v2",
       scenario: snapshot.scenarioId,
       tick: snapshot.tick,
       mode: this.companionMode,
@@ -737,18 +912,26 @@ export class R1LabScene extends Phaser.Scene {
     this.logEvent(this.incidentNotice);
   }
 
-  private resetBrains(): void {
-    this.relationalBrain.reset();
-    this.spatialBrain.reset();
-    this.naturalSpatialBrain.reset();
-    this.relationalDecision = null;
+  private clearSpatialDebug(): void {
     this.spatialDecision = null;
+    this.spatialRepairDecision = null;
     this.refinementDecision = null;
     this.continuityDecision = null;
+    this.finalConstraintDecision = null;
+    this.progressDecision = null;
+    this.appliedLocalRetries = 0;
+  }
+
+  private resetBrains(): void {
+    this.relationalBrain.reset();
+    this.spatialStack.reset();
+    this.relationalDecision = null;
+    this.clearSpatialDebug();
     this.decisionRoutePlan = null;
     this.postRoutePlan = null;
     this.hardProbe = null;
     this.desiredProbe = null;
+    this.lastPostSignature = "";
   }
 
   private async loadScenario(id: ScenarioId): Promise<void> {
@@ -768,6 +951,7 @@ export class R1LabScene extends Phaser.Scene {
       this.causalTrace.reset();
       this.eventLog.length = 0;
       this.incidentNotice = "";
+      this.lastPostSignature = "";
       this.resetBrains();
       this.recordTrail(this.snapshotValue);
       this.updatePostEvidence(this.snapshotValue);
