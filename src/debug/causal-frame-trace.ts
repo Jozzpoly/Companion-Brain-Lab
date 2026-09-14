@@ -19,12 +19,20 @@ export interface CausalDecisionPhase {
   spatialCandidate: string | null;
   preferredVelocity: Vec2 | null;
   refinedVelocity: Vec2 | null;
+  routeClearanceConstrained?: boolean | null;
+  comfortStartViolated?: boolean | null;
+  comfortStartBlockers?: readonly string[];
+  rehabilitatedCandidateCount?: number | null;
+  comfortExitCandidateCount?: number | null;
 }
 
 export interface CausalCommandPhase {
   actuator: "direct" | "natural" | "manual" | "chase" | "relational";
   commandedMove: Vec2;
   commandedVelocity: Vec2;
+  finalConstraintSource?: string | null;
+  finalConstrained?: boolean | null;
+  finalConstraintReason?: string | null;
 }
 
 export interface CausalOutcomePhase {
@@ -36,13 +44,19 @@ export interface CausalOutcomePhase {
   displacement: number;
   postRouteStatus: string | null;
   postRoutePath: string;
+  postRouteClearanceConstrained?: boolean | null;
 }
 
 export interface CausalPostClassification {
-  state: "arrived" | "progressing" | "holding" | "unreachable" | "blocked" | "unknown";
+  state: string;
   reason: string;
   desiredClearanceProbe: "clear" | "blocked-zero" | "blocked" | "unknown";
   hardProbe: "clear" | "blocked" | "unknown";
+  action?: string | null;
+  noProgressTicks?: number | null;
+  unreachableTicks?: number | null;
+  retryCount?: number | null;
+  appliedLocalRetries?: number | null;
 }
 
 export interface CausalFrame {
@@ -72,7 +86,10 @@ function cloneFrame(frame: CausalFrame): CausalFrame {
       ...frame.decision,
       relationshipTarget: cloneVec(frame.decision.relationshipTarget),
       preferredVelocity: cloneVec(frame.decision.preferredVelocity),
-      refinedVelocity: cloneVec(frame.decision.refinedVelocity)
+      refinedVelocity: cloneVec(frame.decision.refinedVelocity),
+      comfortStartBlockers: frame.decision.comfortStartBlockers
+        ? [...frame.decision.comfortStartBlockers]
+        : undefined
     },
     command: {
       ...frame.command,
