@@ -35,6 +35,11 @@ function frame(sequence: number, observationTick: number, outcomeTick: number): 
         regionAnchor: { x: 2.2, y: 3.1 },
         regionBestSampleId: "r1.d12",
         regionCoherentSampleCount: 7,
+        regionRouteEvaluatedCount: 12,
+        regionStaticTraversalQueryCount: 184,
+        regionTopologyKeyChanged: false,
+        regionCoherentOverlapRatio: 0.75,
+        regionAnchorDisplacement: 0.08,
         paceLabel: "FOLLOWING",
         paceUrgency: 0.42,
         desiredSpeed: 2.1,
@@ -124,7 +129,7 @@ describe("R1 causal frame trace", () => {
     expect(latest?.post.cumulativeLocalRetriesSinceReset).toBe(9);
   });
 
-  it("preserves preferred-vs-final CCC-0 conflict evidence with explicit cognition provenance", () => {
+  it("preserves preferred-vs-final CCC-0 conflict evidence with cognition, cost and continuity provenance", () => {
     const trace = new CausalFrameTrace();
     trace.record(frame(trace.nextSequence(), 12, 13));
 
@@ -134,6 +139,11 @@ describe("R1 causal frame trace", () => {
     expect(shadow?.shadowTick).toBe(12);
     expect(shadow?.ageTicks).toBe(0);
     expect(shadow?.regionState).toBe("REGION");
+    expect(shadow?.regionRouteEvaluatedCount).toBe(12);
+    expect(shadow?.regionStaticTraversalQueryCount).toBe(184);
+    expect(shadow?.regionTopologyKeyChanged).toBe(false);
+    expect(shadow?.regionCoherentOverlapRatio).toBe(0.75);
+    expect(shadow?.regionAnchorDisplacement).toBe(0.08);
     expect(shadow?.paceUrgency).toBe(0.42);
     expect(shadow?.playerCorridorConfidence).toBe(0.86);
     expect(shadow?.preferredFlowConflictState).toBe("CLEAR");
