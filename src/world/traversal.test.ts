@@ -169,6 +169,30 @@ describe("R1-2 explicit hard / comfort / egress spatial query contract", () => {
     world.dispose();
   });
 
+  it("at exact boundary contact allow-egress clears inward-to-world motion but not motion into the wall", async () => {
+    const world = await LabWorld.create("open");
+    const start = { x: 0.3, y: 4 };
+
+    const intoWorld = world.staticCircleTraversal(
+      start,
+      { x: 2, y: 4 },
+      0.3,
+      { initialOverlap: "allow-egress" }
+    );
+    const intoWall = world.staticCircleTraversal(
+      start,
+      { x: -1, y: 4 },
+      0.3,
+      { initialOverlap: "allow-egress" }
+    );
+
+    expect(intoWorld.clear).toBe(true);
+    expect(intoWorld.blocker).toBeNull();
+    expect(intoWall.clear).toBe(false);
+    expect(intoWall.blocker?.label).toBe("boundary.left");
+    world.dispose();
+  });
+
   it("rejects invalid occupancy inputs without advancing World state", async () => {
     const world = await LabWorld.create("open");
     const before = world.snapshot();
