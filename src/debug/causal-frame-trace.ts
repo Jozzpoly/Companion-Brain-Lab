@@ -108,7 +108,13 @@ function cloneFrame(frame: CausalFrame): CausalFrame {
       companionActualVelocity: { ...frame.outcome.companionActualVelocity },
       companionContacts: [...frame.outcome.companionContacts]
     },
-    post: { ...frame.post }
+    post: {
+      ...frame.post,
+      retryBudgetUsedThisEpisode:
+        frame.post.retryBudgetUsedThisEpisode ?? frame.post.retryCount ?? null,
+      cumulativeLocalRetriesSinceReset:
+        frame.post.cumulativeLocalRetriesSinceReset ?? frame.post.appliedLocalRetries ?? null
+    }
   };
 }
 
