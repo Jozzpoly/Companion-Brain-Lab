@@ -10,37 +10,38 @@ Canonical substrate verdict:
 
 `docs/FOUNDATION_FINAL_READINESS.md` — **FOUNDATION PASS · REWORK-READY**
 
-This document begins the post-foundation Companion Coordination Core (CCC) redesign. It is deliberately a **pre-architecture skeleton**, not a final architecture specification. Its job is to define responsibilities, seams, falsifiers, evidence requirements and a safe rework path before implementation receives authority.
+This document begins the post-foundation Companion Coordination Core (CCC) redesign. It is deliberately a **pre-architecture skeleton**, not a final architecture specification. It defines responsibilities, evidence boundaries, donor findings, falsifiers and a safe rework path before new behavior receives authority.
 
-Every implementation stage must be re-planned against current evidence. Nothing here becomes permanent merely because it is written here.
+Every implementation stage must be re-planned against current evidence. Nothing below earns permanent authority merely by being written here.
 
 ---
 
 ## 1. Why CCC exists
 
-The foundation campaign solved a different class of problem than the one CCC now attacks.
+The foundation campaign solved substrate survival and causal reliability. CCC attacks a different class of problem: **coordination quality**.
 
-The defended substrate can survive ordinary constrained-world states, hard overlap/egress, route failure, candidate exhaustion, bounded local recovery and catastrophic runtime faults without turning ordinary gameplay states into hidden shutdowns or unexplained crashes.
+The current foundation can survive hard overlap/egress, route loss, candidate exhaustion, bounded recovery and catastrophic runtime faults without turning ordinary gameplay states into silent shutdowns. That does **not** make the current companion good.
 
-What remains is primarily **coordination quality**:
+Material limitations intentionally promoted into CCC:
 
 - the legacy eight-slot relationship objective is too crude;
-- the companion lacks a real pace / urgency / catch-up model;
-- player right-of-way and predicted movement corridor semantics are not first-class;
+- relationship semantics collapse too early into one point target;
+- the companion lacks explicit pace / urgency / catch-up authority;
+- player right-of-way, predicted movement corridor and chokepoint cooperation are not first-class;
 - NATURAL temporal realization can invalidate an upstream player-safe movement decision;
-- current `MotionIntent` and fixed speed authority are too narrow for the next class of behavior;
-- the browser scene currently glues several semantic layers together that CCC should make explicit.
+- `MotionIntent { move: Vec2 }` and one fixed experiment speed are too narrow for the next behavior class;
+- `R1LabScene` currently owns too much semantic glue between relationship, route, motion, World and recovery.
 
-CCC therefore should not be treated as “S6: better slots”. It is a deliberate replacement of the current coordination semantics above the defended World/physics/safety substrate.
+CCC is therefore **not** “S6: better slots”. It is a deliberate replacement of coordination semantics above the defended World/physics/safety substrate.
 
 ---
 
-## 2. Foundation boundary: preserve by default, replace only with evidence
+## 2. Foundation boundary
 
-### Defended substrate to preserve unless new evidence falsifies it
+### Preserve by default unless new evidence falsifies it
 
 - World as factual simulation authority;
-- Rapier as current physical/contact/query kernel behind World;
+- Rapier as the current physical/contact/query kernel behind World;
 - fixed-step world progression;
 - hard physical feasibility distinct from desired/comfort clearance;
 - explicit hard-egress semantics;
@@ -49,269 +50,355 @@ CCC therefore should not be treated as “S6: better slots”. It is a deliberat
 - post-World progress/recovery observation;
 - causal trace separating decision → command → World outcome → post-outcome interpretation;
 - catastrophic fail-stop sentinel;
-- MANUAL / deliberately simple baselines where they remain useful for research comparison.
+- MANUAL / deliberately simple baselines where they remain useful for comparison.
 
 ### Explicitly open to aggressive redesign
 
 - eight-slot relationship objective;
 - player-relative spatial representation;
 - pace / urgency / catch-up authority;
-- fixed experiment speed ceiling as behavioral authority;
-- `MotionIntent` shape and desired-speed contract;
+- fixed experiment speed as behavioral authority;
+- `MotionIntent` shape / desired-speed contract;
 - player movement corridor / right-of-way / chokepoint cooperation;
-- ordering between spatial safety, player cooperation and temporal realization;
+- ordering between coordination policy and temporal realization;
 - NATURAL continuity implementation;
 - scene-level orchestration responsibilities;
-- later multi-companion coordination, commands and combat-facing coordination inputs.
+- later multi-companion, command and combat-facing inputs.
+
+A defended seam may still be replaced, but the reason must be new evidence rather than convenience.
 
 ---
 
-## 3. Current bottlenecks identified from live authority
+## 3. Evidence recovered before architecture selection
 
 ### 3.1 Point-target bottleneck
 
-Current relationship reasoning eventually collapses to one `target: Vec2`. The downstream route and local mover therefore receive a single point even when the semantic desire is actually a broad acceptable area around the player.
+`RelationalPositioningBrain` ultimately produces a single `target: Vec2`. Route and local movement therefore receive one point even when the semantic desire is really a broad acceptable area around the player.
 
-That makes arbitrary target switching, path crossing and player obstruction too easy to create.
+This makes arbitrary target switching, path crossing and player obstruction too easy to create.
 
-CCC should treat a **good region / field** as the semantic object. A representative point may temporarily remain as an adapter for existing routing, but the point must not become the new canonical meaning.
+**Current conclusion:** the semantic object should become a **coherent useful region / field**. A representative point may survive temporarily as an adapter for existing routing, but it must not become the new canonical meaning.
 
-### 3.2 Normalized-move bottleneck
+### 3.2 Speed/intent bottleneck
 
-Current `MotionIntent` contains only a normalized-ish `move: Vec2`, while actor speed remains an external fixed capability. The local mover samples speed fractions but scales all of them against one experiment max speed.
+Current `MotionIntent` contains only `move: Vec2`. The S3/R1 local mover samples speed fractions, but every candidate is ultimately scaled against one experiment max speed.
 
-This is insufficient for explicit settle/follow/catch-up/recover behavior.
-
-CCC needs an explicit separation between:
+This cannot cleanly express the distinction between:
 
 - physical movement capability;
-- coordination-preferred pace;
-- urgency / catch-up pressure;
-- final physically executable velocity.
+- ordinary preferred follow pace;
+- temporary catch-up allowance;
+- urgency / recovery pressure;
+- final executable velocity.
 
-The exact data type remains open.
+The exact replacement contract remains open.
 
-### 3.3 Dynamic authority ordering gap
+### 3.3 S5 field donor
 
-Current spatial selection can reject player-conflicting candidate velocities, but NATURAL continuity runs afterwards. Preserved R1-5A evidence proves that temporal realization can turn a player-safe upstream movement into a final command that produces real player contact.
+Historical S5 demonstrated a useful bounded relationship-field substrate:
 
-CCC must make player-cooperation safety part of the **final realized command authority**, not merely an upstream preference.
+- broad cheap spatial sampling before expensive route qualification;
+- route-aware shortlist evaluation;
+- explicit utility terms;
+- coherent good-region reasoning;
+- representative anchor only as an adapter.
 
-This does not imply a hard post-continuity clip is the correct solution. Constraint-aware temporal realization, safe fallback families and final dynamic revalidation must be compared experimentally.
+Its critical falsification was **centroid collapse**: globally averaging disconnected near-best regions produced an absurd anchor near the player center. The repair was topological, not a weight tweak — retain only the connected good component containing the best sample before interpolation.
 
-### 3.4 Scene orchestration owns too much semantic glue
+Preserve the finding, not the constants. Do not canonize S5’s 32×3 sampling, weights, shortlist size, polar topology or representative-point interface.
 
-`R1LabScene` currently composes:
+### 3.4 S3/R1 local velocity donor
 
-`relationship point → route → local spatial stack → World → route/recovery observation → causal evidence`.
+The existing local mover is not disposable. It already demonstrates:
 
-That is acceptable for the completed research stack but too implicit for the next redesign.
-
-CCC should introduce an explicit coordination seam so that browser orchestration does not itself become the architecture.
-
----
-
-## 4. Donor conclusions
-
-### 4.1 S5 continuous relationship field — selective donor, not authority
-
-Preserve these findings:
-
-- broad cheap field sampling can precede expensive route qualification;
-- useful relationship state can be represented as a spatial utility field rather than eight slots;
-- route-aware shortlist evaluation is practical;
-- the semantic object should be a coherent good region;
-- **centroid collapse** is a real failure mode when disconnected near-best regions are averaged globally;
-- connected-component topology around the best sample is a strong bounded repair;
-- representative anchors can be useful adapters without becoming the semantic model.
-
-Do not automatically preserve:
-
-- 32×3 sampling as final resolution;
-- current utility weights;
-- current polar topology;
-- shortlist size 12;
-- current representative-point interface;
-- any assumption that combat or multi-companion utility belongs directly inside this first field.
-
-### 4.2 S3/R1 local velocity field — mechanical donor, semantics require rework
-
-Useful preserved mechanics:
-
-- omnidirectional candidate velocity sampling;
+- omnidirectional velocity candidate sampling;
 - multiple speed fractions;
 - route-lookahead guidance;
 - predicted player-relative clearance;
-- explicit hard reject vs soft score terms;
-- deterministic, inspectable candidate selection;
-- hard-vs-comfort repair layer.
+- explicit hard rejection vs soft score terms;
+- deterministic inspectable selection;
+- hard-vs-comfort repair and egress handling.
 
-Open redesign questions:
+The redesign should reuse these mechanics where they remain valid while replacing point-target and fixed-speed semantics.
 
-- candidate speed authority must no longer be anchored to one fixed global behavioral max speed;
-- player prediction must become part of a richer corridor/cooperation model;
-- desired region utility should replace distance to one relationship point;
-- temporal realization must not invalidate the dynamic cooperation contract;
-- current semantic labels HOLD/ADVANCE/SIDESTEP/BACKOFF are useful debug descriptions, not a coordination architecture.
+### 3.5 Recovered R1-5A player-authority donor — mechanically qualified, never Owner-promoted
+
+Deeper donor recovery changed the initial CCC picture materially.
+
+Historical branch:
+
+`planning/r1-5-player-conflict-authority`
+
+Qualified experimental checkpoint:
+
+`c84c1342a87b267dc5a94b1008d25bd1e0ed1e5c`
+
+Qualification status in that branch:
+
+**MECHANICAL QUALIFICATION PASS · OWNER BROWSER EVIDENCE NOT RUN · NOT MERGED TO MAIN**
+
+The experiment added a separate final player physical-authority boundary after NATURAL continuity and the existing static final gate.
+
+Most important finding: **broad cooperation/comfort policy and hard physical player authority are different responsibilities.**
+
+The attempted broad final envelope reused the S3 `0.55 s` horizon plus `0.18 m` player comfort buffer. It was falsified as a hard final gate: clean moving-player cases triggered excessive emergency intervention or lost useful progress. That would turn an emergency boundary into a second steering system.
+
+The mechanically qualified alternative used:
+
+- only next-physics-step physical prediction;
+- body radii plus a tiny `0.002 m` numerical hard margin;
+- explicit egress semantics when already touching/overlapping;
+- projection of an unsafe final command toward already player-aware upstream preferred motion;
+- static hard-safety preservation during repair;
+- fallback to preferred/stop/best-effort only when necessary;
+- reset of NATURAL local temporal history when final authority alters the command.
+
+In the original material NATURAL failure fixture, this guard removed measurable player disturbance with only rare interventions while preserving useful companion progress. In clean moving-player matrix cases it typically did not intervene at all.
+
+This is **strong donor evidence**, not current authority, because no Owner/browser gate was run and the branch was never merged.
+
+### 3.6 Resulting two-level player interaction invariant
+
+CCC must not collapse all “player safety” into one mechanism.
+
+**Level A — cooperation policy / comfort / right-of-way (upstream):**
+
+- predicted player corridor;
+- preferred passing side / yielding behavior;
+- front-crossing and obstruction costs;
+- chokepoint semantics;
+- comfort spacing;
+- intentional vs unwanted proximity;
+- motion readability and useful progress.
+
+This layer should shape normal behavior continuously.
+
+**Level B — physical player-agency guard (downstream):**
+
+- rare emergency authority over the final realized command;
+- protects against the companion materially taking control away from the player;
+- short physical horizon;
+- egress-aware;
+- must remain compatible with static hard safety;
+- should not become ordinary steering.
+
+A high intervention rate from Level B in otherwise clean play is itself a failure signal: upstream cooperation or temporal realization is not doing its job.
+
+This responsibility split is now a **design invariant backed by experiment**, unless future evidence falsifies it.
 
 ---
 
-## 5. Proposed responsibility skeleton
+## 4. Proposed responsibility skeleton
 
-This is a responsibility map, not a module list.
+This is a responsibility map, not a class diagram or frozen module tree.
 
-### 5.1 Coordination observation / situated frame
+### 4.1 Coordination observation / situated frame
 
 Build the smallest factual frame needed to reason about the player-companion relationship at active-play timescales.
 
 Likely evidence:
 
 - player position, requested/actual velocity and short recent motion history;
-- companion position, actual/requested velocity and physical capability;
+- companion position, requested/actual velocity and physical capability;
 - current separation and relative velocity;
-- static route/topology state;
-- current relationship-region evidence;
+- route/topology state;
+- relationship-region evidence;
 - local hard/comfort feasibility;
 - recent coordination outcome / progress state;
-- current command or higher-level intent modifiers later.
+- later command / role modifiers through explicit inputs.
 
 Do not silently grant omniscience beyond the laboratory’s intended situated evidence.
 
-### 5.2 WHERE — relationship region / spatial utility field
+### 4.2 WHERE — coherent useful region
 
-Output should describe **where it is useful to be**, not command a motor target directly.
+WHERE answers **where it is useful for the companion to be**, without directly commanding a motor target.
 
-Candidate utility dimensions for research:
+Candidate utility dimensions:
 
-- desired distance band rather than one radius;
-- interference with the player’s likely movement corridor;
+- desired distance band rather than one fixed radius;
+- interference with likely player movement corridor;
 - companion travel cost;
 - route/topology cost;
 - static comfort/clearance;
 - continuity of the current coherent region;
 - player-facing obstruction / front-crossing cost;
-- future role/command/combat modifiers through explicit inputs rather than hidden coupling.
+- future role/command/combat modifiers through explicit inputs.
 
 Primary semantic object:
 
-> one or more coherent acceptable regions with utility/evidence, plus continuity identity.
+> one or more coherent acceptable regions with utility/evidence and continuity identity.
 
-A representative anchor may be generated only as an adapter where the existing static router still requires a point target.
+A representative route target may be generated as an adapter while the router still requires a point.
 
-### 5.3 PACE — temporal relationship and desired speed authority
+### 4.3 PACE — temporal relationship / desired-speed authority
 
-PACE should answer **how urgently and how quickly the companion should change the relationship**, independently from exact steering direction.
+PACE answers **how urgently and how quickly the companion should change the relationship**, independently from exact steering direction.
 
-Research variables should include:
+Research variables:
 
-- separation from the current useful region;
-- whether the region itself is moving;
-- player speed and persistence of motion;
+- distance from the useful region;
+- motion of the region itself;
+- player speed and persistence;
 - route remaining distance;
-- recent loss/recovery of proximity;
-- obstruction/yield state;
+- recent separation / recovery history;
+- yield/conflict state;
 - overshoot risk near settle;
 - bounded catch-up reserve above ordinary follow pace.
 
-Do not canonize discrete `settle/follow/catch-up/recover` states prematurely. They are useful diagnostic labels, but the underlying authority may work better as continuous pressure/envelopes with explicit thresholds only where needed.
+Diagnostic labels such as `settle / follow / catch-up / recover` may be useful, but should not be canonized as execution modes before evidence requires them.
 
 Critical distinction:
 
-> actor physical speed capability ≠ ordinary preferred pace ≠ temporary catch-up allowance ≠ final executable command.
+> physical capability ≠ ordinary preferred pace ≠ catch-up allowance ≠ final executable command.
 
-### 5.4 PLAYER COOPERATION — predicted corridor and right-of-way
+### 4.4 PLAYER COOPERATION — corridor, right-of-way and constrained passage
 
-The player is not just another circular dynamic obstacle.
+The player is not merely another circular dynamic obstacle.
 
-CCC should reason about a short-horizon **player movement corridor**: a swept, uncertainty-aware region representing likely near-future player occupancy.
+CCC should reason about a short-horizon **player movement corridor**: a swept, uncertainty-aware region representing likely near-future occupancy and flow.
 
 Questions to research:
 
 - when should the companion strongly avoid entering that corridor?
-- when is brief crossing acceptable?
+- when is a brief crossing acceptable?
 - when should it yield, hold, sidestep or back off?
-- how should chokepoint contention be detected from route/corridor interaction?
-- how quickly should yielding be released when the player clears?
-- how should deliberate physical contact or future combat proximity differ from accidental obstruction?
+- how should same-direction and opposite-direction chokepoint contention differ?
+- how quickly should yielding release when the player clears or reverses?
+- how should intentional close contact later differ from accidental obstruction?
 
-Do not freeze “player always has hard right-of-way” as a universal rule. The initial non-combat follow context can strongly prefer player priority while preserving an explicit path for later intentional close-contact semantics.
+Do not freeze “player always has hard right-of-way” as a universal rule. Initial non-combat following can strongly prefer player priority while leaving a clean path for future intentional close-contact semantics.
 
-### 5.5 LOCAL COORDINATION REALIZATION — joint direction + speed selection
+### 4.5 LOCAL COORDINATION REALIZATION — joint direction + speed
 
-This layer translates WHERE + PACE + PLAYER COOPERATION + route/static feasibility into a local preferred velocity family.
+This layer combines WHERE + PACE + PLAYER COOPERATION + route/static feasibility into a local preferred velocity family.
 
-Current S3 velocity sampling is a strong donor because it already evaluates direction and speed together. The redesign should replace target-point distance with region utility and replace fixed-speed semantics with explicit pace authority.
+Current S3 velocity sampling is a strong donor because it already chooses direction and speed jointly.
 
-Hard constraints should remain distinguishable from soft utility.
+Redesign goals:
 
-Candidate hard reasons may include:
+- region utility replaces distance to one relationship point;
+- pace authority replaces one fixed behavioral speed ceiling;
+- hard constraints stay distinguishable from soft utility;
+- output remains inspectable as candidate evidence, not a black-box vector.
+
+Possible hard reasons:
 
 - hard static illegality;
 - no valid egress from true hard overlap;
-- dynamic player-conflict contract where the current cooperation policy marks the conflict forbidden.
+- a dynamic conflict explicitly forbidden by the current cooperation contract.
 
-Candidate soft costs may include:
+Possible soft costs:
 
 - region utility loss;
-- player corridor intrusion where avoidance is preferred but not absolute;
+- player-corridor intrusion;
 - comfort clearance;
 - route deviation;
 - temporal discontinuity;
 - unnecessary motion;
 - pace error / failure to catch up.
 
-### 5.6 TEMPORAL REALIZATION — motion quality without authority violation
+### 4.6 TEMPORAL REALIZATION — motion quality without semantic authority drift
 
-NATURAL motion quality remains valuable, but temporal smoothing must no longer be allowed to silently invalidate the same constraints that justified the preferred velocity.
+NATURAL motion quality remains valuable, but smoothing cannot silently invalidate the coordination decision that justified the preferred velocity.
 
-Families to compare experimentally:
+Families worth comparing:
 
-1. constraint-aware temporal controller that shapes motion inside the currently feasible velocity set;
-2. ordinary temporal shaping followed by dynamic/static revalidation and safe fallback;
-3. bounded hybrid where urgency/right-of-way can deliberately relax continuity before a hard fallback becomes necessary.
+1. **constraint-aware temporal controller** — shape motion inside a currently admissible velocity set;
+2. **temporal shaping + policy revalidation** — shape normally, then revalidate the final command against current coordination constraints and use a bounded preferred fallback;
+3. **hybrid** — urgency/right-of-way can deliberately relax continuity before a hard fallback is needed.
 
-Preserve R1-5A as the canonical falsifier.
+Do not confuse normal cooperation revalidation with the rare physical player-agency guard.
 
-Do not choose the family from aesthetics alone. Measure cooperation correctness and motion-quality cost.
+The recovered R1-5A guard is now a concrete donor for the downstream emergency boundary. CCC-3 should compare transplant/adaptation against any new final guard rather than reinventing the responsibility from scratch.
 
-### 5.7 WORLD OUTCOME + coordination feedback
+### 4.7 FINAL HARD AUTHORITIES
+
+After temporal realization, two independent hard responsibilities may remain:
+
+1. **static physical authority** — existing defended final static command boundary;
+2. **player physical-agency authority** — candidate transplant/adaptation of the qualified R1-5A emergency guard.
+
+Ordering/composition must be tested so one repair does not reintroduce a violation rejected by the other.
+
+These boundaries must stay rare during healthy cooperation. They are not substitutes for PLAYER COOPERATION.
+
+### 4.8 WORLD OUTCOME + coordination feedback
 
 World remains authoritative for what physically happened.
 
-Post-World feedback should update coordination evidence using facts such as:
+Post-World evidence should include:
 
-- actual displacement/velocity;
-- contact and player disturbance;
-- progress toward/inside the selected region;
-- route state changes;
+- actual displacement / velocity;
+- contacts and measurable player disturbance;
+- progress toward / inside the useful region;
+- route changes;
 - whether a yield/conflict episode resolved;
-- whether catch-up pressure actually reduced separation;
-- whether local retry/reconsideration was productive.
+- whether catch-up pressure reduced separation;
+- whether local retry/reconsideration was productive;
+- whether a final hard authority intervened and whether upstream behavior subsequently adapted.
 
-Existing progress/recovery is a donor and defended substrate, but its target-point assumptions may need adapters when region semantics receive authority.
-
----
-
-## 6. Cadence model to investigate
-
-Do not force every layer onto one update cadence.
-
-Current evidence suggests a useful separation:
-
-- **World / temporal realization:** 60 Hz fixed step;
-- **local coordination realization:** approximately 20 Hz is already mechanically viable as a starting point;
-- **expensive relationship-region/topology reconsideration:** approximately 10 Hz is already mechanically viable as a starting point;
-- **event-driven immediate reconsideration:** may be needed when region validity, hard egress or acute player conflict changes materially.
-
-These are starting hypotheses, not final constants.
-
-The key architectural rule is that slow strategic reconsideration must not make fast player-cooperation safety stale.
+Existing progress/recovery is a strong donor and defended substrate, but point-target assumptions may need adapters for region objectives.
 
 ---
 
-## 7. First debug contract
+## 5. Current-best authority chain
 
-CCC must be explainable from its first authoritative experiment.
+Current strongest hypothesis:
+
+`World / situated evidence`
+
+→ **Coordination observation**
+
+→ **WHERE: coherent useful region**
+
++ **PACE: temporal relationship / desired speed authority**
+
++ **PLAYER COOPERATION: corridor / right-of-way / chokepoint policy**
+
+→ **route/topological projection where required**
+
+→ **local joint direction + speed realization**
+
+→ **temporal realization with coordination semantics preserved**
+
+→ **final static hard authority**
+
+→ **rare final player physical-agency authority**
+
+→ **World / Rapier truth**
+
+→ **progress/recovery + coordination outcome**
+
+→ **causal evidence**.
+
+This is intentionally a skeleton, not a class diagram.
+
+The central rule is:
+
+> **space, pace and cooperation must meet before the final movement command; hard emergency boundaries protect physical authority but must not become ordinary steering.**
+
+---
+
+## 6. Cadence hypotheses
+
+Do not force every responsibility onto one cadence.
+
+Useful starting hypotheses from existing evidence:
+
+- **World / temporal realization / final physical guards:** 60 Hz fixed step;
+- **local coordination realization:** ~20 Hz is already mechanically viable as a starting point;
+- **expensive region/topology reconsideration:** ~10 Hz is already mechanically viable as a starting point;
+- **event-driven immediate reconsideration:** material region invalidation, hard egress or acute player conflict may require it.
+
+These are not final constants.
+
+A slower strategic cadence must never make fast physical safety or acute cooperation stale.
+
+---
+
+## 7. Debug/evidence contract
+
+CCC must be explainable from its first experiment.
 
 ### WHERE
 
@@ -320,9 +407,9 @@ Expose:
 - broad field samples / validity;
 - utility terms;
 - route-qualified shortlist;
-- coherent region membership;
+- coherent-region membership;
 - selected region identity and continuity;
-- representative adapter anchor when one exists;
+- representative adapter anchor when used;
 - reason for region switch / loss.
 
 ### PACE
@@ -331,8 +418,8 @@ Expose:
 
 - current separation from useful region;
 - ordinary preferred pace;
-- catch-up/urgency pressure;
-- allowed speed envelope/capability;
+- catch-up / urgency pressure;
+- physical speed capability / current allowed envelope;
 - reason for acceleration, settling or slowing.
 
 ### PLAYER COOPERATION
@@ -340,9 +427,9 @@ Expose:
 Expose:
 
 - predicted player corridor;
-- prediction horizon/uncertainty;
+- horizon / uncertainty;
 - candidate corridor conflicts;
-- current right-of-way/cooperation reason;
+- current cooperation/right-of-way reason;
 - yield/conflict episode state and release reason.
 
 ### REALIZATION
@@ -353,51 +440,62 @@ Expose:
 - hard rejects vs soft costs;
 - preferred velocity;
 - temporally shaped command;
-- final revalidation/fallback if any;
-- actual velocity after World.
+- any policy-level revalidation/fallback.
+
+### FINAL HARD AUTHORITIES
+
+Expose separately:
+
+- static hard authority source/reason;
+- player physical-agency authority source/reason;
+- original vs final physical clearance;
+- intervention magnitude;
+- whether the intervention reset temporal state.
 
 ### OUTCOME
 
 Expose:
 
+- actual velocity / displacement;
 - progress toward/in selected region;
-- player displacement/contact consequence;
+- player displacement / motion error;
 - catch-up effectiveness;
 - recovery/reconsideration action;
-- causal chain for the current frame.
+- causal chain for the frame.
 
-Player-facing behavior readability and Owner/debug readability remain separate concerns.
+Player-facing readability and Owner/debug readability remain separate concerns.
 
 ---
 
 ## 8. Experimental campaign skeleton
 
-Implementation should be bounded, but the design question is integrated. Each stage is re-planned before execution.
+Implementation should remain bounded, but each stage is re-planned from fresh evidence.
 
-### CCC-0 — contract and shadow-frame instrumentation
+### CCC-0 — shadow CoordinationFrame + observability
 
-Goal: establish the new causal vocabulary without changing public movement authority.
+Goal: establish the new causal vocabulary without changing movement authority.
 
 Build/validate shadow evidence for:
 
-- region field/coherent components;
-- pace pressure;
+- coherent relationship region;
+- pace pressure / catch-up demand;
 - predicted player corridor;
-- candidate coordination conflicts.
+- candidate cooperation conflicts;
+- recovered R1-5A physical-agency guard evidence as an offline/reference donor, not live authority.
 
 Keep legacy movement authoritative.
 
-Gate: evidence must be stable, deterministic where expected, visually legible and capable of representing known failures.
+Gate: evidence must be stable, deterministic where expected, visually legible and capable of representing known failure cases.
 
-### CCC-1 — region + pace authority under simplest realization
+### CCC-1 — WHERE + PACE authority under simple realization
 
-Promote new WHERE and PACE while minimizing temporal confounders.
+Promote new region and pace semantics while minimizing temporal confounders.
 
-Prefer DIRECT or otherwise deliberately simple realization first so region/pace quality can be judged independently from NATURAL smoothing.
+Prefer DIRECT or another deliberately simple realization first so relationship/pace quality can be judged independently from NATURAL smoothing.
 
-Compare against eight-slot baseline.
+Compare against the legacy eight-slot baseline.
 
-### CCC-2 — explicit player cooperation / right-of-way authority
+### CCC-2 — PLAYER COOPERATION authority
 
 Introduce corridor-aware cooperation in representative situations:
 
@@ -408,78 +506,96 @@ Introduce corridor-aware cooperation in representative situations:
 - companion slightly ahead of player;
 - player pressure/push/release near static geometry.
 
-Qualification must measure player disturbance, not merely companion survival.
+Qualification must measure player disturbance and useful progress, not merely companion survival.
 
-### CCC-3 — temporal realization redesign and R1-5A closure
+The emergency physical-agency guard must not be used to hide poor cooperation.
 
-Reintroduce/replace NATURAL motion quality only after the upstream coordination contract is credible.
+### CCC-3 — temporal realization + final-authority composition
 
-Exact R1-5A red fixture becomes a required promotion test.
+Only after upstream coordination is credible, redesign/reintroduce NATURAL motion quality.
 
-Goal: temporal smoothness must preserve final coordination legality or expose an explicit constrained fallback with bounded motion-quality cost.
+Required work:
+
+- preserve coordination legality through temporal shaping;
+- replay the exact historical R1-5A material fixture;
+- compare adaptation/transplant of the mechanically qualified R1-5A guard against any alternative downstream guard;
+- verify static and player hard authorities compose without repair ping-pong;
+- measure emergency intervention rate and correction magnitude;
+- reject designs where the emergency guard becomes routine steering.
 
 ### CCC-4 — integrated one-companion Owner campaign
 
-Stress unscripted play across open space, pillars, doorways and repeated reversals.
+Stress unscripted play across open space, pillars, doorways, repeated reversals and prolonged free movement.
 
 Primary questions:
 
 - does the companion feel less arbitrary?
-- can it actually catch up without rubber-banding?
-- does it stay out of the player’s way without becoming timid/useless?
-- are its region changes understandable?
-- does it recover naturally after separation/contention?
-- does motion remain stable under long free play?
+- can it genuinely catch up without rubber-banding?
+- does it stay out of the player’s flow without becoming timid/useless?
+- are region changes understandable?
+- does yielding release naturally?
+- does it recover after separation/contention?
+- does NATURAL movement remain stable without frequent emergency correction?
+- does long free play remain foundation-stable?
 
-Only after this should the project decide what becomes the next durable foundation for commands/combat/few-companion work.
+Only after this should the project decide what becomes the durable base for commands, combat and one→few companions.
 
 ---
 
 ## 9. Required falsifiers / scenarios
 
-At minimum preserve or add deterministic/controlled cases for:
+At minimum preserve or add controlled cases for:
 
-- open-space sustained player travel where equal ordinary pace creates separation;
+- sustained open-space player travel where equal ordinary pace creates separation;
 - large initial separation and bounded catch-up;
-- arrival/settle without jitter around the useful region;
+- settle inside useful region without jitter;
 - abrupt player reversal;
-- repeated left-right reversals;
+- repeated left/right reversals;
 - player crossing directly in front of companion;
-- companion positioned ahead of player and forced to vacate flow;
-- same-direction doorway entry;
+- companion ahead of player and forced to vacate flow;
+- same-direction doorway entry/following;
 - opposite-direction doorway contention;
 - doorway stop/release;
 - pillar-induced region split / topology change;
 - region invalidation while moving;
 - push toward wall then release;
 - true hard-overlap egress;
-- exact R1-5A dynamic final-command conflict reproduction;
+- exact historical R1-5A abrupt-turn material player-disturbance fixture;
+- static + player authority same-frame composition;
+- moving-player head-on/cross-front/reversal non-interference cases;
 - long free-running torture without freeze/shutdown/recovery thrash.
 
-Later combat/contact semantics should add new scenarios rather than weakening these non-combat cooperation falsifiers silently.
+Later combat/contact semantics should add new cases rather than silently weakening these non-combat cooperation falsifiers.
 
 ---
 
 ## 10. Metrics worth collecting
 
-No single scalar should define companion quality.
+No single scalar defines companion quality.
 
 Mechanical/causal metrics:
 
 - time outside useful relationship region;
 - recovery time after separation;
-- maximum/mean separation during sustained player travel;
-- time spent in catch-up pressure;
+- maximum/mean separation during sustained travel;
+- time spent under catch-up pressure;
 - player-corridor conflict count/duration;
-- player contact frames caused by companion command;
-- measurable player displacement / motion error from unwanted contact;
-- region switch frequency and disconnected-region thrash;
+- unwanted player contact frames;
+- measurable player displacement / motion error caused by the companion;
+- region switch frequency / disconnected-region thrash;
 - hold/yield duration and successful resume;
 - route invalid/unreachable duration;
 - command vs actual velocity divergence;
-- acceleration/jerk/discontinuity around dynamic fallback;
+- acceleration / jerk / discontinuity around fallbacks;
 - local retry/reconsideration frequency;
+- **player physical-agency guard intervention rate**;
+- **maximum/mean physical guard correction magnitude**;
+- static/player hard-authority composition conflicts;
 - catastrophic fault / freeze / permanent shutdown count.
+
+Interpretation rule:
+
+> frequent emergency physical-agency interventions in nominal play are evidence of an upstream cooperation or temporal-realization defect, not evidence that the guard is “working well”.
 
 Owner judgement remains essential for:
 
@@ -501,19 +617,21 @@ Pause the current approach instead of weight-tuning around it if evidence shows 
 - coherent regions cannot remain stable enough under ordinary player motion;
 - representative-point routing repeatedly destroys region semantics;
 - current static router cannot support region/topology queries without pathological churn;
-- current local velocity lattice cannot express needed pace/cooperation behavior without combinatorial or responsiveness problems;
-- constraint-aware temporal realization becomes more complex/fragile than replacing the current continuity controller;
-- player-corridor prediction produces systematic false yielding or obstruction that cannot be bounded by reasonable horizons/uncertainty;
-- progress/recovery cannot be adapted cleanly from point targets to region objectives;
+- current local velocity lattice cannot express pace/cooperation without combinatorial or responsiveness problems;
+- progress/recovery cannot adapt cleanly from point targets to region objectives;
+- player-corridor prediction creates systematic false yielding/obstruction that reasonable horizons cannot bound;
+- temporal realization repeatedly forces the downstream player physical guard to intervene;
+- the historical R1-5A guard cannot compose cleanly with the redesigned speed contract or static authority;
+- constraint-aware temporal realization becomes more fragile than replacing the continuity controller;
 - CCC responsibilities leak so heavily into `R1LabScene` that the workbench becomes architecture again.
 
-Any such finding can justify changing a previously defended seam, but the burden is explicit evidence.
+Any such finding may justify changing a previously defended seam, but the burden is explicit evidence.
 
 ---
 
 ## 12. Explicit non-goals for this redesign phase
 
-Do not let CCC planning silently expand into:
+Do not silently expand CCC into:
 
 - full combat AI;
 - weapon selection;
@@ -523,53 +641,22 @@ Do not let CCC planning silently expand into:
 - LLM integration;
 - generic Utility AI / BT / GOAP framework selection;
 - navmesh/crowd middleware adoption by default;
-- shared package extraction with `Llm-Live-NPC`;
-- production/shipping character controller design.
+- shared-package extraction with `Llm-Live-NPC`;
+- production/shipping character-controller design.
 
 The design should leave clean future inputs for those systems without implementing them now.
 
 ---
 
-## 13. Current-best architectural hypothesis
+## 13. Immediate next research move
 
-The strongest current hypothesis is:
+Before any behavior authority changes:
 
-`World/situated evidence`
+1. transplant/re-express the useful S5 relationship-field donor against current `main` as **shadow evidence**, not by merging its historical branch;
+2. define a provisional shadow `CoordinationFrame` carrying region, pace and player-corridor evidence without freezing the final public API;
+3. preserve the qualified historical R1-5A player physical-authority experiment as a named donor/falsifier, not current authority;
+4. build exact catch-up and corridor-contention falsifiers alongside the historical R1-5A fixture;
+5. expose all new evidence in the causal workbench;
+6. only then decide the first authority-promotion slice.
 
-→ **Coordination observation**
-
-→ **WHERE: coherent useful region**
-
-+ **PACE: temporal relationship / desired speed authority**
-
-+ **PLAYER COOPERATION: predicted corridor / right-of-way semantics**
-
-→ **route/topological projection where required**
-
-→ **local joint direction+speed realization**
-
-→ **constraint-aware temporal realization / final coordination validation**
-
-→ **World/Rapier truth**
-
-→ **progress/recovery + coordination outcome**
-
-→ **causal evidence**.
-
-This is intentionally a skeleton, not a class diagram.
-
-The most important design principle is that **space, pace and cooperation must meet before the final movement command**, while World remains the authority on what actually happened.
-
----
-
-## 14. Immediate next research move
-
-Before behavior authority changes:
-
-1. recover the S5 field implementation as a donor against current `main` rather than merging the old branch;
-2. design a shadow `CoordinationFrame` capable of carrying region, pace and player-corridor evidence without forcing a final public API;
-3. build exact falsifiers for sustained catch-up and player-corridor contention alongside the preserved R1-5A case;
-4. expose the new evidence in the causal workbench;
-5. only then decide the first authority promotion slice.
-
-This keeps the next implementation aggressive in direction but bounded in evidence.
+This keeps the next implementation aggressive in direction but bounded by evidence.
