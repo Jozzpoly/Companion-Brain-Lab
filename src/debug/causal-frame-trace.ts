@@ -59,6 +59,8 @@ export interface CausalDecisionPhase {
   relationshipLabel: string | null;
   relationshipState?: string | null;
   relationshipTarget: Vec2 | null;
+  /** Exact heading evidence consumed by the legacy relationship decision. */
+  relationshipPlayerDirection?: Vec2 | null;
   routeStatus: string | null;
   routePath: string;
   routeCost: number | null;
@@ -186,6 +188,7 @@ function cloneFrame(frame: CausalFrame): CausalFrame {
     decision: {
       ...frame.decision,
       relationshipTarget: cloneVec(frame.decision.relationshipTarget),
+      relationshipPlayerDirection: cloneOptionalVec(frame.decision.relationshipPlayerDirection),
       preferredVelocity: cloneVec(frame.decision.preferredVelocity),
       refinedVelocity: cloneVec(frame.decision.refinedVelocity),
       coarseLocalVelocity: cloneOptionalVec(frame.decision.coarseLocalVelocity),
