@@ -41,6 +41,7 @@ function evaluate(options: {
   state?: WorldSnapshot;
   companionVelocity?: Vec2 | null;
   previousDirection?: Vec2 | null;
+  velocitySource?: "legacy-preferred" | "authoritative-command";
 } = {}) {
   const state = options.state ?? snapshot();
   const corridor = evaluateShadowPlayerCorridor({
@@ -50,16 +51,18 @@ function evaluate(options: {
   return evaluateShadowPlayerFlowConflict({
     snapshot: state,
     corridor,
-    legacyPreferredVelocity: options.companionVelocity === undefined
+    companionVelocity: options.companionVelocity === undefined
       ? { x: -1, y: 0 }
-      : options.companionVelocity
+      : options.companionVelocity,
+    velocitySource: options.velocitySource
   });
 }
 
 describe("CCC-0 shadow player-flow conflict", () => {
-  it("makes no conflict claim when legacy preferred velocity is unavailable", () => {
+  it("makes no conflict claim when companion velocity evidence is unavailable", () => {
     const result = evaluate({ companionVelocity: null });
     expect(result.state).toBe("UNAVAILABLE");
+    expect(result.velocitySource).toBe("unavailable");
     expect(result.companionVelocity).toBeNull();
     expect(result.closestApproachTime).toBeNull();
   });
@@ -76,6 +79,19 @@ describe("CCC-0 shadow player-flow conflict", () => {
     expect(result.state).toBe("CLEAR");
     expect(result.closestApproachTime).toBe(0);
     expect(result.comfortClearance).toBeGreaterThan(0);
+  });
+
+  it("does not fabricate a conflict when both actors are separating", () => {
+    const result = evaluate({
+      state: snapshot({
+        playerPosition: { x: 4, y: 4 },
+        playerVelocity: { x: -1.5, y: 0 },
+        companionPosition: { x: 5.2, y: 4 }
+      }),
+      companionVelocity: { x: 1.5, y: 0 }
+    });
+    expect(result.state).toBe("CLEAR");
+    expect(result.closestApproachTime).toBe(0);
   });
 
   it("distinguishes comfort intrusion from physical overlap", () => {
@@ -120,6 +136,15 @@ describe("CCC-0 shadow player-flow conflict", () => {
       companionVelocity: { x: -1, y: 0 }
     });
     expect(result.horizon).toBeGreaterThan(0);
+    expect(result.state).toBe("PHYSICAL_CONFLICT");
+  });
+
+  it("preserves authoritative-command provenance when evaluating the final sent velocity", () => {
+    const result = evaluate({
+      companionVelocity: { x: -1, y: 0 },
+      velocitySource: "authoritative-command"
+    });
+    expect(result.velocitySource).toBe("authoritative-command");
     expect(result.state).toBe("PHYSICAL_CONFLICT");
   });
 
