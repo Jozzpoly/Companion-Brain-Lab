@@ -22,6 +22,7 @@ function frame(sequence: number, observationTick: number, outcomeTick: number): 
       relationshipRevision: 3,
       relationshipLabel: "back-left",
       relationshipTarget: { x: 3, y: 4 },
+      relationshipPlayerDirection: { x: -1, y: 0 },
       routeStatus: "routed",
       routePath: "start>corner>target",
       routeCost: 5,
@@ -181,6 +182,7 @@ describe("R1 causal frame trace", () => {
     const latest = trace.latest();
     expect(latest?.observation.playerInputMove).toEqual({ x: 0.5, y: 0 });
     expect(latest?.observation.playerMotionError).toBe(0.31);
+    expect(latest?.decision.relationshipPlayerDirection).toEqual({ x: -1, y: 0 });
     expect(latest?.decision.localSafetyState).toBe("NORMAL");
     expect(latest?.decision.coarseLocalVelocity).toEqual({ x: 2, y: 1 });
     expect(latest?.decision.refinementSource).toBe("weighted-local-refinement");
@@ -219,6 +221,7 @@ describe("R1 causal frame trace", () => {
     value.observation.companionPosition.x = 999;
     value.observation.playerInputMove!.x = 999;
     value.decision.relationshipTarget!.x = 999;
+    value.decision.relationshipPlayerDirection!.x = 999;
     value.decision.coarseLocalVelocity!.x = 999;
     value.decision.naturalPreConstraintVelocity!.x = 999;
     value.decision.shadowCoordination!.regionAnchor!.x = 999;
@@ -240,6 +243,7 @@ describe("R1 causal frame trace", () => {
     expect(latest?.observation.companionPosition.x).toBe(1);
     expect(latest?.observation.playerInputMove?.x).toBe(0.5);
     expect(latest?.decision.relationshipTarget?.x).toBe(3);
+    expect(latest?.decision.relationshipPlayerDirection?.x).toBe(-1);
     expect(latest?.decision.coarseLocalVelocity?.x).toBe(2);
     expect(latest?.decision.naturalPreConstraintVelocity?.x).toBe(1.6);
     expect(latest?.decision.shadowCoordination?.regionAnchor?.x).toBe(2.2);
