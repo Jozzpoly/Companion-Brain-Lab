@@ -1,5 +1,6 @@
 import type { MotionIntent } from "../world/types";
 import type { FinalCommandConstraintResult } from "./final-command-constraint";
+import type { FinalPlayerCommandConstraintResult } from "./final-player-command-constraint";
 import type { MotionContinuityStepResult } from "./motion-continuity";
 import type { PreferredVelocityRefinement } from "./preferred-velocity-refinement";
 import type { ProgressRecoveryDecision } from "./progress-recovery";
@@ -23,6 +24,7 @@ export interface R1WorkbenchSpatialDebug {
   refinement: PreferredVelocityRefinement | null;
   continuity: MotionContinuityStepResult | null;
   finalConstraint: FinalCommandConstraintResult | null;
+  finalPlayerConstraint: FinalPlayerCommandConstraintResult | null;
   progress: ProgressRecoveryDecision | null;
   appliedLocalRetries: number;
 }
@@ -62,6 +64,7 @@ export class R1WorkbenchSpatialStack {
         refinement: value.movement.refinement,
         continuity: value.movement.continuity,
         finalConstraint: value.movement.finalConstraint,
+        finalPlayerConstraint: value.movement.finalPlayerConstraint,
         progress: value.progress,
         appliedLocalRetries: value.appliedLocalRetries
       };
@@ -75,6 +78,7 @@ export class R1WorkbenchSpatialStack {
       refinement: null,
       continuity: null,
       finalConstraint: null,
+      finalPlayerConstraint: null,
       progress: value.progress,
       appliedLocalRetries: value.appliedLocalRetries
     };
