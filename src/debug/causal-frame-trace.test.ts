@@ -29,6 +29,8 @@ function frame(sequence: number, observationTick: number, outcomeTick: number): 
       comfortExitCandidateCount: 1,
       shadowCoordination: {
         kind: "CCC0_SHADOW_COORDINATION",
+        shadowTick: observationTick,
+        ageTicks: 0,
         regionState: "REGION",
         regionAnchor: { x: 2.2, y: 3.1 },
         regionBestSampleId: "r1.d12",
@@ -122,13 +124,15 @@ describe("R1 causal frame trace", () => {
     expect(latest?.post.cumulativeLocalRetriesSinceReset).toBe(9);
   });
 
-  it("preserves preferred-vs-final CCC-0 conflict evidence without confusing either with command authority", () => {
+  it("preserves preferred-vs-final CCC-0 conflict evidence with explicit cognition provenance", () => {
     const trace = new CausalFrameTrace();
     trace.record(frame(trace.nextSequence(), 12, 13));
 
     const latest = trace.latest();
     const shadow = latest?.decision.shadowCoordination;
     expect(shadow?.kind).toBe("CCC0_SHADOW_COORDINATION");
+    expect(shadow?.shadowTick).toBe(12);
+    expect(shadow?.ageTicks).toBe(0);
     expect(shadow?.regionState).toBe("REGION");
     expect(shadow?.paceUrgency).toBe(0.42);
     expect(shadow?.playerCorridorConfidence).toBe(0.86);
