@@ -25,6 +25,7 @@ export interface ShadowCoordinationHistory {
 export interface ShadowLegacyComparison {
   relationshipTarget: Vec2 | null;
   preferredVelocity: Vec2 | null;
+  authoritativeVelocity: Vec2 | null;
   targetToShadowAnchorDistance: number | null;
   targetToNearestCoherentSampleDistance: number | null;
 }
@@ -35,7 +36,8 @@ export interface ShadowCoordinationFrame {
   region: ShadowRelationshipRegion;
   pace: ShadowPaceEvidence;
   playerCorridor: ShadowPlayerCorridor;
-  playerFlowConflict: ShadowPlayerFlowConflict;
+  preferredPlayerFlowConflict: ShadowPlayerFlowConflict;
+  authoritativePlayerFlowConflict: ShadowPlayerFlowConflict;
   legacy: ShadowLegacyComparison;
   nextHistory: ShadowCoordinationHistory;
 }
@@ -47,6 +49,7 @@ export interface ShadowCoordinationFrameInput {
   history?: Partial<ShadowCoordinationHistory> | null;
   legacyRelationshipTarget?: Vec2 | null;
   legacyPreferredVelocity?: Vec2 | null;
+  legacyAuthoritativeVelocity?: Vec2 | null;
 }
 
 const EMPTY_HISTORY: ShadowCoordinationHistory = {
@@ -126,10 +129,17 @@ export function evaluateShadowCoordinationFrame(
     physicalSpeedCapability: input.physicalSpeedCapability,
     outsideRegionTicks: outsideRegionTicksAtObservation
   });
-  const playerFlowConflict = evaluateShadowPlayerFlowConflict({
+  const preferredPlayerFlowConflict = evaluateShadowPlayerFlowConflict({
     snapshot: input.snapshot,
     corridor: playerCorridor,
-    legacyPreferredVelocity: input.legacyPreferredVelocity
+    companionVelocity: input.legacyPreferredVelocity,
+    velocitySource: "legacy-preferred"
+  });
+  const authoritativePlayerFlowConflict = evaluateShadowPlayerFlowConflict({
+    snapshot: input.snapshot,
+    corridor: playerCorridor,
+    companionVelocity: input.legacyAuthoritativeVelocity,
+    velocitySource: "authoritative-command"
   });
 
   const relationshipTarget = input.legacyRelationshipTarget
@@ -137,6 +147,9 @@ export function evaluateShadowCoordinationFrame(
     : null;
   const preferredVelocity = input.legacyPreferredVelocity
     ? { ...input.legacyPreferredVelocity }
+    : null;
+  const authoritativeVelocity = input.legacyAuthoritativeVelocity
+    ? { ...input.legacyAuthoritativeVelocity }
     : null;
 
   const targetToShadowAnchorDistance = relationshipTarget && region.representativeAnchor
@@ -164,10 +177,12 @@ export function evaluateShadowCoordinationFrame(
     region,
     pace,
     playerCorridor,
-    playerFlowConflict,
+    preferredPlayerFlowConflict,
+    authoritativePlayerFlowConflict,
     legacy: {
       relationshipTarget,
       preferredVelocity,
+      authoritativeVelocity,
       targetToShadowAnchorDistance,
       targetToNearestCoherentSampleDistance
     },
