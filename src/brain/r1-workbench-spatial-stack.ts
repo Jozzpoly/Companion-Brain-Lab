@@ -1,3 +1,9 @@
+import {
+  createEmptyShadowCoordinationHistory,
+  evaluateShadowCoordinationFrame,
+  type ShadowCoordinationFrame,
+  type ShadowCoordinationHistory
+} from "../coordination/shadow-coordination-frame";
 import type { MotionIntent } from "../world/types";
 import type { FinalCommandConstraintResult } from "./final-command-constraint";
 import type { MotionContinuityStepResult } from "./motion-continuity";
@@ -14,7 +20,10 @@ import type {
   R1SpatialLocomotionInput,
   R1SpatialRepairEvidence
 } from "./r1-hard-comfort-spatial";
-import type { SpatialLocomotionDecision } from "./spatial-locomotion";
+import {
+  S3_EXPERIMENT_MAX_SPEED,
+  type SpatialLocomotionDecision
+} from "./spatial-locomotion";
 
 export interface R1WorkbenchSpatialDebug {
   actuator: "direct" | "natural";
@@ -25,15 +34,23 @@ export interface R1WorkbenchSpatialDebug {
   finalConstraint: FinalCommandConstraintResult | null;
   progress: ProgressRecoveryDecision | null;
   appliedLocalRetries: number;
+  shadowCoordination: ShadowCoordinationFrame | null;
+  shadowCoordinationError: string | null;
 }
 
 export class R1WorkbenchSpatialStack {
   private readonly direct = new R1RecoveringDirectSpatialBrain();
   private readonly natural = new R1RecoveringNaturalSpatialBrain();
+  private shadowHistory: ShadowCoordinationHistory = createEmptyShadowCoordinationHistory();
+  private shadowFrame: ShadowCoordinationFrame | null = null;
+  private shadowError: string | null = null;
 
   reset(): void {
     this.direct.reset();
     this.natural.reset();
+    this.shadowHistory = createEmptyShadowCoordinationHistory();
+    this.shadowFrame = null;
+    this.shadowError = null;
   }
 
   resetActuator(natural: boolean): void {
@@ -45,7 +62,32 @@ export class R1WorkbenchSpatialStack {
     natural: boolean,
     input: Omit<R1SpatialLocomotionInput, "previousMove">
   ): MotionIntent {
-    return natural ? this.natural.intent(input) : this.direct.intent(input);
+    // Authoritative movement is computed first. CCC-0 shadow evaluation runs only
+    // after the command has already been selected and is fault-contained so the
+    // research probe cannot acquire accidental movement authority.
+    const intent = natural ? this.natural.intent(input) : this.direct.intent(input);
+    const preferred = natural
+      ? this.natural.debugState().movement.preferred
+      : this.direct.debugState().preferred;
+
+    try {
+      const frame = evaluateShadowCoordinationFrame({
+        snapshot: input.snapshot,
+        query: input.query,
+        physicalSpeedCapability: S3_EXPERIMENT_MAX_SPEED,
+        history: this.shadowHistory,
+        legacyRelationshipTarget: input.relationshipTarget,
+        legacyPreferredVelocity: preferred?.selectedVelocity ?? null
+      });
+      this.shadowFrame = frame;
+      this.shadowHistory = frame.nextHistory;
+      this.shadowError = null;
+    } catch (error) {
+      this.shadowFrame = null;
+      this.shadowError = error instanceof Error ? error.message : String(error);
+    }
+
+    return intent;
   }
 
   observeOutcome(natural: boolean, input: R1RecoveryOutcomeInput): ProgressRecoveryDecision {
@@ -63,7 +105,9 @@ export class R1WorkbenchSpatialStack {
         continuity: value.movement.continuity,
         finalConstraint: value.movement.finalConstraint,
         progress: value.progress,
-        appliedLocalRetries: value.appliedLocalRetries
+        appliedLocalRetries: value.appliedLocalRetries,
+        shadowCoordination: this.shadowFrame,
+        shadowCoordinationError: this.shadowError
       };
     }
 
@@ -76,7 +120,9 @@ export class R1WorkbenchSpatialStack {
       continuity: null,
       finalConstraint: null,
       progress: value.progress,
-      appliedLocalRetries: value.appliedLocalRetries
+      appliedLocalRetries: value.appliedLocalRetries,
+      shadowCoordination: this.shadowFrame,
+      shadowCoordinationError: this.shadowError
     };
   }
 }
