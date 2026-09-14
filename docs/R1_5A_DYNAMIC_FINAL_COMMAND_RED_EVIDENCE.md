@@ -1,6 +1,6 @@
 # R1-5A — Dynamic Final-Command Authority Red Evidence
 
-Status: **RED REPRODUCTION PASS / MATERIAL WORLD CONSEQUENCE DEMONSTRATED / NO PRODUCTION REPAIR SELECTED**
+Status: **RED REPRODUCTION PASS / MATERIAL WORLD CONSEQUENCE DEMONSTRATED / REPAIR SHAPE UNDER TEST**
 
 Date: 2026-09-14
 
@@ -8,7 +8,9 @@ Branch: `planning/r1-5-player-conflict-authority`
 
 Primary red evidence commit: `df6c3e7382f350252a76e346900bd6121a43da19`
 
-Primary CI run: `34864314897`
+Primary RED CI run: `34864314897`
+
+Projection comparison run: `34865156296`
 
 ## 1. Question
 
@@ -113,13 +115,15 @@ This demonstrates a material World consequence: NATURAL converts a DIRECT-clean 
 
 ## 4. Regression isolation
 
-CI run `34864314897`:
+Primary RED run `34864314897`:
 
 - historical audited R1-4 suite: **108/108 PASS**;
 - new R1-5A tests: **2/2 RED as designed**;
 - total: 108 PASS / 2 FAIL.
 
 The new failure therefore does not invalidate the historical R1-4 qualification claims within their exercised scope. It demonstrates a previously unqualified R1-5 boundary.
+
+The R1-5 planning branch intentionally remains red while these two reproductions are preserved.
 
 ## 5. Promoted finding
 
@@ -144,48 +148,90 @@ It does not prove:
 
 The fixture deliberately isolates an abrupt temporal direction change with meaningful existing velocity. It proves the missing authority seam and one material consequence class.
 
-## 7. Repair families now worth comparing
+## 7. First repair comparison — full fallback vs safe-boundary projection
 
-No family is selected yet.
+Test-only probe: `src/brain/r1-player-conflict-repair-probe.test.ts`
+
+No production brain behavior is changed. Both variants re-evaluate the post-continuity command against the same dynamic player-clearance contract and reset temporal acceleration state after intervention.
+
+### Candidate A — full safe upstream fallback
+
+When the realized command is dynamically unsafe, use the already accepted safe refined/coarse move.
+
+Run `34864917729` / repeated in comparison run `34865156296`:
+
+- intervention count: `1`;
+- minimum final predicted clearance: `+0.22 m`;
+- minimum physical center distance: `1.0006026715 m`;
+- player-contact frames: `0`;
+- maximum player displacement: `0`;
+- maximum command correction: **`1.2026780451`** normalized move units;
+- companion end: `{ x = 4.0, y = 5.2176551819 }`.
+
+Finding: it is a strong emergency baseline — it removes the violation/contact with one intervention and preserves progress — but the one-frame command discontinuity is large.
+
+### Candidate A2 — project toward nearest safe upstream boundary
+
+Instead of jumping directly to the safe refined move, binary-search the segment from the unsafe NATURAL command toward that already safe upstream command and take the nearest point satisfying a small positive predicted-clearance target (`0.002 m`).
+
+Comparison run `34865156296`:
+
+- intervention count: `1`;
+- minimum final predicted clearance: `+0.0020000041 m`;
+- minimum physical center distance: `0.9263863056 m`;
+- player-contact frames: `0`;
+- maximum player displacement: `0`;
+- maximum command correction: **`0.7688866800`** normalized move units;
+- companion end: `{ x = 4.0510292053, y = 5.1651439667 }`.
+
+Relative to full fallback, the projection reduces the maximum command correction by about **36%** while remaining contact-free in this fixture and preserving useful progress.
+
+### Current interpretation
+
+The projection is a materially better **candidate emergency boundary** than immediate full fallback for this reproduction. It is not yet selected for production because:
+
+- the improvement is proven in one abrupt-turn/stationary-player fixture only;
+- its chosen clearance sits intentionally close to the contract boundary;
+- moving-player prediction may make the safe region shift rapidly between frames;
+- repeated projection could still create visible oscillation or destroy temporal smoothness;
+- the current bisection along one line segment is an experiment, not a final dynamic-constraint geometry.
+
+## 8. Repair families still worth comparing
 
 ### A — post-continuity dynamic revalidation + safe upstream fallback
 
-Analogous in responsibility shape to R1-3 static final validation:
-- evaluate the realized final command against player-conflict evidence;
-- if unsafe, use a dynamically safe refined/coarse preferred fallback when one exists;
-- otherwise produce an explicit bounded conflict response rather than silently sending the unsafe command.
+Demonstrated as mechanically safe in the current reproduction, but with high one-frame correction cost.
 
-Potential benefit: narrow and causally inspectable.
+### A2 — nearest safe blend/projection toward upstream accepted motion
 
-Risk: abrupt fallback may destroy NATURAL continuity, create visible snapping, or treat the moving player too much like static geometry.
+Current-best narrow candidate. It materially reduces correction cost in the existing fixture while preserving safety. It now requires adversarial multi-scenario characterization.
 
 ### B — dynamic constraint-aware temporal realization
 
 Allow continuity to shape acceleration/turning inside a dynamic admissible set rather than fixing the command afterwards.
 
-Potential benefit: better preservation of motion quality.
-
-Risk: significantly more coupling between temporal actuation and player-conflict prediction; harder A/B and harder debugging.
+This becomes worth its additional coupling only if A2 fails across moving-player / varying-speed / reversal scenarios or requires repeated destructive intervention.
 
 ### C — hybrid emergency boundary + higher-level right-of-way/commitment
 
-Use a narrow final emergency contract only for imminent material player conflict, while ordinary passing/yielding remains a higher-level R1-5 responsibility in the candidate field.
+Use a narrow final emergency contract for imminent material player conflict, while ordinary passing/yielding remains a higher-level R1-5 responsibility in the candidate field.
 
-Potential benefit: avoids asking one layer to solve both safety and cooperation.
+This remains the strongest current responsibility shape: final safety consistency and higher-level cooperation are related but should not be forced into one algorithm.
 
-Risk: threshold interactions can become opaque unless workbench evidence is explicit.
+## 9. Next bounded research move
 
-## 8. Next bounded research move
+Before production repair, broaden A2 against adversarial variants while retaining the exact red reproductions:
 
-Before production repair, build a **test-only repair comparison** against the exact red fixtures:
+1. lower and medium carried companion velocity, not only `3 m/s`;
+2. moving/cross-front player;
+3. player sudden reversal / stop where the predicted dynamic safe set moves between frames;
+4. repeated independent conflict episodes to detect projection/fallback oscillation;
+5. report intervention count, minimum predicted clearance, physical contact, player disruption, command correction and companion progress.
 
-1. safe-upstream fallback candidate;
-2. measure whether it removes predicted violation and physical contact;
-3. measure the command discontinuity / motion-quality cost it introduces;
-4. compare against an actuator-aware alternative only if the simple fallback is materially destructive.
+Only after this matrix should we decide between:
 
-This preserves the evidence-led sequence:
-
-`RED authority reproduction -> test-only repair comparison -> repair selection -> isolated implementation -> regression campaign -> Owner gate`.
+- narrow post-continuity projection as emergency authority;
+- a more deeply constraint-aware continuity controller;
+- or evidence that the player-conflict representation itself must change.
 
 The current public R1-4 runtime remains unchanged.
