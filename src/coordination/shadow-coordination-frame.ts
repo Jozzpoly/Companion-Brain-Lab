@@ -189,7 +189,8 @@ export function evaluateShadowCoordinationFrame(
     snapshot: input.snapshot,
     query: input.query,
     previousRepresentative: history.previousRepresentative,
-    previousPlayerDirection: freshPlayerDirection
+    previousPlayerDirection: freshPlayerDirection,
+    previousPlayerDirectionAgeTicks: agedPlayerDirection.ageTicks
   });
   const playerCorridor = evaluateShadowPlayerCorridor({
     snapshot: input.snapshot,
