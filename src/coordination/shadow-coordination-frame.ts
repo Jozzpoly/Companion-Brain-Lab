@@ -16,10 +16,22 @@ import {
 
 export interface ShadowCoordinationHistory {
   previousRepresentative: Vec2 | null;
+  previousRegionTopologyKey: string | null;
+  previousCoherentSampleIds: readonly string[];
   previousPlayerDirection: Vec2 | null;
   previousCorridorDirection: Vec2 | null;
   outsideRegionTicks: number;
   previousEvaluationTick: number | null;
+}
+
+export interface ShadowRegionContinuityEvidence {
+  previousRegionPresent: boolean;
+  currentRegionPresent: boolean;
+  previousTopologyKey: string | null;
+  currentTopologyKey: string | null;
+  topologyKeyChanged: boolean | null;
+  coherentSampleOverlapRatio: number | null;
+  anchorDisplacement: number | null;
 }
 
 export interface ShadowLegacyComparison {
@@ -34,6 +46,7 @@ export interface ShadowCoordinationFrame {
   kind: "CCC0_SHADOW_COORDINATION";
   tick: number;
   region: ShadowRelationshipRegion;
+  regionContinuity: ShadowRegionContinuityEvidence;
   pace: ShadowPaceEvidence;
   playerCorridor: ShadowPlayerCorridor;
   preferredPlayerFlowConflict: ShadowPlayerFlowConflict;
@@ -54,6 +67,8 @@ export interface ShadowCoordinationFrameInput {
 
 const EMPTY_HISTORY: ShadowCoordinationHistory = {
   previousRepresentative: null,
+  previousRegionTopologyKey: null,
+  previousCoherentSampleIds: [],
   previousPlayerDirection: null,
   previousCorridorDirection: null,
   outsideRegionTicks: 0,
@@ -72,6 +87,8 @@ function normalizedHistory(history: ShadowCoordinationFrameInput["history"]): Sh
     previousRepresentative: history?.previousRepresentative
       ? { ...history.previousRepresentative }
       : null,
+    previousRegionTopologyKey: history?.previousRegionTopologyKey ?? null,
+    previousCoherentSampleIds: [...(history?.previousCoherentSampleIds ?? [])],
     previousPlayerDirection: history?.previousPlayerDirection
       ? { ...history.previousPlayerDirection }
       : null,
@@ -94,9 +111,21 @@ function nearestCoherentSampleDistance(region: ShadowRelationshipRegion, point: 
   return Number.isFinite(best) ? best : null;
 }
 
+function coherentSampleOverlapRatio(previous: readonly string[], current: readonly string[]): number | null {
+  if (previous.length === 0 || current.length === 0) return null;
+  const previousIds = new Set(previous);
+  const currentIds = new Set(current);
+  let intersection = 0;
+  for (const id of previousIds) if (currentIds.has(id)) intersection += 1;
+  const union = new Set([...previousIds, ...currentIds]).size;
+  return union > 0 ? intersection / union : null;
+}
+
 export function createEmptyShadowCoordinationHistory(): ShadowCoordinationHistory {
   return {
     previousRepresentative: null,
+    previousRegionTopologyKey: null,
+    previousCoherentSampleIds: [],
     previousPlayerDirection: null,
     previousCorridorDirection: null,
     outsideRegionTicks: 0,
@@ -107,7 +136,7 @@ export function createEmptyShadowCoordinationHistory(): ShadowCoordinationHistor
 export function evaluateShadowCoordinationFrame(
   input: ShadowCoordinationFrameInput
 ): ShadowCoordinationFrame {
-  const history = input.history ? normalizedHistory(input.history) : { ...EMPTY_HISTORY };
+  const history = input.history ? normalizedHistory(input.history) : { ...EMPTY_HISTORY, previousCoherentSampleIds: [] };
   const elapsedWorldTicks = history.previousEvaluationTick === null
     ? 1
     : Math.max(1, input.snapshot.tick - history.previousEvaluationTick);
@@ -159,8 +188,28 @@ export function evaluateShadowCoordinationFrame(
     ? nearestCoherentSampleDistance(region, relationshipTarget)
     : null;
 
+  const hadPreviousObservation = history.previousEvaluationTick !== null;
+  const regionContinuity: ShadowRegionContinuityEvidence = {
+    previousRegionPresent: hadPreviousObservation && history.previousRegionTopologyKey !== null,
+    currentRegionPresent: region.topologyKey !== null,
+    previousTopologyKey: history.previousRegionTopologyKey,
+    currentTopologyKey: region.topologyKey,
+    topologyKeyChanged: hadPreviousObservation
+      ? history.previousRegionTopologyKey !== region.topologyKey
+      : null,
+    coherentSampleOverlapRatio: coherentSampleOverlapRatio(
+      history.previousCoherentSampleIds,
+      region.coherentSampleIds
+    ),
+    anchorDisplacement: history.previousRepresentative && region.representativeAnchor
+      ? distance(history.previousRepresentative, region.representativeAnchor)
+      : null
+  };
+
   const nextHistory: ShadowCoordinationHistory = {
     previousRepresentative: region.representativeAnchor ? { ...region.representativeAnchor } : null,
+    previousRegionTopologyKey: region.topologyKey,
+    previousCoherentSampleIds: [...region.coherentSampleIds],
     previousPlayerDirection: { ...region.playerDirection },
     previousCorridorDirection: playerCorridor.state === "STATIONARY"
       ? history.previousCorridorDirection
@@ -175,6 +224,7 @@ export function evaluateShadowCoordinationFrame(
     kind: "CCC0_SHADOW_COORDINATION",
     tick: input.snapshot.tick,
     region,
+    regionContinuity,
     pace,
     playerCorridor,
     preferredPlayerFlowConflict,
