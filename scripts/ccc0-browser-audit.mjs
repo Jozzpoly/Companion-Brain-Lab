@@ -40,6 +40,14 @@ async function panelText(page) {
   return page.locator("#debug-panel").innerText();
 }
 
+function sectionDetails(page, sectionId) {
+  return page.locator(`details[data-section-id="${sectionId}"]`);
+}
+
+async function sectionText(page, sectionId) {
+  return sectionDetails(page, sectionId).innerText();
+}
+
 async function waitForPanel(page, predicate, timeout = 10_000, label = "panel condition") {
   const startedAt = Date.now();
   let latest = "";
@@ -51,6 +59,38 @@ async function waitForPanel(page, predicate, timeout = 10_000, label = "panel co
   throw new Error(`${label} timed out after ${timeout}ms. Latest panel: ${JSON.stringify(latest.slice(0, 4000))}`);
 }
 
+async function waitForSection(page, sectionId, predicate, timeout = 10_000, label = sectionId) {
+  const startedAt = Date.now();
+  let latest = "";
+  while (Date.now() - startedAt < timeout) {
+    latest = await sectionText(page, sectionId).catch(() => "");
+    if (predicate(latest)) return latest;
+    await page.waitForTimeout(100);
+  }
+  throw new Error(`${label} timed out after ${timeout}ms. Latest section: ${JSON.stringify(latest.slice(0, 4000))}`);
+}
+
+async function openSectionAndProvePersistence(page, sectionId, title) {
+  const details = sectionDetails(page, sectionId);
+  await details.waitFor({ state: "attached", timeout: 10_000 });
+  if (!(await details.evaluate((element) => element.open))) {
+    await details.locator("summary").click();
+  }
+  invariant(await details.evaluate((element) => element.open), `${title}: section did not open after a real summary click.`);
+
+  const beforeTick = parseTick(await panelText(page));
+  await page.waitForTimeout(350);
+  const afterTick = parseTick(await panelText(page));
+  invariant(
+    beforeTick !== null && afterTick !== null && afterTick > beforeTick,
+    `${title}: World did not advance while disclosure persistence was tested (${beforeTick} -> ${afterTick}).`
+  );
+  invariant(
+    await sectionDetails(page, sectionId).evaluate((element) => element.open),
+    `${title}: live panel rebuild closed a user-opened section.`
+  );
+}
+
 async function waitForScenario(page, label) {
   await waitForPanel(
     page,
@@ -58,11 +98,12 @@ async function waitForScenario(page, label) {
     10_000,
     `scenario ${label}`
   );
-  await waitForPanel(
+  await waitForSection(
     page,
-    (text) => text.includes("CCC-0 shadow · WHERE") && text.includes("sample t") && !text.includes("SHADOW ERROR"),
+    "ccc-where",
+    (text) => text.includes("sample t") && !text.includes("SHADOW ERROR"),
     10_000,
-    `${label} CCC-0 evidence`
+    `${label} visible CCC-0 WHERE evidence`
   );
 }
 
@@ -148,6 +189,15 @@ try {
   await coordinationToggle.check();
   invariant(await coordinationToggle.isChecked(), "Coordination world layer could not be enabled through the real panel UI.");
 
+  await openSectionAndProvePersistence(page, "ccc-where", "CCC-0 shadow · WHERE");
+  await waitForSection(
+    page,
+    "ccc-where",
+    (text) => text.includes("sample t") && !text.includes("SHADOW ERROR"),
+    10_000,
+    "initial visible CCC-0 WHERE evidence"
+  );
+
   const scenarios = [
     ["scenario-open", "Open field"],
     ["scenario-pillar", "Central pillar"],
@@ -162,8 +212,9 @@ try {
     const text = await panelText(page);
     const tick = parseTick(text);
     invariant(tick !== null && tick > 0, `${label}: World did not run after scenario load.`);
-    invariant(text.includes("CCC-0 shadow · PACE"), `${label}: CCC-0 PACE evidence missing from panel.`);
-    invariant(text.includes("CCC-0 shadow · PLAYER FLOW"), `${label}: CCC-0 PLAYER FLOW evidence missing from panel.`);
+    invariant(await sectionDetails(page, "ccc-where").evaluate((element) => element.open), `${label}: CCC-0 WHERE disclosure state was lost across scenario load.`);
+    invariant(text.includes("CCC-0 shadow · PACE"), `${label}: CCC-0 PACE section missing from panel.`);
+    invariant(text.includes("CCC-0 shadow · PLAYER FLOW"), `${label}: CCC-0 PLAYER FLOW section missing from panel.`);
     invariant(!text.includes("SHADOW ERROR"), `${label}: shadow coordination reported an error.`);
     scenarioEvidence.push({ label, tick, anchor: parseAnchor(text) });
     await assertNoFault(page, errors);
@@ -180,16 +231,26 @@ try {
   await page.locator('[data-action="toggle-actuator"]').click();
   await waitForPanel(page, (value) => value.includes("actuator NATURAL"), 5_000, "NATURAL actuator toggle");
 
+  await openSectionAndProvePersistence(page, "ccc-player", "CCC-0 shadow · PLAYER FLOW");
+  await waitForSection(
+    page,
+    "ccc-player",
+    (value) => value.includes("source") && !value.includes("unavailable"),
+    10_000,
+    "visible CCC-0 PLAYER FLOW evidence"
+  );
+
   const beforeInput = parseAnchor(await panelText(page));
   await page.keyboard.down("d");
   await page.waitForTimeout(650);
   text = await panelText(page);
-  invariant(text.includes("source actual") || text.includes("source requested"), "WASD input did not appear as live player-flow velocity evidence.");
+  invariant(text.includes("source actual") || text.includes("source requested"), "WASD input did not appear as visible player-flow velocity evidence.");
   await page.keyboard.up("d");
   await page.waitForTimeout(450);
   const afterInput = parseAnchor(await panelText(page));
   invariant(beforeInput && afterInput, "Could not read shadow anchor around keyboard-input probe.");
   invariant(Math.hypot(afterInput.x - beforeInput.x, afterInput.y - beforeInput.y) > 0.05, "Shadow evidence did not respond measurably to real keyboard-driven player motion.");
+  invariant(await sectionDetails(page, "ccc-player").evaluate((element) => element.open), "CCC-0 PLAYER FLOW disclosure did not survive live input updates.");
 
   const longRun = [
     ["w", 500], ["d", 700], ["s", 450], ["a", 650],
@@ -208,6 +269,8 @@ try {
     longRunStartTick !== null && longRunEndTick !== null && longRunEndTick - longRunStartTick > 120,
     `Long browser run advanced too few World ticks (${longRunStartTick} -> ${longRunEndTick}).`
   );
+  invariant(await sectionDetails(page, "ccc-where").evaluate((element) => element.open), "CCC-0 WHERE disclosure did not survive the long browser run.");
+  invariant(await sectionDetails(page, "ccc-player").evaluate((element) => element.open), "CCC-0 PLAYER FLOW disclosure did not survive the long browser run.");
 
   const intervals = await page.evaluate(() => window.__ccc0BrowserAudit?.intervals ?? []);
   const timing = timingSummary(intervals);
@@ -224,6 +287,10 @@ try {
     scenarioEvidence,
     finalTick: parseTick(finalText),
     coordinationLayerEnabled: await coordinationToggle.isChecked(),
+    persistentDisclosure: {
+      where: await sectionDetails(page, "ccc-where").evaluate((element) => element.open),
+      playerFlow: await sectionDetails(page, "ccc-player").evaluate((element) => element.open)
+    },
     timing,
     errors
   };
