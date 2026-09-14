@@ -69,6 +69,7 @@ describe("CCC-0 shadow coordination frame", () => {
     expect(second).toEqual(first);
     expect(first.kind).toBe("CCC0_SHADOW_COORDINATION");
     expect(first.region.state).toBe("REGION");
+    expect(first.region.staticTraversalQueryCount).toBeGreaterThan(0);
     expect(first.preferredPlayerFlowConflict.velocitySource).toBe("legacy-preferred");
     expect(first.authoritativePlayerFlowConflict.velocitySource).toBe("authoritative-command");
     expect(first.legacy.relationshipTarget).toEqual({ x: 4.55, y: 4 });
@@ -122,6 +123,30 @@ describe("CCC-0 shadow coordination frame", () => {
     expect(second.playerCorridor.state).toBe("REVERSAL_UNCERTAIN");
     expect(second.playerCorridor.confidence).toBeLessThan(first.playerCorridor.confidence);
     expect(second.nextHistory.previousCorridorDirection).toEqual(second.playerCorridor.direction);
+  });
+
+  it("keeps a small heading change topologically overlapping instead of teleporting the region", () => {
+    const first = evaluateShadowCoordinationFrame({
+      snapshot: snapshot(0, { x: 2, y: 0 }),
+      query: clearQuery,
+      physicalSpeedCapability: 3,
+      history: createEmptyShadowCoordinationHistory()
+    });
+    const second = evaluateShadowCoordinationFrame({
+      snapshot: snapshot(6, { x: 2, y: 0.15 }),
+      query: clearQuery,
+      physicalSpeedCapability: 3,
+      history: first.nextHistory
+    });
+
+    expect(first.region.state).toBe("REGION");
+    expect(second.region.state).toBe("REGION");
+    expect(second.regionContinuity.previousRegionPresent).toBe(true);
+    expect(second.regionContinuity.currentRegionPresent).toBe(true);
+    expect(second.regionContinuity.coherentSampleOverlapRatio).not.toBeNull();
+    expect(second.regionContinuity.coherentSampleOverlapRatio ?? 0).toBeGreaterThan(0);
+    expect(second.regionContinuity.anchorDisplacement).not.toBeNull();
+    expect(second.regionContinuity.anchorDisplacement ?? Number.POSITIVE_INFINITY).toBeLessThan(0.5);
   });
 
   it("accounts outside-region duration in world ticks rather than cognition evaluations", () => {
