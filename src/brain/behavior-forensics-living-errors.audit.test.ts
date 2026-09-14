@@ -108,4 +108,66 @@ describe("behavior-forensics: current living-error mechanisms", () => {
       world.dispose();
     }
   });
+
+  it("solver-induced zero-input player motion can materially change the relational objective at identical geometry", async () => {
+    const world = await LabWorld.create("head-on");
+    try {
+      let snapshot = world.snapshot();
+      let pushed: WorldSnapshot | null = null;
+      for (let step = 0; step < 120; step += 1) {
+        snapshot = world.step([
+          { actorId: "player", move: { x: 0, y: 0 } },
+          { actorId: "companion", move: { x: -1, y: 0 } }
+        ]);
+        const player = actor(snapshot, "player");
+        if (player.actualVelocity.x < -0.1) {
+          pushed = snapshot;
+          break;
+        }
+      }
+
+      expect(pushed).not.toBeNull();
+      if (!pushed) return;
+      const pushedPlayer = actor(pushed, "player");
+      expect(pushedPlayer.requestedVelocity).toEqual({ x: 0, y: 0 });
+      expect(pushedPlayer.actualVelocity.x).toBeLessThan(-0.1);
+
+      const stationaryControl = withActors(
+        pushed,
+        { requestedVelocity: { x: 0, y: 0 }, actualVelocity: { x: 0, y: 0 } },
+        {}
+      );
+      const controlDecision = new RelationalPositioningBrain().decision(stationaryControl);
+      const pushedDecision = new RelationalPositioningBrain().decision(pushed);
+      const targetShift = Math.hypot(
+        pushedDecision.target.x - controlDecision.target.x,
+        pushedDecision.target.y - controlDecision.target.y
+      );
+      const headingDot = pushedDecision.playerDirection.x * controlDecision.playerDirection.x +
+        pushedDecision.playerDirection.y * controlDecision.playerDirection.y;
+
+      console.log("SOLVER_MOTION_OBJECTIVE_LEAK", JSON.stringify({
+        playerPosition: pushedPlayer.position,
+        playerRequestedVelocity: pushedPlayer.requestedVelocity,
+        playerActualVelocity: pushedPlayer.actualVelocity,
+        control: {
+          heading: controlDecision.playerDirection,
+          slot: controlDecision.selectedSlot,
+          target: controlDecision.target
+        },
+        pushed: {
+          heading: pushedDecision.playerDirection,
+          slot: pushedDecision.selectedSlot,
+          target: pushedDecision.target
+        },
+        headingDot,
+        targetShift
+      }));
+
+      expect(headingDot).toBeLessThan(-0.9);
+      expect(targetShift).toBeGreaterThan(1.0);
+    } finally {
+      world.dispose();
+    }
+  });
 });
