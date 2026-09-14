@@ -30,7 +30,7 @@ function finiteActors(actors: readonly ActorSnapshot[]): boolean {
 }
 
 describe("foundation full-chain runtime survival", () => {
-  it("survives hard-overlap + approaching-player contention for 180 World steps", async () => {
+  it("survives, executes hard-egress, and resumes normal motion across 180 World steps", async () => {
     const fixture: ScenarioSpec = {
       id: "pillar",
       label: "dynamic runtime survival",
@@ -49,6 +49,7 @@ describe("foundation full-chain runtime survival", () => {
     let actors = physical.snapshot();
     const seenSafety = new Set<string>();
     const seenProgress = new Set<string>();
+    const seenConstraintSources = new Set<string>();
 
     try {
       for (let step = 0; step < 180; step += 1) {
@@ -69,8 +70,9 @@ describe("foundation full-chain runtime survival", () => {
           query: (from, to, radius, options) => physical.staticCircleTraversal(from, to, radius, options),
           occupancy: (center, radius) => physical.staticCircleOccupancy(center, radius)
         });
-        const repair = brain.debugState().movement.repair;
-        if (repair) seenSafety.add(repair.localSafetyState);
+        const movement = brain.debugState().movement;
+        if (movement.repair) seenSafety.add(movement.repair.localSafetyState);
+        if (movement.finalConstraint) seenConstraintSources.add(movement.finalConstraint.source);
 
         const playerMove = step < 70
           ? { x: -1, y: 0 }
@@ -102,7 +104,9 @@ describe("foundation full-chain runtime survival", () => {
       }
 
       expect(tick).toBe(180);
-      expect(seenSafety.has("HARD_EGRESS") || seenSafety.has("NO_SAFE_VELOCITY")).toBe(true);
+      expect(seenSafety).toContain("HARD_EGRESS");
+      expect(seenSafety).toContain("NORMAL");
+      expect(seenConstraintSources).toContain("hard-egress");
       expect(seenProgress.size).toBeGreaterThan(0);
       expect(finiteActors(actors)).toBe(true);
     } finally {
