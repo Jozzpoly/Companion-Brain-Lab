@@ -2,6 +2,7 @@ import type { StaticTraversalQuery } from "../navigation/static-router";
 import type { Vec2, WorldSnapshot } from "../world/types";
 import { evaluateShadowPace, type ShadowPaceEvidence } from "./shadow-pace";
 import {
+  CCC0_CORRIDOR_DIRECTION_MEMORY_TICKS,
   evaluateShadowPlayerCorridor,
   type ShadowPlayerCorridor
 } from "./shadow-player-corridor";
@@ -19,7 +20,9 @@ export interface ShadowCoordinationHistory {
   previousRegionTopologyKey: string | null;
   previousCoherentSampleIds: readonly string[];
   previousPlayerDirection: Vec2 | null;
+  previousPlayerDirectionAgeTicks: number | null;
   previousCorridorDirection: Vec2 | null;
+  previousCorridorDirectionAgeTicks: number | null;
   outsideRegionTicks: number;
   previousEvaluationTick: number | null;
 }
@@ -70,13 +73,19 @@ const EMPTY_HISTORY: ShadowCoordinationHistory = {
   previousRegionTopologyKey: null,
   previousCoherentSampleIds: [],
   previousPlayerDirection: null,
+  previousPlayerDirectionAgeTicks: null,
   previousCorridorDirection: null,
+  previousCorridorDirectionAgeTicks: null,
   outsideRegionTicks: 0,
   previousEvaluationTick: null
 };
 
 function distance(a: Vec2, b: Vec2): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function normalizedAge(value: number | null | undefined): number | null {
+  return Number.isFinite(value) ? Math.max(0, Math.floor(value!)) : null;
 }
 
 function normalizedHistory(history: ShadowCoordinationFrameInput["history"]): ShadowCoordinationHistory {
@@ -92,9 +101,11 @@ function normalizedHistory(history: ShadowCoordinationFrameInput["history"]): Sh
     previousPlayerDirection: history?.previousPlayerDirection
       ? { ...history.previousPlayerDirection }
       : null,
+    previousPlayerDirectionAgeTicks: normalizedAge(history?.previousPlayerDirectionAgeTicks),
     previousCorridorDirection: history?.previousCorridorDirection
       ? { ...history.previousCorridorDirection }
       : null,
+    previousCorridorDirectionAgeTicks: normalizedAge(history?.previousCorridorDirectionAgeTicks),
     outsideRegionTicks: Math.max(0, Math.floor(history?.outsideRegionTicks ?? 0)),
     previousEvaluationTick
   };
@@ -121,13 +132,33 @@ function coherentSampleOverlapRatio(previous: readonly string[], current: readon
   return union > 0 ? intersection / union : null;
 }
 
+function agedDirection(
+  direction: Vec2 | null,
+  ageTicks: number | null,
+  elapsedWorldTicks: number
+): { direction: Vec2 | null; ageTicks: number | null } {
+  if (!direction) return { direction: null, ageTicks: null };
+  return {
+    direction: { ...direction },
+    ageTicks: (ageTicks ?? 0) + elapsedWorldTicks
+  };
+}
+
+function freshDirection(value: { direction: Vec2 | null; ageTicks: number | null }): Vec2 | null {
+  return value.direction && (value.ageTicks ?? 0) <= CCC0_CORRIDOR_DIRECTION_MEMORY_TICKS
+    ? { ...value.direction }
+    : null;
+}
+
 export function createEmptyShadowCoordinationHistory(): ShadowCoordinationHistory {
   return {
     previousRepresentative: null,
     previousRegionTopologyKey: null,
     previousCoherentSampleIds: [],
     previousPlayerDirection: null,
+    previousPlayerDirectionAgeTicks: null,
     previousCorridorDirection: null,
+    previousCorridorDirectionAgeTicks: null,
     outsideRegionTicks: 0,
     previousEvaluationTick: null
   };
@@ -141,16 +172,30 @@ export function evaluateShadowCoordinationFrame(
     ? 1
     : Math.max(1, input.snapshot.tick - history.previousEvaluationTick);
   const outsideRegionTicksAtObservation = history.outsideRegionTicks + elapsedWorldTicks;
+  const agedPlayerDirection = agedDirection(
+    history.previousPlayerDirection,
+    history.previousPlayerDirectionAgeTicks,
+    elapsedWorldTicks
+  );
+  const agedCorridorDirection = agedDirection(
+    history.previousCorridorDirection,
+    history.previousCorridorDirectionAgeTicks,
+    elapsedWorldTicks
+  );
+  const freshPlayerDirection = freshDirection(agedPlayerDirection);
+  const freshCorridorDirection = freshDirection(agedCorridorDirection);
 
   const region = evaluateShadowRelationshipRegion({
     snapshot: input.snapshot,
     query: input.query,
     previousRepresentative: history.previousRepresentative,
-    previousPlayerDirection: history.previousPlayerDirection
+    previousPlayerDirection: freshPlayerDirection,
+    previousPlayerDirectionAgeTicks: agedPlayerDirection.ageTicks
   });
   const playerCorridor = evaluateShadowPlayerCorridor({
     snapshot: input.snapshot,
-    previousDirection: history.previousCorridorDirection
+    previousDirection: freshCorridorDirection,
+    previousDirectionAgeTicks: agedCorridorDirection.ageTicks
   });
   const pace = evaluateShadowPace({
     snapshot: input.snapshot,
@@ -206,16 +251,27 @@ export function evaluateShadowCoordinationFrame(
       : null
   };
 
+  const regionHasFreshMotion = region.playerHeadingSource === "actual" || region.playerHeadingSource === "requested";
+  const nextPlayerDirection = regionHasFreshMotion
+    ? { direction: { ...region.playerDirection }, ageTicks: 0 }
+    : region.playerHeadingSource === "previous" && freshPlayerDirection
+      ? { direction: { ...freshPlayerDirection }, ageTicks: agedPlayerDirection.ageTicks }
+      : { direction: null, ageTicks: null };
+  const corridorHasFreshMotion = playerCorridor.velocitySource === "actual" || playerCorridor.velocitySource === "requested";
+  const nextCorridorDirection = corridorHasFreshMotion
+    ? { direction: { ...playerCorridor.direction }, ageTicks: 0 }
+    : playerCorridor.previousDirection
+      ? { direction: { ...playerCorridor.previousDirection }, ageTicks: agedCorridorDirection.ageTicks }
+      : { direction: null, ageTicks: null };
+
   const nextHistory: ShadowCoordinationHistory = {
     previousRepresentative: region.representativeAnchor ? { ...region.representativeAnchor } : null,
     previousRegionTopologyKey: region.topologyKey,
     previousCoherentSampleIds: [...region.coherentSampleIds],
-    previousPlayerDirection: { ...region.playerDirection },
-    previousCorridorDirection: playerCorridor.state === "STATIONARY"
-      ? history.previousCorridorDirection
-        ? { ...history.previousCorridorDirection }
-        : null
-      : { ...playerCorridor.direction },
+    previousPlayerDirection: nextPlayerDirection.direction,
+    previousPlayerDirectionAgeTicks: nextPlayerDirection.ageTicks,
+    previousCorridorDirection: nextCorridorDirection.direction,
+    previousCorridorDirectionAgeTicks: nextCorridorDirection.ageTicks,
     outsideRegionTicks: pace.insideUsefulRegion ? 0 : outsideRegionTicksAtObservation,
     previousEvaluationTick: input.snapshot.tick
   };

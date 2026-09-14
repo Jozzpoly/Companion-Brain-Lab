@@ -6,6 +6,7 @@ import {
   type StaticTraversalQuery
 } from "../navigation/static-router";
 import type { ActorSnapshot, ObstacleSpec, Vec2, WorldSnapshot } from "../world/types";
+import { CCC0_CORRIDOR_DIRECTION_MEMORY_STRENGTH } from "./shadow-player-corridor";
 
 export const CCC0_REGION_DIRECTIONS = 32;
 export const CCC0_REGION_RADII = [1.15, 1.45, 1.8] as const;
@@ -14,8 +15,11 @@ export const CCC0_REGION_SCORE_WINDOW = 0.5;
 
 const PREFERRED_RADIUS = 1.45;
 const COMFORT_CLEARANCE = 0.65;
+const PLAYER_HEADING_THRESHOLD = 0.15;
+const PLAYER_HEADING_FULL_STRENGTH_SPEED = 0.6;
 const INVALID_SCORE = 1_000_000;
 const EPSILON = 1e-9;
+const SCORE_TIE_EPSILON = 1e-9;
 
 export type ShadowRegionState = "REGION" | "NO_REACHABLE_REGION";
 export type ShadowNoRegionReason = "NO_HARD_VALID_SAMPLE" | "ROUTE_SHORTLIST_EXHAUSTED";
@@ -59,11 +63,13 @@ export interface ShadowRelationshipRegion {
   playerPosition: Vec2;
   playerDirection: Vec2;
   playerHeadingSource: ShadowPlayerHeadingSource;
+  /** Continuous influence of velocity-derived direction on WHERE scoring. */
+  playerHeadingStrength: number;
   companionPosition: Vec2;
   samples: readonly ShadowRegionSample[];
   /** Number of candidate targets sent through route qualification. */
   routeEvaluatedCount: number;
-  /** Actual static traversal calls issued by all route graphs + representative revalidation. */
+  /** Actual static traversal calls issued by direct probes, route graphs and representative revalidation. */
   staticTraversalQueryCount: number;
   bestSampleId: string | null;
   coherentSampleIds: readonly string[];
@@ -79,6 +85,13 @@ export interface ShadowRelationshipRegionInput {
   query: StaticTraversalQuery;
   previousRepresentative?: Vec2 | null;
   previousPlayerDirection?: Vec2 | null;
+  previousPlayerDirectionAgeTicks?: number | null;
+}
+
+interface RouteQualification {
+  status: StaticRoutePlan["status"];
+  cost: number | null;
+  clearanceConstrained: boolean;
 }
 
 function actor(snapshot: WorldSnapshot, id: ActorSnapshot["id"]): ActorSnapshot {
@@ -112,20 +125,48 @@ function addScaled(origin: Vec2, direction: Vec2, scale: number): Vec2 {
   return { x: origin.x + direction.x * scale, y: origin.y + direction.y * scale };
 }
 
+function headingStrength(speed: number): number {
+  return clamp(
+    (speed - PLAYER_HEADING_THRESHOLD) /
+      (PLAYER_HEADING_FULL_STRENGTH_SPEED - PLAYER_HEADING_THRESHOLD),
+    0,
+    1
+  );
+}
+
 function observedPlayerDirection(
   player: ActorSnapshot,
-  previous: Vec2 | null | undefined
-): { direction: Vec2; source: ShadowPlayerHeadingSource } {
-  if (magnitude(player.actualVelocity) > 0.15) {
-    return { direction: normalized(player.actualVelocity), source: "actual" };
+  previous: Vec2 | null | undefined,
+  previousAgeTicks: number | null | undefined
+): { direction: Vec2; source: ShadowPlayerHeadingSource; strength: number } {
+  const actualSpeed = magnitude(player.actualVelocity);
+  if (actualSpeed > PLAYER_HEADING_THRESHOLD) {
+    return {
+      direction: normalized(player.actualVelocity),
+      source: "actual",
+      strength: headingStrength(actualSpeed)
+    };
   }
-  if (magnitude(player.requestedVelocity) > 0.15) {
-    return { direction: normalized(player.requestedVelocity), source: "requested" };
+  const requestedSpeed = magnitude(player.requestedVelocity);
+  if (requestedSpeed > PLAYER_HEADING_THRESHOLD) {
+    return {
+      direction: normalized(player.requestedVelocity),
+      source: "requested",
+      strength: headingStrength(requestedSpeed)
+    };
   }
   if (previous && magnitude(previous) > 0.5) {
-    return { direction: normalized(previous), source: "previous" };
+    const strength = CCC0_CORRIDOR_DIRECTION_MEMORY_STRENGTH(previousAgeTicks);
+    if (strength > EPSILON) {
+      return { direction: normalized(previous), source: "previous", strength };
+    }
   }
-  return { direction: { x: 0, y: 0 }, source: "none" };
+  return { direction: { x: 0, y: 0 }, source: "none", strength: 0 };
+}
+
+function compareSampleScore(a: ShadowRegionSample, b: ShadowRegionSample): number {
+  const delta = a.score - b.score;
+  return Math.abs(delta) > SCORE_TIE_EPSILON ? delta : a.id.localeCompare(b.id);
 }
 
 function distanceToObstacle(point: Vec2, obstacle: ObstacleSpec): number {
@@ -164,6 +205,7 @@ function localSampleScore(options: {
   snapshot: WorldSnapshot;
   companion: ActorSnapshot;
   playerDirection: Vec2;
+  playerHeadingStrength: number;
   position: Vec2;
   direction: Vec2;
   radius: number;
@@ -178,7 +220,10 @@ function localSampleScore(options: {
     : 0;
   const comfortPressure = clamp((COMFORT_CLEARANCE - clearance) / COMFORT_CLEARANCE, 0, 1);
   const terms: ShadowRegionScoreTerms = {
-    frontPenalty: frontness * frontness * 4.8,
+    // Direction itself remains discrete/noise-filtered, but its semantic weight now
+    // grows continuously above the observation threshold and fades continuously
+    // when the only remaining evidence is recent trajectory memory.
+    frontPenalty: frontness * frontness * 4.8 * options.playerHeadingStrength,
     radialPenalty: Math.abs(options.radius - PREFERRED_RADIUS) * 1.4,
     travelPenalty: distance(options.companion.position, options.position) * 0.18,
     comfortPenalty: comfortPressure * comfortPressure * 1.8,
@@ -211,11 +256,16 @@ function buildSamples(input: ShadowRelationshipRegionInput): {
   player: ActorSnapshot;
   playerDirection: Vec2;
   playerHeadingSource: ShadowPlayerHeadingSource;
+  playerHeadingStrength: number;
   samples: ShadowRegionSample[];
 } {
   const companion = actor(input.snapshot, "companion");
   const player = actor(input.snapshot, "player");
-  const heading = observedPlayerDirection(player, input.previousPlayerDirection);
+  const heading = observedPlayerDirection(
+    player,
+    input.previousPlayerDirection,
+    input.previousPlayerDirectionAgeTicks
+  );
   const samples: ShadowRegionSample[] = [];
 
   for (let radiusIndex = 0; radiusIndex < CCC0_REGION_RADII.length; radiusIndex += 1) {
@@ -230,6 +280,7 @@ function buildSamples(input: ShadowRelationshipRegionInput): {
         snapshot: input.snapshot,
         companion,
         playerDirection: heading.direction,
+        playerHeadingStrength: heading.strength,
         position,
         direction,
         radius,
@@ -263,7 +314,52 @@ function buildSamples(input: ShadowRelationshipRegionInput): {
     player,
     playerDirection: heading.direction,
     playerHeadingSource: heading.source,
+    playerHeadingStrength: heading.strength,
     samples
+  };
+}
+
+function qualifyRoute(
+  input: ShadowRelationshipRegionInput,
+  companion: ActorSnapshot,
+  target: Vec2
+): RouteQualification {
+  // Most useful-region samples are directly reachable. Calling the full visibility
+  // graph before discovering that fact made every sample pay O(global obstacle²)
+  // work even when distant obstacles could not affect the result. Probe the exact
+  // same hard/comfort direct contract first; escalate to the router only if blocked.
+  const hard = input.query(
+    companion.position,
+    target,
+    companion.radius,
+    { initialOverlap: "allow-egress" }
+  );
+  const comfort = input.query(
+    companion.position,
+    target,
+    companion.radius + S2C_ROUTE_CLEARANCE,
+    { initialOverlap: "allow-egress" }
+  );
+  if (hard.clear) {
+    return {
+      status: "direct",
+      cost: hard.distance,
+      clearanceConstrained: !comfort.clear
+    };
+  }
+
+  const plan = planStaticShadowRoute({
+    snapshot: input.snapshot,
+    start: companion.position,
+    target,
+    radius: companion.radius,
+    clearance: S2C_ROUTE_CLEARANCE,
+    query: input.query
+  });
+  return {
+    status: plan.status,
+    cost: plan.cost,
+    clearanceConstrained: plan.clearanceConstrained
   };
 }
 
@@ -274,18 +370,11 @@ function evaluateRouteShortlist(
 ): void {
   const shortlist = samples
     .filter((sample) => sample.hardValid)
-    .sort((a, b) => a.score - b.score || a.id.localeCompare(b.id))
+    .sort(compareSampleScore)
     .slice(0, CCC0_REGION_ROUTE_SHORTLIST);
 
   for (const sample of shortlist) {
-    const plan = planStaticShadowRoute({
-      snapshot: input.snapshot,
-      start: companion.position,
-      target: sample.position,
-      radius: companion.radius,
-      clearance: S2C_ROUTE_CLEARANCE,
-      query: input.query
-    });
+    const plan = qualifyRoute(input, companion, sample.position);
 
     sample.routeEvaluated = true;
     sample.routeStatus = plan.status;
@@ -338,7 +427,7 @@ export function coherentShadowRegion(
     }
   }
 
-  return region.sort((a, b) => a.score - b.score || a.id.localeCompare(b.id));
+  return region.sort(compareSampleScore);
 }
 
 function weightedRepresentative(samples: readonly ShadowRegionSample[]): Vec2 | null {
@@ -374,7 +463,7 @@ export function evaluateShadowRelationshipRegion(
 
   const reachable = raw.samples
     .filter((sample) => sample.routeEvaluated && sample.reachable)
-    .sort((a, b) => a.score - b.score || a.id.localeCompare(b.id));
+    .sort(compareSampleScore);
   const best = reachable[0] ?? null;
   const routeEvaluatedCount = raw.samples.filter((sample) => sample.routeEvaluated).length;
 
@@ -390,6 +479,7 @@ export function evaluateShadowRelationshipRegion(
       playerPosition: { ...raw.player.position },
       playerDirection: { ...raw.playerDirection },
       playerHeadingSource: raw.playerHeadingSource,
+      playerHeadingStrength: raw.playerHeadingStrength,
       companionPosition: { ...raw.companion.position },
       samples: raw.samples,
       routeEvaluatedCount,
@@ -421,14 +511,7 @@ export function evaluateShadowRelationshipRegion(
   let reason = `best route-qualified sample ${best.id}; weighted coherent representative unavailable`;
 
   if (weighted && circleFitsStaticWorld(input.snapshot, weighted, raw.companion.radius)) {
-    const plan = planStaticShadowRoute({
-      snapshot: input.snapshot,
-      start: raw.companion.position,
-      target: weighted,
-      radius: raw.companion.radius,
-      clearance: S2C_ROUTE_CLEARANCE,
-      query: countedQuery
-    });
+    const plan = qualifyRoute(countedInput, raw.companion, weighted);
     representativeRouteStatus = plan.status;
     if (routeQualifies(plan.status)) {
       representativeAnchor = weighted;
@@ -446,6 +529,7 @@ export function evaluateShadowRelationshipRegion(
     playerPosition: { ...raw.player.position },
     playerDirection: { ...raw.playerDirection },
     playerHeadingSource: raw.playerHeadingSource,
+    playerHeadingStrength: raw.playerHeadingStrength,
     companionPosition: { ...raw.companion.position },
     samples: raw.samples,
     routeEvaluatedCount,
@@ -459,3 +543,7 @@ export function evaluateShadowRelationshipRegion(
     reason
   };
 }
+
+export const CCC0_REGION_HEADING_THRESHOLD = PLAYER_HEADING_THRESHOLD;
+export const CCC0_REGION_HEADING_FULL_STRENGTH_SPEED = PLAYER_HEADING_FULL_STRENGTH_SPEED;
+export const CCC0_REGION_SCORE_TIE_EPSILON = SCORE_TIE_EPSILON;

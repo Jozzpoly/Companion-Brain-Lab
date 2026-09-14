@@ -7,13 +7,15 @@
     "dev": "vite",
     "build": "vite build",
     "test": "vitest run",
-    "check": "tsc -p tsconfig.json --noEmit && vitest run && vite build"
+    "check": "tsc -p tsconfig.json --noEmit && vitest run && vite build",
+    "browser:audit": "node scripts/ccc0-browser-audit.mjs"
   },
   "dependencies": {
     "@dimforge/rapier2d-deterministic-compat": "0.20.0",
     "phaser": "4.2.1"
   },
   "devDependencies": {
+    "playwright-chromium": "1.63.0",
     "typescript": "7.0.2",
     "vite": "8.2.2",
     "vitest": "5.0.0"
