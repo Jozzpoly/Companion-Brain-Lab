@@ -1,333 +1,404 @@
 # CCC-0 Shadow Coordination — Execution Evidence
 
-Status: **MECHANICAL SHADOW CHECKPOINT CANDIDATE · ZERO AUTHORITY PROVEN · OWNER OBSERVATION PENDING**
+Status: **MECHANICAL SHADOW CHECKPOINT PASS · BROWSER DELIVERY PASS · OWNER OBSERVATION GATE OPEN · ZERO MOVEMENT AUTHORITY**
+
+Date: 2026-09-14
 
 Base checkpoint:
 
 `5e809fc61433b3eceefde088243ad736da0e5b1b`
 
-Latest evidence head at document creation:
+Exact qualified CCC-0 application runtime:
 
-`f3ddfc8a7333fe3e274fb6c012ade7036e2770f0`
+`bfe30df9298c1aa36dd4db43de70a049804255bc`
 
-Latest completed validation observed at document creation:
+Primary exact-head validation:
 
-- workflow `validate`
-- run `34887724707`
-- conclusion `success`
+- workflow `validate`;
+- run `34893657450`;
+- **39/39 test files PASS**;
+- **189/189 tests PASS**;
+- strict TypeScript PASS;
+- production Vite build PASS;
+- npm install audit: 0 vulnerabilities.
 
-This document is not a claim that CCC coordination behavior is ready for authority. It records what the shadow stage has actually demonstrated and what remains deliberately unproven.
+Pinned browser delivery:
+
+- Pages authority commit on `main`: `1829804cfa7969775714810c42a0638ac6abbe2f`;
+- composite Pages run `34893943934`: build PASS + deploy PASS;
+- Foundation root pinned to `b217943e027e66993f0010643b2933b01d4b1e6d`;
+- `/ccc0/` pinned to `bfe30df9298c1aa36dd4db43de70a049804255bc`;
+- deployed environment: `https://jozzpoly.github.io/Companion-Brain-Lab/`;
+- CCC-0 Owner preview: `https://jozzpoly.github.io/Companion-Brain-Lab/ccc0/`.
+
+The uploaded Pages artifact was independently inspected. It contains separate root and `/ccc0/` builds with separate asset bundles; CCC-0 markers occur only in the `/ccc0/` bundle. The Foundation root therefore remains preserved rather than being silently replaced by research instrumentation.
+
+Owner protocol:
+
+`docs/CCC_0_BROWSER_GATE_CHECKLIST.md`
+
+This document does **not** claim that current WHERE/PACE/PLAYER FLOW behavior is ready for movement authority. It records that the shadow research substrate is mechanically coherent enough for Owner falsification.
 
 ---
 
-## 1. Stage question
+## 1. Stage question and current answer
 
 CCC-0 asked:
 
 > Before changing companion movement, can the current runtime produce bounded, causal, inspectable evidence for WHERE, PACE and PLAYER FLOW beside the legacy decision, while proving that the new research substrate has zero movement authority?
 
-Current mechanical answer:
+Mechanical answer:
 
-**Yes.**
+**PASS at the current bounded scope.**
 
-Behavior-quality answer:
+Owner/browser semantic answer:
 
-**Not evaluated yet.** The new evidence has not been promoted to movement authority and requires Owner/browser observation before it should inform CCC-1 authority design.
+**OPEN.** The current question is whether the evidence is understandable, stable enough to criticize and cheap enough to observe live.
+
+Movement-authority answer:
+
+**ZERO by design.** CCC-0 cannot change authoritative companion `MotionIntent`.
 
 ---
 
-## 2. What exists now
+## 2. Current responsibility decomposition
+
+The decomposition remains provisional research vocabulary, not frozen architecture.
 
 ### WHERE — shadow relationship region
 
-The runtime samples a bounded player-relative field:
+Current bounded field:
 
-- 32 angular directions;
-- 3 radii: `1.15`, `1.45`, `1.8`;
-- 96 total broad samples;
-- hard body validity before route work;
-- local utility decomposition before route qualification;
-- at most 12 locally shortlisted route candidates;
-- coherent connected near-best region around the best route-qualified sample;
-- weighted representative only inside that coherent region;
-- final representative hard/route revalidation;
-- explicit no-region data instead of player-center fallback.
+- 32 directions × 3 radii = 96 player-relative samples;
+- hard body validity separate from comfort quality;
+- local scoring before route work;
+- at most 12 route-qualified shortlist candidates;
+- current static router/query contracts, not copied S5 geometry;
+- route-aware coherent near-best component containing the best reachable sample;
+- weighted representative only inside that coherent component;
+- representative hard/route revalidation;
+- explicit `NO_HARD_VALID_SAMPLE` vs `ROUTE_SHORTLIST_EXHAUSTED` uncertainty;
+- no player-center fallback.
 
-Important semantic distinction:
+The representative anchor is an adapter/debug artifact. The coherent region remains the research object.
 
-- `NO_HARD_VALID_SAMPLE` means the bounded field itself contains no hard-valid body sample;
-- `ROUTE_SHORTLIST_EXHAUSTED` means the bounded route shortlist found no reachable candidate, **not** that every untested field sample is globally unreachable.
+### PACE — temporal relationship pressure
 
-The representative anchor is an adapter/debug artifact. The region is the research object.
+Current evidence exposes:
 
-### PACE — shadow temporal relationship
-
-The current provisional evidence exposes:
-
-- physical speed capability;
-- observed player speed;
-- companion speed;
+- companion physical speed capability;
+- player and companion observed speed;
 - distance to the useful region;
-- route distance of the best route-qualified sample;
-- relative opening/closing speed;
-- time outside the useful region;
-- decomposed urgency pressure;
+- route distance where available;
+- relative opening/closing motion;
+- duration outside the useful region;
+- continuous urgency;
 - provisional desired speed;
-- explanatory labels `SETTLED`, `FOLLOWING`, `CATCH_UP`, `RECOVERING`.
+- diagnostic labels such as `SETTLED`, `FOLLOWING`, `CATCH_UP`, `RECOVERING`.
 
-The labels are not a hidden behavior FSM and currently have no authority.
+Duration is measured in **World ticks**, not number of CCC cognition evaluations.
 
-### PLAYER FLOW — shadow corridor
+### PLAYER FLOW — short-horizon player-space evidence
 
-The current provisional corridor exposes:
+Current corridor/evidence exposes:
 
-- meaningful actual player velocity first;
-- requested velocity only when actual velocity is not meaningful;
-- no directional corridor when the player is stationary and no motion evidence exists;
-- short bounded prediction horizon;
-- separate physical and comfort radii;
-- heading persistence/confidence;
-- explicit `REVERSAL_UNCERTAIN` evidence after an abrupt reversal.
+- actual player velocity when meaningful, otherwise requested velocity;
+- no fabricated heading when no motion evidence exists;
+- bounded short prediction horizon;
+- separate physical and comfort widths;
+- confidence/persistence evidence;
+- reversal uncertainty;
+- distinct conflict channels for legacy preferred velocity and final authoritative velocity.
 
-This is cooperation evidence, not a final player collision guard.
-
-### Aggregate shadow frame
-
-`ShadowCoordinationFrame` combines:
-
-- WHERE;
-- PACE;
-- PLAYER FLOW;
-- same-observation legacy relationship target;
-- same-observation legacy preferred velocity;
-- legacy-target disagreement with the shadow region;
-- small explicit temporal history.
-
-It contains no movement command.
+The distinction between preferred and authoritative conflict is deliberate: it can expose temporal/downstream transformation of an upstream-safe motion without installing any repair.
 
 ---
 
-## 3. Zero-authority evidence
+## 3. Multi-rate cognition and causal provenance
 
-CCC-0 is integrated inside `R1WorkbenchSpatialStack` **after** the authoritative DIRECT/NATURAL brain has already selected `MotionIntent`.
+Early CCC-0 evaluation ran the expensive shadow frame every physics tick. Instrumentation then made the hidden cost explicit: one 12-candidate WHERE shortlist can expand into many static traversal calls because route graphs themselves perform multiple traversal queries.
 
-Shadow evaluation is wrapped in fault containment. A shadow exception becomes debug evidence and does not replace, clear or recompute the authoritative command.
+Current runtime therefore evaluates the expensive CCC-0 shadow frame every:
 
-Automated evidence includes:
+`CCC0_SHADOW_INTERVAL_TICKS = 6`
+
+At the current 60 Hz World cadence this is approximately 10 Hz.
+
+This cadence is **not a frozen brain frequency**. It is a measured current response to the cost of the present WHERE implementation.
+
+### Causal safeguards
+
+A cached shadow frame retains the tick at which it was actually evaluated.
+
+Causal trace records:
+
+- `shadowTick` — the World observation tick used to compute the shadow frame;
+- `ageTicks` — current observation tick minus `shadowTick`.
+
+Therefore cached evidence never masquerades as same-tick evidence.
+
+PACE temporal history also stores the previous evaluation tick and advances outside-region duration by the actual elapsed World-tick difference. A six-tick cognition interval therefore contributes six ticks of duration, not one pseudo-step.
+
+Automated tests bind this behavior.
+
+---
+
+## 4. Measured WHERE cost instead of fake boundedness
+
+CCC-0 originally exposed only the number of route candidates. That was insufficient evidence of computational cost because each route qualification may issue many static traversal queries.
+
+Current WHERE evidence reports both:
+
+- `routeEvaluatedCount`;
+- `staticTraversalQueryCount`.
+
+The scenario campaign independently wraps the traversal query and verifies that the internal reported count exactly matches externally observed calls.
+
+Current bounded characterization:
+
+- open geometry: more than the shortlist count but <= 40 static traversal calls in the fixture;
+- pillar geometry: >100 and <=500;
+- doorway geometry: >100 and <=500.
+
+These are characterization bounds for the current implementation, **not performance targets** and not architectural constants.
+
+The high topology-dependent cost is precisely why browser cadence/performance observation is part of the Owner gate.
+
+---
+
+## 5. Region temporal/topological continuity evidence
+
+CCC-0 now exposes continuity without installing a hidden behavior FSM:
+
+- previous/current region presence;
+- previous/current topology key;
+- explicit topology-key change;
+- coherent-sample overlap ratio;
+- representative-anchor displacement.
+
+A deterministic test verifies that a small heading change retains overlapping coherent evidence and bounded anchor displacement rather than appearing as a region teleport.
+
+This evidence is diagnostic only. It does not smooth or constrain authoritative movement.
+
+---
+
+## 6. Zero-authority evidence
+
+CCC-0 remains integrated **after** authoritative DIRECT/NATURAL movement selects `MotionIntent`.
+
+The order is intentional:
+
+`authoritative movement decision -> capture immutable command evidence -> optional slower CCC-0 shadow evaluation -> return the original command`
+
+Shadow evaluation is fault-contained. A shadow exception becomes research/debug evidence and cannot replace or recompute the already selected command.
 
 ### One-step equivalence
 
-For DIRECT and NATURAL separately:
-
-- pre-shadow authoritative brain and shadow-enabled workbench receive equivalent evidence;
-- returned `MotionIntent` is exactly equal.
+For DIRECT and NATURAL independently, workbench command equals the corresponding pre-shadow authoritative brain command exactly.
 
 ### Parallel-World equivalence
 
-For DIRECT and NATURAL separately:
+For DIRECT and NATURAL independently, two deterministic Worlds are driven for 120 steps with the same scripted moving player:
 
-- two independent deterministic `LabWorld` instances start from identical `open` state;
-- one is driven by the pre-shadow authoritative brain;
-- one is driven by the shadow-enabled workbench;
-- a scripted player changes direction during the run;
-- for 120 steps the test checks:
-  - exact authoritative companion command equality;
-  - exact post-World snapshot equality on every step;
-  - exact progress/recovery decision equality.
+- one by the pre-shadow authoritative brain;
+- one by the CCC-0-enabled workbench.
 
-This is stronger than a final-state comparison: the trajectories must remain identical frame by frame.
+Every step requires:
 
-### Shadow-failure isolation
+- exact companion command equality;
+- exact World snapshot equality;
+- exact progress/recovery decision equality.
 
-The workbench can be injected with a synthetic shadow evaluator that throws immediately.
+### Fault isolation
 
-For DIRECT and NATURAL separately the test verifies:
+A synthetic shadow evaluator that throws immediately is injected for both actuators.
 
-- the authoritative command is still exactly equal to the pre-shadow baseline;
-- `shadowCoordination` becomes null;
-- the research failure appears only as `shadowCoordinationError`.
-
-### Existing long workbench run
-
-The existing 360-step DIRECT/NATURAL workbench integration remains green while shadow evidence is evaluated throughout the run.
+The authoritative command remains equal to baseline while the error appears only as `shadowCoordinationError`.
 
 Mechanical conclusion:
 
 > **No semantic movement authority has leaked into CCC-0.**
 
-Remaining caveat:
+Remaining Owner question:
 
-> synchronous shadow work may still have browser/runtime performance cost; semantic zero-authority does not by itself prove negligible presentation-time overhead.
+> semantic zero-authority does not prove zero browser-time cost; visible hitching must be observed separately.
 
 ---
 
-## 4. Geometry and falsifier campaign
+## 7. Falsifier coverage currently preserved
 
-Current automated coverage includes:
+Automated coverage includes, among other cases:
 
-- deterministic identical-input output;
-- finite evidence;
-- bounded broad sample count;
-- bounded route shortlist count;
-- explicit no-region data;
-- distinction between no hard-valid sample and shortlist exhaustion;
-- disconnected near-best components are not averaged together;
-- representative remains away from player center rather than reproducing the historical S5 centroid collapse;
-- representative is hard/route revalidated;
-- actual player motion wins over requested motion when meaningful;
-- stationary player does not fabricate a heading;
+- identical input/history/query evidence -> deterministic shadow frame;
+- finite sample/evidence values;
+- 96-sample field bound;
+- 12-candidate route-shortlist bound;
+- true static traversal-cost instrumentation;
+- explicit no-region uncertainty;
+- disconnected near-best regions not globally averaged;
+- historical S5 centroid-collapse class prevented;
+- representative hard/route revalidation;
+- stationary player does not inherit arbitrary +X heading;
 - previous meaningful heading may persist through a temporary stop;
 - stationary corridor does not fabricate flow;
-- abrupt reversal lowers corridor confidence/horizon;
-- moving-away PACE urgency exceeds stationary urgency at identical geometry;
-- moving-toward/reversal reduces urgency relative to moving away;
-- desired speed remains within physical capability.
+- abrupt reversal reduces corridor confidence/horizon;
+- repeated player-flow cases remain finite and explicit;
+- same-distance moving-away vs stationary PACE differs;
+- moving-toward/reversal reduces catch-up urgency relative to moving away;
+- desired speed stays within physical capability;
+- small heading change retains region overlap rather than teleporting;
+- outside-region duration advances by real World ticks across 6-tick cognition gaps;
+- preferred and authoritative player-flow conflict can disagree and remain separately visible.
 
-Real lab geometry campaign:
+Real World geometry campaign remains:
 
-- `open`;
-- `pillar`;
-- `doorway`;
-- `head-on`;
-- deliberately shifted player-relative field adjacent to the pillar.
-
-The doorway case explicitly rechecks that the region representative does not collapse toward player center while route-qualified samples cross the passage topology.
+- open;
+- pillar;
+- doorway;
+- head-on;
+- deliberately shifted player-relative field against the pillar.
 
 ---
 
-## 5. Workbench observability
+## 8. Workbench and incident evidence
 
-CCC-0 now extends the existing workbench instead of creating a second debug application.
+CCC-0 extends the existing Foundation/R1 workbench rather than creating a second diagnostic runtime.
 
-### World layer
+### Coordination overlay
 
-A new `Coordination` layer is available and default OFF.
+Default OFF to avoid overwhelming the playfield.
 
-It can render:
+It can visualize:
 
 - all bounded WHERE samples;
 - hard-invalid samples;
-- route-evaluated unreachable samples;
-- route-evaluated reachable samples;
+- route-evaluated reachable/unreachable samples;
 - coherent region membership;
 - representative anchor;
-- legacy target → shadow anchor disagreement;
-- player flow line;
+- legacy target -> shadow-anchor disagreement;
+- player-flow line;
 - physical and comfort corridor envelopes.
 
 ### Panel
 
-Three new sections remain collapsed by default:
+Collapsed sections:
 
 - `CCC-0 shadow · WHERE`;
 - `CCC-0 shadow · PACE`;
 - `CCC-0 shadow · PLAYER FLOW`.
 
-A shadow failure is explicitly labelled as research/debug failure while authoritative movement remains unchanged.
+WHERE now includes:
 
-### Causal trace / incident capture
+- route candidates;
+- actual static traversal count;
+- topology-change evidence;
+- coherent overlap;
+- representative-anchor displacement.
 
-Causal frames may now carry an explicitly named `CCC0_SHADOW_COORDINATION` block in the **decision evidence**, separate from the authoritative command phase.
+PLAYER FLOW exposes preferred-vs-authoritative conflict separately.
 
-Incident export schema is now:
+### Causal incident schema
 
-`companion-brain-lab-ccc0-causal-incident-v3`
+Current incident schema:
 
-The trace defensively clones shadow vectors so later mutation cannot rewrite recorded evidence.
+`companion-brain-lab-ccc0-causal-incident-v4`
+
+Shadow evidence is explicitly typed `CCC0_SHADOW_COORDINATION` inside decision evidence and carries `shadowTick` + `ageTicks`.
+
+Recorded shadow vectors are defensively cloned.
 
 ---
 
-## 6. Material findings discovered during CCC-0 itself
+## 9. Material findings discovered during CCC-0
 
-CCC-0 has already falsified or corrected two tempting assumptions before they could receive authority.
+### Finding A — stationary player cannot inherit a fake world-axis heading
 
-### Finding A — stationary player must not inherit a fake world-axis heading
+Initial fallback to +X would have turned missing motion evidence into fake semantic front/back information.
 
-Initial implementation used `+X` when actual velocity, requested velocity and previous heading were absent.
+Corrected to:
 
-That would have made an arbitrary world direction semantically become the player's front and would have biased WHERE while the player was simply standing still.
-
-Correction:
-
-- no evidence → heading source `none`;
+- no evidence -> source `none`;
 - direction `{0,0}`;
 - front/back penalty disabled;
-- previous meaningful heading may still persist through a temporary stop.
+- previous meaningful heading may persist through a temporary stop.
 
-This is a direct example of why the shadow stage exists.
+### Finding B — shortlist exhaustion is not global unreachable truth
 
-### Finding B — bounded shortlist failure is not global unreachable truth
+Only the bounded shortlist is route-qualified. Current evidence explicitly distinguishes:
 
-Initial no-region wording could be read as "no reachable relationship region exists" even though only a bounded route shortlist had been queried.
+- no hard-valid sample in the field;
+- bounded shortlist exhausted without a reachable result.
 
-Correction:
+Untested samples are not claimed unreachable.
 
-- distinguish field hard-validity failure from shortlist route exhaustion;
-- explicitly state that untested samples are not claimed unreachable.
+### Finding C — route candidate count hid real WHERE cost
 
-This avoids later recovery logic being built on false epistemic certainty.
+A 12-candidate shortlist can generate >100 traversal queries in obstacle-rich geometry because each route plan evaluates a graph. Current evidence exposes actual traversal count and CCC-0 moved to a slower 6-tick cognition cadence rather than pretending the original per-tick cost was negligible.
 
----
+### Finding D — player-flow conflict has two causal boundaries
 
-## 7. What is **not** proven
+The legacy preferred local velocity and final authoritative command can have different player-flow conflict classifications. Combining them into one signal would hide whether conflict originates upstream or appears during later movement realization.
 
-The following remain intentionally open:
-
-### Visual / semantic legibility
-
-Automated tests cannot answer whether the region, pace and corridor are understandable and useful when watched live.
-
-Owner/browser questions include:
-
-- does the coherent region look like a plausible useful place around the player?
-- does it remain stable enough without becoming sticky?
-- does it behave sensibly near the doorway and pillar?
-- does PACE rise/fall in a way that matches intuitive separation pressure?
-- does corridor confidence visibly fall during reversals instead of flickering or hallucinating flow?
-- are legacy-vs-shadow disagreements informative?
-
-### Runtime overhead
-
-The full shadow evaluator currently runs synchronously during each spatial workbench intent.
-
-Its work is structurally bounded at the sampling/shortlist level, but real browser cost has not yet been measured or observed. If it is materially expensive, cadence/caching must be redesigned without compromising evidence semantics.
-
-### Scoring quality
-
-Current constants are provisional research parameters. Mechanical tests only defend invariants/falsifiers; they do not establish that the utility weights encode the best teammate behavior.
-
-### Current-player-input immediacy
-
-The shadow models read the authoritative `WorldSnapshot`. Player actual/requested velocity therefore reflects World evidence available at the observation boundary, not a privileged lookahead into a just-read current-frame keyboard command. This is deliberate causal discipline for now, but any perceived one-tick responsiveness issue should be evaluated rather than hidden.
-
-### Authority design
-
-CCC-0 provides evidence only. It does not answer how CCC-1 should finally combine region utility, pace, right-of-way, local realization and rare hard player-agency protection.
-
-The earlier CCC skeleton remains a hypothesis to re-plan after Owner evidence.
+Current shadow frame therefore keeps both channels.
 
 ---
 
-## 8. Current verdict
+## 10. Current non-claims
+
+CCC-0 does **not** prove:
+
+- current scoring weights produce the best companion relationship;
+- 32 × 3 samples are optimal;
+- 12 route candidates are optimal;
+- 6 ticks / ~10 Hz is the right long-term cognition cadence;
+- current router is the right long-term WHERE substrate;
+- representative anchor is the eventual movement target interface;
+- WHERE/PACE/PLAYER FLOW is the final architecture decomposition;
+- current player corridor is a final predictor;
+- shadow evidence should receive authority unchanged;
+- multi-companion coordination is solved;
+- command/combat behavior is in scope for CCC-0.
+
+All current constants remain throwaway-ready.
+
+---
+
+## 11. Promotion boundary
 
 ### Mechanically
 
-**PASS candidate.**
+**PASS for the CCC-0 shadow checkpoint.**
 
-The project now has a bounded, deterministic, fault-contained and causal shadow coordination substrate with strong zero-authority evidence.
+The current exact runtime is deterministic/bounded within its tested scope, topology-aware, causally provenance-aware, fault-contained and mechanically zero-authority while preserving the Foundation suite.
 
-### Behaviorally
+### Delivery
 
-**UNPROVEN by design.**
+**PASS.**
 
-No new companion behavior has been promoted.
+The exact CCC-0 runtime is available under `/ccc0/` while the historical Foundation root remains independently pinned and unchanged.
 
-### Next gate
+### Owner/browser
 
-1. finish final branch validation / review;
-2. make the shadow checkpoint easy to run in the browser without replacing the historical Foundation preview prematurely;
-3. Owner observes WHERE / PACE / PLAYER FLOW across open, pillar, doorway, head-on and deliberately adversarial movement;
-4. use those observations to falsify/rewrite CCC assumptions;
-5. only then design CCC-1 authority promotion.
+**OPEN.**
 
-The correct response to bad Owner evidence is not to protect this implementation. It is to change or delete it.
+The Owner gate must now evaluate:
+
+- semantic legibility of WHERE/PACE/PLAYER FLOW;
+- region stability vs justified topology changes;
+- corridor confidence under stops/reversals/jitter;
+- usefulness of preferred-vs-authoritative conflict disagreements;
+- clarity of cached `ageTicks` provenance;
+- visible runtime cost / periodic ~10 Hz hitching;
+- whether incidents make bad shadow decisions explainable.
+
+Protocol:
+
+`docs/CCC_0_BROWSER_GATE_CHECKLIST.md`
+
+### Movement authority
+
+**NOT AUTHORIZED.**
+
+A CCC-0 Owner PASS would qualify the research apparatus, not the current coordination policy for movement.
+
+After Owner evidence, CCC-1 must be replanned from observed failures/disagreements. A material Owner FAIL keeps the work in CCC-0 and may justify deleting or replacing substantial parts of this implementation.
