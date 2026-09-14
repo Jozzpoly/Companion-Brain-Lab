@@ -160,6 +160,47 @@ async function compareParallelWorlds(natural: boolean): Promise<void> {
   }
 }
 
+async function proveShadowFaultIsolation(natural: boolean): Promise<void> {
+  const world = await LabWorld.create("open");
+  const baseline = natural
+    ? new R1RecoveringNaturalSpatialBrain()
+    : new R1RecoveringDirectSpatialBrain();
+  const stack = new R1WorkbenchSpatialStack(() => {
+    throw new Error("synthetic CCC-0 research failure");
+  });
+
+  try {
+    const snapshot = world.snapshot();
+    const body = companion(snapshot);
+    const target: Vec2 = { x: 5, y: 4 };
+    const query = (from: Vec2, to: Vec2, radius: number) => world.staticCircleTraversal(from, to, radius);
+    const routePlan = planStaticShadowRoute({
+      snapshot,
+      start: body.position,
+      target,
+      radius: body.radius,
+      query
+    });
+    const input = {
+      snapshot,
+      relationshipTarget: target,
+      routePlan,
+      query,
+      occupancy: (center: Vec2, radius: number) => world.staticCircleOccupancy(center, radius)
+    };
+
+    const baselineIntent = baseline.intent(input);
+    const isolatedIntent = stack.intent(natural, input);
+    expect(isolatedIntent).toEqual(baselineIntent);
+
+    const debug = stack.debugState(natural);
+    expect(debug.shadowCoordination).toBeNull();
+    expect(debug.shadowCoordinationError).toBe("synthetic CCC-0 research failure");
+  } finally {
+    world.dispose();
+  }
+}
+
 describe("CCC-0 zero-authority runtime contract", () => {
   it("leaves DIRECT MotionIntent byte-for-byte equivalent to the pre-shadow authoritative brain", async () => {
     await compareAuthoritativeIntent(false);
@@ -175,5 +216,13 @@ describe("CCC-0 zero-authority runtime contract", () => {
 
   it("keeps NATURAL commands, recovery and World outcomes identical for a 120-step moving-player run", async () => {
     await compareParallelWorlds(true);
+  });
+
+  it("contains a failing shadow evaluator after DIRECT authority has already selected the command", async () => {
+    await proveShadowFaultIsolation(false);
+  });
+
+  it("contains a failing shadow evaluator after NATURAL authority has already selected the command", async () => {
+    await proveShadowFaultIsolation(true);
   });
 });
