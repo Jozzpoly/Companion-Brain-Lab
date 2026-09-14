@@ -537,6 +537,11 @@ export class R1LabScene extends Phaser.Scene {
               regionAnchor: shadow.region.representativeAnchor ? { ...shadow.region.representativeAnchor } : null,
               regionBestSampleId: shadow.region.bestSampleId,
               regionCoherentSampleCount: shadow.region.coherentSampleIds.length,
+              regionRouteEvaluatedCount: shadow.region.routeEvaluatedCount,
+              regionStaticTraversalQueryCount: shadow.region.staticTraversalQueryCount,
+              regionTopologyKeyChanged: shadow.regionContinuity.topologyKeyChanged,
+              regionCoherentOverlapRatio: shadow.regionContinuity.coherentSampleOverlapRatio,
+              regionAnchorDisplacement: shadow.regionContinuity.anchorDisplacement,
               paceLabel: shadow.pace.label,
               paceUrgency: shadow.pace.urgency,
               desiredSpeed: shadow.pace.desiredSpeed,
@@ -575,6 +580,11 @@ export class R1LabScene extends Phaser.Scene {
                 regionAnchor: null,
                 regionBestSampleId: null,
                 regionCoherentSampleCount: 0,
+                regionRouteEvaluatedCount: 0,
+                regionStaticTraversalQueryCount: 0,
+                regionTopologyKeyChanged: null,
+                regionCoherentOverlapRatio: null,
+                regionAnchorDisplacement: null,
                 paceLabel: "ERROR",
                 paceUrgency: 0,
                 desiredSpeed: 0,
@@ -946,7 +956,8 @@ export class R1LabScene extends Phaser.Scene {
           : shadow
             ? [
                 `sample t${shadow.tick} · age ${shadowAge ?? 0}t · state ${shadow.region.state} · heading ${shadow.region.playerHeadingSource}`,
-                `best ${shadow.region.bestSampleId ?? "none"} · coherent ${shadow.region.coherentSampleIds.length} · route candidates ${shadow.region.routeEvaluatedCount}`,
+                `best ${shadow.region.bestSampleId ?? "none"} · coherent ${shadow.region.coherentSampleIds.length} · route candidates ${shadow.region.routeEvaluatedCount} · static traversals ${shadow.region.staticTraversalQueryCount}`,
+                `continuity topology ${shadow.regionContinuity.topologyKeyChanged === null ? "n/a" : shadow.regionContinuity.topologyKeyChanged ? "CHANGED" : "same"} · overlap ${compactNullable(shadow.regionContinuity.coherentSampleOverlapRatio)} · anchor Δ ${compactNullable(shadow.regionContinuity.anchorDisplacement)}`,
                 shadow.region.representativeAnchor
                   ? `anchor ${compact(shadow.region.representativeAnchor.x)}, ${compact(shadow.region.representativeAnchor.y)} · ${shadow.region.representativeSource}`
                   : "anchor none",
