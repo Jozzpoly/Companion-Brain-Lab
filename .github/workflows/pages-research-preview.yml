@@ -34,7 +34,7 @@ jobs:
       - name: Checkout exact CCC-0 shadow checkpoint
         uses: actions/checkout@v5
         with:
-          ref: bfe30df9298c1aa36dd4db43de70a049804255bc
+          ref: a2a0e793f01a6fe3b435e473cb9912347f2fcb0d
           path: ccc0
 
       - name: Setup Node
