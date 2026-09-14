@@ -1,103 +1,128 @@
 # Foundation Runtime Survival / Pre-Rework Audit
 
-Status: **MECHANICAL PASS · UPDATED PUBLIC CANDIDATE DEPLOYED · NORMAL-RUNTIME OWNER GATE OPEN · NOT YET REWORK-READY**
+Status: **CLOSED · FOUNDATION PASS · REWORK-READY**
 
-Current exact runtime: `b217943e027e66993f0010643b2933b01d4b1e6d`.
+Canonical final verdict:
 
-Validation run `34876312905`: 31/31 test files PASS, 137/137 tests PASS, TypeScript PASS, production build PASS, 0 npm vulnerabilities.
+[`FOUNDATION_FINAL_READINESS.md`](FOUNDATION_FINAL_READINESS.md)
 
-Current Pages workflow commit: `67c37d8145cdbcbf4044db0a6736418d8c9c6258`.
+Owner-tested public runtime:
 
-Current Pages run `34876484531`: exact checkout, validation, upload and deploy PASS.
+`b217943e027e66993f0010643b2933b01d4b1e6d`
 
-Public URL: `https://jozzpoly.github.io/Companion-Brain-Lab/`.
+Public-runtime validation `34876312905`:
 
-## Foundation substrate status
+- 31/31 test files PASS;
+- 137/137 tests PASS;
+- TypeScript PASS;
+- production build PASS;
+- npm audit: 0 vulnerabilities.
 
-The foundation campaign was opened after a previous Owner browser run reproduced a whole-workbench freeze. Deterministic regressions and broad claim-vs-code audits converted known ordinary constrained-world failure classes into typed runtime states and aligned browser authority with headless test contracts.
+Public Pages run `34876484531`: exact checkout / validation / upload / deploy PASS.
 
-Current survival vocabulary includes `NORMAL`, `HARD_EGRESS`, `NO_SAFE_VELOCITY` and `NO_VALID_RELATIONAL_SLOT`.
+Later test-only foundation head `7c2d25dead58ca26d3bb195bc1b91911c60d32a5` adds a DIRECT full-chain survival rehearsal. Run `34879978993` passes 32/32 test files and 138/138 tests, with TypeScript/build PASS and 0 npm vulnerabilities.
 
-Hard/contact egress is coherent through route, local spatial choice, NATURAL realization, final hard validation, World and post-World recovery. A 180-step full-chain rehearsal enters hard egress, escapes and returns to normal finite motion.
+## Why this audit existed
 
-Known browser/headless contract truncation was removed with a typed full-signature static traversal adapter. Exact authored-boundary contact routing, relationship-exhaustion hold semantics, recovery counters and static point-fit/traversal responsibilities are regression-bound.
+A prior Owner browser run reproduced a whole-workbench freeze even though the earlier R1 campaign had strong automated evidence. The foundation campaign therefore stopped product-feature expansion and attacked substrate survival, authority, browser/headless parity, recovery semantics and causal observability.
 
-## Catastrophic fault containment
+The freeze-class investigation exposed ordinary constrained-world states that had incorrectly been allowed to reach historical invariant exceptions or contradictory movement contracts. Those classes were promoted into explicit data and deterministic regressions.
 
-A `runtime-fault-sentinel` is installed before Phaser. First uncaught catastrophic fault evidence is latched, the Phaser game loop is stopped, the last canvas is preserved behind an independent fault surface, JSON/reload controls remain available and secondary errors cannot replace the first cause.
+## Closed survival vocabulary
 
-A deliberate public probe exists at `?foundationFaultProbe=1`.
+The active runtime now has explicit ordinary states:
 
-### Owner browser evidence
+- `NORMAL`;
+- `HARD_EGRESS`;
+- `NO_SAFE_VELOCITY`;
+- `NO_VALID_RELATIONAL_SLOT`.
 
-The first foundation public candidate `81877d7fab6b52d4ea683c870074cf12e0793c43` was exercised in the real Owner browser.
+Ordinary constrained-world states must not terminate the runtime merely because a local solver cannot immediately produce normal movement.
 
-The deliberate probe reached the real independent fault surface and produced a valid `companion-brain-lab-runtime-fault-v1` record with the expected `FOUNDATION_FAULT_PROBE` message. Therefore the containment surface itself has real-browser evidence.
+## Defended chain
 
-The same recording exposed a serious apparatus bug: `Reload workbench` preserved the probe query parameter, so every reload re-armed the deliberate probe and fired it again after the bounded delay. The apparent repeated crashes were repeated self-inflicted probe faults.
+Current defended causal path:
 
-Classification: **containment observed; probe recovery UX failed**.
+`relationship objective`
+→ `shared static point validity`
+→ `static route / egress semantics`
+→ `R1 hard-vs-comfort local spatial safety`
+→ `DIRECT or NATURAL realization`
+→ `final hard validation`
+→ `World / Rapier`
+→ `post-World route`
+→ `progress / bounded recovery`
+→ `causal trace / workbench`.
 
-The finding and video/JSON interpretation are preserved in `FOUNDATION_OWNER_FAULT_PROBE_EVIDENCE.md`.
+Important closed findings:
 
-## One-shot probe repair
+- hard physical feasibility is separate from desired/comfort clearance;
+- route edges leaving the live physical start are egress-aware while route targets/corners remain normally constrained;
+- browser traversal callbacks forward the full `StaticTraversalOptions` signature;
+- exact boundary contact can move away from a wall while motion into the wall remains blocked;
+- STOP is not treated as a valid safe answer while true hard penetration requires egress;
+- NATURAL `HARD_EGRESS` bypasses temporal smoothing and executes the approved safety move;
+- candidate exhaustion becomes `NO_SAFE_VELOCITY`, not an uncaught exception;
+- exhaustion of the temporary eight-slot relationship vocabulary becomes `NO_VALID_RELATIONAL_SLOT`, not an uncaught exception or fake `ARRIVED`;
+- progress/recovery is post-World and distinguishes moving, tracking, intentional hold, blocking, invalid/unreachable route and bounded retry;
+- causal trace separates pre-decision evidence from post-outcome evidence;
+- incident retry counters expose self-describing scopes.
 
-Current runtime `b217943e...` makes the deliberate probe one-shot. Before the deliberate fault fires, only the probe query parameter is removed with `history.replaceState()`; unrelated query parameters and the hash survive. The fault action is labelled `Reload normally`. Regression coverage binds this URL-clearing behavior.
+Both NATURAL and DIRECT have 180-step full-chain hard-egress survival coverage.
 
-The current runtime has 137/137 tests PASS and is deployed publicly. The Owner does not need to repeat the deliberate probe merely to recreate containment evidence already obtained.
+## Catastrophic fault boundary
 
-## Closed foundation gates
+Unknown programmer/data/runtime faults are not converted into plausible gameplay states.
 
-Mechanical gates closed by the current campaign include:
-- ordinary local candidate exhaustion survival;
-- hard-contact/overlap egress;
-- exact-contact route-start recovery and directional boundary egress;
-- relationship-slot exhaustion without fatal exception or fake arrival;
-- browser traversal-option forwarding;
-- final-command hard safety;
-- temporal progress/recovery semantics;
-- incident/retry counter clarity;
-- first-fault latching and fail-stop surface;
-- 180-step full-chain survival;
-- active authority mapping;
-- exact source pin, Pages rebuild and deployment.
+`runtime-fault-sentinel` is installed before Phaser. The first uncaught fault:
 
-Programmer/data invariants may still fail loudly and should surface through the sentinel rather than fabricate gameplay behavior.
+- latches first-cause evidence;
+- stops the Phaser game loop;
+- leaves the last rendered evidence visible;
+- presents an independent DOM fault surface;
+- exposes message/stack/location and fault JSON;
+- prevents secondary faults from replacing the first cause.
 
-## Current evidence authority
+The deliberate real-browser `FOUNDATION_FAULT_PROBE` reached that surface and produced valid fault JSON. The same Owner rehearsal discovered a separate probe UX bug: reload preserved the probe parameter and re-armed the deliberate failure. That finding is preserved in `FOUNDATION_OWNER_FAULT_PROBE_EVIDENCE.md`; current runtime `b217943e...` makes the probe one-shot.
 
-- `FOUNDATION_RUNTIME_SURVIVAL_AUDIT.md` — live readiness truth;
-- `FOUNDATION_ACTIVE_AUTHORITY_MAP.md` — active runtime authority;
-- `FOUNDATION_PUBLIC_PREVIEW_QUALIFICATION.md` — exact current deployment evidence;
-- `FOUNDATION_OWNER_FAULT_PROBE_EVIDENCE.md` — real Owner probe evidence and reload-loop finding;
-- `FOUNDATION_BROWSER_OWNER_GATE.md` — remaining ordinary-runtime Owner procedure;
-- `R1_AUDIT_LEDGER.md` — historical R1 evidence only.
+## Final Owner ordinary-runtime evidence
 
-## Remaining binding gate
+The Owner exercised the normal current public runtime for approximately 123 seconds across multiple scenarios and deliberately difficult interactions.
 
-Only the ordinary public-runtime Owner torture gate remains.
+Review found:
 
-Stress wall/boundary pin-push-release, boundary scrape/corner contact, doorway contention, rapid reversals/moving objective, long continuous movement and a DIRECT/NATURAL comparison. Capture incident/video for suspicious zero motion, wrong persistent-unreachable, sticky no-safe-velocity, recovery loops, teleport/disappearance, spontaneous fault surface or whole-runtime freeze.
+- no spontaneous fault surface;
+- no unexplained whole-runtime freeze;
+- no permanent autonomous zero-motion shutdown;
+- no sticky no-safe-velocity / recovery loop;
+- movement continued across the full run except scenario resets and intentional stops;
+- the longest suspicious both-actors-still interval was approximately 1.6 seconds and was explicitly classified `ARRIVED`; movement later resumed normally.
 
-The substrate fails readiness if the ordinary runtime shows an unexplained survival, contract or causal-truth failure.
+The Owner reported that they were unable to destroy the runtime during this run.
 
-Minor feel limitations, the temporary eight-slot relationship policy, missing player right-of-way and missing catch-up pace are intentionally deferred unless they expose such a substrate defect.
+Classification:
 
-## Deferred to the aggressive redesign
+**OWNER TORTURE GATE PASS.**
 
-Do not polish these inside foundation cleanup:
-- Relationship Field / region reasoning;
+## What remains intentionally open for redesign, not foundation repair
+
+These are product/coordination limitations, not unresolved survival blockers:
+
+- replacement of the legacy eight-slot relationship objective by region/field reasoning;
 - player movement corridor and right-of-way;
-- dynamic pace / urgency / catch-up;
-- redesign of MotionIntent / desired-speed authority;
+- pace / urgency / catch-up;
+- MotionIntent / desired-speed authority;
+- dynamic player-conflict authority after NATURAL temporal realization;
 - multi-companion coordination;
 - commands;
 - combat;
 - LLM cognition;
-- selective S5 research transplant.
+- selective transplantation of useful older S5 research.
 
-## Readiness exit statement
+A proven R1-5A red finding shows that NATURAL continuity can invalidate a player-safe upstream move before World, producing real player contact while the existing final gate sees only hard static geometry. This is a known next-stage design input, not a reason to reopen survival foundation.
 
-The foundation becomes rework-ready only when the current ordinary exact public runtime survives the Owner torture gate without an unexplained substrate/survival/causal-truth failure.
+## Final audit verdict
 
-We have mechanical foundation PASS, real-browser fault-containment evidence, a repaired one-shot probe and an updated public candidate. The ordinary-runtime Owner torture gate remains open.
+No currently known substrate-level survival / browser-contract / causal-truth blocker remains open inside the intended foundation scope.
+
+**FOUNDATION PASS · REWORK-READY.**
