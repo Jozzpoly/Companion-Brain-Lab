@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { planStaticShadowRoute, S2C_ROUTE_CLEARANCE } from "./static-router";
+import { RapierPhysicalWorld } from "../physics/rapier-physical-world";
 import { LabWorld } from "../world/world";
-import type { ScenarioId, Vec2 } from "../world/types";
+import type { ScenarioId, ScenarioSpec, Vec2, WorldSnapshot } from "../world/types";
 
 function reachable(status: ReturnType<typeof planStaticShadowRoute>["status"]): boolean {
   return status === "direct" || status === "routed";
@@ -88,6 +89,61 @@ describe("behavior-forensics: hard-vs-comfort route connectivity", () => {
       expect(lower.routeNodeIds).not.toEqual(upper.routeNodeIds);
     } finally {
       world.dispose();
+    }
+  });
+
+  it("narrow boundary passage: desired clearance can erase a physically hard-feasible route", async () => {
+    const spec: ScenarioSpec = {
+      id: "open",
+      label: "forensics narrow hard-only passage",
+      width: 12,
+      height: 8,
+      actors: [
+        { id: "player", position: { x: 2, y: 7 }, radius: 0.3, speed: 3 },
+        { id: "companion", position: { x: 8, y: 4 }, radius: 0.3, speed: 3 }
+      ],
+      obstacles: [
+        { id: "hard-only-wall", x: 5.5, y: 0.7, width: 1, height: 7.3 }
+      ]
+    };
+    const physical = await RapierPhysicalWorld.create(spec);
+    try {
+      const snapshot: WorldSnapshot = {
+        tick: 0,
+        scenarioId: "open",
+        width: spec.width,
+        height: spec.height,
+        actors: physical.snapshot(),
+        obstacles: spec.obstacles
+      };
+      const companion = snapshot.actors.find((entry) => entry.id === "companion");
+      if (!companion) throw new Error("missing companion");
+      const target = { x: 3, y: 4 };
+      const query = (from: Vec2, to: Vec2, radius: number, options?: Parameters<RapierPhysicalWorld["staticCircleTraversal"]>[3]) =>
+        physical.staticCircleTraversal(from, to, radius, options);
+
+      const hard = planStaticShadowRoute({
+        snapshot,
+        start: companion.position,
+        target,
+        radius: companion.radius,
+        clearance: 0,
+        query
+      });
+      const withComfort = planStaticShadowRoute({
+        snapshot,
+        start: companion.position,
+        target,
+        radius: companion.radius,
+        clearance: S2C_ROUTE_CLEARANCE,
+        query
+      });
+
+      expect(reachable(hard.status)).toBe(true);
+      expect(hard.status).toBe("routed");
+      expect(withComfort.status).toBe("unreachable");
+    } finally {
+      physical.dispose();
     }
   });
 });
