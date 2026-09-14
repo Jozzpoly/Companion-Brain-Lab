@@ -5,7 +5,9 @@ import type {
   DirectTraversalResult,
   MotionIntent,
   ScenarioId,
+  StaticCircleOccupancyResult,
   StaticCircleTraversalResult,
+  StaticTraversalOptions,
   Vec2,
   WorldSnapshot
 } from "./types";
@@ -30,8 +32,17 @@ export class LabWorld {
     return this.physical.directTraversal(actorId, target);
   }
 
-  staticCircleTraversal(from: Vec2, target: Vec2, radius: number): StaticCircleTraversalResult {
-    return this.physical.staticCircleTraversal(from, target, radius);
+  staticCircleOccupancy(center: Vec2, radius: number): StaticCircleOccupancyResult {
+    return this.physical.staticCircleOccupancy(center, radius);
+  }
+
+  staticCircleTraversal(
+    from: Vec2,
+    target: Vec2,
+    radius: number,
+    options: StaticTraversalOptions = {}
+  ): StaticCircleTraversalResult {
+    return this.physical.staticCircleTraversal(from, target, radius, options);
   }
 
   step(intents: readonly MotionIntent[]): WorldSnapshot {
