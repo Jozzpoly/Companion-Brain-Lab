@@ -39,7 +39,7 @@ const clearQuery: StaticTraversalQuery = (from, to, radius): StaticCircleTravers
 });
 
 describe("CCC-0 shadow coordination frame", () => {
-  it("aggregates deterministic WHERE/PACE/PLAYER evidence without an authoritative command", () => {
+  it("aggregates deterministic WHERE/PACE/PLAYER/conflict evidence without an authoritative command", () => {
     const input = {
       snapshot: snapshot(0, { x: 2, y: 0 }),
       query: clearQuery,
@@ -54,9 +54,22 @@ describe("CCC-0 shadow coordination frame", () => {
     expect(second).toEqual(first);
     expect(first.kind).toBe("CCC0_SHADOW_COORDINATION");
     expect(first.region.state).toBe("REGION");
+    expect(first.playerFlowConflict.velocitySource).toBe("legacy-preferred");
     expect(first.legacy.relationshipTarget).toEqual({ x: 4.55, y: 4 });
     expect(first.legacy.preferredVelocity).toEqual({ x: 1.5, y: 0 });
     expect("command" in first).toBe(false);
+  });
+
+  it("keeps conflict evidence explicitly unavailable when no legacy preferred velocity exists", () => {
+    const result = evaluateShadowCoordinationFrame({
+      snapshot: snapshot(0, { x: 2, y: 0 }),
+      query: clearQuery,
+      physicalSpeedCapability: 3,
+      history: createEmptyShadowCoordinationHistory()
+    });
+
+    expect(result.playerFlowConflict.state).toBe("UNAVAILABLE");
+    expect(result.playerFlowConflict.companionVelocity).toBeNull();
   });
 
   it("carries only small explicit history and detects a next-tick reversal", () => {
