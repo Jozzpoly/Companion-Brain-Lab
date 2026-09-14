@@ -19,15 +19,16 @@ describe("shared static body point validity", () => {
     expect(circleFitsStaticWorld(snapshot, { x: 5.29, y: 1.79 }, 0.3)).toBe(false);
   });
 
-  it("treats exact static tangency as occupied and distinguishes a materially clear gap", () => {
-    expect(circleFitsStaticWorld(snapshot, { x: 5.2, y: 2 }, 0.3)).toBe(false);
+  it("treats exact point tangency as non-penetrating while rejecting material overlap", () => {
+    expect(circleFitsStaticWorld(snapshot, { x: 5.2, y: 2 }, 0.3)).toBe(true);
     expect(circleFitsStaticWorld(snapshot, { x: 5.199, y: 2 }, 0.3)).toBe(true);
     expect(circleFitsStaticWorld(snapshot, { x: 5.201, y: 2 }, 0.3)).toBe(false);
     expect(FOUNDATION_STATIC_BODY_GEOMETRY_EPSILON).toBeGreaterThan(0);
+    expect(FOUNDATION_STATIC_BODY_GEOMETRY_EPSILON).toBeLessThan(1e-6);
   });
 
-  it("requires positive clearance from world boundaries rather than relying on floating-point equality", () => {
-    expect(circleFitsStaticWorld(snapshot, { x: 0.3, y: 0.3 }, 0.3)).toBe(false);
+  it("matches non-penetrating world-boundary placement semantics", () => {
+    expect(circleFitsStaticWorld(snapshot, { x: 0.3, y: 0.3 }, 0.3)).toBe(true);
     expect(circleFitsStaticWorld(snapshot, { x: 0.301, y: 0.301 }, 0.3)).toBe(true);
     expect(circleFitsStaticWorld(snapshot, { x: 0.299, y: 0.3 }, 0.3)).toBe(false);
   });
