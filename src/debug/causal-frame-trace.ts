@@ -33,6 +33,13 @@ export interface CausalCommandPhase {
   finalConstraintSource?: string | null;
   finalConstrained?: boolean | null;
   finalConstraintReason?: string | null;
+  finalPlayerConstraintSource?: string | null;
+  finalPlayerConstrained?: boolean | null;
+  finalPlayerCurrentPhysicalClearance?: number | null;
+  finalPlayerRequiredPhysicalClearance?: number | null;
+  finalPlayerOriginalPredictedClearance?: number | null;
+  finalPlayerFinalPredictedClearance?: number | null;
+  finalPlayerConstraintReason?: string | null;
 }
 
 export interface CausalOutcomePhase {
