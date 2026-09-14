@@ -41,22 +41,10 @@ interface MatrixEvidence {
   endCompanion: Vec2;
 }
 
-function magnitude(v: Vec2): number {
-  return Math.hypot(v.x, v.y);
-}
-
-function distance(a: Vec2, b: Vec2): number {
-  return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
-function dot(a: Vec2, b: Vec2): number {
-  return a.x * b.x + a.y * b.y;
-}
-
-function clamp(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v));
-}
-
+function magnitude(v: Vec2): number { return Math.hypot(v.x, v.y); }
+function distance(a: Vec2, b: Vec2): number { return Math.hypot(a.x - b.x, a.y - b.y); }
+function dot(a: Vec2, b: Vec2): number { return a.x * b.x + a.y * b.y; }
+function clamp(v: number, min: number, max: number): number { return Math.max(min, Math.min(max, v)); }
 function lerp(a: Vec2, b: Vec2, alpha: number): Vec2 {
   return { x: a.x + (b.x - a.x) * alpha, y: a.y + (b.y - a.y) * alpha };
 }
@@ -68,14 +56,7 @@ function actor(snapshot: WorldSnapshot, id: "player" | "companion"): ActorSnapsh
 }
 
 function snapshotFor(spec: ScenarioSpec, tick: number, actors: readonly ActorSnapshot[]): WorldSnapshot {
-  return {
-    tick,
-    scenarioId: spec.id,
-    width: spec.width,
-    height: spec.height,
-    actors,
-    obstacles: spec.obstacles
-  };
+  return { tick, scenarioId: spec.id, width: spec.width, height: spec.height, actors, obstacles: spec.obstacles };
 }
 
 function dynamicPlayerClearance(snapshot: WorldSnapshot, move: Vec2): number {
@@ -130,7 +111,7 @@ function nearestSafeBlend(snapshot: WorldSnapshot, unsafe: Vec2, safe: Vec2): Ve
 async function runCase(testCase: MatrixCase): Promise<MatrixEvidence> {
   const spec: ScenarioSpec = {
     id: "open",
-    label: `R1-5A matrix ${testCase.id}`,
+    label: `R1-5A rejected broad projection ${testCase.id}`,
     width: 12,
     height: 8,
     actors: [
@@ -214,10 +195,7 @@ async function runCase(testCase: MatrixCase): Promise<MatrixEvidence> {
         constraintCount += 1;
       }
 
-      minimumPredictedClearance = Math.min(
-        minimumPredictedClearance,
-        dynamicPlayerClearance(snapshot, finalMove)
-      );
+      minimumPredictedClearance = Math.min(minimumPredictedClearance, dynamicPlayerClearance(snapshot, finalMove));
       previousAcceleration = staticConstrained.constrained || dynamicConstrained
         ? { x: 0, y: 0 }
         : { ...shaped.acceleration };
@@ -231,10 +209,7 @@ async function runCase(testCase: MatrixCase): Promise<MatrixEvidence> {
 
       const afterPlayer = actor(snapshot, "player");
       const afterCompanion = actor(snapshot, "companion");
-      minimumCenterDistance = Math.min(
-        minimumCenterDistance,
-        distance(afterPlayer.position, afterCompanion.position)
-      );
+      minimumCenterDistance = Math.min(minimumCenterDistance, distance(afterPlayer.position, afterCompanion.position));
       maximumPlayerMotionError = Math.max(maximumPlayerMotionError, afterPlayer.motionError);
       if (afterCompanion.contacts.some((contact) => contact.with === "player")) contactFrames += 1;
     }
@@ -257,80 +232,42 @@ async function runCase(testCase: MatrixCase): Promise<MatrixEvidence> {
 }
 
 const CASES: MatrixCase[] = [
-  {
-    id: "turn-carry-1.05ms",
-    playerStart: { x: 5, y: 4 },
-    companionStart: { x: 3.95, y: 4 },
-    playerWarmMove: { x: 0, y: 0 },
-    companionWarmMove: { x: 0.35, y: 0 },
-    target: { x: 4, y: 6 },
-    ticks: 36,
-    playerMove: () => ({ x: 0, y: 0 })
-  },
-  {
-    id: "turn-carry-2.10ms",
-    playerStart: { x: 5, y: 4 },
-    companionStart: { x: 3.95, y: 4 },
-    playerWarmMove: { x: 0, y: 0 },
-    companionWarmMove: { x: 0.7, y: 0 },
-    target: { x: 4, y: 6 },
-    ticks: 36,
-    playerMove: () => ({ x: 0, y: 0 })
-  },
-  {
-    id: "turn-carry-3.00ms",
-    playerStart: { x: 5, y: 4 },
-    companionStart: { x: 3.95, y: 4 },
-    playerWarmMove: { x: 0, y: 0 },
-    companionWarmMove: { x: 1, y: 0 },
-    target: { x: 4, y: 6 },
-    ticks: 36,
-    playerMove: () => ({ x: 0, y: 0 })
-  },
-  {
-    id: "head-on-moving-player",
-    playerStart: { x: 6, y: 4 },
-    companionStart: { x: 3.2, y: 4 },
-    playerWarmMove: { x: -0.45, y: 0 },
-    companionWarmMove: { x: 1, y: 0 },
-    target: { x: 8, y: 4 },
-    ticks: 72,
-    playerMove: () => ({ x: -0.45, y: 0 })
-  },
-  {
-    id: "cross-front-moving-player",
-    playerStart: { x: 4.8, y: 4.9 },
-    companionStart: { x: 3.5, y: 4 },
-    playerWarmMove: { x: 0, y: -0.5 },
-    companionWarmMove: { x: 0.7, y: 0 },
-    target: { x: 7, y: 4 },
-    ticks: 72,
-    playerMove: () => ({ x: 0, y: -0.5 })
-  },
-  {
-    id: "player-reversal",
-    playerStart: { x: 5.8, y: 4 },
-    companionStart: { x: 3.5, y: 4 },
-    playerWarmMove: { x: -0.45, y: 0 },
-    companionWarmMove: { x: 0.7, y: 0 },
-    target: { x: 7.5, y: 4 },
-    ticks: 72,
-    playerMove: (step) => step < 20 ? { x: -0.45, y: 0 } : { x: 0.45, y: 0 }
-  }
+  { id: "turn-carry-1.05ms", playerStart: { x: 5, y: 4 }, companionStart: { x: 3.95, y: 4 }, playerWarmMove: { x: 0, y: 0 }, companionWarmMove: { x: 0.35, y: 0 }, target: { x: 4, y: 6 }, ticks: 36, playerMove: () => ({ x: 0, y: 0 }) },
+  { id: "turn-carry-2.10ms", playerStart: { x: 5, y: 4 }, companionStart: { x: 3.95, y: 4 }, playerWarmMove: { x: 0, y: 0 }, companionWarmMove: { x: 0.7, y: 0 }, target: { x: 4, y: 6 }, ticks: 36, playerMove: () => ({ x: 0, y: 0 }) },
+  { id: "turn-carry-3.00ms", playerStart: { x: 5, y: 4 }, companionStart: { x: 3.95, y: 4 }, playerWarmMove: { x: 0, y: 0 }, companionWarmMove: { x: 1, y: 0 }, target: { x: 4, y: 6 }, ticks: 36, playerMove: () => ({ x: 0, y: 0 }) },
+  { id: "head-on-moving-player", playerStart: { x: 6, y: 4 }, companionStart: { x: 3.2, y: 4 }, playerWarmMove: { x: -0.45, y: 0 }, companionWarmMove: { x: 1, y: 0 }, target: { x: 8, y: 4 }, ticks: 72, playerMove: () => ({ x: -0.45, y: 0 }) },
+  { id: "cross-front-moving-player", playerStart: { x: 4.8, y: 4.9 }, companionStart: { x: 3.5, y: 4 }, playerWarmMove: { x: 0, y: -0.5 }, companionWarmMove: { x: 0.7, y: 0 }, target: { x: 7, y: 4 }, ticks: 72, playerMove: () => ({ x: 0, y: -0.5 }) },
+  { id: "player-reversal", playerStart: { x: 5.8, y: 4 }, companionStart: { x: 3.5, y: 4 }, playerWarmMove: { x: -0.45, y: 0 }, companionWarmMove: { x: 0.7, y: 0 }, target: { x: 7.5, y: 4 }, ticks: 72, playerMove: (step) => step < 20 ? { x: -0.45, y: 0 } : { x: 0.45, y: 0 } }
 ];
 
-describe("R1-5A projection characterization matrix", () => {
-  it("keeps the final dynamic boundary contact-free across carried-speed and moving-player variants", async () => {
+describe("R1-5A rejected broad comfort-projection characterization", () => {
+  it("records why the S3 comfort envelope is not suitable as final hard authority", async () => {
     const evidence: MatrixEvidence[] = [];
     for (const testCase of CASES) evidence.push(await runCase(testCase));
-    console.info(`R1-5A projection matrix ${JSON.stringify(evidence)}`);
+    console.info(`R1-5A rejected broad projection matrix ${JSON.stringify(evidence)}`);
 
+    // The broad projector can keep its own conservative comfort envelope and
+    // avoid material player disturbance. That is not enough to qualify it as
+    // a final authority layer.
     for (const row of evidence) {
       expect(row.minimumPredictedClearance, row.id).toBeGreaterThanOrEqual(-1e-8);
       expect(row.contactFrames, row.id).toBe(0);
       expect(row.minimumCenterDistance, row.id).toBeGreaterThan(RADIUS * 2);
       expect(row.maximumPlayerMotionError, row.id).toBeLessThan(0.02);
-      expect(row.endTargetDistance, row.id).toBeLessThan(row.startTargetDistance);
     }
+
+    const headOn = evidence.find((row) => row.id === "head-on-moving-player");
+    const crossFront = evidence.find((row) => row.id === "cross-front-moving-player");
+    if (!headOn || !crossFront) throw new Error("R1-5A broad projection evidence missing required cases.");
+
+    // Falsification result: enforcing comfort clearance at the final boundary
+    // causes persistent emergency intervention in a clean moving-player pass.
+    expect(headOn.constraintCount).toBeGreaterThan(10);
+
+    // And in cross-front it can sacrifice objective progress even though player
+    // authority remains clean. This negative result is why R1-5A split comfort
+    // policy from the one-step physical hard gate.
+    expect(crossFront.constraintCount).toBeGreaterThan(0);
+    expect(crossFront.endTargetDistance).toBeGreaterThanOrEqual(crossFront.startTargetDistance);
   });
 });
