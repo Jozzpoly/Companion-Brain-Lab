@@ -289,17 +289,18 @@ export class ProgressRecoveryMonitor {
       });
     }
 
-    // Body motion is evidence, not objective progress. A companion can move
-    // laterally, orbit or slide indefinitely without getting closer to its
-    // route/objective. Only improvement in the route/objective metric counts as
-    // ordinary progress.
-    const measurableProgress = progressDelta >= R1_PROGRESS_DISTANCE;
+    // Metric improvement only counts as the companion's own progress when the
+    // body also moved materially during the same rolling window. A moving target
+    // approaching a stationary companion must not manufacture PROGRESSING.
+    const measurableProgress =
+      progressDelta >= R1_PROGRESS_DISTANCE &&
+      evidence.bodyDisplacement >= R1_PROGRESS_DISTANCE;
     if (measurableProgress) {
       this.noProgressSinceTick = null;
       return this.finish(observation, {
         state: "PROGRESSING",
         action: "NONE",
-        reason: "rolling route/objective metric is decreasing",
+        reason: "rolling route/objective metric is decreasing while the companion is materially moving",
         objectiveDistance,
         progressMetric,
         progressDelta,
