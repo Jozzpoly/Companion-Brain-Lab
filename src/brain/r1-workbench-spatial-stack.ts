@@ -5,7 +5,7 @@ import {
   type ShadowCoordinationFrameInput,
   type ShadowCoordinationHistory
 } from "../coordination/shadow-coordination-frame";
-import type { MotionIntent } from "../world/types";
+import type { MotionIntent, Vec2 } from "../world/types";
 import type { FinalCommandConstraintResult } from "./final-command-constraint";
 import type { MotionContinuityStepResult } from "./motion-continuity";
 import type { PreferredVelocityRefinement } from "./preferred-velocity-refinement";
@@ -43,6 +43,13 @@ export interface R1WorkbenchSpatialDebug {
 }
 
 type ShadowCoordinationEvaluator = (input: ShadowCoordinationFrameInput) => ShadowCoordinationFrame;
+
+function intentVelocity(intent: MotionIntent): Vec2 {
+  return {
+    x: intent.move.x * S3_EXPERIMENT_MAX_SPEED,
+    y: intent.move.y * S3_EXPERIMENT_MAX_SPEED
+  };
+}
 
 export class R1WorkbenchSpatialStack {
   private readonly direct = new R1RecoveringDirectSpatialBrain();
@@ -90,7 +97,10 @@ export class R1WorkbenchSpatialStack {
           physicalSpeedCapability: S3_EXPERIMENT_MAX_SPEED,
           history: this.shadowHistory,
           legacyRelationshipTarget: input.relationshipTarget,
-          legacyPreferredVelocity: preferred?.selectedVelocity ?? null
+          legacyPreferredVelocity: preferred?.selectedVelocity ?? null,
+          // World will apply the same actor speed scale to MotionIntent. Capture
+          // the already-selected command as velocity evidence without changing it.
+          legacyAuthoritativeVelocity: intentVelocity(intent)
         });
         this.shadowFrame = frame;
         this.shadowHistory = frame.nextHistory;
