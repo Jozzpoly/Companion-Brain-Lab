@@ -56,7 +56,7 @@ function frame(sequence: number, observationTick: number, outcomeTick: number): 
       noProgressTicks: 0,
       unreachableTicks: 0,
       retryCount: 1,
-      appliedLocalRetries: 1
+      appliedLocalRetries: 9
     }
   };
 }
@@ -90,7 +90,18 @@ describe("R1 causal frame trace", () => {
     expect(latest?.outcome.postRouteClearanceConstrained).toBe(false);
     expect(latest?.post.action).toBe("RETRY_LOCAL");
     expect(latest?.post.retryCount).toBe(1);
-    expect(latest?.post.appliedLocalRetries).toBe(1);
+    expect(latest?.post.appliedLocalRetries).toBe(9);
+    expect(latest?.post.retryBudgetUsedThisEpisode).toBe(1);
+    expect(latest?.post.cumulativeLocalRetriesSinceReset).toBe(9);
+  });
+
+  it("adds self-describing recovery aliases to legacy incident-v2 frames", () => {
+    const trace = new CausalFrameTrace();
+    trace.record(frame(trace.nextSequence(), 20, 21));
+
+    const publicFrame = trace.recent(1)[0];
+    expect(publicFrame?.post.retryBudgetUsedThisEpisode).toBe(publicFrame?.post.retryCount);
+    expect(publicFrame?.post.cumulativeLocalRetriesSinceReset).toBe(publicFrame?.post.appliedLocalRetries);
   });
 
   it("defensively clones nested public evidence", () => {
