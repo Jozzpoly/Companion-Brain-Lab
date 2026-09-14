@@ -2,6 +2,7 @@ import type {
   DirectTraversalBlocker,
   ObstacleSpec,
   StaticCircleTraversalResult,
+  StaticTraversalOptions,
   Vec2,
   WorldSnapshot
 } from "../world/types";
@@ -23,9 +24,13 @@ export interface StaticRouteEdge {
   id: string;
   from: string;
   to: string;
+  /** Hard-body feasibility. This is the graph-connectivity authority. */
   clear: boolean;
   distance: number;
   blocker: DirectTraversalBlocker | null;
+  /** Preferred/comfort-clearance evidence. This does not remove hard-valid connectivity. */
+  comfortClear: boolean;
+  comfortBlocker: DirectTraversalBlocker | null;
 }
 
 export interface StaticRoutePlan {
@@ -33,7 +38,12 @@ export interface StaticRoutePlan {
   reason: string;
   radius: number;
   clearance: number;
+  /** Radius used to decide physical graph connectivity. */
   queryRadius: number;
+  /** Radius used only to expose preferred/comfort-clearance quality. */
+  desiredQueryRadius: number;
+  clearanceConstrained: boolean;
+  constrainedEdgeIds: readonly string[];
   start: Vec2;
   target: Vec2;
   nodes: readonly StaticRouteNode[];
@@ -46,7 +56,8 @@ export interface StaticRoutePlan {
 export type StaticTraversalQuery = (
   from: Vec2,
   to: Vec2,
-  radius: number
+  radius: number,
+  options?: StaticTraversalOptions
 ) => StaticCircleTraversalResult;
 
 function edgeId(a: string, b: string): string {
@@ -89,12 +100,12 @@ function pointFitsWorld(
 function obstacleCornerNodes(
   snapshot: WorldSnapshot,
   obstacle: ObstacleSpec,
-  queryRadius: number
+  desiredQueryRadius: number
 ): StaticRouteNode[] {
-  // A node exactly tangent to the inflated AABB can be reported as contact by the
-  // shape cast used to validate the edge. Keep this tiny epsilon explicit and
-  // debuggable instead of hiding it inside collision tolerances.
-  const cornerMargin = queryRadius + S2C_CORNER_EPSILON;
+  // Keep route corners at the preferred clearance even though connectivity is
+  // now decided by hard-body feasibility. This preserves nominal route quality
+  // without turning the preference into an unrecoverable physical law.
+  const cornerMargin = desiredQueryRadius + S2C_CORNER_EPSILON;
   const x0 = obstacle.x - cornerMargin;
   const x1 = obstacle.x + obstacle.width + cornerMargin;
   const y0 = obstacle.y - cornerMargin;
@@ -107,10 +118,10 @@ function obstacleCornerNodes(
   ];
 
   return candidates.filter((candidate) => {
-    if (!pointFitsWorld(snapshot, candidate.position, queryRadius, [])) return false;
+    if (!pointFitsWorld(snapshot, candidate.position, desiredQueryRadius, [])) return false;
     return !snapshot.obstacles.some((other) => {
       if (other.id === obstacle.id) return false;
-      return pointInsideExpandedObstacle(candidate.position, other, queryRadius);
+      return pointInsideExpandedObstacle(candidate.position, other, desiredQueryRadius);
     });
   });
 }
@@ -119,7 +130,7 @@ function buildNodes(
   snapshot: WorldSnapshot,
   start: Vec2,
   target: Vec2,
-  queryRadius: number
+  desiredQueryRadius: number
 ): StaticRouteNode[] {
   const nodes: StaticRouteNode[] = [
     { id: "start", kind: "start", position: { ...start }, sourceObstacle: null },
@@ -127,7 +138,7 @@ function buildNodes(
   ];
 
   const obstacles = [...snapshot.obstacles].sort((a, b) => a.id.localeCompare(b.id));
-  for (const obstacle of obstacles) nodes.push(...obstacleCornerNodes(snapshot, obstacle, queryRadius));
+  for (const obstacle of obstacles) nodes.push(...obstacleCornerNodes(snapshot, obstacle, desiredQueryRadius));
 
   return nodes.sort((a, b) => {
     const rankOrder = nodeKindRank(a.kind) - nodeKindRank(b.kind);
@@ -137,7 +148,8 @@ function buildNodes(
 
 function buildEdges(
   nodes: readonly StaticRouteNode[],
-  queryRadius: number,
+  hardQueryRadius: number,
+  desiredQueryRadius: number,
   query: StaticTraversalQuery
 ): StaticRouteEdge[] {
   const edges: StaticRouteEdge[] = [];
@@ -147,14 +159,22 @@ function buildEdges(
     for (let j = i + 1; j < nodes.length; j += 1) {
       const to = nodes[j];
       if (!to) continue;
-      const traversal = query(from.position, to.position, queryRadius);
+      const hard = query(from.position, to.position, hardQueryRadius);
+      const comfort = query(
+        from.position,
+        to.position,
+        desiredQueryRadius,
+        { initialOverlap: "allow-egress" }
+      );
       edges.push({
         id: edgeId(from.id, to.id),
         from: from.id,
         to: to.id,
-        clear: traversal.clear,
-        distance: traversal.distance,
-        blocker: traversal.blocker
+        clear: hard.clear,
+        distance: hard.distance,
+        blocker: hard.blocker,
+        comfortClear: comfort.clear,
+        comfortBlocker: comfort.blocker
       });
     }
   }
@@ -233,6 +253,22 @@ function shortestPath(
   return { nodeIds: route, cost: total };
 }
 
+function constrainedEdgesForPath(
+  nodeIds: readonly string[],
+  edges: readonly StaticRouteEdge[]
+): string[] {
+  const constrained: string[] = [];
+  for (let index = 0; index < nodeIds.length - 1; index += 1) {
+    const a = nodeIds[index];
+    const b = nodeIds[index + 1];
+    if (!a || !b) continue;
+    const id = edgeId(a, b);
+    const edge = edges.find((candidate) => candidate.id === id);
+    if (edge && !edge.comfortClear) constrained.push(id);
+  }
+  return constrained;
+}
+
 export function planStaticShadowRoute(options: {
   snapshot: WorldSnapshot;
   start: Vec2;
@@ -245,11 +281,13 @@ export function planStaticShadowRoute(options: {
   if (!Number.isFinite(clearance) || clearance < 0) throw new Error("Route clearance must be finite and non-negative.");
   if (!Number.isFinite(options.radius) || options.radius <= 0) throw new Error("Route radius must be finite and positive.");
 
-  const queryRadius = options.radius + clearance;
+  const queryRadius = options.radius;
+  const desiredQueryRadius = options.radius + clearance;
   const base = {
     radius: options.radius,
     clearance,
     queryRadius,
+    desiredQueryRadius,
     start: { ...options.start },
     target: { ...options.target }
   };
@@ -259,6 +297,8 @@ export function planStaticShadowRoute(options: {
       ...base,
       status: "invalid-target",
       reason: "target cannot contain the actor body inside static world geometry",
+      clearanceConstrained: false,
+      constrainedEdgeIds: [],
       nodes: [],
       edges: [],
       routeNodeIds: [],
@@ -267,14 +307,19 @@ export function planStaticShadowRoute(options: {
     };
   }
 
-  const nodes = buildNodes(options.snapshot, options.start, options.target, queryRadius);
-  const edges = buildEdges(nodes, queryRadius, options.query);
+  const nodes = buildNodes(options.snapshot, options.start, options.target, desiredQueryRadius);
+  const edges = buildEdges(nodes, queryRadius, desiredQueryRadius, options.query);
   const direct = edges.find((edge) => edge.id === edgeId("start", "target"));
   if (direct?.clear) {
+    const constrainedEdgeIds = direct.comfortClear ? [] : [direct.id];
     return {
       ...base,
       status: "direct",
-      reason: "whole-body direct traversal is clear",
+      reason: direct.comfortClear
+        ? "hard-body direct traversal is clear with desired clearance"
+        : "hard-body direct traversal is clear but desired clearance is constrained",
+      clearanceConstrained: constrainedEdgeIds.length > 0,
+      constrainedEdgeIds,
       nodes,
       edges,
       routeNodeIds: ["start", "target"],
@@ -289,8 +334,10 @@ export function planStaticShadowRoute(options: {
       ...base,
       status: "unreachable",
       reason: direct?.blocker
-        ? `direct route blocked by ${direct.blocker.label}; graph contains no clear alternate path`
-        : "graph contains no clear route to target",
+        ? `hard-body direct route blocked by ${direct.blocker.label}; graph contains no hard-feasible alternate path`
+        : "graph contains no hard-feasible route to target",
+      clearanceConstrained: false,
+      constrainedEdgeIds: [],
       nodes,
       edges,
       routeNodeIds: [],
@@ -305,13 +352,18 @@ export function planStaticShadowRoute(options: {
     if (!node) throw new Error(`Route references missing node: ${id}`);
     return { ...node.position };
   });
+  const constrainedEdgeIds = constrainedEdgesForPath(path.nodeIds, edges);
 
   return {
     ...base,
     status: "routed",
-    reason: direct?.blocker
-      ? `direct route blocked by ${direct.blocker.label}; deterministic graph route found`
-      : "deterministic graph route found",
+    reason: constrainedEdgeIds.length > 0
+      ? "deterministic hard-feasible graph route found with constrained desired clearance"
+      : direct?.blocker
+        ? `hard-body direct route blocked by ${direct.blocker.label}; deterministic graph route found with desired clearance`
+        : "deterministic graph route found with desired clearance",
+    clearanceConstrained: constrainedEdgeIds.length > 0,
+    constrainedEdgeIds,
     nodes,
     edges,
     routeNodeIds: path.nodeIds,
