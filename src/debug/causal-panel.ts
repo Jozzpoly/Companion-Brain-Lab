@@ -13,6 +13,7 @@ export type CausalPanelAction =
 
 export type WorldDebugLayer =
   | "relationship"
+  | "coordination"
   | "route"
   | "spatial"
   | "motion"
@@ -34,14 +35,36 @@ export interface CausalPanelModel {
   sections: readonly CausalPanelSection[];
 }
 
+interface RenderedCausalPanelSection {
+  node: HTMLElement;
+  details: HTMLDetailsElement;
+  summary: HTMLElement;
+  body: HTMLElement;
+}
+
 const DEFAULT_LAYERS: Readonly<Record<WorldDebugLayer, boolean>> = {
   relationship: false,
+  coordination: false,
   route: true,
   spatial: true,
   motion: true,
   trails: true,
   contacts: true
 };
+
+const DEFAULT_OPEN_SECTION_IDS = new Set(["run", "recovery", "route", "motion"]);
+
+export class CausalPanelDisclosureState {
+  private readonly remembered = new Map<string, boolean>();
+
+  isOpen(sectionId: string): boolean {
+    return this.remembered.get(sectionId) ?? DEFAULT_OPEN_SECTION_IDS.has(sectionId);
+  }
+
+  remember(sectionId: string, open: boolean): void {
+    this.remembered.set(sectionId, open);
+  }
+}
 
 function button(label: string, action: CausalPanelAction): HTMLButtonElement {
   const element = document.createElement("button");
@@ -54,6 +77,7 @@ function button(label: string, action: CausalPanelAction): HTMLButtonElement {
 
 function layerLabel(layer: WorldDebugLayer): string {
   if (layer === "relationship") return "Relationship";
+  if (layer === "coordination") return "Coordination";
   if (layer === "route") return "Route";
   if (layer === "spatial") return "Spatial";
   if (layer === "motion") return "Motion";
@@ -69,6 +93,8 @@ export class CausalPanel {
   private readonly badge: HTMLElement;
   private readonly sectionsRoot: HTMLElement;
   private readonly layerValues = new Map<WorldDebugLayer, boolean>();
+  private readonly disclosureState = new CausalPanelDisclosureState();
+  private readonly renderedSections = new Map<string, RenderedCausalPanelSection>();
   private collapsed = false;
 
   constructor(onAction: (action: CausalPanelAction) => void) {
@@ -179,31 +205,61 @@ export class CausalPanel {
     return this.layerValues.get(layer) ?? false;
   }
 
+  private createRenderedSection(sectionId: string): RenderedCausalPanelSection {
+    const node = document.createElement("section");
+    node.className = "debug-section debug-dynamic-section";
+
+    const details = document.createElement("details");
+    details.dataset.sectionId = sectionId;
+    details.open = this.disclosureState.isOpen(sectionId);
+    details.addEventListener("toggle", () => this.disclosureState.remember(sectionId, details.open));
+
+    const summary = document.createElement("summary");
+    const body = document.createElement("div");
+    body.className = "debug-lines";
+    details.append(summary, body);
+    node.append(details);
+
+    const rendered = { node, details, summary, body };
+    this.renderedSections.set(sectionId, rendered);
+    return rendered;
+  }
+
   update(model: CausalPanelModel): void {
     this.title.textContent = model.title;
     this.subtitle.textContent = model.subtitle;
     this.badge.textContent = model.badge;
     this.badge.dataset.tone = model.badgeTone;
 
-    this.sectionsRoot.replaceChildren();
+    const seen = new Set<string>();
+    const desiredNodes: HTMLElement[] = [];
+
     for (const section of model.sections) {
-      const node = document.createElement("section");
-      node.className = "debug-section debug-dynamic-section";
-      node.dataset.tone = section.tone ?? "normal";
-      const details = document.createElement("details");
-      details.open = section.id === "run" || section.id === "recovery" || section.id === "route" || section.id === "motion";
-      const summary = document.createElement("summary");
-      summary.textContent = section.title;
-      const body = document.createElement("div");
-      body.className = "debug-lines";
+      seen.add(section.id);
+      const rendered = this.renderedSections.get(section.id) ?? this.createRenderedSection(section.id);
+      rendered.node.dataset.tone = section.tone ?? "normal";
+      rendered.summary.textContent = section.title;
+      rendered.body.replaceChildren();
       for (const line of section.lines) {
         const row = document.createElement("div");
         row.textContent = line;
-        body.append(row);
+        rendered.body.append(row);
       }
-      details.append(summary, body);
-      node.append(details);
-      this.sectionsRoot.append(node);
+      desiredNodes.push(rendered.node);
+    }
+
+    for (const [sectionId, rendered] of this.renderedSections) {
+      if (seen.has(sectionId)) continue;
+      this.disclosureState.remember(sectionId, rendered.details.open);
+      rendered.node.remove();
+      this.renderedSections.delete(sectionId);
+    }
+
+    for (let index = 0; index < desiredNodes.length; index += 1) {
+      const desired = desiredNodes[index];
+      if (!desired) continue;
+      const current = this.sectionsRoot.children.item(index);
+      if (current !== desired) this.sectionsRoot.insertBefore(desired, current);
     }
   }
 }
