@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { LabScene } from "./app/lab-scene";
+import { S4LabScene } from "./app/s4-lab-scene";
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -7,5 +7,5 @@ new Phaser.Game({
   width: 1200,
   height: 800,
   backgroundColor: "#111318",
-  scene: [LabScene]
+  scene: [S4LabScene]
 });
