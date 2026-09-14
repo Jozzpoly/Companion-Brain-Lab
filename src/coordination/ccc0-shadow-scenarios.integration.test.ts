@@ -27,6 +27,24 @@ async function inspectScenario(id: ScenarioId) {
   }
 }
 
+async function countTraversalQueries(id: ScenarioId): Promise<number> {
+  const world = await LabWorld.create(id);
+  try {
+    const snapshot = world.snapshot();
+    let queryCount = 0;
+    evaluateShadowRelationshipRegion({
+      snapshot,
+      query: (from, to, radius, options) => {
+        queryCount += 1;
+        return world.staticCircleTraversal(from, to, radius, options);
+      }
+    });
+    return queryCount;
+  } finally {
+    world.dispose();
+  }
+}
+
 describe("CCC-0 shadow geometry campaign", () => {
   for (const scenarioId of ["open", "pillar", "doorway", "head-on"] as const) {
     it(`${scenarioId} remains deterministic, bounded and physically revalidated`, async () => {
@@ -65,6 +83,19 @@ describe("CCC-0 shadow geometry campaign", () => {
       }
     });
   }
+
+  it("makes the hidden static-traversal cost visible instead of equating 12 route candidates with 12 casts", async () => {
+    const openQueries = await countTraversalQueries("open");
+    const pillarQueries = await countTraversalQueries("pillar");
+    const doorwayQueries = await countTraversalQueries("doorway");
+
+    expect(openQueries).toBeGreaterThan(CCC0_REGION_ROUTE_SHORTLIST);
+    expect(openQueries).toBeLessThanOrEqual(40);
+    expect(pillarQueries).toBeGreaterThan(100);
+    expect(doorwayQueries).toBeGreaterThan(100);
+    expect(pillarQueries).toBeLessThanOrEqual(500);
+    expect(doorwayQueries).toBeLessThanOrEqual(500);
+  });
 
   it("doorway does not collapse its representative into the player while route-qualifying across the passage", async () => {
     const { result } = await inspectScenario("doorway");
