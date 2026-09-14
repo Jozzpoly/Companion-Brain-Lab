@@ -1,6 +1,6 @@
 {
   "name": "companion-brain-lab",
-  "version": "0.0.0-s1",
+  "version": "0.1.0-foundation.0",
   "private": true,
   "type": "module",
   "scripts": {
