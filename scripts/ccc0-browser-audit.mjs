@@ -302,6 +302,71 @@ try {
   invariant(await sectionDetails(page, "ccc-where").evaluate((element) => element.open), "CCC-0 WHERE disclosure did not survive the long browser run.");
   invariant(await sectionDetails(page, "ccc-player").evaluate((element) => element.open), "CCC-0 PLAYER FLOW disclosure did not survive the long browser run.");
 
+  // One bounded real-browser rehearsal of the confirmed solver-motion -> semantic-objective leak.
+  // The companion is manually driven into a zero-input player, World-generated player velocity is frozen by pause,
+  // then RELATIONAL gets exactly one step to consume that snapshot. This does not alter runtime authority.
+  await page.locator('[data-action="scenario-head-on"]').click();
+  await waitForScenario(page, "Head-on contact");
+  await page.locator('[data-action="cycle-mode"]').click();
+  await waitForPanel(page, (value) => value.includes("mode MANUAL"), 5_000, "MANUAL mode for solver-motion rehearsal");
+  await page.keyboard.down("ArrowLeft");
+  await page.waitForTimeout(1_050);
+  await page.locator('[data-action="toggle-pause"]').click();
+  await waitForPanel(page, (value) => value.includes("PAUSED"), 5_000, "pause at manual player contact");
+  await page.keyboard.up("ArrowLeft");
+  await page.waitForTimeout(100);
+
+  await page.locator('[data-action="cycle-mode"]').click();
+  await waitForPanel(page, (value) => value.includes("mode CHASE"), 5_000, "CHASE transition before relational rehearsal");
+  await page.locator('[data-action="cycle-mode"]').click();
+  await waitForPanel(page, (value) => value.includes("mode RELATIONAL"), 5_000, "RELATIONAL mode for solver-motion rehearsal");
+
+  const causalBeforeTick = parseTick(await panelText(page));
+  invariant(causalBeforeTick !== null, "Could not read paused tick before causal single-step.");
+  await page.locator('[data-action="single-step"]').click();
+  await waitForPanel(
+    page,
+    (value) => {
+      const tick = parseTick(value);
+      return tick !== null && tick > causalBeforeTick && value.includes("mode RELATIONAL");
+    },
+    5_000,
+    "RELATIONAL causal single-step"
+  );
+
+  const [solverLeakDownload] = await Promise.all([
+    page.waitForEvent("download", { timeout: 10_000 }),
+    page.locator('[data-action="capture-incident"]').click()
+  ]);
+  const solverLeakIncident = await readDownloadJson(solverLeakDownload);
+  invariant(solverLeakIncident.schema === "companion-brain-lab-ccc0-causal-incident-v5", "Solver-motion rehearsal did not export incident v5.");
+  const solverLeakFrame = solverLeakIncident.frames.at(-1);
+  const solverInput = solverLeakFrame?.observation?.playerInputMove;
+  const solverRequested = solverLeakFrame?.observation?.playerRequestedVelocity;
+  const solverActual = solverLeakFrame?.observation?.playerActualVelocity;
+  const consumedHeading = solverLeakFrame?.decision?.relationshipPlayerDirection;
+  const solverActualSpeed = solverActual ? Math.hypot(solverActual.x, solverActual.y) : 0;
+  const solverRequestedSpeed = solverRequested ? Math.hypot(solverRequested.x, solverRequested.y) : Number.POSITIVE_INFINITY;
+  const solverInputMagnitude = solverInput ? Math.hypot(solverInput.x, solverInput.y) : Number.POSITIVE_INFINITY;
+  const headingDot = solverActual && consumedHeading && solverActualSpeed > 1e-9
+    ? (solverActual.x / solverActualSpeed) * consumedHeading.x + (solverActual.y / solverActualSpeed) * consumedHeading.y
+    : Number.NEGATIVE_INFINITY;
+
+  invariant(solverInputMagnitude < 1e-6, `Solver-motion rehearsal owner input was not zero: ${JSON.stringify(solverInput)}`);
+  invariant(solverRequestedSpeed < 1e-6, `Solver-motion rehearsal player requested velocity was not zero: ${JSON.stringify(solverRequested)}`);
+  invariant(solverActualSpeed > 0.1, `Manual companion push did not leave meaningful player actual velocity: ${JSON.stringify(solverActual)}`);
+  invariant(
+    solverLeakFrame?.observation?.playerContacts?.includes("companion"),
+    `Solver-motion rehearsal did not preserve player/companion contact provenance: ${JSON.stringify(solverLeakFrame?.observation?.playerContacts)}`
+  );
+  invariant(consumedHeading && headingDot > 0.95, `Relationship did not consume the solver-induced player heading: dot=${headingDot}`);
+  invariant(typeof solverLeakFrame?.decision?.relationshipLabel === "string", "Solver-motion rehearsal missing relational slot decision.");
+  invariant(
+    solverLeakFrame?.decision?.relationshipTarget && Number.isFinite(solverLeakFrame.decision.relationshipTarget.x),
+    "Solver-motion rehearsal missing relational target."
+  );
+  await assertNoFault(page, errors);
+
   const intervals = await page.evaluate(() => window.__ccc0BrowserAudit?.intervals ?? []);
   const timing = timingSummary(intervals);
   invariant(timing.count > 120, `Too few requestAnimationFrame samples (${timing.count}).`);
@@ -325,6 +390,18 @@ try {
       refinementSource: incidentFrame?.decision?.refinementSource ?? null,
       naturalRegime: incidentFrame?.decision?.naturalRegime ?? null,
       playerMotionErrorAfter: incidentFrame?.outcome?.playerMotionError ?? null
+    },
+    solverMotionSemanticLeak: {
+      capturedTick: solverLeakIncident.tick,
+      frameSequence: solverLeakFrame?.sequence ?? null,
+      ownerInputMove: solverInput ?? null,
+      playerRequestedVelocity: solverRequested ?? null,
+      playerActualVelocity: solverActual ?? null,
+      playerContacts: solverLeakFrame?.observation?.playerContacts ?? [],
+      relationshipPlayerDirection: consumedHeading ?? null,
+      relationshipLabel: solverLeakFrame?.decision?.relationshipLabel ?? null,
+      relationshipTarget: solverLeakFrame?.decision?.relationshipTarget ?? null,
+      headingDot
     },
     finalTick: parseTick(finalText),
     coordinationLayerEnabled: await coordinationToggle.isChecked(),
