@@ -6,6 +6,11 @@ import {
   type CompanionMode,
   type RelationalDecision
 } from "../brain/relational-positioning";
+import {
+  SpatialLocomotionBrain,
+  type SpatialLocomotionDecision,
+  type SpatialVelocityCandidate
+} from "../brain/spatial-locomotion";
 import { DebugWorkbenchState } from "../debug/debug-workbench";
 import { ResearchTrace, type PublicDebugChannel } from "../debug/research-trace";
 import {
@@ -45,6 +50,13 @@ function compact(value: number): number {
   return Number(value.toFixed(3));
 }
 
+function topAcceptedCandidates(decision: SpatialLocomotionDecision, limit = 5): SpatialVelocityCandidate[] {
+  return decision.candidates
+    .filter((candidate) => !candidate.hardRejected)
+    .sort((a, b) => a.score - b.score || a.id.localeCompare(b.id))
+    .slice(0, limit);
+}
+
 export class LabScene extends Phaser.Scene {
   private world: LabWorld | null = null;
   private snapshotValue: WorldSnapshot | null = null;
@@ -55,16 +67,21 @@ export class LabScene extends Phaser.Scene {
   private loading = false;
   private singleStepQueued = false;
   private scenarioId: ScenarioId = "open";
-  private companionMode: CompanionMode = "relational";
+  private companionMode: CompanionMode = "spatial";
+
   private readonly relationalBrain = new RelationalPositioningBrain();
+  private readonly spatialBrain = new SpatialLocomotionBrain();
   private relationalDecision: RelationalDecision | null = null;
+  private spatialDecision: SpatialLocomotionDecision | null = null;
   private directTraversalProbe: DirectTraversalResult | null = null;
   private shadowRoutePlan: StaticRoutePlan | null = null;
-  private readonly debugWorkbench = new DebugWorkbenchState("brain");
+
+  private readonly debugWorkbench = new DebugWorkbenchState("spatial");
   private readonly researchTrace = new ResearchTrace();
   private lastBrainSlot: string | null = null;
   private lastTraversalSignature: string | null = null;
   private lastRouteSignature: string | null = null;
+  private lastSpatialSignature: string | null = null;
   private previousCompanionContacts = new Set<string>();
   private incidentNotice = "";
 
@@ -79,16 +96,16 @@ export class LabScene extends Phaser.Scene {
 
   create(): void {
     this.graphics = this.add.graphics();
-    this.hud = this.add.text(12, 10, "Loading S2-C0 shadow routing workbench...", {
+    this.hud = this.add.text(12, 10, "Loading S3 spatial locomotion workbench...", {
       fontFamily: "monospace",
-      fontSize: "15px",
+      fontSize: "14px",
       color: "#e7e9ee",
-      backgroundColor: "rgba(12,14,18,0.78)",
+      backgroundColor: "rgba(12,14,18,0.82)",
       padding: { x: 8, y: 6 }
     }).setDepth(10);
 
     const keyboard = this.input.keyboard;
-    if (!keyboard) throw new Error("Keyboard input is required for S2-C0.");
+    if (!keyboard) throw new Error("Keyboard input is required for S3.");
     this.keys = keyboard.addKeys({
       w: Phaser.Input.Keyboard.KeyCodes.W,
       a: Phaser.Input.Keyboard.KeyCodes.A,
@@ -142,7 +159,7 @@ export class LabScene extends Phaser.Scene {
   }
 
   private currentIntents(): MotionIntent[] {
-    if (!this.snapshotValue) throw new Error("Cannot produce intents without a World snapshot.");
+    if (!this.snapshotValue || !this.world) throw new Error("Cannot produce intents without World state.");
 
     const playerIntent: MotionIntent = {
       actorId: "player",
@@ -152,26 +169,43 @@ export class LabScene extends Phaser.Scene {
     let companionIntent: MotionIntent;
     if (this.companionMode === "manual") {
       this.relationalDecision = null;
+      this.spatialDecision = null;
       companionIntent = {
         actorId: "companion",
         move: motion(axis(this.keys.left, this.keys.right), axis(this.keys.up, this.keys.down))
       };
     } else if (this.companionMode === "chase") {
       this.relationalDecision = null;
+      this.spatialDecision = null;
       companionIntent = chaseIntent(this.snapshotValue);
-    } else {
+    } else if (this.companionMode === "relational") {
       companionIntent = this.relationalBrain.intent(this.snapshotValue);
       this.relationalDecision = this.relationalBrain.debugState();
+      this.spatialDecision = null;
       this.observeBrainDecision(this.snapshotValue.tick);
+    } else {
+      const relationship = this.relationalBrain.decision(this.snapshotValue);
+      this.relationalDecision = relationship;
+      this.observeBrainDecision(this.snapshotValue.tick);
+      const plan = this.buildRoutePlan(this.snapshotValue, relationship.target);
+      this.shadowRoutePlan = plan;
+      companionIntent = this.spatialBrain.intent({
+        snapshot: this.snapshotValue,
+        relationshipTarget: relationship.target,
+        routePlan: plan,
+        query: (from, to, radius) => this.world!.staticCircleTraversal(from, to, radius)
+      });
+      this.spatialDecision = this.spatialBrain.debugState();
+      this.observeSpatialDecision(this.snapshotValue.tick);
     }
 
-    // S2-C0 invariant: this is still the exact S1/S2-B movement authority path.
-    // The shadow route is computed only after the World step and never changes these intents.
     return [playerIntent, companionIntent];
   }
 
   private navigationTarget(snapshot: WorldSnapshot): Vec2 | null {
-    if (this.companionMode === "relational") return this.relationalDecision?.target ?? null;
+    if (this.companionMode === "relational" || this.companionMode === "spatial") {
+      return this.relationalDecision?.target ?? null;
+    }
     if (this.companionMode === "chase") {
       const player = snapshot.actors.find((entry) => entry.id === "player");
       return player ? { ...player.position } : null;
@@ -179,39 +213,41 @@ export class LabScene extends Phaser.Scene {
     return null;
   }
 
-  private updateNavigationEvidence(snapshot: WorldSnapshot): void {
-    if (!this.world) return;
-    const target = this.navigationTarget(snapshot);
+  private buildRoutePlan(snapshot: WorldSnapshot, target: Vec2): StaticRoutePlan {
+    if (!this.world) throw new Error("Cannot build route plan without a World.");
     const companion = snapshot.actors.find((entry) => entry.id === "companion");
-    if (!target || !companion) {
-      this.directTraversalProbe = null;
-      this.shadowRoutePlan = null;
-      this.lastTraversalSignature = null;
-      this.lastRouteSignature = null;
-      return;
-    }
-
-    const probe = this.world.directTraversal("companion", target);
-    this.directTraversalProbe = probe;
-    this.observeDirectTraversal(snapshot, probe);
-
-    const plan = planStaticShadowRoute({
+    if (!companion) throw new Error("Cannot build route plan without companion actor.");
+    return planStaticShadowRoute({
       snapshot,
       start: companion.position,
       target,
       radius: companion.radius,
       query: (from, to, radius) => this.world!.staticCircleTraversal(from, to, radius)
     });
+  }
+
+  private updateNavigationEvidence(snapshot: WorldSnapshot): void {
+    if (!this.world) return;
+    const target = this.navigationTarget(snapshot);
+    if (!target) {
+      this.resetNavigationEvidence();
+      return;
+    }
+
+    const probe = this.world.directTraversal("companion", target);
+    const plan = this.buildRoutePlan(snapshot, target);
+    this.directTraversalProbe = probe;
     this.shadowRoutePlan = plan;
+    this.observeDirectTraversal(snapshot, probe);
     this.observeShadowRoute(snapshot, plan);
   }
 
   private observeDirectTraversal(snapshot: WorldSnapshot, probe: DirectTraversalResult): void {
     const signature = probe.clear ? "clear" : `blocked:${probe.blocker?.label ?? "unknown"}`;
     if (signature === this.lastTraversalSignature) return;
-
     const previous = this.lastTraversalSignature;
     this.lastTraversalSignature = signature;
+
     if (probe.clear) {
       this.researchTrace.recordEvent(snapshot.tick, "nav.direct.clear", "direct whole-body traversal is clear", {
         actorId: "companion",
@@ -250,33 +286,24 @@ export class LabScene extends Phaser.Scene {
     const routePath = plan.routeNodeIds.join(">");
     const signature = `${plan.status}|${routePath}`;
     if (signature === this.lastRouteSignature) return;
-
     const previous = this.lastRouteSignature;
     this.lastRouteSignature = signature;
     const blockedEdges = plan.edges.filter((edge) => !edge.clear).length;
-    this.researchTrace.recordEvent(
-      snapshot.tick,
-      `nav.shadow.${plan.status}`,
-      `shadow route ${plan.status}: ${plan.reason}`,
-      {
-        actorId: "companion",
-        fields: {
-          previous,
-          status: plan.status,
-          path: routePath || "none",
-          cost: plan.cost === null ? null : compact(plan.cost),
-          nodes: plan.nodes.length,
-          edges: plan.edges.length,
-          blockedEdges,
-          radius: compact(plan.radius),
-          clearance: compact(plan.clearance),
-          queryRadius: compact(plan.queryRadius),
-          cornerEpsilon: compact(S2C_CORNER_EPSILON),
-          reason: plan.reason,
-          controlsMovement: false
-        }
+    this.researchTrace.recordEvent(snapshot.tick, `nav.route.${plan.status}`, `route ${plan.status}: ${plan.reason}`, {
+      actorId: "companion",
+      fields: {
+        previous,
+        status: plan.status,
+        path: routePath || "none",
+        cost: plan.cost === null ? null : compact(plan.cost),
+        nodes: plan.nodes.length,
+        edges: plan.edges.length,
+        blockedEdges,
+        clearance: compact(plan.clearance),
+        cornerEpsilon: compact(S2C_CORNER_EPSILON),
+        feedsSpatialLocomotion: this.companionMode === "spatial"
       }
-    );
+    });
   }
 
   private observeBrainDecision(tick: number): void {
@@ -284,23 +311,42 @@ export class LabScene extends Phaser.Scene {
     if (!decision || decision.selectedSlot === this.lastBrainSlot) return;
     const previous = this.lastBrainSlot;
     this.lastBrainSlot = decision.selectedSlot;
-    this.researchTrace.recordEvent(
-      tick,
-      "brain.slot",
-      previous === null
-        ? `selected ${decision.selectedSlot}`
-        : `slot ${previous} -> ${decision.selectedSlot}`,
-      {
-        actorId: "companion",
-        fields: {
-          previous,
-          selected: decision.selectedSlot,
-          reason: decision.reason,
-          targetX: compact(decision.target.x),
-          targetY: compact(decision.target.y)
-        }
+    this.researchTrace.recordEvent(tick, "brain.relationship", previous === null
+      ? `selected ${decision.selectedSlot}`
+      : `slot ${previous} -> ${decision.selectedSlot}`, {
+      actorId: "companion",
+      fields: {
+        previous,
+        selected: decision.selectedSlot,
+        reason: decision.reason,
+        targetX: compact(decision.target.x),
+        targetY: compact(decision.target.y)
       }
-    );
+    });
+  }
+
+  private observeSpatialDecision(tick: number): void {
+    const decision = this.spatialDecision;
+    if (!decision) return;
+    const signature = `${decision.state}|${decision.selectedCandidateId}`;
+    if (signature === this.lastSpatialSignature) return;
+    const previous = this.lastSpatialSignature;
+    this.lastSpatialSignature = signature;
+    const selected = decision.candidates.find((candidate) => candidate.id === decision.selectedCandidateId);
+    this.researchTrace.recordEvent(tick, "spatial.choice", decision.reason, {
+      actorId: "companion",
+      fields: {
+        previous,
+        state: decision.state,
+        candidate: decision.selectedCandidateId,
+        accepted: decision.acceptedCount,
+        rejected: decision.rejectedCount,
+        moveX: compact(decision.selectedMove.x),
+        moveY: compact(decision.selectedMove.y),
+        score: selected ? compact(selected.score) : null,
+        minPlayerClearance: selected ? compact(selected.minimumPlayerClearance) : null
+      }
+    });
   }
 
   private recordTrace(snapshot: WorldSnapshot): void {
@@ -325,7 +371,6 @@ export class LabScene extends Phaser.Scene {
       }
       this.previousCompanionContacts = currentContacts;
     }
-
     this.researchTrace.recordSample(snapshot, this.companionMode, this.publicDebugChannels(snapshot));
   }
 
@@ -333,7 +378,7 @@ export class LabScene extends Phaser.Scene {
     const channels: PublicDebugChannel[] = [];
     const companion = snapshot.actors.find((entry) => entry.id === "companion");
 
-    if (this.relationalDecision && this.companionMode === "relational") {
+    if (this.relationalDecision && (this.companionMode === "relational" || this.companionMode === "spatial")) {
       channels.push({
         id: "brain",
         summary: `relationship slot ${this.relationalDecision.selectedSlot}`,
@@ -342,7 +387,8 @@ export class LabScene extends Phaser.Scene {
           targetX: compact(this.relationalDecision.target.x),
           targetY: compact(this.relationalDecision.target.y),
           rethink: this.relationalDecision.reconsiderationCount,
-          reason: this.relationalDecision.reason
+          reason: this.relationalDecision.reason,
+          feedsSpatial: this.companionMode === "spatial"
         }
       });
     } else {
@@ -356,10 +402,10 @@ export class LabScene extends Phaser.Scene {
       const blockedEdges = plan.edges.filter((edge) => !edge.clear).length;
       channels.push({
         id: "nav",
-        summary: `shadow ${plan.status}; direct ${probe.clear ? "clear" : `blocked by ${blocker?.label ?? "unknown"}`}`,
+        summary: `${plan.status}; direct ${probe.clear ? "clear" : `blocked by ${blocker?.label ?? "unknown"}`}`,
         fields: {
-          routeModel: "visibility-graph-shadow-v0",
-          controlsMovement: false,
+          routeModel: "visibility-graph-v0",
+          feedsSpatial: this.companionMode === "spatial",
           routeStatus: plan.status,
           routeReason: plan.reason,
           routePath: plan.routeNodeIds.join(">") || "none",
@@ -368,36 +414,45 @@ export class LabScene extends Phaser.Scene {
           routeEdges: plan.edges.length,
           rejectedEdges: blockedEdges,
           routeClearance: compact(plan.clearance),
-          routeQueryRadius: compact(plan.queryRadius),
           cornerEpsilon: compact(S2C_CORNER_EPSILON),
-          directTraversalKnown: true,
           directClear: probe.clear,
-          distance: compact(probe.distance),
-          radius: compact(probe.radius),
-          targetX: compact(probe.to.x),
-          targetY: compact(probe.to.y),
           blocker: blocker?.label ?? null,
-          hitDistance: blocker ? compact(blocker.distance) : null,
-          hitFraction: blocker ? compact(blocker.fraction) : null,
-          hitX: blocker ? compact(blocker.hitCenter.x) : null,
-          hitY: blocker ? compact(blocker.hitCenter.y) : null,
-          contactX: blocker ? compact(blocker.contactPoint.x) : null,
-          contactY: blocker ? compact(blocker.contactPoint.y) : null,
-          normalX: blocker ? compact(blocker.normal.x) : null,
-          normalY: blocker ? compact(blocker.normal.y) : null
+          hitDistance: blocker ? compact(blocker.distance) : null
         }
       });
     } else {
+      channels.push({ id: "nav", summary: "no autonomous route evidence" });
+    }
+
+    const spatial = this.spatialDecision;
+    if (spatial) {
+      const selected = spatial.candidates.find((candidate) => candidate.id === spatial.selectedCandidateId);
+      const blockedRays = spatial.observation.rays.filter((ray) => ray.blockedBy !== null).length;
       channels.push({
-        id: "nav",
-        summary: this.companionMode === "manual" ? "manual mode has no navigation target" : "waiting for first navigation evidence",
+        id: "spatial",
+        summary: `${spatial.state} via ${spatial.selectedCandidateId}`,
         fields: {
-          routeModel: "visibility-graph-shadow-v0",
-          controlsMovement: false,
-          directTraversalKnown: false,
-          routeStatus: null
+          state: spatial.state,
+          candidate: spatial.selectedCandidateId,
+          accepted: spatial.acceptedCount,
+          rejected: spatial.rejectedCount,
+          blockedRays,
+          rays: spatial.observation.rays.length,
+          lookaheadX: compact(spatial.observation.routeLookahead.x),
+          lookaheadY: compact(spatial.observation.routeLookahead.y),
+          predictedPlayerX: compact(spatial.observation.predictedPlayerPosition.x),
+          predictedPlayerY: compact(spatial.observation.predictedPlayerPosition.y),
+          selectedScore: selected ? compact(selected.score) : null,
+          playerClearance: selected ? compact(selected.minimumPlayerClearance) : null,
+          routeTerm: selected ? compact(selected.terms.routeDistance) : null,
+          relationshipTerm: selected ? compact(selected.terms.relationshipDistance) : null,
+          clearanceTerm: selected ? compact(selected.terms.clearancePenalty) : null,
+          playerRiskTerm: selected ? compact(selected.terms.playerRiskPenalty) : null,
+          continuityTerm: selected ? compact(selected.terms.continuityPenalty) : null
         }
       });
+    } else {
+      channels.push({ id: "spatial", summary: "SPATIAL locomotion inactive" });
     }
 
     if (companion) {
@@ -451,15 +506,22 @@ export class LabScene extends Phaser.Scene {
     this.lastRouteSignature = null;
   }
 
+  private resetBrains(): void {
+    this.relationalBrain.reset();
+    this.spatialBrain.reset();
+    this.relationalDecision = null;
+    this.spatialDecision = null;
+    this.lastBrainSlot = null;
+    this.lastSpatialSignature = null;
+  }
+
   private cycleCompanionMode(): void {
     const currentIndex = COMPANION_MODES.indexOf(this.companionMode);
     const next = COMPANION_MODES[(currentIndex + 1) % COMPANION_MODES.length];
     if (!next) throw new Error("Companion mode cycle produced no next mode.");
     const previous = this.companionMode;
     this.companionMode = next;
-    this.relationalBrain.reset();
-    this.relationalDecision = null;
-    this.lastBrainSlot = null;
+    this.resetBrains();
     this.resetNavigationEvidence();
     this.recordControlEvent("companion.mode", `${previous} -> ${next}`, { previous, next });
   }
@@ -501,9 +563,7 @@ export class LabScene extends Phaser.Scene {
       this.snapshotValue = next.snapshot();
       this.accumulator = 0;
       this.singleStepQueued = false;
-      this.relationalBrain.reset();
-      this.relationalDecision = null;
-      this.lastBrainSlot = null;
+      this.resetBrains();
       this.resetNavigationEvidence();
       this.previousCompanionContacts.clear();
       this.researchTrace.reset();
@@ -535,44 +595,9 @@ export class LabScene extends Phaser.Scene {
       this.graphics.fillRect(sx(obstacle.x), sy(obstacle.y), obstacle.width * scale, obstacle.height * scale);
     }
 
-    if (visibility.brain && this.companionMode === "relational" && this.relationalDecision) {
-      const companion = snapshot.actors.find((entry) => entry.id === "companion");
-      const player = snapshot.actors.find((entry) => entry.id === "player");
-      for (const candidate of this.relationalDecision.candidates) {
-        const selected = candidate.slot === this.relationalDecision.selectedSlot;
-        this.graphics.lineStyle(selected ? 3 : 1, candidate.valid ? 0x9da7b3 : 0xff5d66, selected ? 1 : 0.55);
-        this.graphics.strokeCircle(sx(candidate.position.x), sy(candidate.position.y), selected ? 8 : 5);
-      }
-      if (companion) {
-        this.graphics.lineStyle(2, 0xd2a8ff, 0.9);
-        this.graphics.lineBetween(
-          sx(companion.position.x),
-          sy(companion.position.y),
-          sx(this.relationalDecision.target.x),
-          sy(this.relationalDecision.target.y)
-        );
-      }
-      if (player) {
-        this.graphics.lineStyle(2, 0x79c0ff, 0.9);
-        this.graphics.lineBetween(
-          sx(player.position.x),
-          sy(player.position.y),
-          sx(player.position.x + this.relationalDecision.playerDirection.x),
-          sy(player.position.y + this.relationalDecision.playerDirection.y)
-        );
-      }
-    }
-
+    if (visibility.brain) this.drawRelationshipOverlay(snapshot, sx, sy);
     if (visibility.nav) this.drawNavigationOverlay(sx, sy, scale);
-
-    if (visibility.brain && this.companionMode === "chase") {
-      const companion = snapshot.actors.find((entry) => entry.id === "companion");
-      const player = snapshot.actors.find((entry) => entry.id === "player");
-      if (companion && player) {
-        this.graphics.lineStyle(2, 0xd29922, 0.8);
-        this.graphics.lineBetween(sx(companion.position.x), sy(companion.position.y), sx(player.position.x), sy(player.position.y));
-      }
-    }
+    if (visibility.spatial) this.drawSpatialOverlay(sx, sy, scale);
 
     for (const actor of snapshot.actors) {
       const isPlayer = actor.id === "player";
@@ -607,45 +632,70 @@ export class LabScene extends Phaser.Scene {
     });
 
     const scenarioLabel = SCENARIOS[snapshot.scenarioId].label;
+    const authority = this.companionMode === "spatial"
+      ? "SPATIAL LOCAL LOCOMOTION AUTHORITY ACTIVE"
+      : `${this.companionMode.toUpperCase()} BASELINE AUTHORITY`;
     const baseLines = [
-      `S2-C0 · ${scenarioLabel} · tick ${snapshot.tick} · ${this.paused ? "PAUSED" : "RUNNING"} · companion ${this.companionMode.toUpperCase()} · debug ${this.debugWorkbench.preset().toUpperCase()}`,
-      "SHADOW ROUTING ONLY — route planner has NO movement authority",
-      "WASD player · M mode · arrows manual companion · 1-4 scenarios · R reset · P pause · O step · B debug preset · I capture incident"
+      `S3 · ${scenarioLabel} · tick ${snapshot.tick} · ${this.paused ? "PAUSED" : "RUNNING"} · companion ${this.companionMode.toUpperCase()} · debug ${this.debugWorkbench.preset().toUpperCase()}`,
+      authority,
+      "WASD player · M mode [MANUAL/CHASE/RELATIONAL/SPATIAL] · arrows manual companion · 1-4 scenarios · R reset · P pause · O step · B debug · I incident"
     ];
     if (this.incidentNotice) baseLines.push(this.incidentNotice);
 
     const debugLines: string[] = [];
-
-    if (visibility.brain) {
-      if (this.companionMode === "relational" && this.relationalDecision) {
-        const scores = this.relationalDecision.candidates
-          .map((candidate) => `${candidate.slot}:${candidate.valid ? candidate.score.toFixed(2) : "X"}`)
-          .join("  ");
-        debugLines.push(
-          `BRAIN slot ${this.relationalDecision.selectedSlot} · rethink #${this.relationalDecision.reconsiderationCount} @ tick ${this.relationalDecision.reconsideredAtTick}`,
-          `BRAIN reason: ${this.relationalDecision.reason}`,
-          `BRAIN candidates: ${scores}`
-        );
-      } else if (this.companionMode === "chase") {
-        debugLines.push("BRAIN CHASE baseline: direct center-seeking; no relational slot selection");
-      } else {
-        debugLines.push("BRAIN MANUAL baseline: arrow keys own companion intent");
-      }
-    }
-
+    if (visibility.brain) this.appendBrainHud(debugLines);
     if (visibility.nav) this.appendNavigationHud(debugLines);
-
+    if (visibility.spatial) this.appendSpatialHud(debugLines);
     if (visibility.motion) {
       debugLines.push("MOTION green=requested velocity · red=actual velocity · red body outline=contact", ...actorLines);
     }
-
     if (visibility.events) {
-      const events = this.researchTrace.recentEvents(5);
+      const events = this.researchTrace.recentEvents(6);
       debugLines.push(`EVENTS trace ${this.researchTrace.sampleCount()} samples / ${this.researchTrace.eventCount()} events`);
       for (const event of events) debugLines.push(`  t${event.tick} ${event.kind}: ${event.summary}`);
     }
-
     this.hud.setVisible(true).setText([...baseLines, ...debugLines]);
+  }
+
+  private drawRelationshipOverlay(
+    snapshot: WorldSnapshot,
+    sx: (x: number) => number,
+    sy: (y: number) => number
+  ): void {
+    if ((this.companionMode === "relational" || this.companionMode === "spatial") && this.relationalDecision) {
+      const companion = snapshot.actors.find((entry) => entry.id === "companion");
+      const player = snapshot.actors.find((entry) => entry.id === "player");
+      for (const candidate of this.relationalDecision.candidates) {
+        const selected = candidate.slot === this.relationalDecision.selectedSlot;
+        this.graphics.lineStyle(selected ? 3 : 1, candidate.valid ? 0x9da7b3 : 0xff5d66, selected ? 1 : 0.55);
+        this.graphics.strokeCircle(sx(candidate.position.x), sy(candidate.position.y), selected ? 8 : 5);
+      }
+      if (companion) {
+        this.graphics.lineStyle(2, 0xd2a8ff, 0.9);
+        this.graphics.lineBetween(
+          sx(companion.position.x), sy(companion.position.y),
+          sx(this.relationalDecision.target.x), sy(this.relationalDecision.target.y)
+        );
+      }
+      if (player) {
+        this.graphics.lineStyle(2, 0x79c0ff, 0.9);
+        this.graphics.lineBetween(
+          sx(player.position.x), sy(player.position.y),
+          sx(player.position.x + this.relationalDecision.playerDirection.x),
+          sy(player.position.y + this.relationalDecision.playerDirection.y)
+        );
+      }
+      return;
+    }
+
+    if (this.companionMode === "chase") {
+      const companion = snapshot.actors.find((entry) => entry.id === "companion");
+      const player = snapshot.actors.find((entry) => entry.id === "player");
+      if (companion && player) {
+        this.graphics.lineStyle(2, 0xd29922, 0.8);
+        this.graphics.lineBetween(sx(companion.position.x), sy(companion.position.y), sx(player.position.x), sy(player.position.y));
+      }
+    }
   }
 
   private drawNavigationOverlay(
@@ -657,26 +707,14 @@ export class LabScene extends Phaser.Scene {
     if (probe) {
       const corridorColor = probe.clear ? 0x3fb950 : 0xff7b72;
       const corridorWidth = Math.max(6, probe.radius * 2 * scale);
-      this.graphics.lineStyle(corridorWidth, corridorColor, 0.12);
+      this.graphics.lineStyle(corridorWidth, corridorColor, 0.1);
       this.graphics.lineBetween(sx(probe.from.x), sy(probe.from.y), sx(probe.to.x), sy(probe.to.y));
-      this.graphics.lineStyle(3, corridorColor, 0.95);
+      this.graphics.lineStyle(2, corridorColor, 0.8);
       this.graphics.lineBetween(sx(probe.from.x), sy(probe.from.y), sx(probe.to.x), sy(probe.to.y));
-      this.graphics.lineStyle(2, corridorColor, 0.9);
-      this.graphics.strokeCircle(sx(probe.to.x), sy(probe.to.y), probe.radius * scale);
-
       const blocker = probe.blocker;
       if (blocker) {
-        this.graphics.lineStyle(3, 0xff5d66, 1);
-        this.graphics.strokeCircle(sx(blocker.hitCenter.x), sy(blocker.hitCenter.y), probe.radius * scale);
         this.graphics.fillStyle(0xffa657, 1);
-        this.graphics.fillCircle(sx(blocker.contactPoint.x), sy(blocker.contactPoint.y), 5);
-        this.graphics.lineStyle(3, 0x79c0ff, 1);
-        this.graphics.lineBetween(
-          sx(blocker.contactPoint.x),
-          sy(blocker.contactPoint.y),
-          sx(blocker.contactPoint.x + blocker.normal.x * 0.55),
-          sy(blocker.contactPoint.y + blocker.normal.y * 0.55)
-        );
+        this.graphics.fillCircle(sx(blocker.contactPoint.x), sy(blocker.contactPoint.y), 4);
       }
     }
 
@@ -684,9 +722,9 @@ export class LabScene extends Phaser.Scene {
     if (!plan) return;
     const nodes = new Map(plan.nodes.map((node) => [node.id, node]));
     const routeEdges = new Set<string>();
-    for (let i = 0; i < plan.routeNodeIds.length - 1; i += 1) {
-      const a = plan.routeNodeIds[i];
-      const b = plan.routeNodeIds[i + 1];
+    for (let index = 0; index < plan.routeNodeIds.length - 1; index += 1) {
+      const a = plan.routeNodeIds[index];
+      const b = plan.routeNodeIds[index + 1];
       if (!a || !b) continue;
       routeEdges.add(a < b ? `${a}<->${b}` : `${b}<->${a}`);
     }
@@ -696,42 +734,100 @@ export class LabScene extends Phaser.Scene {
       const from = nodes.get(edge.from);
       const to = nodes.get(edge.to);
       if (!from || !to) continue;
-      if (edge.clear) {
-        this.graphics.lineStyle(1, 0x8b949e, 0.2);
-      } else {
-        this.graphics.lineStyle(1, 0xff5d66, 0.12);
-      }
-      this.graphics.lineBetween(
-        sx(from.position.x), sy(from.position.y),
-        sx(to.position.x), sy(to.position.y)
-      );
+      this.graphics.lineStyle(1, edge.clear ? 0x8b949e : 0xff5d66, edge.clear ? 0.16 : 0.08);
+      this.graphics.lineBetween(sx(from.position.x), sy(from.position.y), sx(to.position.x), sy(to.position.y));
     }
-
     for (const edgeId of routeEdges) {
       const edge = plan.edges.find((candidate) => candidate.id === edgeId);
       if (!edge) continue;
       const from = nodes.get(edge.from);
       const to = nodes.get(edge.to);
       if (!from || !to) continue;
-      this.graphics.lineStyle(5, 0x58a6ff, 0.9);
-      this.graphics.lineBetween(
-        sx(from.position.x), sy(from.position.y),
-        sx(to.position.x), sy(to.position.y)
-      );
+      this.graphics.lineStyle(5, 0x58a6ff, 0.82);
+      this.graphics.lineBetween(sx(from.position.x), sy(from.position.y), sx(to.position.x), sy(to.position.y));
     }
-
     for (const node of plan.nodes) {
       const inRoute = plan.routeNodeIds.includes(node.id);
-      if (node.kind === "start") {
-        this.graphics.fillStyle(0xf2c15c, 0.95);
-      } else if (node.kind === "target") {
-        this.graphics.fillStyle(0xd2a8ff, 0.95);
-      } else if (inRoute) {
-        this.graphics.fillStyle(0x58a6ff, 1);
-      } else {
-        this.graphics.fillStyle(0x8b949e, 0.75);
-      }
+      this.graphics.fillStyle(node.kind === "target" ? 0xd2a8ff : inRoute ? 0x58a6ff : 0x8b949e, inRoute ? 1 : 0.65);
       this.graphics.fillCircle(sx(node.position.x), sy(node.position.y), inRoute ? 5 : 3);
+    }
+  }
+
+  private drawSpatialOverlay(
+    sx: (x: number) => number,
+    sy: (y: number) => number,
+    scale: number
+  ): void {
+    const decision = this.spatialDecision;
+    if (!decision) return;
+    const observation = decision.observation;
+    const origin = observation.companionPosition;
+
+    for (const ray of observation.rays) {
+      const endpoint = {
+        x: origin.x + ray.direction.x * ray.freeDistance,
+        y: origin.y + ray.direction.y * ray.freeDistance
+      };
+      this.graphics.lineStyle(1, ray.blockedBy ? 0xff7b72 : 0x7ee787, ray.blockedBy ? 0.42 : 0.18);
+      this.graphics.lineBetween(sx(origin.x), sy(origin.y), sx(endpoint.x), sy(endpoint.y));
+      if (ray.blockedBy && ray.hitPoint) {
+        this.graphics.fillStyle(0xff7b72, 0.7);
+        this.graphics.fillCircle(sx(ray.hitPoint.x), sy(ray.hitPoint.y), 2.5);
+      }
+    }
+
+    for (const candidate of decision.candidates) {
+      const selected = candidate.id === decision.selectedCandidateId;
+      if (selected) continue;
+      this.graphics.fillStyle(candidate.hardRejected ? 0xff5d66 : 0x8b949e, candidate.hardRejected ? 0.22 : 0.28);
+      this.graphics.fillCircle(sx(candidate.predictedPosition.x), sy(candidate.predictedPosition.y), candidate.hardRejected ? 2 : 2.5);
+    }
+
+    const selected = decision.candidates.find((candidate) => candidate.id === decision.selectedCandidateId);
+    if (selected) {
+      this.graphics.lineStyle(6, 0x39d0d8, 0.9);
+      this.graphics.lineBetween(
+        sx(origin.x), sy(origin.y),
+        sx(selected.predictedPosition.x), sy(selected.predictedPosition.y)
+      );
+      this.graphics.fillStyle(0x39d0d8, 1);
+      this.graphics.fillCircle(sx(selected.predictedPosition.x), sy(selected.predictedPosition.y), 6);
+    }
+
+    this.graphics.lineStyle(3, 0xd2a8ff, 0.9);
+    this.graphics.lineBetween(
+      sx(origin.x), sy(origin.y),
+      sx(observation.routeLookahead.x), sy(observation.routeLookahead.y)
+    );
+    this.graphics.strokeCircle(sx(observation.routeLookahead.x), sy(observation.routeLookahead.y), 7);
+
+    this.graphics.lineStyle(3, 0x79c0ff, 0.75);
+    this.graphics.lineBetween(
+      sx(observation.playerPosition.x), sy(observation.playerPosition.y),
+      sx(observation.predictedPlayerPosition.x), sy(observation.predictedPlayerPosition.y)
+    );
+    this.graphics.lineStyle(2, 0x79c0ff, 0.8);
+    this.graphics.strokeCircle(
+      sx(observation.predictedPlayerPosition.x),
+      sy(observation.predictedPlayerPosition.y),
+      observation.playerRadius * scale
+    );
+  }
+
+  private appendBrainHud(lines: string[]): void {
+    if ((this.companionMode === "relational" || this.companionMode === "spatial") && this.relationalDecision) {
+      const scores = this.relationalDecision.candidates
+        .map((candidate) => `${candidate.slot}:${candidate.valid ? candidate.score.toFixed(2) : "X"}`)
+        .join("  ");
+      lines.push(
+        `BRAIN relationship ${this.relationalDecision.selectedSlot} · rethink #${this.relationalDecision.reconsiderationCount}`,
+        `BRAIN reason: ${this.relationalDecision.reason}`,
+        `BRAIN candidates: ${scores}`
+      );
+    } else if (this.companionMode === "chase") {
+      lines.push("BRAIN CHASE baseline: direct center-seeking");
+    } else {
+      lines.push("BRAIN MANUAL baseline: arrow keys own companion intent");
     }
   }
 
@@ -739,38 +835,42 @@ export class LabScene extends Phaser.Scene {
     const probe = this.directTraversalProbe;
     const plan = this.shadowRoutePlan;
     if (!probe || !plan) {
-      lines.push(
-        this.companionMode === "manual"
-          ? "NAV MANUAL: no autonomous navigation target"
-          : "NAV waiting for direct traversal + shadow route evidence",
-        "NAV shadow route model exists but currently has no target · dynamic cooperation/yielding: NOT MODELED"
-      );
+      lines.push("NAV no autonomous route evidence");
       return;
     }
-
     const blockedEdges = plan.edges.filter((edge) => !edge.clear).length;
     const acceptedEdges = plan.edges.length - blockedEdges;
-    if (probe.clear) {
-      lines.push(
-        `NAV direct whole-body: CLEAR · distance ${probe.distance.toFixed(2)} · radius ${probe.radius.toFixed(2)}`,
-        `NAV shadow: ${plan.status.toUpperCase()} · cost ${plan.cost?.toFixed(2) ?? "n/a"} · path ${plan.routeNodeIds.join(" → ") || "none"}`
-      );
-    } else {
-      const blocker = probe.blocker;
-      lines.push(
-        `NAV direct whole-body: BLOCKED by ${blocker?.label ?? "unknown"}`,
-        `NAV hit ${blocker?.distance.toFixed(2) ?? "?"}/${probe.distance.toFixed(2)} (${blocker ? (blocker.fraction * 100).toFixed(0) : "?"}%) · radius ${probe.radius.toFixed(2)}`,
-        blocker
-          ? `NAV hit-center ${blocker.hitCenter.x.toFixed(2)},${blocker.hitCenter.y.toFixed(2)} · contact ${blocker.contactPoint.x.toFixed(2)},${blocker.contactPoint.y.toFixed(2)} · normal ${blocker.normal.x.toFixed(2)},${blocker.normal.y.toFixed(2)}`
-          : "NAV blocker geometry unavailable",
-        `NAV shadow: ${plan.status.toUpperCase()} · cost ${plan.cost?.toFixed(2) ?? "n/a"} · path ${plan.routeNodeIds.join(" → ") || "none"}`
-      );
-    }
-
     lines.push(
-      `NAV graph ${plan.nodes.length} nodes · ${acceptedEdges} accepted / ${blockedEdges} rejected edges · clearance ${plan.clearance.toFixed(2)} · corner ε ${S2C_CORNER_EPSILON.toFixed(2)}`,
+      `NAV direct ${probe.clear ? "CLEAR" : `BLOCKED ${probe.blocker?.label ?? "unknown"}`} · route ${plan.status.toUpperCase()} · cost ${plan.cost?.toFixed(2) ?? "n/a"}`,
+      `NAV path ${plan.routeNodeIds.join(" → ") || "none"}`,
+      `NAV graph ${plan.nodes.length} nodes · ${acceptedEdges} accepted / ${blockedEdges} rejected · clearance ${plan.clearance.toFixed(2)} · corner ε ${S2C_CORNER_EPSILON.toFixed(2)}`,
       `NAV reason: ${plan.reason}`,
-      "NAV SHADOW ONLY: planner does NOT control MotionIntent · dynamic cooperation/yielding: NOT MODELED"
+      this.companionMode === "spatial"
+        ? "NAV route is corridor/lookahead guidance for SPATIAL; local locomotion chooses the actual velocity"
+        : "NAV route is observational only in this baseline mode"
+    );
+  }
+
+  private appendSpatialHud(lines: string[]): void {
+    const decision = this.spatialDecision;
+    if (!decision) {
+      lines.push("SPATIAL inactive — switch companion mode with M");
+      return;
+    }
+    const selected = decision.candidates.find((candidate) => candidate.id === decision.selectedCandidateId);
+    const blockedRays = decision.observation.rays.filter((ray) => ray.blockedBy !== null).length;
+    const top = topAcceptedCandidates(decision, 4)
+      .map((candidate) => `${candidate.id}:${candidate.score.toFixed(2)}`)
+      .join("  ");
+    lines.push(
+      `SPATIAL ${decision.state} · selected ${decision.selectedCandidateId} · ${decision.acceptedCount} accepted / ${decision.rejectedCount} rejected`,
+      `SPATIAL 360° awareness ${decision.observation.rays.length} rays · ${blockedRays} blocked · lookahead ${decision.observation.routeLookahead.x.toFixed(2)},${decision.observation.routeLookahead.y.toFixed(2)}`,
+      `SPATIAL player now ${decision.observation.playerPosition.x.toFixed(2)},${decision.observation.playerPosition.y.toFixed(2)} → predicted ${decision.observation.predictedPlayerPosition.x.toFixed(2)},${decision.observation.predictedPlayerPosition.y.toFixed(2)}`,
+      selected
+        ? `SPATIAL score ${selected.score.toFixed(2)} = route ${selected.terms.routeDistance.toFixed(2)} + relation ${selected.terms.relationshipDistance.toFixed(2)} + clearance ${selected.terms.clearancePenalty.toFixed(2)} + player ${selected.terms.playerRiskPenalty.toFixed(2)} + continuity ${selected.terms.continuityPenalty.toFixed(2)} + motion ${selected.terms.unnecessaryMotionPenalty.toFixed(2)}`
+        : "SPATIAL selected candidate data unavailable",
+      `SPATIAL top: ${top}`,
+      `SPATIAL reason: ${decision.reason}`
     );
   }
 }
