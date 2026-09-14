@@ -39,12 +39,18 @@ function frame(sequence: number, observationTick: number, outcomeTick: number): 
         playerCorridorState: "MOVING",
         playerCorridorConfidence: 0.86,
         playerCorridorEndpoint: { x: 4.7, y: 5 },
-        playerFlowConflictState: "COMFORT_CONFLICT",
-        playerFlowClosestApproachTime: 0.22,
-        playerFlowPhysicalClearance: 0.08,
-        playerFlowComfortClearance: -0.10,
-        playerFlowCompanionClosest: { x: 2.5, y: 2.5 },
-        playerFlowPlayerClosest: { x: 3.15, y: 2.5 },
+        preferredFlowConflictState: "CLEAR",
+        preferredFlowClosestApproachTime: 0.18,
+        preferredFlowPhysicalClearance: 0.28,
+        preferredFlowComfortClearance: 0.10,
+        preferredFlowCompanionClosest: { x: 2.5, y: 2.5 },
+        preferredFlowPlayerClosest: { x: 3.3, y: 2.5 },
+        authoritativeFlowConflictState: "COMFORT_CONFLICT",
+        authoritativeFlowClosestApproachTime: 0.22,
+        authoritativeFlowPhysicalClearance: 0.08,
+        authoritativeFlowComfortClearance: -0.10,
+        authoritativeFlowCompanionClosest: { x: 2.55, y: 2.5 },
+        authoritativeFlowPlayerClosest: { x: 3.20, y: 2.5 },
         legacyTargetToShadowAnchorDistance: 1.12,
         error: null
       }
@@ -116,17 +122,18 @@ describe("R1 causal frame trace", () => {
     expect(latest?.post.cumulativeLocalRetriesSinceReset).toBe(9);
   });
 
-  it("preserves explicitly shadow-labelled CCC-0 evidence without confusing it with command authority", () => {
+  it("preserves preferred-vs-final CCC-0 conflict evidence without confusing either with command authority", () => {
     const trace = new CausalFrameTrace();
     trace.record(frame(trace.nextSequence(), 12, 13));
 
     const latest = trace.latest();
-    expect(latest?.decision.shadowCoordination?.kind).toBe("CCC0_SHADOW_COORDINATION");
-    expect(latest?.decision.shadowCoordination?.regionState).toBe("REGION");
-    expect(latest?.decision.shadowCoordination?.paceUrgency).toBe(0.42);
-    expect(latest?.decision.shadowCoordination?.playerCorridorConfidence).toBe(0.86);
-    expect(latest?.decision.shadowCoordination?.playerFlowConflictState).toBe("COMFORT_CONFLICT");
-    expect(latest?.decision.shadowCoordination?.playerFlowClosestApproachTime).toBe(0.22);
+    const shadow = latest?.decision.shadowCoordination;
+    expect(shadow?.kind).toBe("CCC0_SHADOW_COORDINATION");
+    expect(shadow?.regionState).toBe("REGION");
+    expect(shadow?.paceUrgency).toBe(0.42);
+    expect(shadow?.playerCorridorConfidence).toBe(0.86);
+    expect(shadow?.preferredFlowConflictState).toBe("CLEAR");
+    expect(shadow?.authoritativeFlowConflictState).toBe("COMFORT_CONFLICT");
     expect(latest?.command.commandedMove).toEqual({ x: 0.5, y: 0.2 });
   });
 
@@ -152,8 +159,10 @@ describe("R1 causal frame trace", () => {
     value.decision.relationshipTarget!.x = 999;
     value.decision.shadowCoordination!.regionAnchor!.x = 999;
     value.decision.shadowCoordination!.playerCorridorEndpoint.x = 999;
-    value.decision.shadowCoordination!.playerFlowCompanionClosest!.x = 999;
-    value.decision.shadowCoordination!.playerFlowPlayerClosest!.x = 999;
+    value.decision.shadowCoordination!.preferredFlowCompanionClosest!.x = 999;
+    value.decision.shadowCoordination!.preferredFlowPlayerClosest!.x = 999;
+    value.decision.shadowCoordination!.authoritativeFlowCompanionClosest!.x = 999;
+    value.decision.shadowCoordination!.authoritativeFlowPlayerClosest!.x = 999;
     value.command.commandedMove.x = 999;
     sourceContacts.push("wall");
     sourceComfortBlockers.push("door.wall.bottom");
@@ -163,8 +172,10 @@ describe("R1 causal frame trace", () => {
     expect(latest?.decision.relationshipTarget?.x).toBe(3);
     expect(latest?.decision.shadowCoordination?.regionAnchor?.x).toBe(2.2);
     expect(latest?.decision.shadowCoordination?.playerCorridorEndpoint.x).toBe(4.7);
-    expect(latest?.decision.shadowCoordination?.playerFlowCompanionClosest?.x).toBe(2.5);
-    expect(latest?.decision.shadowCoordination?.playerFlowPlayerClosest?.x).toBe(3.15);
+    expect(latest?.decision.shadowCoordination?.preferredFlowCompanionClosest?.x).toBe(2.5);
+    expect(latest?.decision.shadowCoordination?.preferredFlowPlayerClosest?.x).toBe(3.3);
+    expect(latest?.decision.shadowCoordination?.authoritativeFlowCompanionClosest?.x).toBe(2.55);
+    expect(latest?.decision.shadowCoordination?.authoritativeFlowPlayerClosest?.x).toBe(3.20);
     expect(latest?.command.commandedMove.x).toBe(0.5);
     expect(latest?.outcome.companionContacts).toEqual(["player"]);
     expect(latest?.decision.comfortStartBlockers).toEqual(["door.wall.top"]);
