@@ -19,8 +19,8 @@ import {
   buildA1PlayerAgencyTrajectoryEvidence,
   type A1PlayerAgencyTrajectoryEvidence
 } from "./a1-player-agency-trajectory";
+import type { A1PlayerFutureFamily } from "./a1-player-future-hypotheses";
 import type {
-  A1PlayerFutureFamily,
   A1PlayerFutureInterventionPlan,
   A1PlayerFutureInterventionUnresolvedReason,
   A1RehearsablePlayerFutureIntervention
