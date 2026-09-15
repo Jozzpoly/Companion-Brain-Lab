@@ -19,7 +19,7 @@ async function narrowHardOnlyFixture() {
   };
   const physical = await RapierPhysicalWorld.create(spec);
   const snapshot: WorldSnapshot = {
-    tick: 0,
+    tick: 17,
     scenarioId: "open",
     width: spec.width,
     height: spec.height,
@@ -46,6 +46,7 @@ describe("Authority-A0 hard route truth", () => {
         query
       });
 
+      expect(evidence.sourceTick).toBe(17);
       expect(evidence.hardReachable).toBe(true);
       expect(evidence.hardStatus).toBe("routed");
       expect(evidence.desiredReachable).toBe(false);
@@ -71,7 +72,7 @@ describe("Authority-A0 hard route truth", () => {
     const physical = await RapierPhysicalWorld.create(spec);
     try {
       const snapshot: WorldSnapshot = {
-        tick: 0,
+        tick: 23,
         scenarioId: "open",
         width: spec.width,
         height: spec.height,
@@ -91,6 +92,7 @@ describe("Authority-A0 hard route truth", () => {
         query
       });
 
+      expect(evidence.sourceTick).toBe(23);
       expect(evidence.hardReachable).toBe(true);
       expect(evidence.desiredReachable).toBe(true);
       expect(evidence.comfortErasesHardConnectivity).toBe(false);
