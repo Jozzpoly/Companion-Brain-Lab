@@ -37,8 +37,14 @@ export interface A1Situation {
   previousOutcome: A1PreviousOutcomeEvidence | null;
 }
 
+const PHASE_MATCH_EPSILON = 1e-9;
+
 function magnitude(value: Vec2): number {
   return Math.hypot(value.x, value.y);
+}
+
+function vectorDistance(a: Vec2, b: Vec2): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
 /** Mirrors the World MotionIntent unit-disk contract; a real-World regression binds this copy to execution. */
@@ -118,6 +124,31 @@ function previousOutcomeAt(
   };
 }
 
+function assertDecisionSnapshotMatchesPreviousOutcome(
+  situated: SituatedEvidenceFrame,
+  previousOutcome: A1PreviousOutcomeEvidence | null
+): void {
+  if (!previousOutcome) return;
+
+  const current = situated.playerBody;
+  const previous = previousOutcome.playerBody;
+  const phaseMatches =
+    current.sourceTick === previousOutcome.outcomeTick &&
+    vectorDistance(current.position, previous.position) <= PHASE_MATCH_EPSILON &&
+    vectorDistance(current.requestedVelocity, previous.requestedVelocity) <= PHASE_MATCH_EPSILON &&
+    vectorDistance(current.actualVelocity, previous.actualVelocity) <= PHASE_MATCH_EPSILON &&
+    Math.abs(current.motionError - previous.motionError) <= PHASE_MATCH_EPSILON &&
+    current.contacts.length === previous.contacts.length &&
+    current.contacts.every((value, index) => value === previous.contacts[index]);
+
+  if (!phaseMatches) {
+    throw new Error(
+      "A1 decision snapshot must be the live snapshot returned by the immediately preceding World.step; " +
+      "a fresh LabWorld.snapshot() intentionally lacks prior-step kinematic evidence."
+    );
+  }
+}
+
 export function buildA1Situation(input: {
   snapshot: WorldSnapshot;
   playerIntent: MotionIntent;
@@ -135,12 +166,15 @@ export function buildA1Situation(input: {
     throw new Error("A1 situation requires companion movement capability for the companion actor.");
   }
 
+  const previousOutcome = previousOutcomeAt(input.snapshot.tick, input.previousWorldStep);
   const situated = buildSituatedEvidenceFrame({
     snapshot: input.snapshot,
     playerControlMove: input.playerIntent.move,
     playerCapability: input.playerCapability,
     companionCapability: input.companionCapability
   });
+  assertDecisionSnapshotMatchesPreviousOutcome(situated, previousOutcome);
+
   const playerRequestedVelocity = sameStepPlayerRequest(
     input.snapshot.tick,
     input.playerIntent,
@@ -152,7 +186,7 @@ export function buildA1Situation(input: {
     tick: input.snapshot.tick,
     situated,
     playerRequestedVelocity,
-    previousOutcome: previousOutcomeAt(input.snapshot.tick, input.previousWorldStep)
+    previousOutcome
   };
 }
 
