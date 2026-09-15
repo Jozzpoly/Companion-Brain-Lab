@@ -7,9 +7,10 @@ import {
 import type { OutcomeAttributionEvidence } from "./outcome-attribution";
 import type { MovementCapability } from "../world/movement-capability";
 import type { AuthorityA0WorldStepEvidence } from "../world/authority-a0-step-evidence";
-import type { MotionIntent, Vec2, WorldSnapshot } from "../world/types";
+import type { MotionIntent, ScenarioId, Vec2, WorldSnapshot } from "../world/types";
 
 export interface A1PreviousOutcomeEvidence {
+  scenarioId: ScenarioId;
   observationTick: number;
   outcomeTick: number;
   ageTicks: number;
@@ -95,9 +96,10 @@ function cloneAttribution(value: OutcomeAttributionEvidence): OutcomeAttribution
 }
 
 function previousOutcomeAt(
-  tick: number,
+  snapshot: WorldSnapshot,
   evidence: AuthorityA0WorldStepEvidence | null
 ): A1PreviousOutcomeEvidence | null {
+  const tick = snapshot.tick;
   if (!evidence) {
     if (tick !== 0) {
       throw new Error("A1 situation is missing the immediately preceding World outcome for a nonzero tick.");
@@ -105,6 +107,11 @@ function previousOutcomeAt(
     return null;
   }
 
+  if (evidence.scenarioId !== snapshot.scenarioId) {
+    throw new Error(
+      `A1 previous outcome scenario ${evidence.scenarioId} does not match current scenario ${snapshot.scenarioId}.`
+    );
+  }
   if (evidence.outcomeTick !== tick) {
     throw new Error(
       `A1 previous outcome must end at current tick ${tick}; received outcome t${evidence.outcomeTick}.`
@@ -115,6 +122,7 @@ function previousOutcomeAt(
   }
 
   return {
+    scenarioId: evidence.scenarioId,
     observationTick: evidence.observationTick,
     outcomeTick: evidence.outcomeTick,
     ageTicks: tick - evidence.outcomeTick,
@@ -166,7 +174,7 @@ export function buildA1Situation(input: {
     throw new Error("A1 situation requires companion movement capability for the companion actor.");
   }
 
-  const previousOutcome = previousOutcomeAt(input.snapshot.tick, input.previousWorldStep);
+  const previousOutcome = previousOutcomeAt(input.snapshot, input.previousWorldStep);
   const situated = buildSituatedEvidenceFrame({
     snapshot: input.snapshot,
     playerControlMove: input.playerIntent.move,
