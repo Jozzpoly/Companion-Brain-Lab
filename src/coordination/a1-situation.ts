@@ -5,13 +5,9 @@ import {
   type SituatedEvidenceFrame
 } from "./situated-evidence";
 import type { OutcomeAttributionEvidence } from "./outcome-attribution";
-import {
-  velocityCommandFromMotionIntent,
-  type VelocityCommand
-} from "./velocity-command";
 import type { MovementCapability } from "../world/movement-capability";
 import type { AuthorityA0WorldStepEvidence } from "../world/authority-a0-step-evidence";
-import type { MotionIntent, WorldSnapshot } from "../world/types";
+import type { MotionIntent, Vec2, WorldSnapshot } from "../world/types";
 
 export interface A1PreviousOutcomeEvidence {
   observationTick: number;
@@ -22,14 +18,57 @@ export interface A1PreviousOutcomeEvidence {
   companionOutcomeAttribution: OutcomeAttributionEvidence;
 }
 
+export interface A1SameStepPlayerRequest {
+  sourceTick: number;
+  move: Vec2;
+  velocity: Vec2;
+  speed: number;
+  capabilityMaxSpeed: number;
+  source: "same-step-owner-motion-intent";
+}
+
 export interface A1Situation {
   kind: "AUTHORITY_A1_SITUATION";
   tick: number;
   situated: SituatedEvidenceFrame;
-  /** Same-step Owner request converted with the same capability contract World uses. */
-  playerRequestedVelocity: VelocityCommand;
+  /** Same-step Owner request after the same unit-disk clamp used by World. */
+  playerRequestedVelocity: A1SameStepPlayerRequest;
   /** The immediately preceding completed World step, never a substitute for current Owner input. */
   previousOutcome: A1PreviousOutcomeEvidence | null;
+}
+
+function magnitude(value: Vec2): number {
+  return Math.hypot(value.x, value.y);
+}
+
+/** Mirrors the World MotionIntent unit-disk contract; a real-World regression binds this copy to execution. */
+function worldBoundedMove(value: Vec2): Vec2 {
+  if (!Number.isFinite(value.x) || !Number.isFinite(value.y)) {
+    throw new Error("A1 same-step player MotionIntent requires finite x/y components.");
+  }
+  const length = magnitude(value);
+  if (length <= 1) return { ...value };
+  return { x: value.x / length, y: value.y / length };
+}
+
+function sameStepPlayerRequest(
+  tick: number,
+  intent: MotionIntent,
+  capability: MovementCapability
+): A1SameStepPlayerRequest {
+  const move = worldBoundedMove(intent.move);
+  const velocity = {
+    x: move.x * capability.maxSpeed,
+    y: move.y * capability.maxSpeed
+  };
+  return {
+    sourceTick: tick,
+    move,
+    velocity,
+    speed: magnitude(velocity),
+    capabilityMaxSpeed: capability.maxSpeed,
+    source: "same-step-owner-motion-intent"
+  };
 }
 
 function cloneBody(value: PlayerBodyEvidence): PlayerBodyEvidence {
@@ -102,11 +141,11 @@ export function buildA1Situation(input: {
     playerCapability: input.playerCapability,
     companionCapability: input.companionCapability
   });
-  const playerRequestedVelocity = velocityCommandFromMotionIntent({
-    intent: input.playerIntent,
-    capability: input.playerCapability,
-    sourceTick: input.snapshot.tick
-  });
+  const playerRequestedVelocity = sameStepPlayerRequest(
+    input.snapshot.tick,
+    input.playerIntent,
+    input.playerCapability
+  );
 
   return {
     kind: "AUTHORITY_A1_SITUATION",
@@ -136,6 +175,7 @@ export function cloneA1Situation(value: A1Situation): A1Situation {
     },
     playerRequestedVelocity: {
       ...value.playerRequestedVelocity,
+      move: { ...value.playerRequestedVelocity.move },
       velocity: { ...value.playerRequestedVelocity.velocity }
     },
     previousOutcome: value.previousOutcome
