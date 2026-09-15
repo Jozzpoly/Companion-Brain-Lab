@@ -166,6 +166,32 @@ describe("Authority-A1.2g Rapier snapshot rehearsal substrate", () => {
     }
   });
 
+  it("leaves no hidden solver mutation that changes the next live step", async () => {
+    const rehearsalWorld = await LabWorld.create("pillar");
+    const controlWorld = await LabWorld.create("pillar");
+    try {
+      for (let index = 0; index < 47; index += 1) {
+        expect(rehearsalWorld.step([PLAYER_DIAGONAL, COMPANION_HOLD])).toEqual(
+          controlWorld.step([PLAYER_DIAGONAL, COMPANION_HOLD])
+        );
+      }
+
+      rehearsalWorld.rehearseVelocitySequence(
+        Array.from({ length: 40 }, () => diagonalVelocityInputs())
+      );
+
+      const afterRehearsal = rehearsalWorld.step([PLAYER_DIAGONAL, COMPANION_HOLD]);
+      const control = controlWorld.step([PLAYER_DIAGONAL, COMPANION_HOLD]);
+      expect(afterRehearsal).toEqual(control);
+      expect(rehearsalWorld.latestAuthorityA0StepEvidence()).toEqual(
+        controlWorld.latestAuthorityA0StepEvidence()
+      );
+    } finally {
+      rehearsalWorld.dispose();
+      controlWorld.dispose();
+    }
+  });
+
   it("keeps raw world-unit physical hypotheses separate from command admissibility", async () => {
     const world = await LabWorld.create("open");
     try {
