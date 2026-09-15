@@ -1,0 +1,61 @@
+name: z4f-diagnostic
+
+on:
+  push:
+    branches:
+      - diagnostic/authority-a1-2z4f-failure-transport
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: |
+          if npm install; then
+            echo "Dependency install completed through normal npm peer resolution."
+            exit 0
+          fi
+
+          latest_log="$(ls -t "$HOME"/.npm/_logs/*-debug-0.log 2>/dev/null | head -n 1 || true)"
+          echo "::group::npm debug log"
+          if [ -n "$latest_log" ]; then
+            cat "$latest_log"
+          else
+            echo "npm failed without a discoverable debug log"
+          fi
+          echo "::endgroup::"
+
+          if [ -z "$latest_log" ] || ! grep -Fq "Cannot read properties of null (reading 'edgesOut')" "$latest_log"; then
+            echo "npm failed for a reason other than the known Arborist edgesOut null-dereference; refusing fallback."
+            exit 1
+          fi
+
+          echo "Known npm Arborist edgesOut crash detected; retrying with peer auto-resolution disabled."
+          rm -rf node_modules
+          npm install --legacy-peer-deps
+      - run: npm run build
+      - name: Run exact Z4f under diagnostic transport
+        run: node scripts/authority-a1-2z4f-diagnostic-transport.mjs
+      - name: Upload Z4f diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-2z4f-diagnostic-${{ github.sha }}
+          path: |
+            artifacts/a1-2z4f-diagnostic.json
+            artifacts/a1-2z4f-exit-code.txt
+          if-no-files-found: error
+          retention-days: 7
+      - name: Preserve exact Z4f source result
+        if: always()
+        run: |
+          test -f artifacts/a1-2z4f-exit-code.txt
+          code="$(cat artifacts/a1-2z4f-exit-code.txt)"
+          if [ "$code" -ne 0 ]; then
+            echo "Exact Z4f source script failed with exit code $code."
+            exit "$code"
+          fi
