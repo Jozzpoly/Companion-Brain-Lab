@@ -97,6 +97,16 @@ const DIRECTIONAL_OBJECTIVE: A1RelationshipObjectiveProfile = {
   directional: { kind: "AVOID_FORWARD_HEMISPHERE", weight: 1 }
 };
 
+const LATERAL_OBJECTIVE: A1RelationshipObjectiveProfile = {
+  radial: { preferredRadius: 1.45, sigma: 0.3, weight: 1 },
+  directional: {
+    kind: "PREFER_BEARING",
+    preferredBearingRadians: Math.PI / 2,
+    sigmaRadians: Math.PI / 8,
+    weight: 1
+  }
+};
+
 const RING_SAMPLING: A1RelationshipSamplingConfig = {
   directions: 16,
   radii: [1.45],
@@ -105,6 +115,12 @@ const RING_SAMPLING: A1RelationshipSamplingConfig = {
 
 const DIRECTIONAL_SAMPLING: A1RelationshipSamplingConfig = {
   directions: 16,
+  radii: [1.45],
+  nearBestUtilityWindow: 0.2
+};
+
+const DENSER_DIRECTIONAL_SAMPLING: A1RelationshipSamplingConfig = {
+  directions: 32,
   radii: [1.45],
   nearBestUtilityWindow: 0.2
 };
@@ -196,7 +212,8 @@ describe("Authority-A1.1d sampled accessibility", () => {
 
     const continuity = compareA1AccessibilityContinuity({ previous, current });
 
-    expect(continuity.orientationComparability).toBe("COMPARABLE");
+    expect(continuity.semanticComparability).toBe("COMPARABLE");
+    expect(continuity.nonComparabilityReason).toBeNull();
     expect(continuity.semanticEligibleOverlapRatio).toBe(1);
     expect(continuity.confirmedReachableOverlapRatio).toBe(1);
     expect(continuity.accessibilityChanged).toBe(false);
@@ -228,7 +245,8 @@ describe("Authority-A1.1d sampled accessibility", () => {
 
     const continuity = compareA1AccessibilityContinuity({ previous, current });
 
-    expect(continuity.orientationComparability).toBe("COMPARABLE");
+    expect(continuity.semanticComparability).toBe("COMPARABLE");
+    expect(continuity.nonComparabilityReason).toBeNull();
     expect(continuity.semanticEligibleOverlapRatio).toBe(1);
     expect(continuity.confirmedReachableOverlapRatio).toBe(1);
     expect(continuity.accessibilityChanged).toBe(false);
@@ -256,7 +274,66 @@ describe("Authority-A1.1d sampled accessibility", () => {
 
     const continuity = compareA1AccessibilityContinuity({ previous, current });
 
-    expect(continuity.orientationComparability).toBe("NON_COMPARABLE");
+    expect(continuity.semanticComparability).toBe("NON_COMPARABLE");
+    expect(continuity.nonComparabilityReason).toBe("ORIENTATION_REGIME_CHANGED");
+    expect(continuity.semanticEligibleOverlapRatio).toBeNull();
+    expect(continuity.confirmedReachableOverlapRatio).toBeNull();
+    expect(continuity.fragmentMatches).toEqual([]);
+    expect(continuity.accessibilityChanged).toBeNull();
+  });
+
+  it("marks an objective change non-comparable instead of calling semantic reshaping a World accessibility change", () => {
+    const previous = observation({
+      tick: 52,
+      player: { x: 20, y: 16 },
+      companion: { x: 16, y: 16 },
+      orientation: semanticOrientation(52, { x: 1, y: 0 }),
+      objective: DIRECTIONAL_OBJECTIVE,
+      sampling: DIRECTIONAL_SAMPLING
+    });
+    const current = observation({
+      tick: 53,
+      player: { x: 20, y: 16 },
+      companion: { x: 16, y: 16 },
+      orientation: semanticOrientation(53, { x: 1, y: 0 }),
+      objective: LATERAL_OBJECTIVE,
+      sampling: DIRECTIONAL_SAMPLING
+    });
+
+    const continuity = compareA1AccessibilityContinuity({ previous, current });
+
+    expect(previous.accessibility.coverage).toBe("COMPLETE");
+    expect(current.accessibility.coverage).toBe("COMPLETE");
+    expect(continuity.semanticComparability).toBe("NON_COMPARABLE");
+    expect(continuity.nonComparabilityReason).toBe("OBJECTIVE_CHANGED");
+    expect(continuity.semanticEligibleOverlapRatio).toBeNull();
+    expect(continuity.confirmedReachableOverlapRatio).toBeNull();
+    expect(continuity.fragmentMatches).toEqual([]);
+    expect(continuity.accessibilityChanged).toBeNull();
+  });
+
+  it("marks an observation-mesh change non-comparable instead of treating changed sample ids as World churn", () => {
+    const previous = observation({
+      tick: 54,
+      player: { x: 20, y: 16 },
+      companion: { x: 16, y: 16 },
+      orientation: semanticOrientation(54, { x: 1, y: 0 }),
+      objective: DIRECTIONAL_OBJECTIVE,
+      sampling: DIRECTIONAL_SAMPLING
+    });
+    const current = observation({
+      tick: 55,
+      player: { x: 20, y: 16 },
+      companion: { x: 16, y: 16 },
+      orientation: semanticOrientation(55, { x: 1, y: 0 }),
+      objective: DIRECTIONAL_OBJECTIVE,
+      sampling: DENSER_DIRECTIONAL_SAMPLING
+    });
+
+    const continuity = compareA1AccessibilityContinuity({ previous, current });
+
+    expect(continuity.semanticComparability).toBe("NON_COMPARABLE");
+    expect(continuity.nonComparabilityReason).toBe("SAMPLING_CHANGED");
     expect(continuity.semanticEligibleOverlapRatio).toBeNull();
     expect(continuity.confirmedReachableOverlapRatio).toBeNull();
     expect(continuity.fragmentMatches).toEqual([]);
@@ -283,7 +360,8 @@ describe("Authority-A1.1d sampled accessibility", () => {
 
     const continuity = compareA1AccessibilityContinuity({ previous, current });
 
-    expect(continuity.orientationComparability).toBe("COMPARABLE");
+    expect(continuity.semanticComparability).toBe("COMPARABLE");
+    expect(continuity.nonComparabilityReason).toBeNull();
     expect(previous.accessibility.coverage).toBe("PARTIAL");
     expect(current.accessibility.coverage).toBe("PARTIAL");
     expect(continuity.accessibilityChanged).toBeNull();
@@ -312,5 +390,40 @@ describe("Authority-A1.1d sampled accessibility", () => {
 
     expect(() => compareA1AccessibilityContinuity({ previous, current: corrupted }))
       .toThrow(/aligned accessibility evidence/);
+  });
+
+  it("rejects corrupted objective or sampling signatures instead of trusting stale contract labels", () => {
+    const previous = observation({
+      tick: 80,
+      player: { x: 20, y: 16 },
+      companion: { x: 15, y: 16 },
+      orientation: noOrientation(80)
+    });
+    const current = observation({
+      tick: 81,
+      player: { x: 20, y: 16 },
+      companion: { x: 15, y: 16 },
+      orientation: noOrientation(81)
+    });
+
+    const corruptObjective = {
+      ...current,
+      field: {
+        ...current.field,
+        objectiveSignature: "stale-objective-signature"
+      }
+    };
+    expect(() => compareA1AccessibilityContinuity({ previous, current: corruptObjective }))
+      .toThrow(/intact objective contract provenance/);
+
+    const corruptSampling = {
+      ...current,
+      field: {
+        ...current.field,
+        samplingSignature: "stale-sampling-signature"
+      }
+    };
+    expect(() => compareA1AccessibilityContinuity({ previous, current: corruptSampling }))
+      .toThrow(/intact sampling contract provenance/);
   });
 });
