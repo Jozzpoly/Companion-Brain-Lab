@@ -48,3 +48,11 @@ jobs:
           echo "NPM_ARBORIST_EDGESOUT_FALLBACK_USED=1"
       - run: npm run check
       - run: npm run browser:audit
+      - name: Upload A1.2 Z4b participant evidence
+        if: always() && hashFiles('artifacts/a1-2z4b/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: authority-a1-2z4b-${{ github.sha }}
+          path: artifacts/a1-2z4b/
+          if-no-files-found: error
+          retention-days: 7
