@@ -1,6 +1,6 @@
 # Authority-A1.1 — Player-Relative Useful Region Plan
 
-Status: **CANONICAL A1.1 PLANNING CHECKPOINT · NO NEW MOVEMENT AUTHORITY**
+Status: **CANONICAL A1.1 PLANNING CHECKPOINT · CRITICAL REVIEW CORRECTED · NO NEW MOVEMENT AUTHORITY**
 
 Parent stage:
 
@@ -64,8 +64,8 @@ From `shadow-relationship-region.ts` and its qualification history:
 - broad polar sampling is a useful experimental probe;
 - body-fit must be hard geometry first;
 - route qualification is separate from local point validity;
-- disconnected near-best sets must remain disconnected;
-- a coherent region is more truthful than one averaged target;
+- disconnected near-best sets must remain disconnected when connectivity is actually known;
+- a region/set is more truthful than one averaged target;
 - bounded qualification must say when evidence is incomplete;
 - hard feasibility and desired comfort must remain distinct;
 - continuity/topology evidence is useful when its provenance is explicit.
@@ -113,8 +113,8 @@ A1.1 must separate three concepts that CCC-0 partly mixed together.
 Meaning relative to the player:
 
 ```text
-radial relationship
-relative bearing / directional relation when semantic orientation exists
+relative offset / radius
+relative bearing when semantic orientation exists
 semantic utility terms
 orientation provenance
 ```
@@ -123,7 +123,7 @@ This meaning must not depend on absolute world position.
 
 ### 4.2 World projection evidence
 
-A semantic sample projected into the current world can expose:
+A relative sample projected into the current world can expose:
 
 ```text
 world position
@@ -147,7 +147,7 @@ A representative may exist only for:
 
 It must never become the implicit relationship objective.
 
-Prefer a representative **member sample** or medoid-like member over a synthesized centroid. Never average disconnected components through invalid space.
+Prefer a representative **member sample** or medoid-like member over a synthesized centroid. Never average disconnected fragments/components through invalid space.
 
 ---
 
@@ -186,65 +186,83 @@ A1RelationshipOrientation
 
 The CCC-0 smooth fade is donor evidence only. A1 gets its own memory contract and constants so trajectory-memory policy does not silently become relationship semantics.
 
-### 5.3 Projection basis is not semantic facing
+### 5.3 Sampling basis is not semantic facing
 
-Sampling still needs a deterministic geometric basis even when semantic orientation is `NONE`.
+A polar observation lattice needs a deterministic geometric basis, but A1.1 must not preserve an old semantic direction merely to stabilize sampling.
 
-Keep this distinction explicit:
+Use only:
 
 ```text
 semanticOrientation: direction | null
-projectionBasis: unit direction
-projectionBasisSource:
+samplingBasis: unit direction
+samplingBasisSource:
   SEMANTIC_ORIENTATION
-  PRIOR_PROJECTION_BASIS
-  WORLD_AXIS_BOOTSTRAP
+  WORLD_AXIS_SAMPLING_ONLY
 ```
 
-When orientation is absent, the projection basis may keep the lattice stable, but directional semantic terms are disabled. This prevents both:
+When semantic orientation is absent:
 
-- fabricated semantic +X facing;
-- an unnecessary sampling-lattice snap when orientation memory expires.
+- the sampling basis may use world +X **only as a coordinate basis**;
+- directional semantic terms are disabled;
+- the basis must be reported as `WORLD_AXIS_SAMPLING_ONLY`;
+- the basis must never be stored as Owner semantic memory;
+- transition from directional to orientation-free semantics may be marked continuity-non-comparable rather than hidden behind retained basis state.
 
-A projection basis must never be reported as Owner intention.
+This deliberately accepts an observable mesh-basis transition instead of introducing history-dependent hard-feasibility sampling through a stale prior basis.
+
+If that transition proves materially harmful even while non-authoritative, redesign the sampling representation rather than silently retaining semantic history.
 
 ---
 
-## 6. Relative semantic sample
+## 6. Semantic utility is a pure contract; sampling is only observation
 
-Provisional sample contract:
+A1.1 should not make the discrete lattice itself the definition of relationship meaning.
+
+Define a pure relative-state utility seam conceptually equivalent to:
+
+```text
+A1RelativeState
+  relativeOffset
+  radius
+  bearingToSemanticOrientation: number | null
+
+A1RelationshipUtility
+  total
+  directionalTerm
+  radialTerm
+  orientationStrength
+  reason / decomposition
+
+evaluateRelationshipUtility(relativeState, orientation)
+```
+
+The evaluator must not depend on:
+
+- absolute world position;
+- route cost;
+- current companion travel cost;
+- comfort clearance;
+- previous world anchor;
+- final movement continuity.
+
+The polar lattice samples this semantic utility function for evidence, feasibility projection and later visualization.
+
+This matters for A1.2: a predicted future companion relative state should eventually be scoreable directly by the same semantic contract rather than by distance to the nearest sampled anchor.
+
+### 6.1 Provisional sampled evidence
 
 ```text
 A1RelativeRegionSample
   id
   angleIndex
   radiusIndex
-  radius
-  relativeBearing
-  relativeOffset
+  relativeState
   semanticUtility
-  semanticTerms
+  semanticEligible
   directionalSemanticsActive
 ```
 
-`relativeOffset` is expressed in the current projection/player frame, not as an absolute world position.
-
-`semanticUtility` should initially contain only relationship meaning, for example:
-
-- directional/front-vs-back preference when orientation exists;
-- radial preference/range.
-
-Do **not** put these in semantic utility:
-
-- companion travel distance;
-- route cost;
-- comfort clearance;
-- world anchor continuity;
-- final movement smoothness.
-
-Those are execution/projection concerns and belong to separate evidence.
-
-This separation is a hard A1.1 design property.
+Initial sample density/radii may mirror CCC-0 to isolate representation changes, but they remain experimental controls.
 
 ---
 
@@ -252,7 +270,7 @@ This separation is a hard A1.1 design property.
 
 A sample can be semantically useful yet currently difficult or impossible to occupy.
 
-Therefore A1.1 should expose both dimensions rather than folding them into one score.
+Therefore A1.1 exposes both dimensions rather than folding them into one score.
 
 Provisional projection state:
 
@@ -280,30 +298,39 @@ A bounded shortlist may not create a global `NO_REACHABLE_REGION` claim unless a
 
 ---
 
-## 8. Keep multiple useful components
+## 8. Keep multiple reachable fragments; claim components only when topology is complete
 
-A1.1 should not immediately collapse all useful space to one chosen coherent component.
+A1.1 must not collapse useful space to one chosen coherent component.
 
-Output a set of components over semantically useful, confirmed-hard-reachable relative samples:
+However partial route qualification creates another trap: two sets of confirmed reachable samples may appear disconnected only because untested samples between them were never qualified.
+
+Therefore distinguish:
 
 ```text
-A1UsefulRegionComponent
-  id / fingerprint from member relative sample ids
+A1UsefulRegionFragment
+  fingerprint from confirmed member relative sample ids
   memberSampleIds
   semanticBestSampleId
-  representativeSampleId   // debug/adapter only
+  representativeSampleId   // debug/adapter only; actual member
   semanticUtilityRange
   hard/comfort summary
+
+A1RegionTopologyEvidence
+  completeness: PARTIAL | COMPLETE
+  confirmedFragments
+  untestedPotentialConnectorCount
+  reason
 ```
 
-Reasons:
+Rules:
 
-- obstacles can split useful relationship space into left/right or near/far alternatives;
-- one selected component would reintroduce hidden target switching;
-- A1.2 should be able to evaluate velocity against the whole admissible useful set;
-- disconnected components must never be centroid-averaged together.
+- with `PARTIAL` topology, fragments are **confirmed reachable fragments**, not proof of globally disconnected components;
+- true disconnected-component claims require complete qualification of relevant connectors or another complete topological proof;
+- no fragment/component is selected as preferred in A1.1;
+- no centroid/average point between fragments becomes semantic objective;
+- every representative is an actual member sample and debug/adapter only.
 
-A1.1 may expose a debug-preferred component, but downstream authority must not assume it is the objective.
+A1.2 may later choose among the whole admissible set. A1.1 must not make that decision early.
 
 ---
 
@@ -313,10 +340,11 @@ CCC-0 world-anchor continuity is rejected.
 
 A1.1 continuity uses semantic-relative evidence:
 
-- sample-id overlap;
-- component member overlap;
-- component matching by maximum relative membership overlap;
+- semantic sample membership/utility overlap;
+- confirmed-fragment member overlap;
+- fragment matching by maximum relative membership overlap;
 - semantic orientation source/strength provenance;
+- topology completeness;
 - explicit comparability state.
 
 Provisional continuity evidence:
@@ -326,35 +354,47 @@ previousPresent
 currentPresent
 orientationRegimeComparable
 semanticSampleOverlap
-componentMatches[]
-projectionTopologyChanged
+fragmentMatches[]
+projectionTopologyCompleteness
+projectionTopologyChanged: boolean | null
 playerTranslationDelta   // diagnostic only
 representativeWorldDelta // diagnostic only
 ```
 
 Pure player translation in equivalent local geometry must not appear as semantic region churn merely because every world projection moved.
 
-Ordinary rotation with a valid semantic orientation should rotate world projections while preserving local semantic meaning.
+Ordinary rotation with valid semantic orientation should rotate world projections while preserving equivalent local relationship meaning.
 
 A transition between directional and orientation-free semantics may be marked non-comparable rather than forcing false continuity.
+
+With partial topology, `projectionTopologyChanged` may be `null`; missing route evidence must not masquerade as a real topology transition.
 
 ---
 
 ## 10. Moving-frame hook for A1.2
 
-A1.1 should expose a pure projection helper rather than implementing PACE now.
+A1.1 should expose pure semantic/projection helpers rather than implementing PACE now.
 
 Conceptually:
 
 ```text
+evaluateRelationshipUtility(relativeState, orientation)
+
 projectRelativeState(
-  relativeSample,
+  relativeState,
   playerReferencePosition,
-  semantic/projection basis
+  sampling/orientation basis
 ) -> worldPosition
 ```
 
-A1.2 can later use the same semantic state against a predicted player reference at horizon `h`.
+A1.2 can later evaluate:
+
+```text
+futureRelative = predictedCompanionWorld - predictedPlayerWorld
+utility = evaluateRelationshipUtility(futureRelative, futureOrientation)
+```
+
+without converting the current sampled region into one future point target.
 
 A1.1 must not hardwire `current world projection == future target`.
 
@@ -372,9 +412,9 @@ When A1 DIRECT or TEMPORAL is selected in SPATIAL mode:
 baseline companion decision
 A1Situation@t
 A1.1 orientation/history
-A1.1 relative semantic region
+A1.1 semantic utility field + sampled evidence
 A1.1 world projection evidence
-A1.1 continuity/components
+A1.1 continuity/fragments/topology completeness
         |
         v
 record/debug only
@@ -403,13 +443,16 @@ Provisional A1.1 history:
 ```text
 lastEvaluationTick
 ownerOrientationDirection / sourceTick / age
-projectionBasis
 previousSemanticUsefulSampleIds
-previousComponents
-previousProjectionTopology summary
+previousConfirmedFragments
+previousProjectionTopology summary/completeness
 ```
 
-Do not store a world-space representative as semantic history.
+Do not store as semantic history:
+
+- world-space representative;
+- sampling basis when it came only from `WORLD_AXIS_SAMPLING_ONLY`;
+- actual/external player velocity as orientation.
 
 Reset on the existing A1-owned epoch boundary:
 
@@ -428,13 +471,15 @@ A1.1 must not repeat the CCC-0 mistake where a small route shortlist hid a much 
 Evidence must report:
 
 - total semantic samples;
+- semantically eligible count;
 - hard-fit count;
 - route-evaluated count;
 - hard-reachable count;
 - hard-unreachable count;
 - untested count;
 - actual static traversal query count;
-- component count;
+- confirmed fragment count;
+- topology completeness;
 - source tick / age;
 - evaluation duration in browser qualification when practical.
 
@@ -450,8 +495,8 @@ Duplicate an open configuration with player + companion translated by the same v
 
 Require:
 
-- same semantic utility by relative sample id;
-- same useful semantic membership;
+- same semantic utility for equivalent relative states;
+- same semantic eligibility;
 - same orientation provenance;
 - world projections shift by the translation vector;
 - no semantic continuity penalty from translation alone.
@@ -460,7 +505,9 @@ Require:
 
 Rotate player, companion relative placement, same-step Owner input and local geometry by 90 degrees.
 
-Require equivalent semantic utility/component structure in player-relative coordinates and correspondingly rotated world projections.
+Require equivalent semantic utility/relative structure after the corresponding relative-frame transform and correspondingly rotated world projections.
+
+Do not require raw world-angle sample ids to remain numerically identical if the sampling basis changes; require semantic equivalence.
 
 ### 14.3 Same-step Owner reversal
 
@@ -487,8 +534,8 @@ With zero Owner control and no semantic memory:
 
 - orientation is `NONE`;
 - no front/back penalty is fabricated;
-- projection basis provenance is explicitly non-semantic;
-- semantic utility does not prefer world +X merely because the lattice needs a basis.
+- sampling-basis provenance is explicitly `WORLD_AXIS_SAMPLING_ONLY`;
+- semantic utility does not prefer world +X merely because the observation lattice needs coordinates.
 
 ### 14.6 Memory fade
 
@@ -497,7 +544,8 @@ After meaningful Owner direction followed by stop:
 - memory strength decreases monotonically by World ticks;
 - external motion does not refresh it;
 - eventual state is `NONE`;
-- expiry does not create a semantic world-axis heading.
+- expiry does not create a semantic world-axis heading;
+- no prior semantic direction is retained merely to stabilize physical sampling.
 
 ### 14.7 Hard-only passage
 
@@ -517,34 +565,39 @@ Force a qualification budget smaller than the hard-fit set.
 Require:
 
 - untested samples remain `UNTESTED`;
+- topology completeness is `PARTIAL`;
+- confirmed fragments are not reported as proven disconnected components;
 - no global unreachable claim;
 - coverage counts exactly match executed qualifications.
 
-### 14.9 Disconnected useful components
+### 14.9 Disconnected useful components under complete evidence
 
-Create two disconnected near-best hard-reachable arcs.
+Create two disconnected near-best hard-reachable arcs and exhaustively qualify relevant connectors.
 
 Require:
 
-- two components survive;
+- topology completeness is `COMPLETE`;
+- two components/fragments survive as genuinely disconnected;
 - no centroid/average point between them becomes semantic objective;
-- each debug representative is an actual member sample.
+- each debug representative is an actual member sample;
+- A1.1 chooses neither component as preferred.
 
 ### 14.10 Pure translation continuity
 
-Advance player and companion together at equal displacement while preserving relative state.
+Advance player and companion together at equal displacement while preserving relative state and equivalent local geometry.
 
 Require:
 
-- high/identical relative membership overlap;
-- component identity/matching remains stable;
+- semantic field remains equivalent;
+- relative membership overlap remains high/identical where discretization permits;
+- confirmed fragment matching remains stable when topology evidence is complete;
 - world representative displacement may be large and is explicitly non-semantic.
 
 ### 14.11 Representation-boundary discontinuity
 
 Sweep slowly across known CCC-0 representative/component discontinuities.
 
-Require semantic utility and relative components change only for real semantic/feasibility reasons; a debug representative jump alone may not alter A1 movement because A1.1 still has no authority.
+Require semantic utility and relative/topological evidence change only for real semantic/feasibility reasons; a debug representative jump alone may not alter A1 movement because A1.1 still has no authority.
 
 ### 14.12 Exact movement non-interference
 
@@ -579,6 +632,7 @@ Require:
 - explicit timing report;
 - same-step input provenance;
 - route coverage/query counts visible;
+- topology completeness visible;
 - baseline command still exact pass-through.
 
 Browser mechanical PASS remains distinct from Owner feel PASS.
@@ -592,34 +646,37 @@ This is not a fixed roadmap; re-plan after any material falsifier.
 ### A1.1a — semantic orientation contract
 
 - A1-specific Owner-derived orientation memory;
-- projection-basis separation;
+- non-semantic sampling-basis provenance;
 - same-step reversal / external-push / no-history tests.
 
-### A1.1b — pure relative semantic lattice
+### A1.1b — pure relative semantic utility + sampling
 
-- player-relative samples;
+- pure arbitrary-relative-state utility evaluator;
+- sampled player-relative evidence;
 - semantic-only utility decomposition;
-- no world feasibility yet in the semantic core;
+- no world feasibility inside the semantic core;
 - translation/rotation metamorphic tests.
 
 ### A1.1c — world projections + hard truth
 
-- project relative states into world;
+- project relative samples into world;
 - hard-fit evidence;
 - hard-route truth vs desired comfort;
 - honest bounded route coverage.
 
-### A1.1d — components + relative continuity
+### A1.1d — reachable fragments + relative continuity
 
-- preserve multiple components;
+- preserve multiple confirmed reachable fragments;
+- PARTIAL vs COMPLETE topology evidence;
 - relative overlap/matching;
 - member-sample debug representatives only;
+- no preferred fragment/component;
 - no world-anchor continuity authority.
 
 ### A1.1e — pass-through runtime/browser integration
 
-- attach evidence to A1-owned runtime state;
-- lazy/bounded debug path;
+- attach bounded evidence to A1-owned runtime state;
+- lazy debug path;
 - exact movement differential;
 - real Chromium qualification.
 
@@ -631,16 +688,19 @@ Do not proceed to A1.2 merely because the first region looks plausible. Complete
 
 A1.1 passes only when all are true:
 
-- semantic region is player-relative first;
+- semantic relationship utility is player-relative first and independently evaluable from absolute world position;
 - current Owner intent has semantic priority over prior physical motion;
 - external player displacement cannot refresh relationship orientation;
 - no-direction state fabricates no semantic heading;
+- sampling basis is explicitly non-semantic when orientation is absent and retains no hidden prior semantic direction;
 - semantic utility is separate from travel/route/comfort/continuity costs;
 - world projection carries explicit hard/comfort facts;
-- partial route coverage remains honest;
+- partial route coverage remains honest and topology completeness is explicit;
 - hard-only passage stays available;
-- multiple disconnected useful components can coexist;
+- multiple disconnected useful components can coexist when complete evidence proves them;
+- partial evidence is described only as confirmed fragments, not global disconnection;
 - representatives are non-authoritative member/debug adapters;
+- A1.1 selects no preferred fragment/component;
 - continuity is relative-space based rather than world-anchor based;
 - translation and rotation falsifiers pass;
 - exact A1.0 movement differential remains green;
@@ -662,15 +722,16 @@ Stop instead of tuning if:
 1. relationship orientation is refreshed by externally induced actual body motion;
 2. a world-space point becomes the persistent semantic objective;
 3. semantic usefulness requires travel/route/comfort weights to make sense;
-4. one representative/component must be selected early for the model to function;
-5. partial route qualification is described as global unreachable truth;
+4. one representative/fragment/component must be selected early for the model to function;
+5. partial route qualification is described as global unreachable or proven-disconnected truth;
 6. desired comfort removes hard-feasible states;
 7. pure player translation looks like semantic churn;
 8. continuity requires anchoring to previous world positions;
 9. orientation expiry invents world-axis facing;
-10. sample density/weights are being tuned to hide representation discontinuities;
-11. A1.1 evaluation changes baseline companion commands or World outcomes;
-12. debug cloning/evidence begins dominating runtime cost.
+10. sampling stability requires silently retaining an expired semantic direction;
+11. sample density/weights are being tuned to hide representation discontinuities;
+12. A1.1 evaluation changes baseline companion commands or World outcomes;
+13. debug cloning/evidence begins dominating runtime cost.
 
 ---
 
@@ -680,6 +741,6 @@ Begin with **A1.1a only**.
 
 Do not start by copying `ShadowRelationshipRegion` into an A1 file.
 
-First make Owner-intent-safe semantic orientation and projection-basis provenance executable and independently tested. Only then build the relative semantic lattice on top of that contract.
+First make Owner-intent-safe semantic orientation and non-semantic sampling-basis provenance executable and independently tested. Only then build the pure relative semantic utility contract and sampled field on top of that seam.
 
-This preserves the main lesson of A1.0: establish the factual/semantic seam before letting downstream complexity depend on it.
+This preserves the main lesson of A1.0: establish the factual/semantic boundary before letting downstream complexity depend on it.
