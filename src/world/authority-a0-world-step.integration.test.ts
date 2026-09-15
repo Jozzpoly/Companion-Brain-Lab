@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { RapierPhysicalWorld } from "../physics/rapier-physical-world";
 import type { AuthorityA0WorldStepEvidence } from "./authority-a0-step-evidence";
 import { scenario } from "./scenarios";
-import { LabWorld } from "./world";
+import { LabWorld, subscribeAuthorityA0StepEvidence } from "./world";
 
 describe("Authority-A0 live World step evidence", () => {
   it("captures same-step control, capability and world-unit command beside the unchanged World step", async () => {
@@ -16,6 +16,7 @@ describe("Authority-A0 live World step evidence", () => {
       if (!evidence) throw new Error("missing A0 step evidence");
 
       expect(after.tick).toBe(1);
+      expect(evidence.scenarioId).toBe("open");
       expect(evidence.observationTick).toBe(0);
       expect(evidence.outcomeTick).toBe(1);
       expect(evidence.situated.playerControl.sourceTick).toBe(0);
@@ -57,6 +58,7 @@ describe("Authority-A0 live World step evidence", () => {
 
       expect(disturbed).not.toBeNull();
       if (!disturbed) return;
+      expect(disturbed.scenarioId).toBe("head-on");
       expect(disturbed.situated.playerControl.active).toBe(false);
       expect(disturbed.situated.playerControl.move).toEqual({ x: 0, y: 0 });
       expect(disturbed.playerOutcomeBody.sourceTick).toBe(disturbed.outcomeTick);
@@ -99,6 +101,36 @@ describe("Authority-A0 live World step evidence", () => {
       expect(second?.companionVelocityCommand.velocity.x).toBe(0);
       expect(second?.companionOutcomeAttribution.contacts).not.toContain("fake");
     } finally {
+      world.dispose();
+    }
+  });
+
+  it("publishes defensive observer copies and isolates observer failures from World authority", async () => {
+    const world = await LabWorld.create("open");
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    let secondObserverEvidence: AuthorityA0WorldStepEvidence | null = null;
+    const unsubscribeMutating = subscribeAuthorityA0StepEvidence((evidence) => {
+      evidence.situated.playerControl.move.x = 999;
+      throw new Error("observer probe failure");
+    });
+    const unsubscribeSecond = subscribeAuthorityA0StepEvidence((evidence) => {
+      secondObserverEvidence = evidence;
+    });
+
+    try {
+      const after = world.step([
+        { actorId: "player", move: { x: 1, y: 0 } },
+        { actorId: "companion", move: { x: -0.25, y: 0 } }
+      ]);
+
+      expect(after.tick).toBe(1);
+      expect(secondObserverEvidence?.situated.playerControl.move.x).toBe(1);
+      expect(world.latestAuthorityA0StepEvidence()?.situated.playerControl.move.x).toBe(1);
+      expect(consoleError).toHaveBeenCalledTimes(1);
+    } finally {
+      unsubscribeMutating();
+      unsubscribeSecond();
+      consoleError.mockRestore();
       world.dispose();
     }
   });
