@@ -1,5 +1,6 @@
 import {
   RapierPhysicalWorld,
+  S0_STEP_SECONDS,
   type PhysicalRehearsalResult,
   type PhysicalRehearsalVelocityInput
 } from "../physics/rapier-physical-world";
@@ -23,6 +24,9 @@ import type {
 } from "./types";
 
 export type AuthorityA0StepObserver = (evidence: AuthorityA0WorldStepEvidence) => void;
+
+/** Public World-boundary timebase truth. Coordination must not import Rapier internals directly. */
+export const WORLD_STEP_SECONDS = S0_STEP_SECONDS;
 
 const authorityA0StepObservers = new Set<AuthorityA0StepObserver>();
 
