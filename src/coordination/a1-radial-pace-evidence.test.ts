@@ -172,12 +172,13 @@ describe("Authority-A1.2u policy-free radial PACE evidence", () => {
   it("preserves sign semantics across the radial objective: too-close states can improve by opening distance", async () => {
     const world = await LabWorld.create("open");
     try {
+      const horizonSeconds = 0.5;
       for (let step = 0; step < 84; step += 1) {
         world.step([hold("player"), intent("companion", -1)]);
       }
       const snapshot = world.step([hold("player"), hold("companion")]);
       const state = situation({ world, snapshot, playerIntentX: -1 });
-      const built = profiles({ world, situation: state });
+      const built = profiles({ world, situation: state, horizonSeconds });
       const rows = built.physical.map(({ proposal, profile }) => ({
         proposal,
         entry: h1(pace(profile, state)).radialPace
@@ -190,7 +191,7 @@ describe("Authority-A1.2u policy-free radial PACE evidence", () => {
       expect(best.entry!.absoluteRadialErrorDelta).toBeLessThan(-0.1);
       expect(best.entry!.radialSeparationDelta).toBeGreaterThan(0.1);
       expect(best.entry!.absoluteRadialErrorRate).toBeCloseTo(
-        best.entry!.absoluteRadialErrorDelta / best.entry!.terminalStateSource.length * best.entry!.terminalStateSource.length / 0.5,
+        best.entry!.absoluteRadialErrorDelta / horizonSeconds,
         8
       );
     } finally {
