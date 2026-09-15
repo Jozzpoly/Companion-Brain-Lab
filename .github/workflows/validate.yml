@@ -47,4 +47,16 @@ jobs:
           npm install --legacy-peer-deps
           echo "NPM_ARBORIST_EDGESOUT_FALLBACK_USED=1"
       - run: npm run check
+      - name: Capture A1.2z4 semantic marker
+        run: |
+          npx vitest run src/coordination/a1-h1-primary-head-on-shadow.audit.test.ts --reporter=verbose 2>&1 | tee a1-2z4-targeted-output.txt
+          grep -F "[A1_2Z4_H1_PRIMARY_HEAD_ON_SHADOW_AUDIT]" a1-2z4-targeted-output.txt > a1-2z4-semantic-marker.txt
+          test -s a1-2z4-semantic-marker.txt
+      - name: Upload A1.2z4 semantic marker
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-2z4-semantic-marker-${{ github.sha }}
+          path: a1-2z4-semantic-marker.txt
+          if-no-files-found: error
+          retention-days: 1
       - run: npm run browser:audit
