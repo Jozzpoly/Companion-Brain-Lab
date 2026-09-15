@@ -20,9 +20,22 @@ function actor(input: {
   };
 }
 
+function evaluate(input: {
+  before: ActorSnapshot;
+  after: ActorSnapshot;
+  commandedVelocity: Vec2;
+  finalConstraintIntervened?: boolean;
+}) {
+  return evaluateOutcomeAttribution({
+    ...input,
+    observationTick: 40,
+    outcomeTick: 41
+  });
+}
+
 describe("Authority-A0 outcome attribution", () => {
   it("supports attribution to a healthy unconstrained submitted action", () => {
-    const result = evaluateOutcomeAttribution({
+    const result = evaluate({
       before: actor({ position: { x: 2, y: 4 } }),
       after: actor({
         position: { x: 2.05, y: 4 },
@@ -33,13 +46,15 @@ describe("Authority-A0 outcome attribution", () => {
       commandedVelocity: { x: 3, y: 0 }
     });
 
+    expect(result.observationTick).toBe(40);
+    expect(result.outcomeTick).toBe(41);
     expect(result.state).toBe("SELF_ACTION_SUPPORTED");
     expect(result.commandActualAlignment).toBeCloseTo(1, 8);
     expect(result.commandDisplacementAlignment).toBeCloseTo(1, 8);
   });
 
   it("does not credit zero-command player-pushed displacement as self action", () => {
-    const result = evaluateOutcomeAttribution({
+    const result = evaluate({
       before: actor({ position: { x: 4.65, y: 4 } }),
       after: actor({
         position: { x: 4.724, y: 4 },
@@ -51,6 +66,8 @@ describe("Authority-A0 outcome attribution", () => {
       commandedVelocity: { x: 0, y: 0 }
     });
 
+    expect(result.observationTick).toBe(40);
+    expect(result.outcomeTick).toBe(41);
     expect(result.state).toBe("EXTERNAL_DISPLACEMENT_EVIDENT");
     expect(result.commandedSpeed).toBe(0);
     expect(result.displacement).toBeGreaterThan(0.07);
@@ -58,7 +75,7 @@ describe("Authority-A0 outcome attribution", () => {
   });
 
   it("classifies a materially suppressed commanded action with static contact as constrained", () => {
-    const result = evaluateOutcomeAttribution({
+    const result = evaluate({
       before: actor({ position: { x: 2, y: 4 } }),
       after: actor({
         position: { x: 2.001, y: 4 },
@@ -74,7 +91,7 @@ describe("Authority-A0 outcome attribution", () => {
   });
 
   it("stays conservative under nonzero command plus player contact", () => {
-    const result = evaluateOutcomeAttribution({
+    const result = evaluate({
       before: actor({ position: { x: 4, y: 4 } }),
       after: actor({
         position: { x: 4.02, y: 4.015 },
@@ -90,7 +107,7 @@ describe("Authority-A0 outcome attribution", () => {
   });
 
   it("reports downstream final intervention as constrained rather than clean self action", () => {
-    const result = evaluateOutcomeAttribution({
+    const result = evaluate({
       before: actor({ position: { x: 2, y: 4 } }),
       after: actor({
         position: { x: 2.02, y: 4 },
@@ -106,12 +123,22 @@ describe("Authority-A0 outcome attribution", () => {
   });
 
   it("reports a stationary zero-command frame as no meaningful motion", () => {
-    const result = evaluateOutcomeAttribution({
+    const result = evaluate({
       before: actor({ position: { x: 2, y: 4 } }),
       after: actor({ position: { x: 2, y: 4 } }),
       commandedVelocity: { x: 0, y: 0 }
     });
 
     expect(result.state).toBe("NO_MEANINGFUL_MOTION");
+  });
+
+  it("rejects non-adjacent phase provenance", () => {
+    expect(() => evaluateOutcomeAttribution({
+      before: actor({ position: { x: 2, y: 4 } }),
+      after: actor({ position: { x: 2, y: 4 } }),
+      observationTick: 40,
+      outcomeTick: 42,
+      commandedVelocity: { x: 0, y: 0 }
+    })).toThrow("adjacent observation/outcome ticks");
   });
 });
