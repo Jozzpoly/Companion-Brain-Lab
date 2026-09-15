@@ -5,6 +5,7 @@ import type { Vec2 } from "../world/types";
 
 const EPSILON = 1e-8;
 const EVIDENCE_EPSILON = 1e-6;
+const A1_2C_DISTANCE_EPSILON = 1e-9;
 
 export type A1HardRadiusPhysicalState =
   | "CLEAR"
@@ -148,7 +149,7 @@ function segmentEvidence(input: {
   const relativePosition = subtract(companionStart, playerStart);
   const relativeVelocity = subtract(input.companion.velocity, input.playerVelocity);
   const relativeSpeedSquared = dot(relativeVelocity, relativeVelocity);
-  const localClosest = relativeSpeedSquared > EPSILON
+  const localClosest = relativeSpeedSquared > 0
     ? clamp(-dot(relativePosition, relativeVelocity) / relativeSpeedSquared, 0, duration)
     : 0;
   const closestTime = input.start + localClosest;
@@ -405,7 +406,7 @@ export function evaluateA1DirectPlayerHardRadiusSafety(input: {
 
   const intendedDistance = vectorDistance(feasibility.intendedEndpoint, playerOrigin);
   const feasibleDistance = vectorDistance(feasibility.feasibleEndpoint, playerOrigin);
-  const expectedFraction = intendedDistance > EVIDENCE_EPSILON
+  const expectedFraction = intendedDistance > A1_2C_DISTANCE_EPSILON
     ? Math.max(0, Math.min(1, feasibleDistance / intendedDistance))
     : 1;
   if (!approximatelyEqual(feasibility.intendedDistance, intendedDistance)) {
