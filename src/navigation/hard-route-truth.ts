@@ -7,6 +7,7 @@ import {
 import type { Vec2, WorldSnapshot } from "../world/types";
 
 export interface HardRouteTruthEvidence {
+  sourceTick: number;
   hardStatus: StaticRoutePlan["status"];
   hardReason: string;
   hardRouteNodeIds: readonly string[];
@@ -54,6 +55,7 @@ export function evaluateHardRouteTruth(input: {
   const desiredReachable = reachable(desiredPlan.status);
 
   return {
+    sourceTick: input.snapshot.tick,
     hardStatus: hardPlan.status,
     hardReason: hardPlan.reason,
     hardRouteNodeIds: [...hardPlan.routeNodeIds],
