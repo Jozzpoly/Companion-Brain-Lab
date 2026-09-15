@@ -101,11 +101,16 @@ function syntheticSituation(options: {
   };
 }
 
-function memory(direction: Vec2, sourceTick: number): A1RelationshipOrientationMemory {
+function memory(
+  direction: Vec2,
+  sourceTick: number,
+  sourceStrength = 1
+): A1RelationshipOrientationMemory {
   return {
     provenance: "OWNER_CONTROL",
     direction: { ...direction },
-    sourceTick
+    sourceTick,
+    sourceStrength
   };
 }
 
@@ -143,6 +148,25 @@ describe("Authority-A1.1a relationship orientation", () => {
     } finally {
       world.dispose();
     }
+  });
+
+  it("preserves partial Owner input strength instead of snapping every active control to full semantic confidence", () => {
+    const current = evaluateA1RelationshipOrientation({
+      situation: syntheticSituation({ tick: 3, control: { x: 0.04, y: 0 } })
+    });
+
+    expect(current.source).toBe("SAME_STEP_OWNER");
+    expect(current.direction).toEqual({ x: 1, y: 0 });
+    expect(current.strength).toBeCloseTo(0.04, 12);
+    expect(current.nextMemory).toEqual(memory({ x: 1, y: 0 }, 3, 0.04));
+
+    const remembered = evaluateA1RelationshipOrientation({
+      situation: syntheticSituation({ tick: 4, control: { x: 0, y: 0 } }),
+      memory: current.nextMemory
+    });
+    expect(remembered.source).toBe("OWNER_MEMORY");
+    expect(remembered.strength).toBeLessThan(0.04);
+    expect(remembered.strength).toBeCloseTo(0.04 * a1OrientationMemoryStrength(1), 12);
   });
 
   it("does not fabricate semantic facing when stationary with no Owner memory", () => {
@@ -270,7 +294,7 @@ describe("Authority-A1.1a relationship orientation", () => {
     expect(result.nextMemory).toEqual(memory({ x: 0, y: -1 }, 21));
   });
 
-  it("rejects future or non-directional Owner memory instead of silently normalizing invalid semantic history", () => {
+  it("rejects future, non-directional or invalid-strength Owner memory instead of accepting bad semantic history", () => {
     const situation = syntheticSituation({ tick: 8, control: { x: 0, y: 0 } });
 
     expect(() => evaluateA1RelationshipOrientation({
@@ -282,5 +306,10 @@ describe("Authority-A1.1a relationship orientation", () => {
       situation,
       memory: memory({ x: 0, y: 0 }, 7)
     })).toThrow(/finite nonzero direction/);
+
+    expect(() => evaluateA1RelationshipOrientation({
+      situation,
+      memory: memory({ x: 1, y: 0 }, 7, 0)
+    })).toThrow(/source strength/);
   });
 });
