@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { R1LabScene } from "./app/r1-lab-scene";
 import { installAuthorityA0BrowserBridge } from "./debug/authority-a0-browser-bridge";
 import { installAuthorityA11fBrowserBridge } from "./debug/authority-a1-1f-browser-bridge";
+import { installAuthorityA12z4cBrowserBridge } from "./debug/authority-a1-2z4c-browser-bridge";
 import { installAuthorityA10BrowserBridge } from "./debug/authority-a1-browser-bridge";
 import { scheduleFoundationFaultProbe } from "./debug/foundation-fault-probe";
 import {
@@ -20,6 +21,7 @@ try {
   installAuthorityA0BrowserBridge(window.location.search);
   installAuthorityA10BrowserBridge(window.location.search);
   installAuthorityA11fBrowserBridge(window.location.search);
+  installAuthorityA12z4cBrowserBridge(window.location.search, R1LabScene.prototype);
 
   game = new Phaser.Game({
     type: Phaser.AUTO,
