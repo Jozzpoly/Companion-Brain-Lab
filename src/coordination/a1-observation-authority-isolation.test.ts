@@ -231,6 +231,7 @@ describe("Authority-A1.1f passive observation isolation", () => {
 
       runtime.setVariant("temporal");
       expect(runtime.debugState().relationshipObservation).toEqual({
+        lastAttemptTick: null,
         latestTick: null,
         observations: 0,
         heavyAttempts: 0,
