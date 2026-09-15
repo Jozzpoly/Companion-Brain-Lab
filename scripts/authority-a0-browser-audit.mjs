@@ -37,6 +37,13 @@ async function waitForBridgeFrames(page, minimum, timeout = 10_000) {
   );
 }
 
+async function waitForHardRouteQualification(page, timeout = 10_000) {
+  await page.waitForFunction(() => {
+    const incident = window.__authorityA0BrowserBridge?.incident();
+    return Boolean(incident?.hardRouteQualification || incident?.hardRouteQualificationError);
+  }, null, { timeout });
+}
+
 function findOwnerDirectedInput(frames) {
   return frames.find((frame) =>
     frame.situated.playerControl.active &&
@@ -55,6 +62,17 @@ function findZeroInputSolverMotion(frames) {
     frame.playerOutcomeMotionProvenance.state !== "OWNER_DIRECTED" &&
     frame.playerOutcomeMotionProvenance.state !== "STATIONARY"
   ) ?? null;
+}
+
+function assertHardRouteQualification(qualification, error, label) {
+  invariant(!error, `${label}: hard-route browser qualification failed: ${error}`);
+  invariant(qualification, `${label}: hard-route browser qualification is missing.`);
+  invariant(qualification.fixture === "narrow-boundary-hard-only-passage-v1", `${label}: unexpected hard-route fixture.`);
+  invariant(qualification.evidence.hardReachable === true, `${label}: hard-only route should remain reachable.`);
+  invariant(qualification.evidence.desiredReachable === false, `${label}: desired-clearance route should be unavailable in the counterexample.`);
+  invariant(qualification.evidence.comfortErasesHardConnectivity === true, `${label}: hard/comfort disagreement was not preserved.`);
+  invariant(qualification.evidence.hardStatus === "routed", `${label}: expected routed hard truth, got ${qualification.evidence.hardStatus}.`);
+  invariant(qualification.evidence.desiredStatus === "unreachable", `${label}: expected unreachable desired route, got ${qualification.evidence.desiredStatus}.`);
 }
 
 async function assertNoFault(page, errors) {
@@ -118,6 +136,7 @@ try {
   await page.waitForFunction(() => window.__authorityA0BrowserBridge?.enabled === true, null, { timeout: 10_000 });
   await waitForPanel(page, (text) => text.includes("scenario Open field") && /\btick \d+\b/.test(text), 15_000, "open scenario boot");
   await waitForBridgeFrames(page, 4, 10_000);
+  await waitForHardRouteQualification(page, 10_000);
   await assertNoFault(page, errors);
 
   const initial = await bridgeSnapshot(page);
@@ -126,6 +145,7 @@ try {
   invariant(initial.frames.every((frame) => frame.outcomeTick === frame.observationTick + 1), "A0 frame tick phases are not adjacent.");
   invariant(initial.frames.every((frame) => frame.situated.playerCapability.maxSpeed === 3), "Player capability drifted from World truth.");
   invariant(initial.frames.every((frame) => frame.situated.companionCapability.maxSpeed === 3), "Companion capability drifted from World truth.");
+  assertHardRouteQualification(initial.hardRouteQualification, initial.hardRouteQualificationError, "live bridge");
 
   await page.keyboard.down("d");
   await page.waitForTimeout(450);
@@ -170,6 +190,7 @@ try {
   invariant(findOwnerDirectedInput(incident.frames), "Downloaded incident lost real WASD control provenance.");
   const downloadedSolverMotion = findZeroInputSolverMotion(incident.frames);
   invariant(downloadedSolverMotion, "Downloaded incident lost real zero-input solver-motion evidence.");
+  assertHardRouteQualification(incident.hardRouteQualification, incident.hardRouteQualificationError, "downloaded incident");
 
   const intervals = await page.evaluate(() => window.__authorityA0TimingAudit?.intervals ?? []);
   const maximumFrameMs = intervals.length > 0 ? Math.max(...intervals) : null;
@@ -183,6 +204,12 @@ try {
     incidentFile: requestedFileName,
     incidentFrames: incident.frameCount,
     scenarios: incident.scenarios,
+    hardRoute: {
+      fixture: incident.hardRouteQualification.fixture,
+      hardStatus: incident.hardRouteQualification.evidence.hardStatus,
+      desiredStatus: incident.hardRouteQualification.evidence.desiredStatus,
+      comfortErasesHardConnectivity: incident.hardRouteQualification.evidence.comfortErasesHardConnectivity
+    },
     ownerInput: {
       tick: ownerDirected.observationTick,
       move: ownerDirected.situated.playerControl.move,
