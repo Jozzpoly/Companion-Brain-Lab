@@ -58,6 +58,7 @@ describe("Authority-A1 decision-time situation", () => {
       // The decision snapshot is the rich t1 outcome returned by World.step(t0 -> t1).
       expect(situation.situated.playerBody.sourceTick).toBe(1);
       expect(situation.situated.playerBody.requestedVelocity.x).toBeGreaterThan(2.9);
+      expect(situation.previousOutcome?.scenarioId).toBe("open");
       expect(situation.previousOutcome?.observationTick).toBe(0);
       expect(situation.previousOutcome?.outcomeTick).toBe(1);
       expect(situation.previousOutcome?.ageTicks).toBe(0);
@@ -136,6 +137,62 @@ describe("Authority-A1 decision-time situation", () => {
         companionCapability: world.actorMovementCapability("companion"),
         previousWorldStep: stale
       })).toThrow(/must end at current tick/);
+    } finally {
+      world.dispose();
+    }
+  });
+
+  it("rejects previous World evidence from another scenario even when its tick phase happens to match", async () => {
+    const openWorld = await LabWorld.create("open");
+    const pillarWorld = await LabWorld.create("pillar");
+    try {
+      openWorld.step([
+        { actorId: "player", move: { x: 1, y: 0 } },
+        companionHold()
+      ]);
+      const wrongScenarioEvidence = openWorld.latestAuthorityA0StepEvidence();
+      const pillarCurrent = pillarWorld.step([
+        { actorId: "player", move: { x: 0, y: 1 } },
+        companionHold()
+      ]);
+
+      expect(pillarCurrent.tick).toBe(1);
+      expect(wrongScenarioEvidence?.outcomeTick).toBe(1);
+      expect(() => buildA1Situation({
+        snapshot: pillarCurrent,
+        playerIntent: { actorId: "player", move: { x: 0, y: -1 } },
+        playerCapability: pillarWorld.actorMovementCapability("player"),
+        companionCapability: pillarWorld.actorMovementCapability("companion"),
+        previousWorldStep: wrongScenarioEvidence
+      })).toThrow(/does not match current scenario/);
+    } finally {
+      openWorld.dispose();
+      pillarWorld.dispose();
+    }
+  });
+
+  it("rejects actor/capability identity mismatches instead of silently rescaling with the wrong actor contract", async () => {
+    const world = await LabWorld.create("open");
+    try {
+      const snapshot = world.snapshot();
+      const playerCapability = world.actorMovementCapability("player");
+      const companionCapability = world.actorMovementCapability("companion");
+
+      expect(() => buildA1Situation({
+        snapshot,
+        playerIntent: { actorId: "player", move: { x: 1, y: 0 } },
+        playerCapability: companionCapability,
+        companionCapability,
+        previousWorldStep: null
+      })).toThrow(/player movement capability/);
+
+      expect(() => buildA1Situation({
+        snapshot,
+        playerIntent: { actorId: "player", move: { x: 1, y: 0 } },
+        playerCapability,
+        companionCapability: playerCapability,
+        previousWorldStep: null
+      })).toThrow(/companion movement capability/);
     } finally {
       world.dispose();
     }
