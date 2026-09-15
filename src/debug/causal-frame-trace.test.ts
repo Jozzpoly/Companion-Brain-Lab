@@ -91,32 +91,6 @@ function frame(sequence: number, observationTick: number, outcomeTick: number): 
       unreachableTicks: 0,
       retryCount: 1,
       appliedLocalRetries: 9
-    },
-    authorityA0: {
-      kind: "AUTHORITY_A0_EVIDENCE",
-      observationTick,
-      outcomeTick,
-      playerControlMove: { x: 0, y: 0 },
-      playerControlActive: false,
-      playerRequestedVelocity: { x: 0, y: 0 },
-      playerActualVelocity: { x: 0, y: 0 },
-      playerMotionError: 0,
-      playerContacts: [],
-      playerMotionProvenanceState: "STATIONARY",
-      playerMotionProvenanceReason: "observation-time body is stationary",
-      playerOutcomeRequestedVelocity: { x: 0, y: 0 },
-      playerOutcomeActualVelocity: { x: -1.49, y: 0 },
-      playerOutcomeMotionError: 1.49,
-      playerOutcomeContacts: ["companion"],
-      playerOutcomeMotionProvenanceState: "EXTERNAL_MOTION_EVIDENT",
-      playerOutcomeMotionProvenanceReason: "post-World contact-driven body motion",
-      playerCapabilityMaxSpeed: 3,
-      companionCapabilityMaxSpeed: 3,
-      companionVelocityCommand: { x: 1.5, y: 0.6 },
-      velocityCommandCapabilityMaxSpeed: 3,
-      velocityCommandSourceTick: observationTick,
-      companionOutcomeAttributionState: "MIXED_OR_AMBIGUOUS",
-      companionOutcomeAttributionReason: "player contact complicates causal ownership"
     }
   };
 }
@@ -177,28 +151,6 @@ describe("R1 causal frame trace", () => {
     expect(latest?.command.commandedMove).toEqual({ x: 0.5, y: 0.2 });
   });
 
-  it("preserves Authority-A0 observation/outcome provenance as separate phases", () => {
-    const trace = new CausalFrameTrace();
-    trace.record(frame(trace.nextSequence(), 30, 31));
-
-    const a0 = trace.latest()?.authorityA0;
-    expect(a0?.kind).toBe("AUTHORITY_A0_EVIDENCE");
-    expect(a0?.observationTick).toBe(30);
-    expect(a0?.outcomeTick).toBe(31);
-    expect(a0?.playerControlMove).toEqual({ x: 0, y: 0 });
-    expect(a0?.playerRequestedVelocity).toEqual({ x: 0, y: 0 });
-    expect(a0?.playerActualVelocity).toEqual({ x: 0, y: 0 });
-    expect(a0?.playerMotionProvenanceState).toBe("STATIONARY");
-    expect(a0?.playerOutcomeRequestedVelocity).toEqual({ x: 0, y: 0 });
-    expect(a0?.playerOutcomeActualVelocity).toEqual({ x: -1.49, y: 0 });
-    expect(a0?.playerOutcomeContacts).toEqual(["companion"]);
-    expect(a0?.playerOutcomeMotionProvenanceState).toBe("EXTERNAL_MOTION_EVIDENT");
-    expect(a0?.playerCapabilityMaxSpeed).toBe(3);
-    expect(a0?.companionCapabilityMaxSpeed).toBe(3);
-    expect(a0?.companionVelocityCommand).toEqual({ x: 1.5, y: 0.6 });
-    expect(a0?.companionOutcomeAttributionState).toBe("MIXED_OR_AMBIGUOUS");
-  });
-
   it("adds self-describing recovery aliases to legacy incident-v2 frames", () => {
     const trace = new CausalFrameTrace();
     trace.record(frame(trace.nextSequence(), 20, 21));
@@ -212,13 +164,9 @@ describe("R1 causal frame trace", () => {
     const trace = new CausalFrameTrace();
     const sourceContacts = ["player"];
     const sourceComfortBlockers = ["door.wall.top"];
-    const sourceA0Contacts = ["companion"];
-    const sourceA0OutcomeContacts = ["companion"];
     const value = frame(trace.nextSequence(), 1, 2);
     value.outcome.companionContacts = sourceContacts;
     value.decision.comfortStartBlockers = sourceComfortBlockers;
-    value.authorityA0!.playerContacts = sourceA0Contacts;
-    value.authorityA0!.playerOutcomeContacts = sourceA0OutcomeContacts;
     trace.record(value);
 
     value.observation.companionPosition.x = 999;
@@ -230,14 +178,8 @@ describe("R1 causal frame trace", () => {
     value.decision.shadowCoordination!.authoritativeFlowCompanionClosest!.x = 999;
     value.decision.shadowCoordination!.authoritativeFlowPlayerClosest!.x = 999;
     value.command.commandedMove.x = 999;
-    value.authorityA0!.playerControlMove.x = 999;
-    value.authorityA0!.playerActualVelocity.x = 999;
-    value.authorityA0!.playerOutcomeActualVelocity.x = 999;
-    value.authorityA0!.companionVelocityCommand.x = 999;
     sourceContacts.push("wall");
     sourceComfortBlockers.push("door.wall.bottom");
-    sourceA0Contacts.push("wall");
-    sourceA0OutcomeContacts.push("wall");
 
     const latest = trace.latest();
     expect(latest?.observation.companionPosition.x).toBe(1);
@@ -251,12 +193,6 @@ describe("R1 causal frame trace", () => {
     expect(latest?.command.commandedMove.x).toBe(0.5);
     expect(latest?.outcome.companionContacts).toEqual(["player"]);
     expect(latest?.decision.comfortStartBlockers).toEqual(["door.wall.top"]);
-    expect(latest?.authorityA0?.playerControlMove.x).toBe(0);
-    expect(latest?.authorityA0?.playerActualVelocity.x).toBe(0);
-    expect(latest?.authorityA0?.playerOutcomeActualVelocity.x).toBe(-1.49);
-    expect(latest?.authorityA0?.companionVelocityCommand.x).toBe(1.5);
-    expect(latest?.authorityA0?.playerContacts).toEqual(["companion"]);
-    expect(latest?.authorityA0?.playerOutcomeContacts).toEqual(["companion"]);
   });
 
   it("bounds history while keeping sequence monotonic", () => {
