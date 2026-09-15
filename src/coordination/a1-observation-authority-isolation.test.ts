@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { LabWorld } from "../world/world";
 import type { StaticCircleTraversalResult, Vec2 } from "../world/types";
 import { A1AuthorityRuntime } from "./a1-authority-runtime";
+import { A1_RELATIONSHIP_HEAVY_INTERVAL_TICKS } from "./a1-relationship-observer";
 import { buildA1Situation } from "./a1-situation";
 
 function clearTraversal(from: Vec2, to: Vec2, radius: number): StaticCircleTraversalResult {
@@ -41,7 +42,9 @@ describe("Authority-A1.1f passive observation isolation", () => {
       expect(runtime.debugState().relationshipObservation).toMatchObject({
         latestTick: null,
         observations: 0,
+        heavyAttempts: 0,
         heavyEvaluations: 0,
+        lastHeavyAttemptTick: null,
         heavy: null
       });
       expect(runtime.debugState().relationshipObservationError).toBeNull();
@@ -81,6 +84,8 @@ describe("Authority-A1.1f passive observation isolation", () => {
       });
       expect(debug.relationshipObservation.latestTick).toBe(0);
       expect(debug.relationshipObservation.semantic?.sourceTick).toBe(0);
+      expect(debug.relationshipObservation.heavyAttempts).toBe(1);
+      expect(debug.relationshipObservation.heavyEvaluations).toBe(0);
       expect(debug.relationshipObservation.heavy).toBeNull();
       expect(debug.passThroughSteps).toBe(1);
     } finally {
@@ -88,7 +93,7 @@ describe("Authority-A1.1f passive observation isolation", () => {
     }
   });
 
-  it("clears failure event evidence on the next successful observation without changing pass-through semantics", async () => {
+  it("clears failure event evidence on the next light observation without causing an immediate heavy retry", async () => {
     const world = await LabWorld.create("open");
     try {
       const runtime = new A1AuthorityRuntime();
@@ -123,13 +128,86 @@ describe("Authority-A1.1f passive observation isolation", () => {
       });
       const baseline = { actorId: "companion" as const, move: { x: 0.13, y: 0.71 } };
 
-      expect(runtime.observeRelationship({ situation, snapshot, query: clearTraversal })).not.toBeNull();
+      expect(runtime.observeRelationship({
+        situation,
+        snapshot,
+        query: () => {
+          throw new Error("heavy retry must remain cadence-bounded after failure");
+        }
+      })).not.toBeNull();
       expect(runtime.resolveCompanionIntent({ baselineIntent: baseline, situation })).toEqual(baseline);
       const recovered = runtime.debugState();
       expect(recovered.relationshipObservationError).toBeNull();
-      expect(recovered.relationshipObservation.heavy?.sourceTick).toBe(1);
-      expect(recovered.relationshipObservation.heavy?.ageTicks).toBe(0);
+      expect(recovered.relationshipObservation.semantic?.sourceTick).toBe(1);
+      expect(recovered.relationshipObservation.heavyAttempts).toBe(1);
+      expect(recovered.relationshipObservation.heavyEvaluations).toBe(0);
+      expect(recovered.relationshipObservation.heavy).toBeNull();
       expect(recovered.passThroughSteps).toBe(1);
+    } finally {
+      world.dispose();
+    }
+  });
+
+  it("retries failed heavy work only when the World-tick cadence becomes due", async () => {
+    const world = await LabWorld.create("open");
+    try {
+      const runtime = new A1AuthorityRuntime();
+      runtime.setVariant("direct");
+      let snapshot = world.snapshot();
+      let situation = buildA1Situation({
+        snapshot,
+        playerIntent: { actorId: "player", move: { x: 1, y: 0 } },
+        playerCapability: world.actorMovementCapability("player"),
+        companionCapability: world.actorMovementCapability("companion"),
+        previousWorldStep: null
+      });
+      runtime.observeRelationship({
+        situation,
+        snapshot,
+        query: () => {
+          throw new Error("initial heavy failure");
+        }
+      });
+
+      for (let tick = 1; tick < A1_RELATIONSHIP_HEAVY_INTERVAL_TICKS; tick += 1) {
+        snapshot = world.step([
+          { actorId: "player", move: { x: 1, y: 0 } },
+          { actorId: "companion", move: { x: 0, y: 0 } }
+        ]);
+        situation = buildA1Situation({
+          snapshot,
+          playerIntent: { actorId: "player", move: { x: 1, y: 0 } },
+          playerCapability: world.actorMovementCapability("player"),
+          companionCapability: world.actorMovementCapability("companion"),
+          previousWorldStep: world.latestAuthorityA0StepEvidence()
+        });
+        expect(runtime.observeRelationship({
+          situation,
+          snapshot,
+          query: () => {
+            throw new Error(`unexpected retry at t${tick}`);
+          }
+        })).not.toBeNull();
+      }
+
+      snapshot = world.step([
+        { actorId: "player", move: { x: 1, y: 0 } },
+        { actorId: "companion", move: { x: 0, y: 0 } }
+      ]);
+      situation = buildA1Situation({
+        snapshot,
+        playerIntent: { actorId: "player", move: { x: 1, y: 0 } },
+        playerCapability: world.actorMovementCapability("player"),
+        companionCapability: world.actorMovementCapability("companion"),
+        previousWorldStep: world.latestAuthorityA0StepEvidence()
+      });
+      expect(runtime.observeRelationship({ situation, snapshot, query: clearTraversal })).not.toBeNull();
+
+      const debug = runtime.debugState();
+      expect(debug.relationshipObservation.heavyAttempts).toBe(2);
+      expect(debug.relationshipObservation.heavyEvaluations).toBe(1);
+      expect(debug.relationshipObservation.heavy?.sourceTick).toBe(A1_RELATIONSHIP_HEAVY_INTERVAL_TICKS);
+      expect(debug.relationshipObservationError).toBeNull();
     } finally {
       world.dispose();
     }
@@ -155,7 +233,9 @@ describe("Authority-A1.1f passive observation isolation", () => {
       expect(runtime.debugState().relationshipObservation).toEqual({
         latestTick: null,
         observations: 0,
+        heavyAttempts: 0,
         heavyEvaluations: 0,
+        lastHeavyAttemptTick: null,
         orientation: null,
         semantic: null,
         heavy: null
