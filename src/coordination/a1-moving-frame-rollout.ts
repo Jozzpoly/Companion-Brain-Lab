@@ -1,11 +1,18 @@
 import type { Vec2 } from "../world/types";
 import type { A1RelationshipOrientationEvidence } from "./a1-relationship-orientation";
 import {
+  A1_DEFAULT_RELATIONSHIP_OBJECTIVE,
+  a1RelationshipObjectiveSignature,
   evaluateA1RelationshipUtility,
   type A1RelationshipObjectiveProfile,
   type A1RelationshipUtilityEvidence
 } from "./a1-relationship-utility";
 
+/**
+ * A1.2a accepts explicit velocity hypotheses only to test moving-frame semantic
+ * composition. Supplying a velocity here makes no capability, reachability,
+ * collision or actuator-realizability claim; those contracts begin in A1.2b+.
+ */
 export interface A1MovingFrameVelocityEvidence {
   id: string;
   sourceTick: number;
@@ -26,6 +33,16 @@ export interface A1MovingFrameRolloutResult {
   kind: "A1_MOVING_FRAME_ROLLOUT";
   tick: number;
   horizonSeconds: number;
+  /** Explicit stage boundary: A1.2a evaluates semantics only. */
+  reachabilityClaim: "NONE_A1_2A_PURE_SEMANTICS";
+  worldLegalityClaim: "NONE_A1_2A_PURE_SEMANTICS";
+  /** Initial A1.2a approximation; future orientation evolution is not predicted yet. */
+  orientationHeldConstantOverHorizon: true;
+  orientationSource: A1RelationshipOrientationEvidence["source"];
+  orientationSourceTick: number | null;
+  orientationAgeTicks: number | null;
+  orientationStrength: number;
+  objectiveSignature: string;
   playerFutureId: string;
   companionCandidateId: string;
   playerVelocity: Vec2;
@@ -105,22 +122,31 @@ export function evaluateA1MovingFrameRollout(input: A1MovingFrameRolloutInput): 
     x: currentRelativeOffset.x + relativeVelocity.x * input.horizonSeconds,
     y: currentRelativeOffset.y + relativeVelocity.y * input.horizonSeconds
   };
+  const objective = input.objective ?? A1_DEFAULT_RELATIONSHIP_OBJECTIVE;
 
   const currentUtility = evaluateA1RelationshipUtility({
     state: { relativeOffset: currentRelativeOffset },
     orientation: input.orientation,
-    objective: input.objective
+    objective
   });
   const futureUtility = evaluateA1RelationshipUtility({
     state: { relativeOffset: futureRelativeOffset },
     orientation: input.orientation,
-    objective: input.objective
+    objective
   });
 
   return {
     kind: "A1_MOVING_FRAME_ROLLOUT",
     tick: input.tick,
     horizonSeconds: input.horizonSeconds,
+    reachabilityClaim: "NONE_A1_2A_PURE_SEMANTICS",
+    worldLegalityClaim: "NONE_A1_2A_PURE_SEMANTICS",
+    orientationHeldConstantOverHorizon: true,
+    orientationSource: input.orientation.source,
+    orientationSourceTick: input.orientation.sourceTick,
+    orientationAgeTicks: input.orientation.ageTicks,
+    orientationStrength: input.orientation.strength,
+    objectiveSignature: a1RelationshipObjectiveSignature(objective),
     playerFutureId: playerFuture.id,
     companionCandidateId: companionCandidate.id,
     playerVelocity: { ...playerFuture.velocity },
