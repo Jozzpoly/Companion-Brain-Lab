@@ -17,6 +17,18 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - run: npm install
+      - name: Install dependencies
+        run: |
+          if ! npm install; then
+            echo "::group::npm debug log"
+            latest_log="$(ls -t "$HOME"/.npm/_logs/*-debug-0.log 2>/dev/null | head -n 1 || true)"
+            if [ -n "$latest_log" ]; then
+              cat "$latest_log"
+            else
+              echo "npm failed without a discoverable debug log"
+            fi
+            echo "::endgroup::"
+            exit 1
+          fi
       - run: npm run check
       - run: npm run browser:audit
