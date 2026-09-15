@@ -1,4 +1,8 @@
-import { RapierPhysicalWorld } from "../physics/rapier-physical-world";
+import {
+  RapierPhysicalWorld,
+  type PhysicalRehearsalResult,
+  type PhysicalRehearsalVelocityInput
+} from "../physics/rapier-physical-world";
 import {
   buildAuthorityA0WorldStepEvidence,
   cloneAuthorityA0WorldStepEvidence,
@@ -81,6 +85,12 @@ export class LabWorld {
     options: StaticTraversalOptions = {}
   ): StaticCircleTraversalResult {
     return this.physical.staticCircleTraversal(from, target, radius, options);
+  }
+
+  rehearseVelocitySequence(
+    sequence: readonly (readonly PhysicalRehearsalVelocityInput[])[]
+  ): PhysicalRehearsalResult {
+    return this.physical.rehearseVelocitySequence(sequence);
   }
 
   step(intents: readonly MotionIntent[]): WorldSnapshot {
