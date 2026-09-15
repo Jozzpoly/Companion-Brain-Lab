@@ -134,6 +134,38 @@ describe("Authority-A1.2g Rapier snapshot rehearsal substrate", () => {
     }
   });
 
+  it("forks from a nontrivial current physics state instead of only matching fresh worlds", async () => {
+    const rehearsalWorld = await LabWorld.create("pillar");
+    const liveWorld = await LabWorld.create("pillar");
+    try {
+      const historySteps = 55;
+      for (let index = 0; index < historySteps; index += 1) {
+        const rehearsalHistory = rehearsalWorld.step([PLAYER_DIAGONAL, COMPANION_HOLD]);
+        const liveHistory = liveWorld.step([PLAYER_DIAGONAL, COMPANION_HOLD]);
+        expect(rehearsalHistory).toEqual(liveHistory);
+      }
+
+      const forkSnapshot = rehearsalWorld.snapshot();
+      const forkA0 = rehearsalWorld.latestAuthorityA0StepEvidence();
+      const futureSteps = 50;
+      const rehearsal = rehearsalWorld.rehearseVelocitySequence(
+        Array.from({ length: futureSteps }, () => diagonalVelocityInputs())
+      );
+      const liveFrames: readonly ActorSnapshot[][] = Array.from({ length: futureSteps }, () =>
+        liveWorld.step([PLAYER_DIAGONAL, COMPANION_HOLD]).actors
+      );
+
+      for (let index = 0; index < futureSteps; index += 1) {
+        expect(rehearsal.frames[index]?.actors).toEqual(liveFrames[index]);
+      }
+      expect(rehearsalWorld.snapshot()).toEqual(forkSnapshot);
+      expect(rehearsalWorld.latestAuthorityA0StepEvidence()).toEqual(forkA0);
+    } finally {
+      rehearsalWorld.dispose();
+      liveWorld.dispose();
+    }
+  });
+
   it("keeps raw world-unit physical hypotheses separate from command admissibility", async () => {
     const world = await LabWorld.create("open");
     try {
