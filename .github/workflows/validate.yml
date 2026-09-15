@@ -47,4 +47,16 @@ jobs:
           npm install --legacy-peer-deps
           echo "NPM_ARBORIST_EDGESOUT_FALLBACK_USED=1"
       - run: npm run check
+      - name: Capture A1.2z4a reflection marker
+        run: |
+          npx vitest run src/coordination/a1-head-on-reflection.audit.test.ts --reporter=verbose 2>&1 | tee a1-2z4a-targeted-output.txt
+          grep -F "[A1_2Z4A_HEAD_ON_REFLECTION_AUDIT]" a1-2z4a-targeted-output.txt > a1-2z4a-reflection-marker.txt
+          test -s a1-2z4a-reflection-marker.txt
+      - name: Upload A1.2z4a reflection marker
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-2z4a-reflection-marker-${{ github.sha }}
+          path: a1-2z4a-reflection-marker.txt
+          if-no-files-found: error
+          retention-days: 1
       - run: npm run browser:audit
