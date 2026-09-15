@@ -12,6 +12,11 @@ export type A1PlayerFutureFamily =
   | "BODY_RESPONSE_CONTINUATION"
   | "TRANSITION_HOLD";
 
+export type A1PlayerFutureVelocitySource =
+  | "SAME_STEP_OWNER_REQUEST"
+  | "CURRENT_OBSERVED_BODY_RESPONSE"
+  | "A1_2C_TRANSITION_HOLD_CONTROL";
+
 export type A1TransitionReason =
   | "OWNER_REQUEST_STOPPED"
   | "OWNER_REQUEST_REVERSED"
@@ -34,6 +39,7 @@ export interface A1PlayerFutureStaticFeasibility {
 export interface A1PlayerFutureHypothesis {
   id: string;
   family: A1PlayerFutureFamily;
+  velocityEvidenceSource: A1PlayerFutureVelocitySource;
   sourceTick: number;
   horizonSeconds: number;
   origin: Vec2;
@@ -43,6 +49,7 @@ export interface A1PlayerFutureHypothesis {
   transitionReasons: readonly A1TransitionReason[];
   staticFeasibility: A1PlayerFutureStaticFeasibility;
   semanticOrientationAuthority: "NONE_PHYSICAL_FUTURE_ONLY";
+  commandAuthorityClaim: "NONE_A1_2C_PREDICTION_ONLY";
   worldLegalityClaim: "STATIC_SWEEP_ONLY_A1_2C";
   dynamicCooperationClaim: "NONE_A1_2C";
 }
@@ -54,6 +61,7 @@ export interface A1PlayerFutureHypothesisSet {
   hypotheses: readonly A1PlayerFutureHypothesis[];
   transitionReasons: readonly A1TransitionReason[];
   aggregationClaim: "NO_AVERAGING_OR_CENTROID_A1_2C";
+  commandAuthorityClaim: "NONE_A1_2C_PREDICTION_ONLY";
   worldLegalityClaim: "STATIC_SWEEP_ONLY_A1_2C";
   dynamicCooperationClaim: "NONE_A1_2C";
 }
@@ -71,6 +79,10 @@ function magnitude(value: Vec2): number {
 
 function dot(a: Vec2, b: Vec2): number {
   return a.x * b.x + a.y * b.y;
+}
+
+function vectorDistance(a: Vec2, b: Vec2): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
 function finiteVector(value: Vec2, label: string): Vec2 {
@@ -109,9 +121,23 @@ function staticFeasibility(input: {
     { initialOverlap: "allow-egress" }
   );
 
-  const feasibleEndpoint = traversal.clear || !traversal.blocker
+  if (
+    vectorDistance(traversal.from, input.origin) > EPSILON ||
+    vectorDistance(traversal.to, intendedEndpoint) > EPSILON ||
+    Math.abs(traversal.radius - input.radius) > EPSILON
+  ) {
+    throw new Error("A1.2c static traversal result does not align with the requested player sweep.");
+  }
+  if (traversal.clear && traversal.blocker) {
+    throw new Error("A1.2c static traversal cannot be clear while reporting a blocker.");
+  }
+  if (!traversal.clear && !traversal.blocker) {
+    throw new Error("A1.2c blocked static traversal requires first-blocker evidence.");
+  }
+
+  const feasibleEndpoint = traversal.clear
     ? intendedEndpoint
-    : { ...traversal.blocker.hitCenter };
+    : { ...traversal.blocker!.hitCenter };
   const feasibleDistance = Math.hypot(
     feasibleEndpoint.x - input.origin.x,
     feasibleEndpoint.y - input.origin.y
@@ -140,6 +166,7 @@ function staticFeasibility(input: {
 
 function hypothesis(input: {
   family: A1PlayerFutureFamily;
+  velocityEvidenceSource: A1PlayerFutureVelocitySource;
   sourceTick: number;
   horizonSeconds: number;
   origin: Vec2;
@@ -161,6 +188,7 @@ function hypothesis(input: {
   return {
     id: input.family.toLowerCase().replaceAll("_", "-"),
     family: input.family,
+    velocityEvidenceSource: input.velocityEvidenceSource,
     sourceTick: input.sourceTick,
     horizonSeconds: input.horizonSeconds,
     origin: { ...input.origin },
@@ -174,6 +202,7 @@ function hypothesis(input: {
     transitionReasons: [...(input.transitionReasons ?? [])],
     staticFeasibility: feasibility,
     semanticOrientationAuthority: "NONE_PHYSICAL_FUTURE_ONLY",
+    commandAuthorityClaim: "NONE_A1_2C_PREDICTION_ONLY",
     worldLegalityClaim: "STATIC_SWEEP_ONLY_A1_2C",
     dynamicCooperationClaim: "NONE_A1_2C"
   };
@@ -251,6 +280,7 @@ export function buildA1PlayerFutureHypotheses(input: {
   const hypotheses: A1PlayerFutureHypothesis[] = [
     hypothesis({
       family: "OWNER_REQUEST_CONTINUATION",
+      velocityEvidenceSource: "SAME_STEP_OWNER_REQUEST",
       sourceTick: input.situation.tick,
       horizonSeconds: input.horizonSeconds,
       origin,
@@ -261,6 +291,7 @@ export function buildA1PlayerFutureHypotheses(input: {
     }),
     hypothesis({
       family: "BODY_RESPONSE_CONTINUATION",
+      velocityEvidenceSource: "CURRENT_OBSERVED_BODY_RESPONSE",
       sourceTick: input.situation.tick,
       horizonSeconds: input.horizonSeconds,
       origin,
@@ -274,6 +305,7 @@ export function buildA1PlayerFutureHypotheses(input: {
   if (reasons.length > 0) {
     hypotheses.push(hypothesis({
       family: "TRANSITION_HOLD",
+      velocityEvidenceSource: "A1_2C_TRANSITION_HOLD_CONTROL",
       sourceTick: input.situation.tick,
       horizonSeconds: input.horizonSeconds,
       origin,
@@ -292,6 +324,7 @@ export function buildA1PlayerFutureHypotheses(input: {
     hypotheses,
     transitionReasons: reasons,
     aggregationClaim: "NO_AVERAGING_OR_CENTROID_A1_2C",
+    commandAuthorityClaim: "NONE_A1_2C_PREDICTION_ONLY",
     worldLegalityClaim: "STATIC_SWEEP_ONLY_A1_2C",
     dynamicCooperationClaim: "NONE_A1_2C"
   };
