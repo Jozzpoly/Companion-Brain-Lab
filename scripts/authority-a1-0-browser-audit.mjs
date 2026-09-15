@@ -121,31 +121,46 @@ try {
   invariant(live.frames.every((frame) => frame.situation.situated.playerControl.sourceTick === frame.tick), "A1 same-step Owner control is stale.");
   await assertNoFault(page, errors);
 
+  // Establish a completed +X World outcome, then freeze simulation while D is still held.
   await page.keyboard.down("d");
-  await page.waitForTimeout(420);
+  await page.waitForFunction(() => {
+    const latest = window.__authorityA10BrowserBridge?.latest();
+    return (latest?.situation.playerRequestedVelocity.velocity.x ?? 0) > 2.9 &&
+      (latest?.situation.previousOutcome?.playerBody.requestedVelocity.x ?? 0) > 2.9;
+  }, null, { timeout: 10_000 });
+  await page.locator('[data-action="toggle-pause"]').click();
+  await waitForPanel(page, (text) => text.includes("PAUSED") && text.includes("A1 DIRECT"), 10_000, "paused +X state");
+
+  // Change real keyboard state while paused. No World step can consume the intermediate key transition.
   await page.keyboard.up("d");
   await page.keyboard.down("a");
-  await page.waitForTimeout(420);
+  const beforeReversalStep = await bridgeSnapshot(page);
+  const frameCountBeforeReversal = beforeReversalStep.frameCount;
+  await page.locator('[data-action="single-step"]').click();
+  await page.waitForFunction(
+    (count) => (window.__authorityA10BrowserBridge?.snapshot().frameCount ?? 0) > count,
+    frameCountBeforeReversal,
+    { timeout: 10_000 }
+  );
   await page.keyboard.up("a");
-  await page.waitForTimeout(120);
 
   live = await bridgeSnapshot(page);
   const reversal = findSameTickReversal(live.frames);
-  invariant(reversal, "Real D -> A reversal never produced current -X Owner request beside previous +X World outcome on the same decision tick.");
+  invariant(reversal, "Paused real-keyboard D -> A single-step did not preserve current -X request beside previous +X World outcome.");
   invariant(intentsEqual(reversal.baselineCompanionIntent, reversal.selectedCompanionIntent), "A1 scaffold changed the companion command on the qualified reversal tick.");
   invariant(reversal.situation.previousOutcome.observationTick === reversal.tick - 1, "Previous outcome observation phase is not t-1 on the reversal tick.");
   invariant(reversal.situation.previousOutcome.ageTicks === 0, "Previous completed outcome should be age 0 at the decision boundary.");
   await assertNoFault(page, errors);
 
+  // Still paused: switch to TEMPORAL and advance exactly one step to qualify reset semantics.
   const directEpoch = live.frames.at(-1)?.epoch;
   await page.locator('[data-action="cycle-a1-authority"]').click();
-  await waitForPanel(page, (text) => text.includes("A1 TEMPORAL") && text.includes("PASS-THROUGH ONLY"), 10_000, "A1 TEMPORAL activation");
+  await waitForPanel(page, (text) => text.includes("A1 TEMPORAL"), 10_000, "A1 TEMPORAL activation");
+  const temporalFrameCount = (await bridgeSnapshot(page)).frameCount;
+  await page.locator('[data-action="single-step"]').click();
   await page.waitForFunction(
-    (epoch) => {
-      const latest = window.__authorityA10BrowserBridge?.latest();
-      return latest?.variant === "temporal" && latest.epoch > epoch;
-    },
-    directEpoch ?? -1,
+    (count) => (window.__authorityA10BrowserBridge?.snapshot().frameCount ?? 0) > count,
+    temporalFrameCount,
     { timeout: 10_000 }
   );
 
@@ -153,14 +168,16 @@ try {
   const temporal = live.frames.filter((frame) => frame.variant === "temporal");
   invariant(temporal.length > 0, "A1 TEMPORAL produced no decision evidence.");
   invariant(temporal.every((frame) => intentsEqual(frame.baselineCompanionIntent, frame.selectedCompanionIntent)), "A1 TEMPORAL scaffold changed a baseline companion intent.");
+  invariant(temporal[0].epoch > (directEpoch ?? -1), "A1 TEMPORAL did not advance the A1-owned epoch on selector transition.");
   invariant(temporal[0].passThroughSteps === 1, "A1 TEMPORAL did not reset A1-owned pass-through history on selector transition.");
 
   await page.locator('[data-action="cycle-a1-authority"]').click();
   await waitForPanel(page, (text) => text.includes("A1 OFF") && text.includes("baseline companion authority is untouched"), 10_000, "A1 OFF restoration");
   const framesAtOff = (await bridgeSnapshot(page)).frameCount;
-  await page.waitForTimeout(300);
+  await page.locator('[data-action="single-step"]').click();
+  await page.waitForTimeout(150);
   const afterOff = await bridgeSnapshot(page);
-  invariant(afterOff.frameCount === framesAtOff, "A1 OFF continued recording decision situations, indicating the new path still executes.");
+  invariant(afterOff.frameCount === framesAtOff, "A1 OFF recorded a decision situation during a real single step, indicating the new path still executes.");
   invariant(afterOff.lastError === null, `A1.0 bridge ended with an error: ${afterOff.lastError}`);
   await assertNoFault(page, errors);
 
@@ -187,7 +204,7 @@ try {
       firstPassThroughStep: temporal[0].passThroughSteps,
       epoch: temporal[0].epoch
     },
-    offFrameCountStable: afterOff.frameCount === framesAtOff,
+    offSingleStepSilent: afterOff.frameCount === framesAtOff,
     timingSamples: intervals.length,
     maximumFrameMs,
     errors
