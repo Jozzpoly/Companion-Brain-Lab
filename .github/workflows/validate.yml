@@ -48,3 +48,12 @@ jobs:
           echo "NPM_ARBORIST_EDGESOUT_FALLBACK_USED=1"
       - run: npm run check
       - run: npm run browser:audit
+      - name: Capture A1.2z4d compact evidence
+        run: node scripts/authority-a1-2z4e-evidence-transport.mjs
+      - name: Upload A1.2z4d compact evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-2z4d-class-support-${{ github.sha }}
+          path: artifacts/a1-2z4d-class-support.json
+          if-no-files-found: error
+          retention-days: 7
