@@ -56,7 +56,6 @@ export interface A1H1PrimaryShadowHorizonResult {
 export interface A1H1PrimaryShadowEvaluation {
   kind: "A1_H1_PRIMARY_LIVE_STATE_SHADOW_EVALUATION";
   sourceTick: number;
-  scenarioId: A1Situation["situated"]["playerBody"] extends never ? never : string;
   horizons: readonly number[];
   results: readonly A1H1PrimaryShadowHorizonResult[];
   semantics: {
@@ -199,11 +198,11 @@ export function evaluateA1H1PrimaryShadowHorizon(input: {
     objective: A1_DEFAULT_RELATIONSHIP_OBJECTIVE
   });
 
-  const origins = new Map(
+  const origins = new Map<string, readonly string[]>(
     proposalSet.proposals.map((proposal) => [
       proposal.proposalId,
       [...new Set(proposal.generationOrigins.map((origin) => origin.seedFamily))]
-    ] as const)
+    ])
   );
   const comparable = comparableRows(certificates);
   const g4 = g4Frontier(comparable);
@@ -243,7 +242,6 @@ export function evaluateA1H1PrimaryLiveStateShadow(input: {
   return {
     kind: "A1_H1_PRIMARY_LIVE_STATE_SHADOW_EVALUATION",
     sourceTick: input.situation.tick,
-    scenarioId: input.situation.situated.playerBody.scenarioId,
     horizons: [...horizons],
     results,
     semantics: {
