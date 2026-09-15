@@ -84,7 +84,7 @@ describe("Authority-A1.2g Rapier snapshot rehearsal substrate", () => {
       const rehearsal = rehearsalWorld.rehearseVelocitySequence(
         Array.from({ length: count }, () => diagonalVelocityInputs())
       );
-      const liveFrames: readonly ActorSnapshot[][] = Array.from({ length: count }, () =>
+      const liveFrames: readonly (readonly ActorSnapshot[])[] = Array.from({ length: count }, () =>
         liveWorld.step([PLAYER_DIAGONAL, COMPANION_HOLD]).actors
       );
 
@@ -115,7 +115,7 @@ describe("Authority-A1.2g Rapier snapshot rehearsal substrate", () => {
       const rehearsal = rehearsalWorld.rehearseVelocitySequence(
         Array.from({ length: count }, () => headOnVelocityInputs())
       );
-      const liveFrames: readonly ActorSnapshot[][] = Array.from({ length: count }, () =>
+      const liveFrames: readonly (readonly ActorSnapshot[])[] = Array.from({ length: count }, () =>
         liveWorld.step([PLAYER_RIGHT, COMPANION_LEFT]).actors
       );
 
@@ -151,7 +151,7 @@ describe("Authority-A1.2g Rapier snapshot rehearsal substrate", () => {
       const rehearsal = rehearsalWorld.rehearseVelocitySequence(
         Array.from({ length: futureSteps }, () => diagonalVelocityInputs())
       );
-      const liveFrames: readonly ActorSnapshot[][] = Array.from({ length: futureSteps }, () =>
+      const liveFrames: readonly (readonly ActorSnapshot[])[] = Array.from({ length: futureSteps }, () =>
         liveWorld.step([PLAYER_DIAGONAL, COMPANION_HOLD]).actors
       );
 
