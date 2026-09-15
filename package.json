@@ -8,7 +8,7 @@
     "build": "vite build",
     "test": "vitest run",
     "check": "tsc -p tsconfig.json --noEmit && vitest run && vite build",
-    "browser:audit": "node scripts/ccc0-browser-audit.mjs && node scripts/authority-a0-browser-audit.mjs"
+    "browser:audit": "node scripts/ccc0-browser-audit.mjs && node scripts/authority-a0-browser-audit.mjs && node scripts/authority-a1-0-browser-audit.mjs"
   },
   "dependencies": {
     "@dimforge/rapier2d-deterministic-compat": "0.20.0",
