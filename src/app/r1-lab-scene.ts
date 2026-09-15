@@ -16,7 +16,10 @@ import {
   type R1WorkbenchSpatialDebug
 } from "../brain/r1-workbench-spatial-stack";
 import type { SpatialLocomotionDecision } from "../brain/spatial-locomotion";
+import { A1AuthorityRuntime } from "../coordination/a1-authority-runtime";
+import { buildA1Situation } from "../coordination/a1-situation";
 import type { ShadowCoordinationFrame } from "../coordination/shadow-coordination-frame";
+import { publishAuthorityA10BrowserDecision } from "../debug/authority-a1-browser-bridge";
 import {
   CausalPanel,
   type CausalPanelAction,
@@ -155,6 +158,7 @@ export class R1LabScene extends Phaser.Scene {
 
   private readonly relationalBrain = new RelationalPositioningBrain();
   private readonly spatialStack = new R1WorkbenchSpatialStack();
+  private readonly a1Authority = new A1AuthorityRuntime();
   private relationalDecision: RelationalDecision | null = null;
   private spatialDecision: SpatialLocomotionDecision | null = null;
   private spatialRepairDecision: R1SpatialRepairEvidence | null = null;
@@ -334,6 +338,30 @@ export class R1LabScene extends Phaser.Scene {
       companionIntent = this.spatialStack.intent(this.naturalActuator, input);
       const debug = this.spatialStack.debugState(this.naturalActuator);
       this.captureSpatialDebug(debug);
+    }
+
+    if (this.companionMode === "spatial" && this.a1Authority.enabled()) {
+      const baselineCompanionIntent: MotionIntent = {
+        actorId: "companion",
+        move: { ...companionIntent.move }
+      };
+      const situation = buildA1Situation({
+        snapshot: before,
+        playerIntent,
+        playerCapability: this.world.actorMovementCapability("player"),
+        companionCapability: this.world.actorMovementCapability("companion"),
+        previousWorldStep: this.world.latestAuthorityA0StepEvidence()
+      });
+      companionIntent = this.a1Authority.resolveCompanionIntent({
+        baselineIntent: baselineCompanionIntent,
+        situation
+      });
+      publishAuthorityA10BrowserDecision({
+        runtime: this.a1Authority.debugState(),
+        situation,
+        baselineCompanionIntent,
+        selectedCompanionIntent: companionIntent
+      });
     }
 
     return {
@@ -921,6 +949,9 @@ export class R1LabScene extends Phaser.Scene {
     const preferredConflict = shadow?.preferredPlayerFlowConflict ?? null;
     const finalConflict = shadow?.authoritativePlayerFlowConflict ?? null;
     const shadowAge = shadow ? Math.max(0, snapshot.tick - shadow.tick) : null;
+    const a1 = this.a1Authority.debugState();
+    const a1Active = a1.variant !== "off" && this.companionMode === "spatial";
+    const a1Situation = a1.latestSituation;
 
     const sections: CausalPanelModel["sections"] = [
       {
@@ -930,8 +961,42 @@ export class R1LabScene extends Phaser.Scene {
           `scenario ${SCENARIOS[snapshot.scenarioId].label}`,
           `tick ${snapshot.tick} · ${this.paused ? "PAUSED" : "RUNNING"} · ${timeScale}x`,
           `mode ${this.companionMode.toUpperCase()} · actuator ${this.naturalActuator ? "NATURAL" : "DIRECT"}`,
+          `A1 ${a1.variant.toUpperCase()}${a1.variant !== "off" && this.companionMode !== "spatial" ? " · selected but inactive outside SPATIAL" : ""}`,
           `causal frames ${this.causalTrace.size()}${this.incidentNotice ? ` · ${this.incidentNotice}` : ""}`
         ]
+      },
+      {
+        id: "a1",
+        title: "Authority-A1.0 · decision-time seam",
+        tone: a1Active ? "success" : "normal",
+        lines: a1.variant === "off"
+          ? [
+              "OFF · baseline companion authority is untouched",
+              "selector is orthogonal to Brain mode and Direct/Natural"
+            ]
+          : !a1Active
+            ? [
+                `${a1.variant.toUpperCase()} selected · inactive outside SPATIAL`,
+                `epoch ${a1.epoch} · A1-owned state is isolated from baseline modes`,
+                "A1.0 still has no new movement policy authority"
+              ]
+            : a1Situation
+              ? [
+                  `${a1.variant.toUpperCase()} · PASS-THROUGH ONLY · no new movement policy authority`,
+                  `epoch ${a1.epoch} · pass-through steps ${a1.passThroughSteps}`,
+                  `decision t${a1Situation.tick} · Owner move ${compact(a1Situation.situated.playerControl.move.x)}, ${compact(a1Situation.situated.playerControl.move.y)}`,
+                  `same-step requested ${compact(a1Situation.playerRequestedVelocity.velocity.x)}, ${compact(a1Situation.playerRequestedVelocity.velocity.y)} · speed ${compact(a1Situation.playerRequestedVelocity.speed)}`,
+                  `pre-step body requested ${compact(a1Situation.situated.playerBody.requestedVelocity.x)}, ${compact(a1Situation.situated.playerBody.requestedVelocity.y)} · actual ${compact(a1Situation.situated.playerBody.actualVelocity.x)}, ${compact(a1Situation.situated.playerBody.actualVelocity.y)}`,
+                  `pre-step provenance ${a1Situation.situated.playerMotionProvenance.state}`,
+                  a1Situation.previousOutcome
+                    ? `previous World t${a1Situation.previousOutcome.observationTick}->${a1Situation.previousOutcome.outcomeTick} · player ${a1Situation.previousOutcome.playerMotionProvenance.state} · companion ${a1Situation.previousOutcome.companionOutcomeAttribution.state}`
+                    : "previous World outcome none · initial decision tick"
+                ]
+              : [
+                  `${a1.variant.toUpperCase()} active · waiting for first SPATIAL decision`,
+                  `epoch ${a1.epoch}`,
+                  "A1.0 still has no new movement policy authority"
+                ]
       },
       {
         id: "objective",
@@ -1105,6 +1170,7 @@ export class R1LabScene extends Phaser.Scene {
     else if (action === "reset") void this.loadScenario(this.scenarioId);
     else if (action === "cycle-mode") this.cycleCompanionMode();
     else if (action === "toggle-actuator") this.toggleActuator();
+    else if (action === "cycle-a1-authority") this.cycleA1Authority();
     else if (action === "cycle-time") this.cycleTimeScale();
     else if (action === "capture-incident") this.captureIncident();
     else if (action === "scenario-open") void this.loadScenario("open");
@@ -1131,6 +1197,7 @@ export class R1LabScene extends Phaser.Scene {
     const previous = this.companionMode;
     this.companionMode = next;
     this.resetBrains();
+    if (this.a1Authority.enabled()) this.a1Authority.resetOwnedState();
     this.logEvent(`control mode ${previous} -> ${next}`);
   }
 
@@ -1138,7 +1205,15 @@ export class R1LabScene extends Phaser.Scene {
     this.naturalActuator = !this.naturalActuator;
     this.spatialStack.reset();
     this.clearSpatialDebug();
+    if (this.a1Authority.enabled()) this.a1Authority.resetOwnedState();
     this.logEvent(`control actuator ${this.naturalActuator ? "NATURAL" : "DIRECT"} (shared R1 movement/recovery state reset)`);
+  }
+
+  private cycleA1Authority(): void {
+    const transition = this.a1Authority.cycleVariant();
+    this.logEvent(
+      `control A1 ${transition.previous.toUpperCase()} -> ${transition.next.toUpperCase()} (A1-owned state reset only)`
+    );
   }
 
   private cycleTimeScale(): void {
@@ -1215,6 +1290,7 @@ export class R1LabScene extends Phaser.Scene {
       this.incidentNotice = "";
       this.lastPostSignature = "";
       this.resetBrains();
+      if (this.a1Authority.enabled()) this.a1Authority.resetOwnedState();
       this.recordTrail(this.snapshotValue);
       this.updatePostEvidence(this.snapshotValue);
       this.logEvent(`scenario ${id} loaded`);
