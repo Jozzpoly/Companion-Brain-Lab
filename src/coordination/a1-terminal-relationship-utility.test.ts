@@ -153,6 +153,7 @@ describe("Authority-A1.2q actual-terminal A1.1 relationship utility", () => {
       const decision = buildDecision({
         world,
         playerMove: { x: 1, y: 0 },
+        horizonSeconds: 1,
         localAlternativeDeltaSpeed: 3
       });
       const proposal = proposalByOrigin({
