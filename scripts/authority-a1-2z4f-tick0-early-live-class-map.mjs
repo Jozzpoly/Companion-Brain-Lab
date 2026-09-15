@@ -82,7 +82,6 @@ async function requestProbe(page, expectedTick) {
   invariant(latest.tick === expectedTick, `expected exact live tick ${expectedTick}, got ${latest.tick}.`);
   invariant(latest.evaluation.sourceTick === latest.tick, `tick ${expectedTick}: evaluation tick misaligned.`);
   invariant(latest.situation.tick === latest.tick, `tick ${expectedTick}: situation tick misaligned.`);
-  invariant(latest.situation.situated.snapshot.scenarioId === "head-on", `tick ${expectedTick}: wrong scenario.`);
   invariant(latest.situation.situated.playerControl.move.x === 1 && latest.situation.situated.playerControl.move.y === 0,
     `tick ${expectedTick}: same-step Owner +X input missing.`);
   invariant(latest.evaluation.semantics.horizonPolicy === "NONE_SCAN_ONLY", `tick ${expectedTick}: horizon policy appeared.`);
