@@ -50,7 +50,9 @@ interface A1HeavyRelationshipObservation {
 export interface A1RelationshipObserverDebug {
   latestTick: number | null;
   observations: number;
+  heavyAttempts: number;
   heavyEvaluations: number;
+  lastHeavyAttemptTick: number | null;
   orientation: {
     source: A1RelationshipOrientationEvidence["source"];
     sourceTick: number | null;
@@ -81,12 +83,25 @@ export interface A1RelationshipObserverDebug {
   } | null;
 }
 
-function magnitude(value: Vec2): number {
-  return Math.hypot(value.x, value.y);
-}
-
 function vectorDistance(a: Vec2, b: Vec2): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function cloneObjective(value: A1RelationshipObjectiveProfile): A1RelationshipObjectiveProfile {
+  const radial = { ...value.radial };
+  if (value.directional.kind === "NONE") return { radial, directional: { kind: "NONE" } };
+  if (value.directional.kind === "AVOID_FORWARD_HEMISPHERE") {
+    return { radial, directional: { ...value.directional } };
+  }
+  return { radial, directional: { ...value.directional } };
+}
+
+function cloneSampling(value: A1RelationshipSamplingConfig): A1RelationshipSamplingConfig {
+  return {
+    directions: value.directions,
+    radii: [...value.radii],
+    nearBestUtilityWindow: value.nearBestUtilityWindow
+  };
 }
 
 function validateConfig(input: Partial<A1RelationshipObserverConfig>): A1RelationshipObserverConfig {
@@ -102,8 +117,8 @@ function validateConfig(input: Partial<A1RelationshipObserverConfig>): A1Relatio
     heavyIntervalTicks,
     routeBudget,
     routeQualificationStrategy: input.routeQualificationStrategy ?? A1_RELATIONSHIP_OBSERVER_ROUTE_STRATEGY,
-    objective: input.objective ?? A1_DEFAULT_RELATIONSHIP_OBJECTIVE,
-    sampling: input.sampling ?? A1_DEFAULT_RELATIONSHIP_SAMPLING
+    objective: cloneObjective(input.objective ?? A1_DEFAULT_RELATIONSHIP_OBJECTIVE),
+    sampling: cloneSampling(input.sampling ?? A1_DEFAULT_RELATIONSHIP_SAMPLING)
   };
 }
 
@@ -135,7 +150,9 @@ export class A1RelationshipObserver {
   private latestSemanticValue: A1RelationshipSemanticField | null = null;
   private latestHeavyValue: A1HeavyRelationshipObservation | null = null;
   private latestTickValue: number | null = null;
+  private lastHeavyAttemptTickValue: number | null = null;
   private observationsValue = 0;
+  private heavyAttemptsValue = 0;
   private heavyEvaluationsValue = 0;
 
   constructor(config: Partial<A1RelationshipObserverConfig> = {}) {
@@ -148,7 +165,9 @@ export class A1RelationshipObserver {
     this.latestSemanticValue = null;
     this.latestHeavyValue = null;
     this.latestTickValue = null;
+    this.lastHeavyAttemptTickValue = null;
     this.observationsValue = 0;
+    this.heavyAttemptsValue = 0;
     this.heavyEvaluationsValue = 0;
   }
 
@@ -179,10 +198,12 @@ export class A1RelationshipObserver {
     this.observationsValue += 1;
 
     const previousHeavy = this.latestHeavyValue;
-    const heavyDue = previousHeavy === null ||
-      input.situation.tick - previousHeavy.projection.sourceTick >= this.config.heavyIntervalTicks;
+    const heavyDue = this.lastHeavyAttemptTickValue === null ||
+      input.situation.tick - this.lastHeavyAttemptTickValue >= this.config.heavyIntervalTicks;
 
     if (heavyDue) {
+      this.lastHeavyAttemptTickValue = input.situation.tick;
+      this.heavyAttemptsValue += 1;
       const projection = projectA1RelationshipSemanticField({
         field,
         snapshot: input.snapshot,
@@ -220,7 +241,9 @@ export class A1RelationshipObserver {
     return {
       latestTick,
       observations: this.observationsValue,
+      heavyAttempts: this.heavyAttemptsValue,
       heavyEvaluations: this.heavyEvaluationsValue,
+      lastHeavyAttemptTick: this.lastHeavyAttemptTickValue,
       orientation: orientation
         ? {
             source: orientation.source,
