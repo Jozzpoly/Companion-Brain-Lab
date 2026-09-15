@@ -3,15 +3,22 @@ import type {
   A1RelationshipProjectionField,
   A1RelationshipProjectionSample
 } from "./a1-relationship-projection";
-import type {
-  A1RelationshipSemanticField,
-  A1RelationshipSemanticSample
+import {
+  a1RelationshipObjectiveSignature,
+  a1RelationshipSamplingSignature,
+  type A1RelationshipSemanticField,
+  type A1RelationshipSemanticSample
 } from "./a1-relationship-utility";
 
 const EPSILON = 1e-12;
 
 export type A1AccessibilityCoverage = "PARTIAL" | "COMPLETE";
-export type A1OrientationComparability = "COMPARABLE" | "NON_COMPARABLE";
+export type A1SemanticComparability = "COMPARABLE" | "NON_COMPARABLE";
+export type A1NonComparabilityReason =
+  | "ORIENTATION_REGIME_CHANGED"
+  | "OBJECTIVE_CHANGED"
+  | "SAMPLING_CHANGED"
+  | null;
 
 export interface A1AccessibleFragment {
   fingerprint: string;
@@ -52,7 +59,8 @@ export interface A1AccessibilityContinuityEvidence {
   kind: "A1_SAMPLED_ACCESSIBILITY_CONTINUITY";
   previousTick: number;
   currentTick: number;
-  orientationComparability: A1OrientationComparability;
+  semanticComparability: A1SemanticComparability;
+  nonComparabilityReason: A1NonComparabilityReason;
   semanticEligibleOverlapRatio: number | null;
   confirmedReachableOverlapRatio: number | null;
   fragmentMatches: readonly A1FragmentContinuityMatch[];
@@ -333,10 +341,26 @@ function validateObservation(observation: AlignedObservation): void {
   ) {
     throw new Error("A1 accessibility continuity requires aligned accessibility evidence.");
   }
+  if (observation.field.objectiveSignature !== a1RelationshipObjectiveSignature(observation.field.objective)) {
+    throw new Error("A1 accessibility continuity requires intact objective contract provenance.");
+  }
+  if (observation.field.samplingSignature !== a1RelationshipSamplingSignature(observation.field.sampling)) {
+    throw new Error("A1 accessibility continuity requires intact sampling contract provenance.");
+  }
 }
 
 function orientationRegime(field: A1RelationshipSemanticField): "DIRECTIONAL" | "DIRECTIONLESS" {
   return field.samplingBasisSource === "SEMANTIC_ORIENTATION" ? "DIRECTIONAL" : "DIRECTIONLESS";
+}
+
+function nonComparabilityReason(
+  previous: A1RelationshipSemanticField,
+  current: A1RelationshipSemanticField
+): A1NonComparabilityReason {
+  if (orientationRegime(previous) !== orientationRegime(current)) return "ORIENTATION_REGIME_CHANGED";
+  if (previous.objectiveSignature !== current.objectiveSignature) return "OBJECTIVE_CHANGED";
+  if (previous.samplingSignature !== current.samplingSignature) return "SAMPLING_CHANGED";
+  return null;
 }
 
 function representativeWorldPosition(
@@ -403,11 +427,11 @@ export function compareA1AccessibilityContinuity(input: {
     throw new Error("A1 accessibility continuity requires forward World time.");
   }
 
-  const orientationComparability: A1OrientationComparability =
-    orientationRegime(input.previous.field) === orientationRegime(input.current.field)
-      ? "COMPARABLE"
-      : "NON_COMPARABLE";
-  const comparable = orientationComparability === "COMPARABLE";
+  const nonComparable = nonComparabilityReason(input.previous.field, input.current.field);
+  const semanticComparability: A1SemanticComparability = nonComparable === null
+    ? "COMPARABLE"
+    : "NON_COMPARABLE";
+  const comparable = semanticComparability === "COMPARABLE";
   const bothComplete =
     input.previous.accessibility.coverage === "COMPLETE" &&
     input.current.accessibility.coverage === "COMPLETE";
@@ -432,20 +456,29 @@ export function compareA1AccessibilityContinuity(input: {
     input.current.projection.playerPosition
   );
 
+  const nonComparableReasonText = nonComparable === "ORIENTATION_REGIME_CHANGED"
+    ? "semantic orientation regime changed"
+    : nonComparable === "OBJECTIVE_CHANGED"
+      ? "objective contract changed"
+      : nonComparable === "SAMPLING_CHANGED"
+        ? "sampling contract changed"
+        : null;
+
   return {
     kind: "A1_SAMPLED_ACCESSIBILITY_CONTINUITY",
     previousTick: input.previous.field.sourceTick,
     currentTick: input.current.field.sourceTick,
-    orientationComparability,
+    semanticComparability,
+    nonComparabilityReason: nonComparable,
     semanticEligibleOverlapRatio,
     confirmedReachableOverlapRatio,
     fragmentMatches,
     accessibilityChanged,
     playerTranslationDelta,
-    reason: !comparable
-      ? "semantic orientation regime changed; relative-lattice continuity is intentionally non-comparable"
+    reason: nonComparableReasonText
+      ? `${nonComparableReasonText}; sampled accessibility continuity is intentionally non-comparable`
       : !bothComplete
-        ? "relative semantics are comparable but accessibility change remains unknown under partial route coverage"
+        ? "semantic contracts are comparable but accessibility change remains unknown under partial route coverage"
         : accessibilityChanged
           ? "complete comparable sampled accessibility changed"
           : "complete comparable sampled accessibility remained stable"
