@@ -2,10 +2,9 @@ import type {
   A1PlayerFutureIntervention,
   A1RehearsablePlayerFutureIntervention
 } from "./a1-player-future-interventions";
-import { WORLD_STEP_SECONDS, type LabWorld } from "../world/world";
+import { a1WorldStepHorizon } from "./a1-rehearsal-timebase";
+import type { LabWorld } from "../world/world";
 import type { Vec2 } from "../world/types";
-
-const HORIZON_ALIGNMENT_EPSILON_SECONDS = 1e-12;
 
 export interface A1PlayerFuturePhysicalRehearsal {
   kind: "A1_PLAYER_FUTURE_PHYSICAL_REHEARSAL";
@@ -35,37 +34,6 @@ function finiteVector(value: Vec2, label: string): Vec2 {
     throw new Error(`${label} requires finite x/y components.`);
   }
   return { ...value };
-}
-
-function worldStepCountFor(horizonSeconds: number): {
-  stepCount: number;
-  executedHorizonSeconds: number;
-  alignmentErrorSeconds: number;
-} {
-  if (!Number.isFinite(horizonSeconds) || horizonSeconds <= 0) {
-    throw new Error("A1.2i rehearsal requires a positive finite horizonSeconds.");
-  }
-  if (!Number.isFinite(WORLD_STEP_SECONDS) || WORLD_STEP_SECONDS <= 0) {
-    throw new Error("A1.2i World timebase must be positive and finite.");
-  }
-
-  const nearestStepCount = Math.round(horizonSeconds / WORLD_STEP_SECONDS);
-  if (nearestStepCount < 1) {
-    throw new Error("A1.2i rehearsal horizon must contain at least one complete World step.");
-  }
-  const executedHorizonSeconds = nearestStepCount * WORLD_STEP_SECONDS;
-  const alignmentErrorSeconds = Math.abs(executedHorizonSeconds - horizonSeconds);
-  if (alignmentErrorSeconds > HORIZON_ALIGNMENT_EPSILON_SECONDS) {
-    throw new Error(
-      `A1.2i rehearsal horizon ${horizonSeconds} is not an exact integer multiple of World step ${WORLD_STEP_SECONDS}.`
-    );
-  }
-
-  return {
-    stepCount: nearestStepCount,
-    executedHorizonSeconds,
-    alignmentErrorSeconds
-  };
 }
 
 function requireRehearsable(
@@ -114,12 +82,12 @@ export function rehearseA1PlayerFutureIntervention(input: {
     );
   }
 
-  const horizon = worldStepCountFor(intervention.horizonSeconds);
+  const horizon = a1WorldStepHorizon(intervention.horizonSeconds, "A1.2i rehearsal");
   const repeatedVelocity = finiteVector(
     intervention.repeatedVelocity,
     `A1.2i repeated velocity for ${intervention.futureId}`
   );
-  const sequence = Array.from({ length: horizon.stepCount }, () => [
+  const sequence = Array.from({ length: horizon.worldStepCount }, () => [
     { actorId: "player" as const, velocity: { ...repeatedVelocity } },
     { actorId: "companion" as const, velocity: { x: 0, y: 0 } }
   ]);
@@ -133,8 +101,8 @@ export function rehearseA1PlayerFutureIntervention(input: {
     causalMeaning: intervention.causalMeaning,
     interventionVelocity: { ...repeatedVelocity },
     declaredHorizonSeconds: intervention.horizonSeconds,
-    worldStepSeconds: WORLD_STEP_SECONDS,
-    worldStepCount: horizon.stepCount,
+    worldStepSeconds: horizon.worldStepSeconds,
+    worldStepCount: horizon.worldStepCount,
     executedHorizonSeconds: horizon.executedHorizonSeconds,
     horizonAlignmentErrorSeconds: horizon.alignmentErrorSeconds,
     companionBaseline: "LIVE_HOLD_CONTROL_ZERO_VELOCITY_EACH_WORLD_STEP",
