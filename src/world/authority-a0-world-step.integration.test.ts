@@ -72,7 +72,7 @@ describe("Authority-A0 live World step evidence", () => {
       if (!first) throw new Error("missing first A0 evidence");
       first.situated.playerControl.move.x = 999;
       first.companionVelocityCommand.velocity.x = 999;
-      first.companionOutcomeAttribution.contacts.push("fake");
+      (first.companionOutcomeAttribution.contacts as string[]).push("fake");
 
       const second = world.latestAuthorityA0StepEvidence();
       expect(second?.situated.playerControl.move.x).toBe(1);
