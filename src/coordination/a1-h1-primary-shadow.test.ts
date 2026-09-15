@@ -49,6 +49,25 @@ describe("Authority-A1.2z4c exact live-state H1 shadow", () => {
       expect(oneSecond.singletonShadowCandidate?.originFamilies).toContain("RELATIVE_TANGENT_NEGATIVE");
       expect(oneSecond.singletonShadowCandidate?.commandVelocity.x).toBeCloseTo(2.1213203435596424, 10);
       expect(oneSecond.singletonShadowCandidate?.commandVelocity.y).toBeCloseTo(-2.1213203435596424, 10);
+
+      const trace = oneSecond.stageTrace;
+      expect(trace.semantics.computationPath).toBe("SAME_A1_H1_PRIMARY_SHADOW_EVALUATION_PASS");
+      expect(trace.semantics.tangentIdentity).toBe("POSITIVE_NEGATIVE_PRESERVED_AS_GENERATION_ORIGINS");
+      expect(trace.semantics.sidePreference).toBe("NONE");
+      expect(trace.semantics.movementAuthority).toBe("NONE_SHADOW_ONLY");
+      expect(trace.proposalCount).toBe(oneSecond.proposalCount);
+      expect(trace.proposals.filter((proposal) => proposal.comparisonEligible).map((proposal) => proposal.proposalId))
+        .toEqual(oneSecond.comparableIds);
+      expect(trace.proposals.filter((proposal) => proposal.g4Frontier).map((proposal) => proposal.proposalId))
+        .toEqual(oneSecond.g4FrontierIds);
+      expect(trace.proposals.filter((proposal) => proposal.structuredFrontier).map((proposal) => proposal.proposalId))
+        .toEqual(oneSecond.structuredFrontierIds);
+
+      const h1TangentOrigins = trace.proposals.flatMap((proposal) => proposal.h1GenerationOrigins)
+        .filter((origin) => origin.seedFamily === "RELATIVE_TANGENT_POSITIVE" || origin.seedFamily === "RELATIVE_TANGENT_NEGATIVE")
+        .map((origin) => origin.seedFamily);
+      expect(h1TangentOrigins).toContain("RELATIVE_TANGENT_POSITIVE");
+      expect(h1TangentOrigins).toContain("RELATIVE_TANGENT_NEGATIVE");
     } finally {
       world.dispose();
     }
@@ -79,6 +98,7 @@ describe("Authority-A1.2z4c exact live-state H1 shadow", () => {
       expect(evaluation.sourceTick).toBe(8);
       expect(evaluation.results).toHaveLength(1);
       expect(evaluation.semantics.liveWorldMutation).toBe("NONE_QUERY_ONLY_REHEARSALS");
+      expect(evaluation.results[0]!.stageTrace.sourceTick).toBe(8);
       expect(observed.snapshot()).toEqual(physicalBefore);
       expect(observed.latestAuthorityA0StepEvidence()).toEqual(a0Before);
 
