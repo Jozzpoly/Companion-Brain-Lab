@@ -59,7 +59,10 @@ export interface A1RelationshipSemanticSample {
 
 export interface A1RelationshipSemanticField {
   kind: "A1_RELATIVE_SEMANTIC_FIELD";
+  sourceTick: number;
   orientationSource: A1RelationshipOrientationEvidence["source"];
+  orientationSourceTick: number | null;
+  orientationAgeTicks: number | null;
   orientationStrength: number;
   samplingBasis: Vec2;
   samplingBasisSource: A1RelationshipOrientationEvidence["samplingBasisSource"];
@@ -134,6 +137,9 @@ function validatedOrientation(input: A1RelationshipOrientationEvidence): {
   strength: number;
   samplingBasis: Vec2;
 } {
+  if (!Number.isInteger(input.tick) || input.tick < 0) {
+    throw new Error("A1 relationship utility requires a non-negative integer orientation tick.");
+  }
   if (!Number.isFinite(input.strength) || input.strength < -EPSILON || input.strength > 1 + EPSILON) {
     throw new Error("A1 relationship utility requires orientation strength in [0, 1].");
   }
@@ -141,14 +147,27 @@ function validatedOrientation(input: A1RelationshipOrientationEvidence): {
   const samplingBasis = normalized(input.samplingBasis, "A1 relationship sampling basis");
 
   if (input.source === "NONE") {
-    if (input.direction !== null || strength > EPSILON || input.samplingBasisSource !== "WORLD_AXIS_SAMPLING_ONLY") {
+    if (
+      input.direction !== null ||
+      input.sourceTick !== null ||
+      input.ageTicks !== null ||
+      strength > EPSILON ||
+      input.samplingBasisSource !== "WORLD_AXIS_SAMPLING_ONLY"
+    ) {
       throw new Error("A1 NONE orientation must be semantically directionless and use non-semantic sampling basis provenance.");
     }
     return { direction: null, strength: 0, samplingBasis };
   }
 
-  if (!input.direction || input.samplingBasisSource !== "SEMANTIC_ORIENTATION" || strength <= EPSILON) {
-    throw new Error("A1 semantic orientation requires a live direction, strength and semantic sampling-basis provenance.");
+  if (
+    !input.direction ||
+    input.sourceTick === null ||
+    input.ageTicks === null ||
+    input.sourceTick + input.ageTicks !== input.tick ||
+    input.samplingBasisSource !== "SEMANTIC_ORIENTATION" ||
+    strength <= EPSILON
+  ) {
+    throw new Error("A1 semantic orientation requires aligned source/age provenance, live direction, strength and semantic sampling-basis provenance.");
   }
   const direction = normalized(input.direction, "A1 relationship semantic orientation");
   if (dot(direction, samplingBasis) < 1 - ORIENTATION_ALIGNMENT_EPSILON) {
@@ -262,7 +281,10 @@ export function sampleA1RelationshipSemanticField(input: {
 
   return {
     kind: "A1_RELATIVE_SEMANTIC_FIELD",
+    sourceTick: input.orientation.tick,
     orientationSource: input.orientation.source,
+    orientationSourceTick: input.orientation.sourceTick,
+    orientationAgeTicks: input.orientation.ageTicks,
     orientationStrength: orientation.strength,
     samplingBasis: { ...orientation.samplingBasis },
     samplingBasisSource: input.orientation.samplingBasisSource,
