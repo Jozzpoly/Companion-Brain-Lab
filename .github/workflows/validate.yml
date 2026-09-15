@@ -7,6 +7,7 @@ on:
       - planning/initial-research-skeleton
       - "experiment/**"
       - "foundation/**"
+      - "evidence/**"
   pull_request:
 
 concurrency:
@@ -47,4 +48,36 @@ jobs:
           npm install --legacy-peer-deps
           echo "NPM_ARBORIST_EDGESOUT_FALLBACK_USED=1"
       - run: npm run check
-      - run: npm run browser:audit
+      - name: Capture A1.2z3 visual evidence
+        run: npm run browser:audit > /tmp/a1-2z3-visual.log
+      - name: Decode A1.2z3 visual evidence
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const text = fs.readFileSync('/tmp/a1-2z3-visual.log', 'utf8');
+          const labels = ['participant-before', 'participant-contact', 'participant-after', 'research-end'];
+          const chunks = new Map(labels.map((label) => [label, []]));
+          for (const line of text.split(/\r?\n/)) {
+            const match = line.match(/^\[A1_2Z3_IMAGE_CHUNK\] (\S+) (\d+) ([A-Za-z0-9+/=]+)$/);
+            if (!match || !chunks.has(match[1])) continue;
+            chunks.get(match[1])[Number(match[2])] = match[3];
+          }
+          fs.mkdirSync('a1-2z3-visual', { recursive: true });
+          for (const label of labels) {
+            const parts = chunks.get(label);
+            if (!parts.length || parts.some((part) => typeof part !== 'string')) {
+              throw new Error(`Missing or non-contiguous chunks for ${label}`);
+            }
+            const bytes = Buffer.from(parts.join(''), 'base64');
+            if (bytes.length < 1000) throw new Error(`Decoded ${label} is unexpectedly small (${bytes.length} bytes)`);
+            fs.writeFileSync(`a1-2z3-visual/${label}.jpg`, bytes);
+            console.log(`${label}: ${bytes.length} bytes`);
+          }
+          NODE
+      - name: Upload A1.2z3 visual evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-2z3-visual-evidence
+          path: a1-2z3-visual/*.jpg
+          if-no-files-found: error
+          retention-days: 1
