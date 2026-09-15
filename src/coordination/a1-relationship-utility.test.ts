@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { Vec2 } from "../world/types";
 import type { A1RelationshipOrientationEvidence } from "./a1-relationship-orientation";
 import {
-  A1_DEFAULT_RELATIONSHIP_PROFILE,
+  A1_DEFAULT_RELATIONSHIP_OBJECTIVE,
+  A1_DEFAULT_RELATIONSHIP_SAMPLING,
   evaluateA1RelationshipUtility,
   sampleA1RelationshipSemanticField,
-  type A1RelationshipSemanticProfile
+  type A1RelationshipObjectiveProfile,
+  type A1RelationshipSamplingConfig
 } from "./a1-relationship-utility";
 
 function semanticOrientation(direction: Vec2, strength = 1): A1RelationshipOrientationEvidence {
@@ -55,10 +57,10 @@ function sampleById(field: ReturnType<typeof sampleA1RelationshipSemanticField>,
   return result;
 }
 
-describe("Authority-A1.1b pure relationship utility", () => {
+describe("Authority-A1.1 pure relationship objective utility", () => {
   it("makes radial meaning independent of absolute world state when semantic orientation is absent", () => {
-    const preferred = A1_DEFAULT_RELATIONSHIP_PROFILE.preferredRadius;
-    const sigma = A1_DEFAULT_RELATIONSHIP_PROFILE.radialSigma;
+    const preferred = A1_DEFAULT_RELATIONSHIP_OBJECTIVE.radial.preferredRadius;
+    const sigma = A1_DEFAULT_RELATIONSHIP_OBJECTIVE.radial.sigma;
     const orientation = noOrientation();
 
     const atPreferred = evaluateA1RelationshipUtility({
@@ -85,8 +87,8 @@ describe("Authority-A1.1b pure relationship utility", () => {
     expect(oneSigmaAway.totalUtility).toBeCloseTo(oneSigmaAway.radialUtility, 12);
   });
 
-  it("penalizes only the forward hemisphere and keeps side/back useful under full Owner orientation", () => {
-    const radius = A1_DEFAULT_RELATIONSHIP_PROFILE.preferredRadius;
+  it("preserves the first follow-like hypothesis as an explicit forward-avoidance objective", () => {
+    const radius = A1_DEFAULT_RELATIONSHIP_OBJECTIVE.radial.preferredRadius;
     const orientation = semanticOrientation({ x: 1, y: 0 });
     const front = evaluateA1RelationshipUtility({
       state: { relativeOffset: { x: radius, y: 0 } },
@@ -101,19 +103,18 @@ describe("Authority-A1.1b pure relationship utility", () => {
       orientation
     });
 
+    expect(front.directionalObjectiveKind).toBe("AVOID_FORWARD_HEMISPHERE");
     expect(front.frontness).toBeCloseTo(1, 12);
     expect(front.directionalUtility).toBeCloseTo(0, 12);
     expect(front.totalUtility).toBeLessThan(side.totalUtility);
     expect(side.frontness).toBeCloseTo(0, 12);
     expect(side.directionalUtility).toBeCloseTo(1, 12);
     expect(side.totalUtility).toBeCloseTo(1, 12);
-    expect(back.frontness).toBeCloseTo(0, 12);
-    expect(back.directionalUtility).toBeCloseTo(1, 12);
     expect(back.totalUtility).toBeCloseTo(1, 12);
   });
 
   it("lets low-strength Owner orientation influence utility continuously instead of acting like full facing", () => {
-    const radius = A1_DEFAULT_RELATIONSHIP_PROFILE.preferredRadius;
+    const radius = A1_DEFAULT_RELATIONSHIP_OBJECTIVE.radial.preferredRadius;
     const weak = evaluateA1RelationshipUtility({
       state: { relativeOffset: { x: radius, y: 0 } },
       orientation: semanticOrientation({ x: 1, y: 0 }, 0.04)
@@ -149,33 +150,33 @@ describe("Authority-A1.1b pure relationship utility", () => {
     expect(b.radialUtility).toBeCloseTo(a.radialUtility, 12);
     expect(b.frontness).toBeCloseTo(a.frontness ?? 0, 12);
     expect(b.directionalUtility).toBeCloseTo(a.directionalUtility ?? 0, 12);
+    expect(b.relativeBearingRadians).toBeCloseTo(a.relativeBearingRadians ?? 0, 12);
     expect(b.effectiveDirectionalWeight).toBeCloseTo(a.effectiveDirectionalWeight, 12);
     expect(b.totalUtility).toBeCloseTo(a.totalUtility, 12);
   });
 
-  it("samples the semantic function rather than introducing a separate point-target score", () => {
-    const field = sampleA1RelationshipSemanticField({
-      orientation: semanticOrientation({ x: 1, y: 0 })
-    });
+  it("samples the same semantic objective instead of introducing a second point-target score", () => {
+    const orientation = semanticOrientation({ x: 1, y: 0 });
+    const field = sampleA1RelationshipSemanticField({ orientation });
 
-    expect(field.samples).toHaveLength(32 * 3);
+    expect(field.samples).toHaveLength(
+      A1_DEFAULT_RELATIONSHIP_SAMPLING.directions * A1_DEFAULT_RELATIONSHIP_SAMPLING.radii.length
+    );
     expect(new Set(field.samples.map((sample) => sample.id)).size).toBe(field.samples.length);
     expect(field.semanticEligibleSampleIds.length).toBeGreaterThan(0);
     expect(field.bestUtility).toBeCloseTo(1, 12);
     expect(field.nearBestUtilityFloor).toBeCloseTo(
-      field.bestUtility - A1_DEFAULT_RELATIONSHIP_PROFILE.nearBestUtilityWindow,
+      field.bestUtility - A1_DEFAULT_RELATIONSHIP_SAMPLING.nearBestUtilityWindow,
       12
     );
 
     for (const sample of field.samples) {
       const direct = evaluateA1RelationshipUtility({
         state: { relativeOffset: sample.relativeOffset },
-        orientation: semanticOrientation({ x: 1, y: 0 })
+        orientation
       });
       expect(sample.utility.totalUtility).toBeCloseTo(direct.totalUtility, 12);
-      expect(sample.semanticEligible).toBe(
-        field.semanticEligibleSampleIds.includes(sample.id)
-      );
+      expect(sample.semanticEligible).toBe(field.semanticEligibleSampleIds.includes(sample.id));
     }
 
     const frontPreferred = sampleById(field, "r1.b0");
@@ -225,39 +226,88 @@ describe("Authority-A1.1b pure relationship utility", () => {
     expect(front.utility.totalUtility).toBeCloseTo(back.utility.totalUtility, 12);
   });
 
-  it("keeps semantic policy parameters explicit and replaceable rather than burying them in the evaluator", () => {
-    const custom: A1RelationshipSemanticProfile = {
-      preferredRadius: 2,
-      radialSigma: 0.25,
-      radialWeight: 2,
-      directionalWeight: 0,
-      sampleDirections: 8,
-      sampleRadii: [1, 2, 3],
+  it("lets objective semantics and observation sampling vary independently", () => {
+    const objective: A1RelationshipObjectiveProfile = {
+      radial: { preferredRadius: 2, sigma: 0.25, weight: 2 },
+      directional: { kind: "NONE" }
+    };
+    const sparseSampling: A1RelationshipSamplingConfig = {
+      directions: 8,
+      radii: [1, 2, 3],
       nearBestUtilityWindow: 0.1
+    };
+    const denseSampling: A1RelationshipSamplingConfig = {
+      directions: 24,
+      radii: [1.5, 2, 2.5],
+      nearBestUtilityWindow: 0.05
     };
     const orientation = semanticOrientation({ x: 1, y: 0 });
     const front = evaluateA1RelationshipUtility({
       state: { relativeOffset: { x: 2, y: 0 } },
       orientation,
-      profile: custom
+      objective
     });
     const back = evaluateA1RelationshipUtility({
       state: { relativeOffset: { x: -2, y: 0 } },
       orientation,
-      profile: custom
+      objective
     });
-    const field = sampleA1RelationshipSemanticField({ orientation, profile: custom });
+    const sparse = sampleA1RelationshipSemanticField({ orientation, objective, sampling: sparseSampling });
+    const dense = sampleA1RelationshipSemanticField({ orientation, objective, sampling: denseSampling });
 
-    expect(front.radialUtility).toBeCloseTo(1, 12);
     expect(front.totalUtility).toBeCloseTo(1, 12);
     expect(back.totalUtility).toBeCloseTo(front.totalUtility, 12);
     expect(front.effectiveDirectionalWeight).toBe(0);
-    expect(field.samples).toHaveLength(8 * 3);
-    expect(field.sampleDirections).toBe(8);
-    expect(field.sampleRadii).toEqual([1, 2, 3]);
+    expect(sparse.samples).toHaveLength(8 * 3);
+    expect(dense.samples).toHaveLength(24 * 3);
+    expect(sparse.objective).toEqual(dense.objective);
+    expect(sparse.sampling).not.toEqual(dense.sampling);
+    expect(sparse.sampleDirections).toBe(8);
+    expect(dense.sampleDirections).toBe(24);
   });
 
-  it("rejects semantic-orientation/basis divergence and malformed profile data", () => {
+  it("expresses a materially different lateral preferred-bearing objective without role-name branches", () => {
+    const lateralObjective: A1RelationshipObjectiveProfile = {
+      radial: { preferredRadius: 1.8, sigma: 0.3, weight: 1 },
+      directional: {
+        kind: "PREFER_BEARING",
+        preferredBearingRadians: Math.PI / 2,
+        sigmaRadians: Math.PI / 8,
+        weight: 2
+      }
+    };
+    const orientationX = semanticOrientation({ x: 1, y: 0 });
+    const preferred = evaluateA1RelationshipUtility({
+      state: { relativeOffset: { x: 0, y: 1.8 } },
+      orientation: orientationX,
+      objective: lateralObjective
+    });
+    const forward = evaluateA1RelationshipUtility({
+      state: { relativeOffset: { x: 1.8, y: 0 } },
+      orientation: orientationX,
+      objective: lateralObjective
+    });
+    const oppositeSide = evaluateA1RelationshipUtility({
+      state: { relativeOffset: { x: 0, y: -1.8 } },
+      orientation: orientationX,
+      objective: lateralObjective
+    });
+    const rotatedPreferred = evaluateA1RelationshipUtility({
+      state: { relativeOffset: { x: -1.8, y: 0 } },
+      orientation: semanticOrientation({ x: 0, y: 1 }),
+      objective: lateralObjective
+    });
+
+    expect(preferred.directionalObjectiveKind).toBe("PREFER_BEARING");
+    expect(preferred.relativeBearingRadians).toBeCloseTo(Math.PI / 2, 12);
+    expect(preferred.directionalUtility).toBeCloseTo(1, 12);
+    expect(preferred.totalUtility).toBeCloseTo(1, 12);
+    expect(forward.totalUtility).toBeLessThan(preferred.totalUtility);
+    expect(oppositeSide.totalUtility).toBeLessThan(forward.totalUtility);
+    expect(rotatedPreferred.totalUtility).toBeCloseTo(preferred.totalUtility, 12);
+  });
+
+  it("rejects semantic-orientation/basis divergence and malformed objective or sampling data", () => {
     const malformed = semanticOrientation({ x: 1, y: 0 });
     malformed.samplingBasis = { x: 0, y: 1 };
 
@@ -266,12 +316,26 @@ describe("Authority-A1.1b pure relationship utility", () => {
       orientation: malformed
     })).toThrow(/sampling basis must align/);
 
+    expect(() => evaluateA1RelationshipUtility({
+      state: { relativeOffset: { x: 1, y: 0 } },
+      orientation: semanticOrientation({ x: 1, y: 0 }),
+      objective: {
+        radial: { preferredRadius: 1.5, sigma: 0.3, weight: 1 },
+        directional: {
+          kind: "PREFER_BEARING",
+          preferredBearingRadians: 0,
+          sigmaRadians: Math.PI * 2,
+          weight: 1
+        }
+      }
+    })).toThrow(/must not exceed PI/);
+
     expect(() => sampleA1RelationshipSemanticField({
       orientation: noOrientation(),
-      profile: {
-        ...A1_DEFAULT_RELATIONSHIP_PROFILE,
-        sampleDirections: 3
+      sampling: {
+        ...A1_DEFAULT_RELATIONSHIP_SAMPLING,
+        directions: 3
       }
-    })).toThrow(/at least four sample directions/);
+    })).toThrow(/at least four directions/);
   });
 });
