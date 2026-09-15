@@ -5,28 +5,66 @@ const EPSILON = 1e-9;
 const ORIENTATION_ALIGNMENT_EPSILON = 1e-6;
 const TAU = Math.PI * 2;
 
-export interface A1RelationshipSemanticProfile {
+export interface A1RadialObjectiveTerm {
   preferredRadius: number;
-  radialSigma: number;
-  radialWeight: number;
-  directionalWeight: number;
-  sampleDirections: number;
-  sampleRadii: readonly number[];
+  sigma: number;
+  weight: number;
+}
+
+export type A1DirectionalObjectiveTerm =
+  | {
+    kind: "NONE";
+  }
+  | {
+    kind: "AVOID_FORWARD_HEMISPHERE";
+    weight: number;
+  }
+  | {
+    kind: "PREFER_BEARING";
+    preferredBearingRadians: number;
+    sigmaRadians: number;
+    weight: number;
+  };
+
+/**
+ * Pure semantic objective. It intentionally contains no sampling density,
+ * route budget, world geometry or execution policy.
+ */
+export interface A1RelationshipObjectiveProfile {
+  radial: A1RadialObjectiveTerm;
+  directional: A1DirectionalObjectiveTerm;
+}
+
+/**
+ * Observation/projection instrument only. Changing this must not change the
+ * direct semantic utility function for the same relative state.
+ */
+export interface A1RelationshipSamplingConfig {
+  directions: number;
+  radii: readonly number[];
   nearBestUtilityWindow: number;
 }
 
 /**
- * First research profile only. These values are experiment controls, not a
- * teammate-design invariant. The representation contract is profile-driven so
- * A1.1 can falsify/tune semantics without changing its world/execution seams.
+ * First follow-like research objective only. This is an experiment control,
+ * not the identity of the companion and not a universal teammate policy.
  */
-export const A1_DEFAULT_RELATIONSHIP_PROFILE: A1RelationshipSemanticProfile = {
-  preferredRadius: 1.45,
-  radialSigma: 0.45,
-  radialWeight: 1,
-  directionalWeight: 1,
-  sampleDirections: 32,
-  sampleRadii: [1.15, 1.45, 1.8],
+export const A1_DEFAULT_RELATIONSHIP_OBJECTIVE: A1RelationshipObjectiveProfile = {
+  radial: {
+    preferredRadius: 1.45,
+    sigma: 0.45,
+    weight: 1
+  },
+  directional: {
+    kind: "AVOID_FORWARD_HEMISPHERE",
+    weight: 1
+  }
+};
+
+/** Initial observation mesh donor from CCC-0; not an architectural invariant. */
+export const A1_DEFAULT_RELATIONSHIP_SAMPLING: A1RelationshipSamplingConfig = {
+  directions: 32,
+  radii: [1.15, 1.45, 1.8],
   nearBestUtilityWindow: 0.2
 };
 
@@ -38,7 +76,9 @@ export interface A1RelationshipUtilityEvidence {
   relativeOffset: Vec2;
   radius: number;
   radialUtility: number;
+  directionalObjectiveKind: A1DirectionalObjectiveTerm["kind"];
   directionalSemanticsActive: boolean;
+  relativeBearingRadians: number | null;
   frontness: number | null;
   directionalUtility: number | null;
   orientationStrength: number;
@@ -66,6 +106,8 @@ export interface A1RelationshipSemanticField {
   orientationStrength: number;
   samplingBasis: Vec2;
   samplingBasisSource: A1RelationshipOrientationEvidence["samplingBasisSource"];
+  objective: A1RelationshipObjectiveProfile;
+  sampling: A1RelationshipSamplingConfig;
   sampleDirections: number;
   sampleRadii: readonly number[];
   bestUtility: number;
@@ -100,35 +142,72 @@ function normalized(value: Vec2, label: string): Vec2 {
   return { x: vector.x / length, y: vector.y / length };
 }
 
-function validatedProfile(profile: A1RelationshipSemanticProfile): A1RelationshipSemanticProfile {
-  if (!Number.isFinite(profile.preferredRadius) || profile.preferredRadius <= 0) {
-    throw new Error("A1 relationship profile requires a positive finite preferred radius.");
+function finitePositive(value: number, label: string): number {
+  if (!Number.isFinite(value) || value <= 0) throw new Error(`${label} must be positive and finite.`);
+  return value;
+}
+
+function finiteNonNegative(value: number, label: string): number {
+  if (!Number.isFinite(value) || value < 0) throw new Error(`${label} must be non-negative and finite.`);
+  return value;
+}
+
+function cloneObjective(objective: A1RelationshipObjectiveProfile): A1RelationshipObjectiveProfile {
+  const radial = {
+    preferredRadius: finitePositive(objective.radial.preferredRadius, "A1 objective preferred radius"),
+    sigma: finitePositive(objective.radial.sigma, "A1 objective radial sigma"),
+    weight: finitePositive(objective.radial.weight, "A1 objective radial weight")
+  };
+
+  if (objective.directional.kind === "NONE") {
+    return { radial, directional: { kind: "NONE" } };
   }
-  if (!Number.isFinite(profile.radialSigma) || profile.radialSigma <= 0) {
-    throw new Error("A1 relationship profile requires a positive finite radial sigma.");
+  if (objective.directional.kind === "AVOID_FORWARD_HEMISPHERE") {
+    return {
+      radial,
+      directional: {
+        kind: "AVOID_FORWARD_HEMISPHERE",
+        weight: finiteNonNegative(objective.directional.weight, "A1 forward-avoidance weight")
+      }
+    };
   }
-  if (!Number.isFinite(profile.radialWeight) || profile.radialWeight <= 0) {
-    throw new Error("A1 relationship profile requires a positive finite radial weight.");
+  if (objective.directional.kind === "PREFER_BEARING") {
+    if (!Number.isFinite(objective.directional.preferredBearingRadians)) {
+      throw new Error("A1 preferred bearing must be finite.");
+    }
+    const sigmaRadians = finitePositive(objective.directional.sigmaRadians, "A1 bearing sigma");
+    if (sigmaRadians > Math.PI) throw new Error("A1 bearing sigma must not exceed PI radians.");
+    return {
+      radial,
+      directional: {
+        kind: "PREFER_BEARING",
+        preferredBearingRadians: objective.directional.preferredBearingRadians,
+        sigmaRadians,
+        weight: finiteNonNegative(objective.directional.weight, "A1 preferred-bearing weight")
+      }
+    };
   }
-  if (!Number.isFinite(profile.directionalWeight) || profile.directionalWeight < 0) {
-    throw new Error("A1 relationship profile requires a finite non-negative directional weight.");
+  throw new Error("Unsupported A1 directional objective kind.");
+}
+
+function cloneSampling(config: A1RelationshipSamplingConfig): A1RelationshipSamplingConfig {
+  if (!Number.isInteger(config.directions) || config.directions < 4) {
+    throw new Error("A1 relationship sampling requires at least four directions.");
   }
-  if (!Number.isInteger(profile.sampleDirections) || profile.sampleDirections < 4) {
-    throw new Error("A1 relationship profile requires at least four sample directions.");
-  }
-  if (profile.sampleRadii.length === 0 || profile.sampleRadii.some((value) => !Number.isFinite(value) || value <= 0)) {
-    throw new Error("A1 relationship profile requires positive finite sample radii.");
+  if (config.radii.length === 0 || config.radii.some((value) => !Number.isFinite(value) || value <= 0)) {
+    throw new Error("A1 relationship sampling requires positive finite radii.");
   }
   if (
-    !Number.isFinite(profile.nearBestUtilityWindow) ||
-    profile.nearBestUtilityWindow < 0 ||
-    profile.nearBestUtilityWindow > 1
+    !Number.isFinite(config.nearBestUtilityWindow) ||
+    config.nearBestUtilityWindow < 0 ||
+    config.nearBestUtilityWindow > 1
   ) {
-    throw new Error("A1 relationship profile near-best utility window must be in [0, 1].");
+    throw new Error("A1 relationship sampling near-best utility window must be in [0, 1].");
   }
   return {
-    ...profile,
-    sampleRadii: [...profile.sampleRadii]
+    directions: config.directions,
+    radii: [...config.radii],
+    nearBestUtilityWindow: config.nearBestUtilityWindow
   };
 }
 
@@ -180,21 +259,78 @@ function validatedOrientation(input: A1RelationshipOrientationEvidence): {
   };
 }
 
+function wrapSignedAngle(value: number): number {
+  return Math.atan2(Math.sin(value), Math.cos(value));
+}
+
+function bearingRelativeToOrientation(relativeDirection: Vec2, forward: Vec2): number {
+  const positivePerpendicular = { x: -forward.y, y: forward.x };
+  return Math.atan2(
+    dot(relativeDirection, positivePerpendicular),
+    dot(relativeDirection, forward)
+  );
+}
+
+function directionalUtility(input: {
+  objective: A1DirectionalObjectiveTerm;
+  relativeDirection: Vec2;
+  orientationDirection: Vec2;
+}): {
+  relativeBearingRadians: number;
+  frontness: number | null;
+  utility: number | null;
+  weight: number;
+} {
+  const relativeBearingRadians = bearingRelativeToOrientation(
+    input.relativeDirection,
+    input.orientationDirection
+  );
+
+  if (input.objective.kind === "NONE") {
+    return {
+      relativeBearingRadians,
+      frontness: null,
+      utility: null,
+      weight: 0
+    };
+  }
+  if (input.objective.kind === "AVOID_FORWARD_HEMISPHERE") {
+    const frontness = Math.max(0, dot(input.relativeDirection, input.orientationDirection));
+    return {
+      relativeBearingRadians,
+      frontness,
+      utility: 1 - frontness * frontness,
+      weight: input.objective.weight
+    };
+  }
+
+  const bearingError = wrapSignedAngle(
+    relativeBearingRadians - input.objective.preferredBearingRadians
+  );
+  const normalizedError = bearingError / input.objective.sigmaRadians;
+  return {
+    relativeBearingRadians,
+    frontness: null,
+    utility: Math.exp(-0.5 * normalizedError * normalizedError),
+    weight: input.objective.weight
+  };
+}
+
 export function evaluateA1RelationshipUtility(input: {
   state: A1RelativeRelationshipState;
   orientation: A1RelationshipOrientationEvidence;
-  profile?: A1RelationshipSemanticProfile;
+  objective?: A1RelationshipObjectiveProfile;
 }): A1RelationshipUtilityEvidence {
-  const profile = validatedProfile(input.profile ?? A1_DEFAULT_RELATIONSHIP_PROFILE);
+  const objective = cloneObjective(input.objective ?? A1_DEFAULT_RELATIONSHIP_OBJECTIVE);
   const relativeOffset = finiteVector(input.state.relativeOffset, "A1 relative relationship state");
   const radius = magnitude(relativeOffset);
-  const radialDelta = (radius - profile.preferredRadius) / profile.radialSigma;
+  const radialDelta = (radius - objective.radial.preferredRadius) / objective.radial.sigma;
   const radialUtility = Math.exp(-0.5 * radialDelta * radialDelta);
   const orientation = validatedOrientation(input.orientation);
 
-  let directionalSemanticsActive = false;
+  let relativeBearingRadians: number | null = null;
   let frontness: number | null = null;
-  let directionalUtility: number | null = null;
+  let directionalValue: number | null = null;
   let effectiveDirectionalWeight = 0;
 
   if (orientation.direction && radius > EPSILON && orientation.strength > EPSILON) {
@@ -202,61 +338,72 @@ export function evaluateA1RelationshipUtility(input: {
       x: relativeOffset.x / radius,
       y: relativeOffset.y / radius
     };
-    frontness = Math.max(0, dot(relativeDirection, orientation.direction));
-    directionalUtility = 1 - frontness * frontness;
-    effectiveDirectionalWeight = profile.directionalWeight * orientation.strength;
-    directionalSemanticsActive = effectiveDirectionalWeight > EPSILON;
+    const directional = directionalUtility({
+      objective: objective.directional,
+      relativeDirection,
+      orientationDirection: orientation.direction
+    });
+    relativeBearingRadians = directional.relativeBearingRadians;
+    frontness = directional.frontness;
+    directionalValue = directional.utility;
+    effectiveDirectionalWeight = directional.weight * orientation.strength;
   }
 
-  const totalWeight = profile.radialWeight + effectiveDirectionalWeight;
+  const directionalSemanticsActive =
+    directionalValue !== null && effectiveDirectionalWeight > EPSILON;
+  const totalWeight = objective.radial.weight + effectiveDirectionalWeight;
   const weightedUtility =
-    profile.radialWeight * radialUtility +
-    effectiveDirectionalWeight * (directionalUtility ?? 1);
+    objective.radial.weight * radialUtility +
+    effectiveDirectionalWeight * (directionalValue ?? 1);
   const totalUtility = clamp01(weightedUtility / totalWeight);
 
   return {
     relativeOffset,
     radius,
     radialUtility,
+    directionalObjectiveKind: objective.directional.kind,
     directionalSemanticsActive,
+    relativeBearingRadians,
     frontness,
-    directionalUtility,
+    directionalUtility: directionalValue,
     orientationStrength: orientation.strength,
     effectiveDirectionalWeight,
     totalUtility
   };
 }
 
-function addBasisScaled(forward: Vec2, right: Vec2, bearing: number, radius: number): Vec2 {
+function addBasisScaled(forward: Vec2, perpendicular: Vec2, bearing: number, radius: number): Vec2 {
   const cos = Math.cos(bearing);
   const sin = Math.sin(bearing);
   return {
-    x: (forward.x * cos + right.x * sin) * radius,
-    y: (forward.y * cos + right.y * sin) * radius
+    x: (forward.x * cos + perpendicular.x * sin) * radius,
+    y: (forward.y * cos + perpendicular.y * sin) * radius
   };
 }
 
 export function sampleA1RelationshipSemanticField(input: {
   orientation: A1RelationshipOrientationEvidence;
-  profile?: A1RelationshipSemanticProfile;
+  objective?: A1RelationshipObjectiveProfile;
+  sampling?: A1RelationshipSamplingConfig;
 }): A1RelationshipSemanticField {
-  const profile = validatedProfile(input.profile ?? A1_DEFAULT_RELATIONSHIP_PROFILE);
+  const objective = cloneObjective(input.objective ?? A1_DEFAULT_RELATIONSHIP_OBJECTIVE);
+  const sampling = cloneSampling(input.sampling ?? A1_DEFAULT_RELATIONSHIP_SAMPLING);
   const orientation = validatedOrientation(input.orientation);
   const forward = orientation.samplingBasis;
-  const right = { x: -forward.y, y: forward.x };
+  const perpendicular = { x: -forward.y, y: forward.x };
   const samples: A1RelationshipSemanticSample[] = [];
 
-  for (let radiusIndex = 0; radiusIndex < profile.sampleRadii.length; radiusIndex += 1) {
-    const radius = profile.sampleRadii[radiusIndex];
+  for (let radiusIndex = 0; radiusIndex < sampling.radii.length; radiusIndex += 1) {
+    const radius = sampling.radii[radiusIndex];
     if (radius === undefined) continue;
 
-    for (let directionIndex = 0; directionIndex < profile.sampleDirections; directionIndex += 1) {
-      const relativeBearing = (directionIndex / profile.sampleDirections) * TAU;
-      const relativeOffset = addBasisScaled(forward, right, relativeBearing, radius);
+    for (let directionIndex = 0; directionIndex < sampling.directions; directionIndex += 1) {
+      const relativeBearing = (directionIndex / sampling.directions) * TAU;
+      const relativeOffset = addBasisScaled(forward, perpendicular, relativeBearing, radius);
       const utility = evaluateA1RelationshipUtility({
         state: { relativeOffset },
         orientation: input.orientation,
-        profile
+        objective
       });
       samples.push({
         id: `r${radiusIndex}.b${directionIndex}`,
@@ -272,7 +419,7 @@ export function sampleA1RelationshipSemanticField(input: {
   }
 
   const bestUtility = samples.reduce((best, sample) => Math.max(best, sample.utility.totalUtility), 0);
-  const nearBestUtilityFloor = clamp01(bestUtility - profile.nearBestUtilityWindow);
+  const nearBestUtilityFloor = clamp01(bestUtility - sampling.nearBestUtilityWindow);
   const semanticEligibleSampleIds: string[] = [];
   for (const sample of samples) {
     sample.semanticEligible = sample.utility.totalUtility + EPSILON >= nearBestUtilityFloor;
@@ -288,8 +435,10 @@ export function sampleA1RelationshipSemanticField(input: {
     orientationStrength: orientation.strength,
     samplingBasis: { ...orientation.samplingBasis },
     samplingBasisSource: input.orientation.samplingBasisSource,
-    sampleDirections: profile.sampleDirections,
-    sampleRadii: [...profile.sampleRadii],
+    objective,
+    sampling,
+    sampleDirections: sampling.directions,
+    sampleRadii: [...sampling.radii],
     bestUtility,
     nearBestUtilityFloor,
     samples,
