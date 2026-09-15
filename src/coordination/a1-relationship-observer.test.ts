@@ -205,6 +205,35 @@ describe("Authority-A1.1f passive relationship observer", () => {
     }
   });
 
+  it("rejects a duplicate World tick before it can mutate evidence or query heavy projection", async () => {
+    const world = await LabWorld.create("open");
+    try {
+      const observer = new A1RelationshipObserver();
+      const snapshot = world.snapshot();
+      observer.observe({
+        situation: situation(world, snapshot, { x: 1, y: 0 }),
+        snapshot,
+        query: clearTraversal
+      });
+      const beforeDuplicate = observer.debugState();
+      let queries = 0;
+
+      expect(() => observer.observe({
+        situation: situation(world, snapshot, { x: -1, y: 0 }),
+        snapshot,
+        query: (from, to, radius) => {
+          queries += 1;
+          return clearTraversal(from, to, radius);
+        }
+      })).toThrow(/must strictly advance World time/);
+
+      expect(queries).toBe(0);
+      expect(observer.debugState()).toEqual(beforeDuplicate);
+    } finally {
+      world.dispose();
+    }
+  });
+
   it("defensively owns objective and sampling config instead of accepting external mutation mid-epoch", async () => {
     const world = await LabWorld.create("open");
     try {
@@ -218,7 +247,7 @@ describe("Authority-A1.1f passive relationship observer", () => {
         nearBestUtilityWindow: 0.2
       };
       const observer = new A1RelationshipObserver({ objective, sampling });
-      const snapshot = world.snapshot();
+      let snapshot = world.snapshot();
       const first = observer.observe({
         situation: situation(world, snapshot, { x: 1, y: 0 }),
         snapshot,
@@ -232,13 +261,15 @@ describe("Authority-A1.1f passive relationship observer", () => {
       sampling.directions = 64;
       sampling.radii = [0.4, 4.2];
 
+      snapshot = step(world, { x: 1, y: 0 });
       const second = observer.observe({
         situation: situation(world, snapshot, { x: 1, y: 0 }),
         snapshot,
         query: () => {
-          throw new Error("same-tick second observation must not trigger heavy work");
+          throw new Error("next-tick light observation must not trigger heavy work");
         }
       });
+      expect(second.semantic?.sourceTick).toBe(1);
       expect(second.semantic?.objectiveSignature).toBe(objectiveSignature);
       expect(second.semantic?.samplingSignature).toBe(samplingSignature);
       expect(second.semantic?.eligibleSamples).toBe(first.semantic?.eligibleSamples);
@@ -328,7 +359,7 @@ describe("Authority-A1.1f passive relationship observer", () => {
           situation: situation(resetWorld, resetSnapshot, { x: 1, y: 0 }),
           snapshot: resetSnapshot,
           query: clearTraversal
-        })).toThrow(/cannot move backward in World time without reset/);
+        })).toThrow(/must strictly advance World time/);
       } finally {
         resetWorld.dispose();
       }
