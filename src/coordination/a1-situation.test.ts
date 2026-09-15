@@ -8,7 +8,7 @@ function companionHold(): MotionIntent {
 }
 
 describe("Authority-A1 decision-time situation", () => {
-  it("exposes same-step Owner request before World while keeping pre-step body motion separate", async () => {
+  it("exposes same-step Owner request before World while keeping initial body state separate", async () => {
     const world = await LabWorld.create("open");
     try {
       const before = world.snapshot();
@@ -33,14 +33,13 @@ describe("Authority-A1 decision-time situation", () => {
     }
   });
 
-  it("sees a same-tick reversal immediately instead of inheriting the previous requested direction", async () => {
+  it("sees a same-tick reversal immediately while preserving the previous completed World response", async () => {
     const world = await LabWorld.create("open");
     try {
-      world.step([
+      const beforeReversal = world.step([
         { actorId: "player", move: { x: 1, y: 0 } },
         companionHold()
       ]);
-      const beforeReversal = world.snapshot();
       expect(beforeReversal.tick).toBe(1);
 
       const situation = buildA1Situation({
@@ -56,7 +55,7 @@ describe("Authority-A1 decision-time situation", () => {
       expect(situation.situated.playerControl.move).toEqual({ x: -1, y: 0 });
       expect(situation.playerRequestedVelocity.velocity).toEqual({ x: -3, y: 0 });
 
-      // Body state at observation t1 still reports what World executed on t0 -> t1.
+      // The decision snapshot is the rich t1 outcome returned by World.step(t0 -> t1).
       expect(situation.situated.playerBody.sourceTick).toBe(1);
       expect(situation.situated.playerBody.requestedVelocity.x).toBeGreaterThan(2.9);
       expect(situation.previousOutcome?.observationTick).toBe(0);
@@ -64,8 +63,29 @@ describe("Authority-A1 decision-time situation", () => {
       expect(situation.previousOutcome?.ageTicks).toBe(0);
       expect(situation.previousOutcome?.playerBody.requestedVelocity.x).toBeGreaterThan(2.9);
 
-      // The decision-time request is nevertheless already the new direction at the same tick.
+      // Current Owner intent has already reversed at exactly the same decision tick.
       expect(situation.playerRequestedVelocity.velocity.x).toBeLessThan(-2.9);
+    } finally {
+      world.dispose();
+    }
+  });
+
+  it("rejects a fresh LabWorld.snapshot substitute when it erases prior-step kinematic evidence", async () => {
+    const world = await LabWorld.create("open");
+    try {
+      world.step([
+        { actorId: "player", move: { x: 1, y: 0 } },
+        companionHold()
+      ]);
+      const neutralizedSnapshot = world.snapshot();
+
+      expect(() => buildA1Situation({
+        snapshot: neutralizedSnapshot,
+        playerIntent: { actorId: "player", move: { x: -1, y: 0 } },
+        playerCapability: world.actorMovementCapability("player"),
+        companionCapability: world.actorMovementCapability("companion"),
+        previousWorldStep: world.latestAuthorityA0StepEvidence()
+      })).toThrow(/live snapshot returned by the immediately preceding World\.step/);
     } finally {
       world.dispose();
     }
@@ -104,11 +124,10 @@ describe("Authority-A1 decision-time situation", () => {
         companionHold()
       ]);
       const stale = world.latestAuthorityA0StepEvidence();
-      world.step([
+      const current = world.step([
         { actorId: "player", move: { x: 0, y: 1 } },
         companionHold()
       ]);
-      const current = world.snapshot();
 
       expect(() => buildA1Situation({
         snapshot: current,
