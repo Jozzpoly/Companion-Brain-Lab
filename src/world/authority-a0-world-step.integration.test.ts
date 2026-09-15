@@ -108,13 +108,13 @@ describe("Authority-A0 live World step evidence", () => {
   it("publishes defensive observer copies and isolates observer failures from World authority", async () => {
     const world = await LabWorld.create("open");
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    let secondObserverEvidence: AuthorityA0WorldStepEvidence | null = null;
+    const secondObserverEvidence: AuthorityA0WorldStepEvidence[] = [];
     const unsubscribeMutating = subscribeAuthorityA0StepEvidence((evidence) => {
       evidence.situated.playerControl.move.x = 999;
       throw new Error("observer probe failure");
     });
     const unsubscribeSecond = subscribeAuthorityA0StepEvidence((evidence) => {
-      secondObserverEvidence = evidence;
+      secondObserverEvidence.push(evidence);
     });
 
     try {
@@ -124,7 +124,7 @@ describe("Authority-A0 live World step evidence", () => {
       ]);
 
       expect(after.tick).toBe(1);
-      expect(secondObserverEvidence?.situated.playerControl.move.x).toBe(1);
+      expect(secondObserverEvidence.at(-1)?.situated.playerControl.move.x).toBe(1);
       expect(world.latestAuthorityA0StepEvidence()?.situated.playerControl.move.x).toBe(1);
       expect(consoleError).toHaveBeenCalledTimes(1);
     } finally {
