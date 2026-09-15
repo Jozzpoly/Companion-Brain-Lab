@@ -107,7 +107,9 @@ export interface A1RelationshipSemanticField {
   samplingBasis: Vec2;
   samplingBasisSource: A1RelationshipOrientationEvidence["samplingBasisSource"];
   objective: A1RelationshipObjectiveProfile;
+  objectiveSignature: string;
   sampling: A1RelationshipSamplingConfig;
+  samplingSignature: string;
   sampleDirections: number;
   sampleRadii: readonly number[];
   bestUtility: number;
@@ -152,6 +154,10 @@ function finiteNonNegative(value: number, label: string): number {
   return value;
 }
 
+function wrapSignedAngle(value: number): number {
+  return Math.atan2(Math.sin(value), Math.cos(value));
+}
+
 function cloneObjective(objective: A1RelationshipObjectiveProfile): A1RelationshipObjectiveProfile {
   const radial = {
     preferredRadius: finitePositive(objective.radial.preferredRadius, "A1 objective preferred radius"),
@@ -181,7 +187,7 @@ function cloneObjective(objective: A1RelationshipObjectiveProfile): A1Relationsh
       radial,
       directional: {
         kind: "PREFER_BEARING",
-        preferredBearingRadians: objective.directional.preferredBearingRadians,
+        preferredBearingRadians: wrapSignedAngle(objective.directional.preferredBearingRadians),
         sigmaRadians,
         weight: finiteNonNegative(objective.directional.weight, "A1 preferred-bearing weight")
       }
@@ -209,6 +215,37 @@ function cloneSampling(config: A1RelationshipSamplingConfig): A1RelationshipSamp
     radii: [...config.radii],
     nearBestUtilityWindow: config.nearBestUtilityWindow
   };
+}
+
+export function a1RelationshipObjectiveSignature(objective: A1RelationshipObjectiveProfile): string {
+  const canonical = cloneObjective(objective);
+  const directional = canonical.directional.kind === "NONE"
+    ? ["NONE"]
+    : canonical.directional.kind === "AVOID_FORWARD_HEMISPHERE"
+      ? ["AVOID_FORWARD_HEMISPHERE", canonical.directional.weight]
+      : [
+          "PREFER_BEARING",
+          canonical.directional.preferredBearingRadians,
+          canonical.directional.sigmaRadians,
+          canonical.directional.weight
+        ];
+  return JSON.stringify([
+    "A1_RELATIONSHIP_OBJECTIVE_V1",
+    canonical.radial.preferredRadius,
+    canonical.radial.sigma,
+    canonical.radial.weight,
+    directional
+  ]);
+}
+
+export function a1RelationshipSamplingSignature(config: A1RelationshipSamplingConfig): string {
+  const canonical = cloneSampling(config);
+  return JSON.stringify([
+    "A1_RELATIONSHIP_SAMPLING_V1",
+    canonical.directions,
+    canonical.radii,
+    canonical.nearBestUtilityWindow
+  ]);
 }
 
 function validatedOrientation(input: A1RelationshipOrientationEvidence): {
@@ -257,10 +294,6 @@ function validatedOrientation(input: A1RelationshipOrientationEvidence): {
     strength,
     samplingBasis
   };
-}
-
-function wrapSignedAngle(value: number): number {
-  return Math.atan2(Math.sin(value), Math.cos(value));
 }
 
 function bearingRelativeToOrientation(relativeDirection: Vec2, forward: Vec2): number {
@@ -436,7 +469,9 @@ export function sampleA1RelationshipSemanticField(input: {
     samplingBasis: { ...orientation.samplingBasis },
     samplingBasisSource: input.orientation.samplingBasisSource,
     objective,
+    objectiveSignature: a1RelationshipObjectiveSignature(objective),
     sampling,
+    samplingSignature: a1RelationshipSamplingSignature(sampling),
     sampleDirections: sampling.directions,
     sampleRadii: [...sampling.radii],
     bestUtility,
