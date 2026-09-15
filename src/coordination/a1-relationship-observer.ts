@@ -1,0 +1,260 @@
+import type { StaticTraversalQuery } from "../navigation/static-router";
+import type { Vec2, WorldSnapshot } from "../world/types";
+import {
+  buildA1AccessibilityEvidence,
+  compareA1AccessibilityContinuity,
+  type A1AccessibilityContinuityEvidence,
+  type A1AccessibilityEvidence
+} from "./a1-accessibility-fragments";
+import {
+  evaluateA1RelationshipOrientation,
+  type A1RelationshipOrientationEvidence,
+  type A1RelationshipOrientationMemory
+} from "./a1-relationship-orientation";
+import {
+  projectA1RelationshipSemanticField,
+  type A1RelationshipProjectionField,
+  type A1RouteQualificationStrategy
+} from "./a1-relationship-projection";
+import {
+  A1_DEFAULT_RELATIONSHIP_OBJECTIVE,
+  A1_DEFAULT_RELATIONSHIP_SAMPLING,
+  sampleA1RelationshipSemanticField,
+  type A1RelationshipObjectiveProfile,
+  type A1RelationshipSamplingConfig,
+  type A1RelationshipSemanticField
+} from "./a1-relationship-utility";
+import type { A1Situation } from "./a1-situation";
+
+const ALIGNMENT_EPSILON = 1e-9;
+
+export const A1_RELATIONSHIP_HEAVY_INTERVAL_TICKS = 6;
+export const A1_RELATIONSHIP_OBSERVER_ROUTE_BUDGET = 12;
+export const A1_RELATIONSHIP_OBSERVER_ROUTE_STRATEGY: A1RouteQualificationStrategy = "STRATIFIED_COVERAGE";
+
+export interface A1RelationshipObserverConfig {
+  heavyIntervalTicks: number;
+  routeBudget: number;
+  routeQualificationStrategy: A1RouteQualificationStrategy;
+  objective: A1RelationshipObjectiveProfile;
+  sampling: A1RelationshipSamplingConfig;
+}
+
+interface A1HeavyRelationshipObservation {
+  field: A1RelationshipSemanticField;
+  projection: A1RelationshipProjectionField;
+  accessibility: A1AccessibilityEvidence;
+  continuity: A1AccessibilityContinuityEvidence | null;
+}
+
+export interface A1RelationshipObserverDebug {
+  latestTick: number | null;
+  observations: number;
+  heavyEvaluations: number;
+  orientation: {
+    source: A1RelationshipOrientationEvidence["source"];
+    sourceTick: number | null;
+    ageTicks: number | null;
+    strength: number;
+    direction: Vec2 | null;
+  } | null;
+  semantic: {
+    sourceTick: number;
+    objectiveSignature: string;
+    samplingSignature: string;
+    eligibleSamples: number;
+    bestUtility: number;
+  } | null;
+  heavy: {
+    sourceTick: number;
+    ageTicks: number;
+    coverage: A1AccessibilityEvidence["coverage"];
+    qualificationStrategy: A1RelationshipProjectionField["routeQualificationStrategy"];
+    fragments: number;
+    hardReachable: number;
+    hardUnreachable: number;
+    untested: number;
+    staticTraversalQueries: number;
+    continuityComparability: A1AccessibilityContinuityEvidence["semanticComparability"] | null;
+    continuityNonComparabilityReason: A1AccessibilityContinuityEvidence["nonComparabilityReason"];
+    accessibilityChanged: boolean | null;
+  } | null;
+}
+
+function magnitude(value: Vec2): number {
+  return Math.hypot(value.x, value.y);
+}
+
+function vectorDistance(a: Vec2, b: Vec2): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function validateConfig(input: Partial<A1RelationshipObserverConfig>): A1RelationshipObserverConfig {
+  const heavyIntervalTicks = input.heavyIntervalTicks ?? A1_RELATIONSHIP_HEAVY_INTERVAL_TICKS;
+  const routeBudget = input.routeBudget ?? A1_RELATIONSHIP_OBSERVER_ROUTE_BUDGET;
+  if (!Number.isInteger(heavyIntervalTicks) || heavyIntervalTicks <= 0) {
+    throw new Error("A1 relationship observer heavy interval must be a positive integer number of World ticks.");
+  }
+  if (!Number.isInteger(routeBudget) || routeBudget < 0) {
+    throw new Error("A1 relationship observer route budget must be a non-negative integer.");
+  }
+  return {
+    heavyIntervalTicks,
+    routeBudget,
+    routeQualificationStrategy: input.routeQualificationStrategy ?? A1_RELATIONSHIP_OBSERVER_ROUTE_STRATEGY,
+    objective: input.objective ?? A1_DEFAULT_RELATIONSHIP_OBJECTIVE,
+    sampling: input.sampling ?? A1_DEFAULT_RELATIONSHIP_SAMPLING
+  };
+}
+
+function validateSituationSnapshotAlignment(situation: A1Situation, snapshot: WorldSnapshot): void {
+  if (situation.tick !== snapshot.tick || situation.situated.tick !== snapshot.tick) {
+    throw new Error("A1 relationship observer requires same-tick situation and World snapshot evidence.");
+  }
+  const player = snapshot.actors.find((actor) => actor.id === "player");
+  const companion = snapshot.actors.find((actor) => actor.id === "companion");
+  if (!player || !companion) {
+    throw new Error("A1 relationship observer requires player and companion actors in the World snapshot.");
+  }
+  const aligned =
+    vectorDistance(player.position, situation.situated.playerBody.position) <= ALIGNMENT_EPSILON &&
+    vectorDistance(player.requestedVelocity, situation.situated.playerBody.requestedVelocity) <= ALIGNMENT_EPSILON &&
+    vectorDistance(player.actualVelocity, situation.situated.playerBody.actualVelocity) <= ALIGNMENT_EPSILON &&
+    vectorDistance(companion.position, situation.situated.companionBody.position) <= ALIGNMENT_EPSILON &&
+    vectorDistance(companion.requestedVelocity, situation.situated.companionBody.requestedVelocity) <= ALIGNMENT_EPSILON &&
+    vectorDistance(companion.actualVelocity, situation.situated.companionBody.actualVelocity) <= ALIGNMENT_EPSILON;
+  if (!aligned) {
+    throw new Error("A1 relationship observer situation/body evidence does not match the supplied World snapshot.");
+  }
+}
+
+export class A1RelationshipObserver {
+  private readonly config: A1RelationshipObserverConfig;
+  private orientationMemoryValue: A1RelationshipOrientationMemory | null = null;
+  private latestOrientationValue: A1RelationshipOrientationEvidence | null = null;
+  private latestSemanticValue: A1RelationshipSemanticField | null = null;
+  private latestHeavyValue: A1HeavyRelationshipObservation | null = null;
+  private latestTickValue: number | null = null;
+  private observationsValue = 0;
+  private heavyEvaluationsValue = 0;
+
+  constructor(config: Partial<A1RelationshipObserverConfig> = {}) {
+    this.config = validateConfig(config);
+  }
+
+  reset(): void {
+    this.orientationMemoryValue = null;
+    this.latestOrientationValue = null;
+    this.latestSemanticValue = null;
+    this.latestHeavyValue = null;
+    this.latestTickValue = null;
+    this.observationsValue = 0;
+    this.heavyEvaluationsValue = 0;
+  }
+
+  observe(input: {
+    situation: A1Situation;
+    snapshot: WorldSnapshot;
+    query: StaticTraversalQuery;
+  }): A1RelationshipObserverDebug {
+    validateSituationSnapshotAlignment(input.situation, input.snapshot);
+    if (this.latestTickValue !== null && input.situation.tick < this.latestTickValue) {
+      throw new Error("A1 relationship observer cannot move backward in World time without reset.");
+    }
+
+    const orientation = evaluateA1RelationshipOrientation({
+      situation: input.situation,
+      memory: this.orientationMemoryValue
+    });
+    const field = sampleA1RelationshipSemanticField({
+      orientation,
+      objective: this.config.objective,
+      sampling: this.config.sampling
+    });
+
+    this.orientationMemoryValue = orientation.nextMemory;
+    this.latestOrientationValue = orientation;
+    this.latestSemanticValue = field;
+    this.latestTickValue = input.situation.tick;
+    this.observationsValue += 1;
+
+    const previousHeavy = this.latestHeavyValue;
+    const heavyDue = previousHeavy === null ||
+      input.situation.tick - previousHeavy.projection.sourceTick >= this.config.heavyIntervalTicks;
+
+    if (heavyDue) {
+      const projection = projectA1RelationshipSemanticField({
+        field,
+        snapshot: input.snapshot,
+        query: input.query,
+        routeBudget: this.config.routeBudget,
+        routeQualificationStrategy: this.config.routeQualificationStrategy
+      });
+      const accessibility = buildA1AccessibilityEvidence({ field, projection });
+      const continuity = previousHeavy
+        ? compareA1AccessibilityContinuity({
+            previous: {
+              field: previousHeavy.field,
+              projection: previousHeavy.projection,
+              accessibility: previousHeavy.accessibility
+            },
+            current: { field, projection, accessibility }
+          })
+        : null;
+      this.latestHeavyValue = { field, projection, accessibility, continuity };
+      this.heavyEvaluationsValue += 1;
+    }
+
+    return this.debugState();
+  }
+
+  debugState(): A1RelationshipObserverDebug {
+    const latestTick = this.latestTickValue;
+    const orientation = this.latestOrientationValue;
+    const semantic = this.latestSemanticValue;
+    const heavy = this.latestHeavyValue;
+    const heavyAge = latestTick !== null && heavy
+      ? Math.max(0, latestTick - heavy.projection.sourceTick)
+      : null;
+
+    return {
+      latestTick,
+      observations: this.observationsValue,
+      heavyEvaluations: this.heavyEvaluationsValue,
+      orientation: orientation
+        ? {
+            source: orientation.source,
+            sourceTick: orientation.sourceTick,
+            ageTicks: orientation.ageTicks,
+            strength: orientation.strength,
+            direction: orientation.direction ? { ...orientation.direction } : null
+          }
+        : null,
+      semantic: semantic
+        ? {
+            sourceTick: semantic.sourceTick,
+            objectiveSignature: semantic.objectiveSignature,
+            samplingSignature: semantic.samplingSignature,
+            eligibleSamples: semantic.semanticEligibleSampleIds.length,
+            bestUtility: semantic.bestUtility
+          }
+        : null,
+      heavy: heavy && heavyAge !== null
+        ? {
+            sourceTick: heavy.projection.sourceTick,
+            ageTicks: heavyAge,
+            coverage: heavy.accessibility.coverage,
+            qualificationStrategy: heavy.projection.routeQualificationStrategy,
+            fragments: heavy.accessibility.fragments.length,
+            hardReachable: heavy.projection.counts.hardReachable,
+            hardUnreachable: heavy.projection.counts.hardUnreachable,
+            untested: heavy.projection.counts.untested,
+            staticTraversalQueries: heavy.projection.counts.staticTraversalQueries,
+            continuityComparability: heavy.continuity?.semanticComparability ?? null,
+            continuityNonComparabilityReason: heavy.continuity?.nonComparabilityReason ?? null,
+            accessibilityChanged: heavy.continuity?.accessibilityChanged ?? null
+          }
+        : null
+    };
+  }
+}
