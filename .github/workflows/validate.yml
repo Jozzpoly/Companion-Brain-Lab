@@ -17,10 +17,6 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Pin npm patch release
-        run: |
-          npm install --global npm@10.9.9
-          npm --version
       - name: Install dependencies
         run: |
           if ! npm install; then
