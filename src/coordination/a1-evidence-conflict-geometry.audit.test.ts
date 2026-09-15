@@ -145,7 +145,7 @@ function decision(input: {
     paceProfiles,
     objective: A1_DEFAULT_RELATIONSHIP_OBJECTIVE
   });
-  return { situation, proposalSet, certificates };
+  return { situation, proposalSet, certificates, transitionReasons: hypotheses.transitionReasons };
 }
 
 function future(
@@ -264,7 +264,7 @@ function summarizeState(input: {
     tick: input.result.situation.tick,
     horizonSeconds: input.result.proposalSet.horizonSeconds,
     proposalCount: input.result.proposalSet.proposalCount,
-    transitionReasons: input.result.situation.transitionReasons,
+    transitionReasons: input.result.transitionReasons,
     futures: FUTURES.map((family) => summarizeFuture(input.result.certificates, family))
   };
 }
