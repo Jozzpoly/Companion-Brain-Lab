@@ -46,6 +46,13 @@ function hasPairContact(frame) {
     frame.companionOutcomeAttribution.contacts.includes("player");
 }
 
+function isExpectedCommandFrame(frame, expectedY) {
+  return frame.situated.playerControl.move.x > 0.99 &&
+    Math.abs(frame.situated.playerControl.move.y) <= 1e-5 &&
+    approx(frame.companionVelocityCommand.velocity.x, EXPECTED_COMPONENT, 1e-5) &&
+    approx(frame.companionVelocityCommand.velocity.y, expectedY, 1e-5);
+}
+
 function trajectoryFrom(frames) {
   return frames.map((frame) => ({
     observationTick: frame.observationTick,
@@ -59,14 +66,37 @@ function trajectoryFrom(frames) {
   }));
 }
 
-async function waitForNewHeadOnFrames(page, baseCount, count, timeout = 5_000) {
-  await page.waitForFunction(
-    ({ baseCount, count }) => {
+async function waitForCommandStart(page, baseCount, expectedY, timeout = 5_000) {
+  const handle = await page.waitForFunction(
+    ({ baseCount, expectedComponent, expectedY }) => {
       const frames = (window.__authorityA0BrowserBridge?.incident().frames ?? [])
         .filter((frame) => frame.scenarioId === "head-on");
-      return frames.length >= baseCount + count;
+      const candidates = frames.slice(baseCount);
+      const match = candidates.find((frame) =>
+        frame.situated.playerControl.move.x > 0.99 &&
+        Math.abs(frame.situated.playerControl.move.y) <= 1e-5 &&
+        Math.abs(frame.companionVelocityCommand.velocity.x - expectedComponent) <= 1e-5 &&
+        Math.abs(frame.companionVelocityCommand.velocity.y - expectedY) <= 1e-5
+      );
+      return match ? { observationTick: match.observationTick } : null;
     },
-    { baseCount, count },
+    { baseCount, expectedComponent: EXPECTED_COMPONENT, expectedY },
+    { timeout }
+  );
+  const value = await handle.jsonValue();
+  invariant(value && Number.isInteger(value.observationTick), "Expected command never reached A0 evidence.");
+  return value.observationTick;
+}
+
+async function waitForCommandWindow(page, startObservationTick, count, timeout = 5_000) {
+  await page.waitForFunction(
+    ({ startObservationTick, count }) => {
+      const frames = (window.__authorityA0BrowserBridge?.incident().frames ?? [])
+        .filter((frame) => frame.scenarioId === "head-on");
+      const startIndex = frames.findIndex((frame) => frame.observationTick === startObservationTick);
+      return startIndex >= 0 && frames.length >= startIndex + count;
+    },
+    { startObservationTick, count },
     { timeout }
   );
 }
@@ -107,20 +137,22 @@ async function runVariant(browser, variant) {
     await page.waitForTimeout(150);
     await assertNoFault(page, errors, variant.id);
 
-    // Capture the participant pre-action frame first. Screenshot capture itself can
-    // span multiple live World steps, so the A0 frame baseline must be sampled
-    // afterwards or those idle steps contaminate the bounded action window.
     const participantBefore = await canvas.screenshot({ type: "jpeg", quality: 60 });
     const beforeIncident = await bridgeIncident(page);
     const baseCount = headOnFrames(beforeIncident).length;
 
+    // Keyboard events are necessarily delivered sequentially. Do not count those
+    // transient assembly ticks as execution of the intended compound command.
+    // Anchor the bounded specimen to the first A0 frame that actually observes
+    // player +X together with the complete reflected tangent companion velocity.
     await page.keyboard.down("d");
     await page.keyboard.down("ArrowRight");
     await page.keyboard.down(variant.verticalKey);
+    const commandStartObservationTick = await waitForCommandStart(page, baseCount, variant.expectedY);
 
-    await waitForNewHeadOnFrames(page, baseCount, 30);
+    await waitForCommandWindow(page, commandStartObservationTick, 30);
     const participantMid = await canvas.screenshot({ type: "jpeg", quality: 60 });
-    await waitForNewHeadOnFrames(page, baseCount, WORLD_FRAMES);
+    await waitForCommandWindow(page, commandStartObservationTick, WORLD_FRAMES);
 
     await page.keyboard.up("d");
     await page.keyboard.up("ArrowRight");
@@ -129,18 +161,18 @@ async function runVariant(browser, variant) {
     const participantAfter = await canvas.screenshot({ type: "jpeg", quality: 60 });
     const researchAfter = await page.screenshot({ type: "jpeg", quality: 55, fullPage: true });
     const incident = await bridgeIncident(page);
-    const frames = headOnFrames(incident).slice(baseCount, baseCount + WORLD_FRAMES);
+    const allFrames = headOnFrames(incident);
+    const startIndex = allFrames.findIndex((frame) => frame.observationTick === commandStartObservationTick);
+    invariant(startIndex >= 0, `${variant.id}: command-start A0 frame left the incident buffer.`);
+    const frames = allFrames.slice(startIndex, startIndex + WORLD_FRAMES);
     const trajectory = trajectoryFrom(frames);
 
-    invariant(trajectory.length === WORLD_FRAMES, `${variant.id}: expected ${WORLD_FRAMES} frames, got ${trajectory.length}.`);
-    const active = trajectory.filter((frame) => frame.playerControl.x > 0.99);
-    invariant(active.length >= 55, `${variant.id}: too few active player frames (${active.length}).`);
-
-    const commandFrames = active.filter((frame) =>
-      approx(frame.companionCommand.x, EXPECTED_COMPONENT, 1e-5) &&
-      approx(frame.companionCommand.y, variant.expectedY, 1e-5)
+    invariant(trajectory.length === WORLD_FRAMES, `${variant.id}: expected ${WORLD_FRAMES} command-window frames, got ${trajectory.length}.`);
+    const exactCommandFrames = frames.filter((frame) => isExpectedCommandFrame(frame, variant.expectedY));
+    invariant(
+      exactCommandFrames.length === WORLD_FRAMES,
+      `${variant.id}: compound command was not stable for the full bounded window (${exactCommandFrames.length}/${WORLD_FRAMES}).`
     );
-    invariant(commandFrames.length >= 55, `${variant.id}: browser command did not match the Z4 tangent velocity often enough (${commandFrames.length}).`);
 
     const contacts = trajectory.filter((frame) => frame.contact);
     invariant(contacts.length === 0, `${variant.id}: tangent class still produced ${contacts.length} player/companion contact frames.`);
@@ -169,9 +201,10 @@ async function runVariant(browser, variant) {
         companion: ["ArrowRight", variant.verticalKey],
         expectedCompanionVelocity: { x: EXPECTED_COMPONENT, y: variant.expectedY }
       },
+      commandStartObservationTick,
+      preCommandTransitionFrameCount: Math.max(0, startIndex - baseCount),
       frameCount: trajectory.length,
-      activeFrameCount: active.length,
-      exactCommandFrameCount: commandFrames.length,
+      exactCommandFrameCount: exactCommandFrames.length,
       contactFrameCount: contacts.length,
       minCenterDistance,
       playerDisplacement,
@@ -217,12 +250,13 @@ try {
   invariant(mirrorInitialError <= 1e-9, `Tangent specimens did not start from the same physical state (${mirrorInitialError}).`);
 
   const summary = {
-    schema: "companion-brain-lab-a1-2z4b-head-on-tangent-class-browser-v1",
+    schema: "companion-brain-lab-a1-2z4b-head-on-tangent-class-browser-v2",
     authority: "ZERO_A1_2_MOVEMENT_AUTHORITY_MANUAL_SPECIMEN_ONLY",
     sourceSha: process.env.GITHUB_SHA ?? null,
     browser: await browser.version(),
     scenario: "head-on",
     worldFramesPerVariant: WORLD_FRAMES,
+    actionWindow: "FIRST_A0_FRAME_WITH_COMPLETE_COMPOUND_COMMAND_THROUGH_NEXT_60_WORLD_FRAMES",
     relationToZ4: "EXECUTES_BOTH_REFLECTED_TANGENT_COMMANDS_AS_BOUNDED_MANUAL_BROWSER_SPECIMENS_NO_SELECTOR_CLAIM",
     results: results.map(({ trajectory, ...result }) => result)
   };
