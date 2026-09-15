@@ -11,7 +11,8 @@
     "browser:audit:a1-2z3": "node scripts/authority-a1-2z3-head-on-browser-specimen.mjs",
     "browser:audit:a1-2z4b": "node scripts/authority-a1-2z4b-head-on-tangent-class-browser-specimen.mjs",
     "browser:audit:a1-2z4c": "node scripts/authority-a1-2z4c-live-state-shadow-browser-specimen.mjs",
-    "browser:audit": "node scripts/ccc0-browser-audit.mjs && node scripts/authority-a0-browser-audit.mjs && node scripts/authority-a1-0-browser-audit.mjs && node scripts/authority-a1-1f-browser-audit.mjs && npm run browser:audit:a1-2z3 && npm run browser:audit:a1-2z4b && npm run browser:audit:a1-2z4c"
+    "browser:audit:a1-2z4d": "node scripts/authority-a1-2z4d-class-support-browser-trace.mjs",
+    "browser:audit": "node scripts/ccc0-browser-audit.mjs && node scripts/authority-a0-browser-audit.mjs && node scripts/authority-a1-0-browser-audit.mjs && node scripts/authority-a1-1f-browser-audit.mjs && npm run browser:audit:a1-2z3 && npm run browser:audit:a1-2z4b && npm run browser:audit:a1-2z4c && npm run browser:audit:a1-2z4d"
   },
   "dependencies": {
     "@dimforge/rapier2d-deterministic-compat": "0.20.0",
