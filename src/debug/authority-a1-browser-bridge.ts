@@ -1,5 +1,5 @@
 import type { MotionIntent } from "../world/types";
-import type { A1AuthorityRuntime, A1AuthorityVariant } from "../coordination/a1-authority-runtime";
+import type { A1AuthorityRuntimeDebug, A1AuthorityVariant } from "../coordination/a1-authority-runtime";
 import { cloneA1Situation, type A1Situation } from "../coordination/a1-situation";
 
 const QUERY_FLAG = "a1debug";
@@ -58,19 +58,18 @@ function cloneDecision(value: AuthorityA10BrowserDecisionEvidence): AuthorityA10
 }
 
 export function publishAuthorityA10BrowserDecision(input: {
-  runtime: A1AuthorityRuntime;
+  runtime: A1AuthorityRuntimeDebug;
   situation: A1Situation;
   baselineCompanionIntent: MotionIntent;
   selectedCompanionIntent: MotionIntent;
 }): void {
   if (!recordDecision) return;
   try {
-    const runtime = input.runtime.debugState();
     recordDecision({
       tick: input.situation.tick,
-      variant: runtime.variant,
-      epoch: runtime.epoch,
-      passThroughSteps: runtime.passThroughSteps,
+      variant: input.runtime.variant,
+      epoch: input.runtime.epoch,
+      passThroughSteps: input.runtime.passThroughSteps,
       situation: cloneA1Situation(input.situation),
       baselineCompanionIntent: cloneIntent(input.baselineCompanionIntent),
       selectedCompanionIntent: cloneIntent(input.selectedCompanionIntent)
