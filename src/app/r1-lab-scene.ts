@@ -19,6 +19,7 @@ import type { SpatialLocomotionDecision } from "../brain/spatial-locomotion";
 import { A1AuthorityRuntime } from "../coordination/a1-authority-runtime";
 import { buildA1Situation } from "../coordination/a1-situation";
 import type { ShadowCoordinationFrame } from "../coordination/shadow-coordination-frame";
+import { publishAuthorityA11fBrowserObservation } from "../debug/authority-a1-1f-browser-bridge";
 import { publishAuthorityA10BrowserDecision } from "../debug/authority-a1-browser-bridge";
 import {
   CausalPanel,
@@ -352,12 +353,24 @@ export class R1LabScene extends Phaser.Scene {
         companionCapability: this.world.actorMovementCapability("companion"),
         previousWorldStep: this.world.latestAuthorityA0StepEvidence()
       });
+      this.a1Authority.observeRelationship({
+        situation,
+        snapshot: before,
+        query: bindWorldStaticTraversalQuery(this.world)
+      });
       companionIntent = this.a1Authority.resolveCompanionIntent({
         baselineIntent: baselineCompanionIntent,
         situation
       });
+      const a1Runtime = this.a1Authority.debugState();
       publishAuthorityA10BrowserDecision({
-        runtime: this.a1Authority.debugState(),
+        runtime: a1Runtime,
+        situation,
+        baselineCompanionIntent,
+        selectedCompanionIntent: companionIntent
+      });
+      publishAuthorityA11fBrowserObservation({
+        runtime: a1Runtime,
         situation,
         baselineCompanionIntent,
         selectedCompanionIntent: companionIntent
