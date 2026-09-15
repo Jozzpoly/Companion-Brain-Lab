@@ -9,7 +9,6 @@ import type { A1Situation } from "./a1-situation";
 import type { Vec2 } from "../world/types";
 
 const CLEARANCE_EPSILON = 1e-8;
-const TIME_EPSILON = 1e-9;
 
 export type A1G3EgressPolicyStatus =
   | "PASS_CLEAR"
@@ -86,7 +85,7 @@ function validatePhysicalEvidence(evidence: A1HardRadiusSafetyEvidence): void {
 
 function segmentsAreMonotonicEgress(evidence: A1HardRadiusSafetyEvidence): boolean {
   return evidence.segments.every((segment) =>
-    segment.closestApproachTimeSeconds <= segment.startTimeSeconds + TIME_EPSILON
+    segment.closestApproachTimeSeconds === segment.startTimeSeconds
   );
 }
 
@@ -126,9 +125,9 @@ function common(input: {
  *
  * The policy deliberately distinguishes new/worsening overlap from recovery.
  * Pre-existing contact can pass only when every piecewise segment has its
- * closest point at the segment start and terminal hard clearance improves.
- * Predicted touch from a previously clear state holds rather than silently
- * becoming either a hard collision or a normal pass.
+ * closest point exactly at the segment start and terminal hard clearance
+ * materially improves. Predicted touch from a previously clear state holds
+ * rather than silently becoming either a hard collision or a normal pass.
  */
 export function evaluateA1G3EgressPolicy(input: {
   physicalEvidence: A1HardRadiusSafetyEvidence;
