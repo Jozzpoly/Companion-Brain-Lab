@@ -17,6 +17,7 @@ export interface A1RelationshipOrientationMemory {
   provenance: "OWNER_CONTROL";
   direction: Vec2;
   sourceTick: number;
+  sourceStrength: number;
 }
 
 export interface A1RelationshipOrientationEvidence {
@@ -36,6 +37,10 @@ function magnitude(value: Vec2): number {
   return Math.hypot(value.x, value.y);
 }
 
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
 function normalized(value: Vec2): Vec2 {
   const length = magnitude(value);
   if (!Number.isFinite(length) || length <= EPSILON) {
@@ -44,11 +49,19 @@ function normalized(value: Vec2): Vec2 {
   return { x: value.x / length, y: value.y / length };
 }
 
+function validatedStrength(value: number): number {
+  if (!Number.isFinite(value) || value <= 0 || value > 1 + EPSILON) {
+    throw new Error("A1 relationship orientation memory source strength must be finite in (0, 1].");
+  }
+  return clamp01(value);
+}
+
 function cloneMemory(value: A1RelationshipOrientationMemory): A1RelationshipOrientationMemory {
   return {
     provenance: "OWNER_CONTROL",
     direction: { ...value.direction },
-    sourceTick: value.sourceTick
+    sourceTick: value.sourceTick,
+    sourceStrength: value.sourceStrength
   };
 }
 
@@ -66,7 +79,8 @@ function validatedMemory(
   return {
     provenance: "OWNER_CONTROL",
     direction: normalized(memory.direction),
-    sourceTick: memory.sourceTick
+    sourceTick: memory.sourceTick,
+    sourceStrength: validatedStrength(memory.sourceStrength)
   };
 }
 
@@ -75,7 +89,7 @@ export function a1OrientationMemoryStrength(ageTicks: number): number {
     throw new Error("A1 relationship orientation memory age must be finite and non-negative.");
   }
   const age = Math.floor(ageTicks);
-  const remaining = Math.max(0, Math.min(1, 1 - age / A1_ORIENTATION_MEMORY_TICKS));
+  const remaining = clamp01(1 - age / A1_ORIENTATION_MEMORY_TICKS);
   return remaining * remaining * (3 - 2 * remaining);
 }
 
@@ -97,10 +111,15 @@ export function evaluateA1RelationshipOrientation(input: {
 
   if (input.situation.situated.playerControl.active) {
     const direction = normalized(currentControl);
+    const sourceStrength = clamp01(magnitude(currentControl));
+    if (sourceStrength <= EPSILON) {
+      throw new Error("A1 active Owner control must carry nonzero same-step requested motion.");
+    }
     const nextMemory: A1RelationshipOrientationMemory = {
       provenance: "OWNER_CONTROL",
       direction: { ...direction },
-      sourceTick: tick
+      sourceTick: tick,
+      sourceStrength
     };
     return {
       tick,
@@ -108,17 +127,17 @@ export function evaluateA1RelationshipOrientation(input: {
       direction,
       sourceTick: tick,
       ageTicks: 0,
-      strength: 1,
+      strength: sourceStrength,
       samplingBasis: { ...direction },
       samplingBasisSource: "SEMANTIC_ORIENTATION",
       nextMemory,
-      reason: "meaningful same-step Owner control defines relationship orientation"
+      reason: `meaningful same-step Owner control defines relationship orientation with strength ${sourceStrength.toFixed(3)}`
     };
   }
 
   if (memory) {
     const ageTicks = tick - memory.sourceTick;
-    const strength = a1OrientationMemoryStrength(ageTicks);
+    const strength = memory.sourceStrength * a1OrientationMemoryStrength(ageTicks);
     if (strength > EPSILON) {
       return {
         tick,
