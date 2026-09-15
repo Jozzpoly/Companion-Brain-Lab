@@ -7,7 +7,8 @@ import {
 import type { A1RelationshipOrientationEvidence } from "./a1-relationship-orientation";
 import {
   sampleA1RelationshipSemanticField,
-  type A1RelationshipSemanticProfile
+  type A1RelationshipObjectiveProfile,
+  type A1RelationshipSamplingConfig
 } from "./a1-relationship-utility";
 import { projectA1RelationshipSemanticField } from "./a1-relationship-projection";
 
@@ -86,23 +87,25 @@ function clearTraversal(from: Vec2, to: Vec2, radius: number): StaticCircleTrave
   };
 }
 
-const RING_PROFILE: A1RelationshipSemanticProfile = {
-  preferredRadius: 1.45,
-  radialSigma: 0.3,
-  radialWeight: 1,
-  directionalWeight: 0,
-  sampleDirections: 16,
-  sampleRadii: [1.45],
+const RING_OBJECTIVE: A1RelationshipObjectiveProfile = {
+  radial: { preferredRadius: 1.45, sigma: 0.3, weight: 1 },
+  directional: { kind: "NONE" }
+};
+
+const DIRECTIONAL_OBJECTIVE: A1RelationshipObjectiveProfile = {
+  radial: { preferredRadius: 1.45, sigma: 0.3, weight: 1 },
+  directional: { kind: "AVOID_FORWARD_HEMISPHERE", weight: 1 }
+};
+
+const RING_SAMPLING: A1RelationshipSamplingConfig = {
+  directions: 16,
+  radii: [1.45],
   nearBestUtilityWindow: 0
 };
 
-const DIRECTIONAL_PROFILE: A1RelationshipSemanticProfile = {
-  preferredRadius: 1.45,
-  radialSigma: 0.3,
-  radialWeight: 1,
-  directionalWeight: 1,
-  sampleDirections: 16,
-  sampleRadii: [1.45],
+const DIRECTIONAL_SAMPLING: A1RelationshipSamplingConfig = {
+  directions: 16,
+  radii: [1.45],
   nearBestUtilityWindow: 0.2
 };
 
@@ -111,13 +114,15 @@ function observation(input: {
   player: Vec2;
   companion: Vec2;
   orientation: A1RelationshipOrientationEvidence;
-  profile?: A1RelationshipSemanticProfile;
+  objective?: A1RelationshipObjectiveProfile;
+  sampling?: A1RelationshipSamplingConfig;
   budget?: number;
   strategy?: "SEMANTIC_PRIORITY" | "STRATIFIED_COVERAGE";
 }) {
   const field = sampleA1RelationshipSemanticField({
     orientation: input.orientation,
-    profile: input.profile ?? RING_PROFILE
+    objective: input.objective ?? RING_OBJECTIVE,
+    sampling: input.sampling ?? RING_SAMPLING
   });
   const projection = projectA1RelationshipSemanticField({
     field,
@@ -209,14 +214,16 @@ describe("Authority-A1.1d sampled accessibility", () => {
       player: center,
       companion: { x: 16, y: 16 },
       orientation: semanticOrientation(40, { x: 1, y: 0 }),
-      profile: DIRECTIONAL_PROFILE
+      objective: DIRECTIONAL_OBJECTIVE,
+      sampling: DIRECTIONAL_SAMPLING
     });
     const current = observation({
       tick: 41,
       player: center,
       companion: { x: 20, y: 12 },
       orientation: semanticOrientation(41, { x: 0, y: 1 }),
-      profile: DIRECTIONAL_PROFILE
+      objective: DIRECTIONAL_OBJECTIVE,
+      sampling: DIRECTIONAL_SAMPLING
     });
 
     const continuity = compareA1AccessibilityContinuity({ previous, current });
@@ -235,14 +242,16 @@ describe("Authority-A1.1d sampled accessibility", () => {
       player: { x: 20, y: 16 },
       companion: { x: 16, y: 16 },
       orientation: semanticOrientation(50, { x: 1, y: 0 }),
-      profile: DIRECTIONAL_PROFILE
+      objective: DIRECTIONAL_OBJECTIVE,
+      sampling: DIRECTIONAL_SAMPLING
     });
     const current = observation({
       tick: 51,
       player: { x: 20, y: 16 },
       companion: { x: 16, y: 16 },
       orientation: noOrientation(51),
-      profile: DIRECTIONAL_PROFILE
+      objective: DIRECTIONAL_OBJECTIVE,
+      sampling: DIRECTIONAL_SAMPLING
     });
 
     const continuity = compareA1AccessibilityContinuity({ previous, current });
