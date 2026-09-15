@@ -48,3 +48,12 @@ jobs:
           echo "NPM_ARBORIST_EDGESOUT_FALLBACK_USED=1"
       - run: npm run check
       - run: npm run browser:audit
+      - name: Capture A1.2z4f tick-zero early live class map
+        run: node scripts/authority-a1-2z4f-tick0-early-live-class-map.mjs
+      - name: Upload A1.2z4f tick-zero early live class map
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-2z4f-early-live-class-map-${{ github.sha }}
+          path: artifacts/a1-2z4f-tick0-early-live-class-map.json
+          if-no-files-found: error
+          retention-days: 7
