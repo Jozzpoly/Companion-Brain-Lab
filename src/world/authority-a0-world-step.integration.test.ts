@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { RapierPhysicalWorld } from "../physics/rapier-physical-world";
+import type { AuthorityA0WorldStepEvidence } from "./authority-a0-step-evidence";
+import { scenario } from "./scenarios";
 import { LabWorld } from "./world";
 
 describe("Authority-A0 live World step evidence", () => {
@@ -29,7 +32,7 @@ describe("Authority-A0 live World step evidence", () => {
   it("observes canonical zero-input player motion as external after companion contact", async () => {
     const world = await LabWorld.create("head-on");
     try {
-      let external = null;
+      let external: AuthorityA0WorldStepEvidence | null = null;
       for (let tick = 0; tick < 120; tick += 1) {
         world.step([
           { actorId: "player", move: { x: 0, y: 0 } },
@@ -80,6 +83,37 @@ describe("Authority-A0 live World step evidence", () => {
       expect(second?.companionOutcomeAttribution.contacts).not.toContain("fake");
     } finally {
       world.dispose();
+    }
+  });
+
+  it("keeps physical outcomes exact against an uninstrumented Rapier world", async () => {
+    const lab = await LabWorld.create("pillar");
+    const raw = await RapierPhysicalWorld.create(scenario("pillar"));
+    try {
+      for (let tick = 0; tick < 180; tick += 1) {
+        const phase = tick % 120;
+        const playerMove = phase < 30
+          ? { x: 1, y: 0 }
+          : phase < 60
+            ? { x: 0, y: 1 }
+            : phase < 90
+              ? { x: -1, y: 0 }
+              : { x: 0, y: -1 };
+        const companionMove = tick % 40 < 20
+          ? { x: -0.6, y: 0.35 }
+          : { x: -0.35, y: -0.6 };
+        const intents = [
+          { actorId: "player" as const, move: playerMove },
+          { actorId: "companion" as const, move: companionMove }
+        ];
+
+        const labAfter = lab.step(intents);
+        const rawAfter = raw.step(intents);
+        expect(labAfter.actors).toEqual(rawAfter);
+      }
+    } finally {
+      lab.dispose();
+      raw.dispose();
     }
   });
 });
