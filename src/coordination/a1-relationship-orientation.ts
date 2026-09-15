@@ -84,8 +84,12 @@ export function evaluateA1RelationshipOrientation(input: {
   memory?: A1RelationshipOrientationMemory | null;
 }): A1RelationshipOrientationEvidence {
   const tick = input.situation.tick;
-  if (input.situation.situated.tick !== tick || input.situation.situated.playerControl.sourceTick !== tick) {
-    throw new Error("A1 relationship orientation requires same-tick situated Owner control evidence.");
+  if (
+    input.situation.situated.tick !== tick ||
+    input.situation.situated.playerControl.sourceTick !== tick ||
+    input.situation.playerRequestedVelocity.sourceTick !== tick
+  ) {
+    throw new Error("A1 relationship orientation requires same-tick Owner control and requested-velocity evidence.");
   }
 
   const memory = validatedMemory(input.memory, tick);
