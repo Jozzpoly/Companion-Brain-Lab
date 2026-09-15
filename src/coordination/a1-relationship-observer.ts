@@ -177,8 +177,10 @@ export class A1RelationshipObserver {
     query: StaticTraversalQuery;
   }): A1RelationshipObserverDebug {
     validateSituationSnapshotAlignment(input.situation, input.snapshot);
-    if (this.latestTickValue !== null && input.situation.tick < this.latestTickValue) {
-      throw new Error("A1 relationship observer cannot move backward in World time without reset.");
+    if (this.latestTickValue !== null && input.situation.tick <= this.latestTickValue) {
+      throw new Error(
+        `A1 relationship observer must strictly advance World time: t${input.situation.tick} follows t${this.latestTickValue}; duplicate/backward observation requires reset.`
+      );
     }
 
     const orientation = evaluateA1RelationshipOrientation({
