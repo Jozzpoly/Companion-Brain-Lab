@@ -61,6 +61,7 @@ describe("Authority-A1.1f passive relationship observer", () => {
         snapshot,
         query: countedQuery
       });
+      expect(t0.lastAttemptTick).toBe(0);
       expect(t0.latestTick).toBe(0);
       expect(t0.orientation?.source).toBe("SAME_STEP_OWNER");
       expect(t0.orientation?.direction).toEqual({ x: 1, y: 0 });
@@ -83,6 +84,7 @@ describe("Authority-A1.1f passive relationship observer", () => {
         query: forbiddenQuery
       });
 
+      expect(t1.lastAttemptTick).toBe(1);
       expect(t1.latestTick).toBe(1);
       expect(t1.orientation?.source).toBe("SAME_STEP_OWNER");
       expect(t1.orientation?.sourceTick).toBe(1);
@@ -125,6 +127,7 @@ describe("Authority-A1.1f passive relationship observer", () => {
             throw new Error(`unexpected heavy query at t${tick}`);
           }
         });
+        expect(debug.lastAttemptTick).toBe(tick);
         expect(debug.heavy?.sourceTick).toBe(0);
         expect(debug.heavy?.ageTicks).toBe(tick);
         expect(debug.heavyAttempts).toBe(1);
@@ -139,6 +142,7 @@ describe("Authority-A1.1f passive relationship observer", () => {
       });
 
       expect(snapshot.tick).toBe(A1_RELATIONSHIP_HEAVY_INTERVAL_TICKS);
+      expect(refreshed.lastAttemptTick).toBe(A1_RELATIONSHIP_HEAVY_INTERVAL_TICKS);
       expect(refreshed.heavy?.sourceTick).toBe(A1_RELATIONSHIP_HEAVY_INTERVAL_TICKS);
       expect(refreshed.heavy?.ageTicks).toBe(0);
       expect(refreshed.heavyAttempts).toBe(2);
@@ -167,6 +171,8 @@ describe("Authority-A1.1f passive relationship observer", () => {
         }
       })).toThrow(/injected heavy failure/);
       const afterFailure = observer.debugState();
+      expect(afterFailure.lastAttemptTick).toBe(0);
+      expect(afterFailure.latestTick).toBe(0);
       expect(afterFailure.heavyAttempts).toBe(1);
       expect(afterFailure.heavyEvaluations).toBe(0);
       expect(afterFailure.lastHeavyAttemptTick).toBe(0);
@@ -182,6 +188,7 @@ describe("Authority-A1.1f passive relationship observer", () => {
             throw new Error(`heavy retry storm at t${tick}`);
           }
         });
+        expect(debug.lastAttemptTick).toBe(tick);
         expect(debug.latestTick).toBe(tick);
         expect(debug.semantic?.sourceTick).toBe(tick);
         expect(debug.heavyAttempts).toBe(1);
@@ -195,6 +202,7 @@ describe("Authority-A1.1f passive relationship observer", () => {
         snapshot,
         query: clearTraversal
       });
+      expect(recovered.lastAttemptTick).toBe(A1_RELATIONSHIP_HEAVY_INTERVAL_TICKS);
       expect(recovered.latestTick).toBe(A1_RELATIONSHIP_HEAVY_INTERVAL_TICKS);
       expect(recovered.heavyAttempts).toBe(2);
       expect(recovered.heavyEvaluations).toBe(1);
@@ -269,6 +277,7 @@ describe("Authority-A1.1f passive relationship observer", () => {
           throw new Error("next-tick light observation must not trigger heavy work");
         }
       });
+      expect(second.lastAttemptTick).toBe(1);
       expect(second.semantic?.sourceTick).toBe(1);
       expect(second.semantic?.objectiveSignature).toBe(objectiveSignature);
       expect(second.semantic?.samplingSignature).toBe(samplingSignature);
@@ -293,6 +302,7 @@ describe("Authority-A1.1f passive relationship observer", () => {
 
       observer.reset();
       expect(observer.debugState()).toEqual({
+        lastAttemptTick: null,
         latestTick: null,
         observations: 0,
         heavyAttempts: 0,
@@ -330,6 +340,9 @@ describe("Authority-A1.1f passive relationship observer", () => {
         }
       })).toThrow(/does not match the supplied World snapshot/);
       expect(queries).toBe(0);
+      expect(observer.debugState().lastAttemptTick).toBe(0);
+      expect(observer.debugState().latestTick).toBeNull();
+      expect(observer.debugState().observations).toBe(0);
     } finally {
       world.dispose();
     }
