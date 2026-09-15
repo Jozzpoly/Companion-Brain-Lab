@@ -154,22 +154,24 @@ function common(input: {
 }
 
 /**
- * First bounded G4 policy: compare two otherwise G3-comparable candidate
- * futures under the exact same player counterfactual. New reciprocal contact
- * is avoidable player-agency conflict when another candidate passes G3.
- *
- * This deliberately does not score comfort distance, cross-front etiquette,
- * relationship utility or candidate family names. It is pairwise cooperation
- * evidence only, not a global selector.
+ * Identity-aware entry to the already-qualified A1.2n cooperation policy.
+ * The comparison ids decide only whether the two actions are distinct for this
+ * comparison. Candidate ids remain untouched provenance and must still align
+ * exactly with A1.2l/A1.2m evidence.
  */
-export function compareA1G4CooperationCandidates(input: {
+export function compareA1G4CooperationCandidatesWithIdentity(input: {
   candidateA: A1G4CandidateEvidence;
   candidateB: A1G4CandidateEvidence;
+  comparisonAId: string;
+  comparisonBId: string;
 }): A1G4CooperationComparisonEvidence {
   const a = input.candidateA;
   const b = input.candidateB;
-  if (a.candidateId === b.candidateId) {
-    throw new Error("A1.2n requires two distinct candidate ids.");
+  if (!input.comparisonAId || !input.comparisonBId) {
+    throw new Error("A1.2n comparison identity requires two non-empty ids.");
+  }
+  if (input.comparisonAId === input.comparisonBId) {
+    throw new Error("A1.2n requires two distinct comparison action ids.");
   }
   const aViability = validateCandidate("A", a);
   const bViability = validateCandidate("B", b);
@@ -223,5 +225,30 @@ export function compareA1G4CooperationCandidates(input: {
     decision: "NO_PREFERENCE",
     preferredCandidateId: null,
     reason: "both candidate futures already pass G3; this bounded G4 slice does not invent a comfort or family-label preference between them"
+  });
+}
+
+/**
+ * First bounded G4 policy: compare two otherwise G3-comparable candidate
+ * futures under the exact same player counterfactual. New reciprocal contact
+ * is avoidable player-agency conflict when another candidate passes G3.
+ *
+ * Legacy A1.2n callers use candidate ids as comparison identity. A1.2r0 may
+ * provide concrete command proposal ids through the identity-aware entry while
+ * preserving candidate ids as evidence provenance only.
+ *
+ * This deliberately does not score comfort distance, cross-front etiquette,
+ * relationship utility or candidate family names. It is pairwise cooperation
+ * evidence only, not a global selector.
+ */
+export function compareA1G4CooperationCandidates(input: {
+  candidateA: A1G4CandidateEvidence;
+  candidateB: A1G4CandidateEvidence;
+}): A1G4CooperationComparisonEvidence {
+  return compareA1G4CooperationCandidatesWithIdentity({
+    candidateA: input.candidateA,
+    candidateB: input.candidateB,
+    comparisonAId: input.candidateA.candidateId,
+    comparisonBId: input.candidateB.candidateId
   });
 }
