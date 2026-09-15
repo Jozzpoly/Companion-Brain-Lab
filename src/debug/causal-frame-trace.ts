@@ -57,6 +57,12 @@ export interface CausalAuthorityA0Evidence {
   playerContacts: readonly string[];
   playerMotionProvenanceState: string;
   playerMotionProvenanceReason: string;
+  playerOutcomeRequestedVelocity: Vec2;
+  playerOutcomeActualVelocity: Vec2;
+  playerOutcomeMotionError: number;
+  playerOutcomeContacts: readonly string[];
+  playerOutcomeMotionProvenanceState: string;
+  playerOutcomeMotionProvenanceReason: string;
   playerCapabilityMaxSpeed: number;
   companionCapabilityMaxSpeed: number;
   companionVelocityCommand: Vec2;
@@ -166,6 +172,9 @@ function cloneAuthorityA0(
     playerRequestedVelocity: { ...value.playerRequestedVelocity },
     playerActualVelocity: { ...value.playerActualVelocity },
     playerContacts: [...value.playerContacts],
+    playerOutcomeRequestedVelocity: { ...value.playerOutcomeRequestedVelocity },
+    playerOutcomeActualVelocity: { ...value.playerOutcomeActualVelocity },
+    playerOutcomeContacts: [...value.playerOutcomeContacts],
     companionVelocityCommand: { ...value.companionVelocityCommand }
   };
 }
