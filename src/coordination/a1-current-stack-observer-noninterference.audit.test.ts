@@ -18,11 +18,16 @@ function motion(actorId: "player" | "companion", move: Vec2): MotionIntent {
   return { actorId, move: { ...move } };
 }
 
-function queryCurrentA12EvidenceStack(world: LabWorld, playerMove: Vec2) {
-  const before = world.snapshot();
-  const previousWorldStep = before.tick === 0 ? null : world.latestAuthorityA0StepEvidence();
+function queryCurrentA12EvidenceStack(
+  world: LabWorld,
+  decisionSnapshot: ReturnType<LabWorld["snapshot"]>,
+  playerMove: Vec2
+) {
+  const beforeFresh = world.snapshot();
+  const previousWorldStep =
+    decisionSnapshot.tick === 0 ? null : world.latestAuthorityA0StepEvidence();
   const situation = buildA1Situation({
-    snapshot: before,
+    snapshot: decisionSnapshot,
     playerIntent: motion("player", playerMove),
     playerCapability: world.actorMovementCapability("player"),
     companionCapability: world.actorMovementCapability("companion"),
@@ -96,10 +101,10 @@ function queryCurrentA12EvidenceStack(world: LabWorld, playerMove: Vec2) {
   });
 
   expect(evidenceDigest.length).toBeGreaterThan(100);
-  expect(world.snapshot()).toEqual(before);
+  expect(world.snapshot()).toEqual(beforeFresh);
 
   return {
-    sourceTick: before.tick,
+    sourceTick: decisionSnapshot.tick,
     proposalCount: proposalSet.proposalCount,
     certificateCount: certificates.certificates.length
   };
@@ -117,6 +122,10 @@ describe("Authority-A1.2z1 donor-derived observer-query non-interference", () =>
     const observed = await LabWorld.create("open");
 
     try {
+      let controlDecisionSnapshot = control.snapshot();
+      let observedDecisionSnapshot = observed.snapshot();
+
+      expect(observedDecisionSnapshot).toEqual(controlDecisionSnapshot);
       expect(observed.snapshot()).toEqual(control.snapshot());
       expect(observed.latestAuthorityA0StepEvidence()).toEqual(control.latestAuthorityA0StepEvidence());
 
@@ -124,31 +133,35 @@ describe("Authority-A1.2z1 donor-derived observer-query non-interference", () =>
 
       for (let step = 0; step < 12; step += 1) {
         const playerMove = playerMoveForPhase(step);
-        const controlBefore = control.snapshot();
-        const observedBefore = observed.snapshot();
+        const controlBeforeFresh = control.snapshot();
+        const observedBeforeFresh = observed.snapshot();
 
-        expect(observedBefore).toEqual(controlBefore);
+        expect(observedDecisionSnapshot).toEqual(controlDecisionSnapshot);
+        expect(observedBeforeFresh).toEqual(controlBeforeFresh);
         expect(observed.latestAuthorityA0StepEvidence()).toEqual(control.latestAuthorityA0StepEvidence());
 
-        observations.push(queryCurrentA12EvidenceStack(observed, playerMove));
+        observations.push(
+          queryCurrentA12EvidenceStack(observed, observedDecisionSnapshot, playerMove)
+        );
 
         // Re-read the public/current authority surfaces after the expensive research query.
         // These reads are intentionally absent from the control twin.
-        expect(observed.snapshot()).toEqual(controlBefore);
+        expect(observed.snapshot()).toEqual(observedBeforeFresh);
         observed.actorMovementCapability("player");
         observed.actorMovementCapability("companion");
         observed.latestAuthorityA0StepEvidence();
-        expect(observed.snapshot()).toEqual(controlBefore);
+        expect(observed.snapshot()).toEqual(observedBeforeFresh);
         expect(observed.latestAuthorityA0StepEvidence()).toEqual(control.latestAuthorityA0StepEvidence());
 
         const intents = [
           motion("player", playerMove),
           motion("companion", { x: 0, y: 0 })
         ];
-        const controlAfter = control.step(intents);
-        const observedAfter = observed.step(intents);
+        controlDecisionSnapshot = control.step(intents);
+        observedDecisionSnapshot = observed.step(intents);
 
-        expect(observedAfter).toEqual(controlAfter);
+        expect(observedDecisionSnapshot).toEqual(controlDecisionSnapshot);
+        expect(observed.snapshot()).toEqual(control.snapshot());
         expect(observed.latestAuthorityA0StepEvidence()).toEqual(control.latestAuthorityA0StepEvidence());
       }
 
@@ -158,6 +171,7 @@ describe("Authority-A1.2z1 donor-derived observer-query non-interference", () =>
       );
       expect(observations.every((entry) => entry.proposalCount > 0)).toBe(true);
       expect(observations.every((entry) => entry.certificateCount === entry.proposalCount)).toBe(true);
+      expect(observedDecisionSnapshot).toEqual(controlDecisionSnapshot);
       expect(observed.snapshot()).toEqual(control.snapshot());
       expect(observed.latestAuthorityA0StepEvidence()).toEqual(control.latestAuthorityA0StepEvidence());
     } finally {
