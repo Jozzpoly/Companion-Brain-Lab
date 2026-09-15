@@ -2,6 +2,7 @@ import type { Vec2 } from "../world/types";
 import type { A1RelationshipOrientationEvidence } from "./a1-relationship-orientation";
 
 const EPSILON = 1e-9;
+const ORIENTATION_ALIGNMENT_EPSILON = 1e-6;
 const TAU = Math.PI * 2;
 
 export interface A1RelationshipSemanticProfile {
@@ -149,8 +150,12 @@ function validatedOrientation(input: A1RelationshipOrientationEvidence): {
   if (!input.direction || input.samplingBasisSource !== "SEMANTIC_ORIENTATION" || strength <= EPSILON) {
     throw new Error("A1 semantic orientation requires a live direction, strength and semantic sampling-basis provenance.");
   }
+  const direction = normalized(input.direction, "A1 relationship semantic orientation");
+  if (dot(direction, samplingBasis) < 1 - ORIENTATION_ALIGNMENT_EPSILON) {
+    throw new Error("A1 semantic sampling basis must align with the semantic orientation direction.");
+  }
   return {
-    direction: normalized(input.direction, "A1 relationship semantic orientation"),
+    direction,
     strength,
     samplingBasis
   };
