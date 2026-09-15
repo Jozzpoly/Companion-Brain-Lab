@@ -71,6 +71,31 @@ describe("Authority-A1 decision-time situation", () => {
     }
   });
 
+  it("matches real World normalization for an over-unit MotionIntent instead of overestimating requested speed", async () => {
+    const world = await LabWorld.create("open");
+    try {
+      const before = world.snapshot();
+      const playerIntent: MotionIntent = { actorId: "player", move: { x: 1.2, y: 0.9 } };
+      const situation = buildA1Situation({
+        snapshot: before,
+        playerIntent,
+        playerCapability: world.actorMovementCapability("player"),
+        companionCapability: world.actorMovementCapability("companion"),
+        previousWorldStep: null
+      });
+      const after = world.step([playerIntent, companionHold()]);
+      const player = after.actors.find((value) => value.id === "player");
+      if (!player) throw new Error("missing player");
+
+      expect(Math.hypot(situation.playerRequestedVelocity.move.x, situation.playerRequestedVelocity.move.y)).toBeCloseTo(1, 12);
+      expect(situation.playerRequestedVelocity.speed).toBeCloseTo(3, 12);
+      expect(situation.playerRequestedVelocity.velocity.x).toBeCloseTo(player.requestedVelocity.x, 12);
+      expect(situation.playerRequestedVelocity.velocity.y).toBeCloseTo(player.requestedVelocity.y, 12);
+    } finally {
+      world.dispose();
+    }
+  });
+
   it("rejects stale previous-outcome evidence instead of silently accepting a clock-phase mismatch", async () => {
     const world = await LabWorld.create("open");
     try {
