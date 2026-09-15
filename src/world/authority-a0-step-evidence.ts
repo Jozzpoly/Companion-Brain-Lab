@@ -1,5 +1,9 @@
 import {
+  bodyEvidenceFromSnapshot,
   buildSituatedEvidenceFrame,
+  classifyObservedPlayerMotion,
+  type PlayerBodyEvidence,
+  type PlayerMotionProvenanceEvidence,
   type SituatedEvidenceFrame
 } from "../coordination/situated-evidence";
 import {
@@ -17,6 +21,8 @@ export interface AuthorityA0WorldStepEvidence {
   observationTick: number;
   outcomeTick: number;
   situated: SituatedEvidenceFrame;
+  playerOutcomeBody: PlayerBodyEvidence;
+  playerOutcomeMotionProvenance: PlayerMotionProvenanceEvidence;
   companionVelocityCommand: VelocityCommand;
   companionOutcomeAttribution: OutcomeAttributionEvidence;
 }
@@ -37,6 +43,16 @@ function actor(snapshot: WorldSnapshot, actorId: MotionIntent["actorId"]) {
   return value;
 }
 
+function cloneBody(value: PlayerBodyEvidence): PlayerBodyEvidence {
+  return {
+    ...value,
+    position: { ...value.position },
+    requestedVelocity: { ...value.requestedVelocity },
+    actualVelocity: { ...value.actualVelocity },
+    contacts: [...value.contacts]
+  };
+}
+
 export function buildAuthorityA0WorldStepEvidence(input: {
   before: WorldSnapshot;
   after: WorldSnapshot;
@@ -55,6 +71,7 @@ export function buildAuthorityA0WorldStepEvidence(input: {
     capability: input.companionCapability,
     sourceTick: input.before.tick
   });
+  const playerOutcomeBody = bodyEvidenceFromSnapshot(input.after, "player");
 
   return {
     observationTick: input.before.tick,
@@ -65,6 +82,8 @@ export function buildAuthorityA0WorldStepEvidence(input: {
       playerCapability: input.playerCapability,
       companionCapability: input.companionCapability
     }),
+    playerOutcomeBody,
+    playerOutcomeMotionProvenance: classifyObservedPlayerMotion(playerOutcomeBody),
     companionVelocityCommand,
     companionOutcomeAttribution: evaluateOutcomeAttribution({
       before: actor(input.before, "companion"),
@@ -87,24 +106,14 @@ export function cloneAuthorityA0WorldStepEvidence(
         move: { ...value.situated.playerControl.move },
         active: value.situated.playerControl.active
       },
-      playerBody: {
-        ...value.situated.playerBody,
-        position: { ...value.situated.playerBody.position },
-        requestedVelocity: { ...value.situated.playerBody.requestedVelocity },
-        actualVelocity: { ...value.situated.playerBody.actualVelocity },
-        contacts: [...value.situated.playerBody.contacts]
-      },
+      playerBody: cloneBody(value.situated.playerBody),
       playerMotionProvenance: { ...value.situated.playerMotionProvenance },
       playerCapability: { ...value.situated.playerCapability },
-      companionBody: {
-        ...value.situated.companionBody,
-        position: { ...value.situated.companionBody.position },
-        requestedVelocity: { ...value.situated.companionBody.requestedVelocity },
-        actualVelocity: { ...value.situated.companionBody.actualVelocity },
-        contacts: [...value.situated.companionBody.contacts]
-      },
+      companionBody: cloneBody(value.situated.companionBody),
       companionCapability: { ...value.situated.companionCapability }
     },
+    playerOutcomeBody: cloneBody(value.playerOutcomeBody),
+    playerOutcomeMotionProvenance: { ...value.playerOutcomeMotionProvenance },
     companionVelocityCommand: {
       ...value.companionVelocityCommand,
       velocity: { ...value.companionVelocityCommand.velocity }
