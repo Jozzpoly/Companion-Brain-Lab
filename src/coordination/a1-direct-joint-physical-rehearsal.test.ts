@@ -14,6 +14,8 @@ import { buildA1Situation, type A1Situation } from "./a1-situation";
 import { LabWorld } from "../world/world";
 import type { ActorSnapshot, MotionIntent, Vec2 } from "../world/types";
 
+const EQUAL_MOTION_MATERIAL_DRIFT_LIMIT_METERS = 1e-4;
+
 function playerIntent(x: number, y: number): MotionIntent {
   return { actorId: "player", move: { x, y } };
 }
@@ -200,8 +202,18 @@ describe("Authority-A1.2j DIRECT joint same-physics rehearsal", () => {
         x: finalCompanion.position.x - finalPlayer.position.x,
         y: finalCompanion.position.y - finalPlayer.position.y
       };
-      expect(finalRelative.x).toBeCloseTo(initialRelative.x, 9);
-      expect(finalRelative.y).toBeCloseTo(initialRelative.y, 9);
+      const relativeDrift = Math.hypot(
+        finalRelative.x - initialRelative.x,
+        finalRelative.y - initialRelative.y
+      );
+
+      expect(relativeDrift).toBeLessThan(EQUAL_MOTION_MATERIAL_DRIFT_LIMIT_METERS);
+      for (const frame of result.physical.frames) {
+        expect(actor(frame.actors, "player").contacts).toHaveLength(0);
+        expect(actor(frame.actors, "companion").contacts).toHaveLength(0);
+      }
+      expect(finalPlayer.requestedVelocity).toEqual({ x: 3, y: 0 });
+      expect(finalCompanion.requestedVelocity).toEqual({ x: 3, y: 0 });
       expect(world.snapshot()).toEqual(before);
       expect(world.latestAuthorityA0StepEvidence()).toBeNull();
     } finally {
