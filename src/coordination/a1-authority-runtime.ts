@@ -69,6 +69,8 @@ export class A1AuthorityRuntime {
   /**
    * Passive A1.1 observation path. Failure is contained as tick-local research
    * evidence and cannot become control-flow authority over the companion command.
+   * If multiple failures are accidentally reported in one World tick, preserve
+   * the first causal failure rather than allowing a derivative error to overwrite it.
    */
   observeRelationship(input: {
     situation: A1Situation;
@@ -82,10 +84,12 @@ export class A1AuthorityRuntime {
       this.relationshipObservationErrorValue = null;
       return result;
     } catch (error) {
-      this.relationshipObservationErrorValue = {
-        tick: input.situation.tick,
-        message: error instanceof Error ? error.message : String(error)
-      };
+      if (this.relationshipObservationErrorValue?.tick !== input.situation.tick) {
+        this.relationshipObservationErrorValue = {
+          tick: input.situation.tick,
+          message: error instanceof Error ? error.message : String(error)
+        };
+      }
       return null;
     }
   }
