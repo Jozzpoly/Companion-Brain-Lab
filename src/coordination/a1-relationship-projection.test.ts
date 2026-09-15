@@ -301,8 +301,10 @@ describe("Authority-A1.1c relative world projection", () => {
       });
 
       const hardOnly = projectionById(projection, "r0.b1");
-      expect(hardOnly.worldPosition.x).toBeCloseTo(3, 12);
-      expect(hardOnly.worldPosition.y).toBeCloseTo(4, 12);
+      // Rapier snapshots are f32-backed. This fixture validates the semantic/world
+      // projection and route class, not sub-nanometer equality with the source spec.
+      expect(hardOnly.worldPosition.x).toBeCloseTo(3, 6);
+      expect(hardOnly.worldPosition.y).toBeCloseTo(4, 6);
       expect(hardOnly.hardFit).toBe(true);
       expect(hardOnly.routeQualification).toBe("HARD_REACHABLE");
       expect(hardOnly.routeTruth?.hardReachable).toBe(true);
