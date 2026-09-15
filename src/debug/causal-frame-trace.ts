@@ -45,33 +45,6 @@ export interface CausalShadowCoordinationEvidence {
   error: string | null;
 }
 
-export interface CausalAuthorityA0Evidence {
-  kind: "AUTHORITY_A0_EVIDENCE";
-  observationTick: number;
-  outcomeTick: number;
-  playerControlMove: Vec2;
-  playerControlActive: boolean;
-  playerRequestedVelocity: Vec2;
-  playerActualVelocity: Vec2;
-  playerMotionError: number;
-  playerContacts: readonly string[];
-  playerMotionProvenanceState: string;
-  playerMotionProvenanceReason: string;
-  playerOutcomeRequestedVelocity: Vec2;
-  playerOutcomeActualVelocity: Vec2;
-  playerOutcomeMotionError: number;
-  playerOutcomeContacts: readonly string[];
-  playerOutcomeMotionProvenanceState: string;
-  playerOutcomeMotionProvenanceReason: string;
-  playerCapabilityMaxSpeed: number;
-  companionCapabilityMaxSpeed: number;
-  companionVelocityCommand: Vec2;
-  velocityCommandCapabilityMaxSpeed: number;
-  velocityCommandSourceTick: number;
-  companionOutcomeAttributionState: string;
-  companionOutcomeAttributionReason: string;
-}
-
 export interface CausalDecisionPhase {
   relationshipRevision: number | null;
   relationshipLabel: string | null;
@@ -137,8 +110,6 @@ export interface CausalFrame {
   command: CausalCommandPhase;
   outcome: CausalOutcomePhase;
   post: CausalPostClassification;
-  /** Authority-A0 factual/provenance evidence; explicitly non-authoritative during A0. */
-  authorityA0?: CausalAuthorityA0Evidence | null;
 }
 
 function cloneVec(value: Vec2 | null | undefined): Vec2 | null {
@@ -158,24 +129,6 @@ function cloneShadow(
     preferredFlowPlayerClosest: cloneVec(value.preferredFlowPlayerClosest),
     authoritativeFlowCompanionClosest: cloneVec(value.authoritativeFlowCompanionClosest),
     authoritativeFlowPlayerClosest: cloneVec(value.authoritativeFlowPlayerClosest)
-  };
-}
-
-function cloneAuthorityA0(
-  value: CausalAuthorityA0Evidence | null | undefined
-): CausalAuthorityA0Evidence | null | undefined {
-  if (value === undefined) return undefined;
-  if (value === null) return null;
-  return {
-    ...value,
-    playerControlMove: { ...value.playerControlMove },
-    playerRequestedVelocity: { ...value.playerRequestedVelocity },
-    playerActualVelocity: { ...value.playerActualVelocity },
-    playerContacts: [...value.playerContacts],
-    playerOutcomeRequestedVelocity: { ...value.playerOutcomeRequestedVelocity },
-    playerOutcomeActualVelocity: { ...value.playerOutcomeActualVelocity },
-    playerOutcomeContacts: [...value.playerOutcomeContacts],
-    companionVelocityCommand: { ...value.companionVelocityCommand }
   };
 }
 
@@ -217,8 +170,7 @@ function cloneFrame(frame: CausalFrame): CausalFrame {
         frame.post.retryBudgetUsedThisEpisode ?? frame.post.retryCount ?? null,
       cumulativeLocalRetriesSinceReset:
         frame.post.cumulativeLocalRetriesSinceReset ?? frame.post.appliedLocalRetries ?? null
-    },
-    authorityA0: cloneAuthorityA0(frame.authorityA0)
+    }
   };
 }
 
