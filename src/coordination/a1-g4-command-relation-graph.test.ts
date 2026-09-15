@@ -121,8 +121,9 @@ describe("Authority-A1.2r per-player-future G4 relation graphs", () => {
       for (const graph of result.graphs) {
         expect(graph.nodes.map((node) => node.proposalId)).toEqual(proposalIds);
         expect(graph.nodes).toHaveLength(decision.proposalSet.proposalCount);
+        const comparableCount = graph.comparableProposalIds.length;
         expect(graph.comparisonCount).toBe(
-          graph.comparableProposalIds.length * (graph.comparableProposalIds.length - 1) / 2
+          comparableCount < 2 ? 0 : comparableCount * (comparableCount - 1) / 2
         );
         expect(graph.comparisonCount).toBe(
           graph.preferenceEdges.length + graph.noPreferencePairs.length + graph.forcedContentionPairs.length
@@ -211,22 +212,43 @@ describe("Authority-A1.2r per-player-future G4 relation graphs", () => {
   it("publishes forced-contention connectivity without inventing transitive preference", async () => {
     const world = await LabWorld.create("head-on");
     try {
-      const after = world.step([playerIntent(0, 0), companionIntent(-1, 0)]);
       const decision = buildDecision({
         world,
-        playerMove: { x: 0, y: 0 },
-        snapshot: after,
+        playerMove: { x: 1, y: 0 },
         horizonSeconds: 3,
         localAlternativeDeltaSpeed: 1
       });
+      const hold = proposalByOrigin({
+        decision,
+        futureFamily: "OWNER_REQUEST_CONTINUATION",
+        seedFamily: "HOLD"
+      });
+      const inward = proposalByOrigin({
+        decision,
+        futureFamily: "OWNER_REQUEST_CONTINUATION",
+        seedFamily: "RELATIVE_RADIAL_INWARD"
+      });
+      expect(hold.proposalId).not.toBe(inward.proposalId);
+      expect(Math.hypot(
+        hold.commandVelocity.x - inward.commandVelocity.x,
+        hold.commandVelocity.y - inward.commandVelocity.y
+      )).toBeGreaterThan(1e-9);
+
       const profiles = buildProfiles({ world, decision });
       const result = buildA1G4CrossFutureRelationGraphs({
         proposalSet: decision.proposalSet,
         profiles
       });
       const h1 = graphFor(result, "OWNER_REQUEST_CONTINUATION");
+      const holdNode = h1.nodes.find((node) => node.proposalId === hold.proposalId);
+      const inwardNode = h1.nodes.find((node) => node.proposalId === inward.proposalId);
+      expect(holdNode?.relationStatus).toBe("COMPARABLE_G3_REQUIRES_COOPERATION");
+      expect(inwardNode?.relationStatus).toBe("COMPARABLE_G3_REQUIRES_COOPERATION");
 
       expect(h1.forcedContentionPairs.length).toBeGreaterThan(0);
+      expect(h1.forcedContentionPairs.some((pair) =>
+        unorderedPairMatches(pair, hold.proposalId, inward.proposalId)
+      )).toBe(true);
       expect(h1.forcedContentionComponents.length).toBeGreaterThan(0);
       for (const pair of h1.forcedContentionPairs) {
         const component = h1.forcedContentionComponents.find((candidate) =>
