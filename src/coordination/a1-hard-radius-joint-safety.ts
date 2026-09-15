@@ -115,6 +115,10 @@ function vectorDistance(a: Vec2, b: Vec2): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+function approximatelyEqual(a: number, b: number, tolerance = EVIDENCE_EPSILON): boolean {
+  return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= tolerance;
+}
+
 function validatedRadius(value: number, label: string): number {
   if (!Number.isFinite(value) || value <= 0) throw new Error(`${label} must be positive and finite.`);
   return value;
@@ -204,7 +208,10 @@ export function evaluateA1HardRadiusPiecewiseSafety(
 
   const threshold = companion.radius + player.radius;
   const segments: A1HardRadiusSafetySegmentEvidence[] = [];
-  if (player.movingUntilSeconds > EPSILON) {
+
+  // Time topology must be exact. A very short but non-zero phase can still
+  // contain the closest approach, so numerical tolerance must not erase it.
+  if (player.movingUntilSeconds > 0) {
     segments.push(segmentEvidence({
       companion,
       player,
@@ -215,7 +222,7 @@ export function evaluateA1HardRadiusPiecewiseSafety(
       playerVelocity: player.velocity
     }));
   }
-  if (player.movingUntilSeconds < input.horizonSeconds - EPSILON) {
+  if (player.movingUntilSeconds < input.horizonSeconds) {
     segments.push(segmentEvidence({
       companion,
       player,
@@ -226,19 +233,11 @@ export function evaluateA1HardRadiusPiecewiseSafety(
       playerVelocity: { x: 0, y: 0 }
     }));
   }
+
+  // movingUntilSeconds is validated inside [0, horizon], therefore one or two
+  // strictly positive-duration segments must always exist.
   if (segments.length === 0) {
-    // This only occurs for a numerically zero/full boundary after epsilon
-    // classification. Preserve one deterministic whole-horizon segment.
-    const stopped = player.movingUntilSeconds <= EPSILON;
-    segments.push(segmentEvidence({
-      companion,
-      player,
-      threshold,
-      phase: stopped ? "PLAYER_STOPPED_AFTER_STATIC_CLIP" : "PLAYER_MOVING",
-      start: 0,
-      end: input.horizonSeconds,
-      playerVelocity: stopped ? { x: 0, y: 0 } : player.velocity
-    }));
+    throw new Error("A1.2e safety could not construct a positive-duration time segment.");
   }
 
   let closest = segments[0]!;
@@ -275,6 +274,14 @@ export function evaluateA1HardRadiusPiecewiseSafety(
   };
 }
 
+function expectedVelocityEvidenceSource(
+  family: A1PlayerFutureHypothesis["family"]
+): A1PlayerFutureHypothesis["velocityEvidenceSource"] {
+  if (family === "OWNER_REQUEST_CONTINUATION") return "SAME_STEP_OWNER_REQUEST";
+  if (family === "BODY_RESPONSE_CONTINUATION") return "CURRENT_OBSERVED_BODY_RESPONSE";
+  return "A1_2C_TRANSITION_HOLD_CONTROL";
+}
+
 /**
  * Thin evidence adapter from qualified A1.2b DIRECT + A1.2c player future into
  * the pure A1.2e hard-radius primitive. This adapter still makes no G2/G3 gate
@@ -287,6 +294,12 @@ export function evaluateA1DirectPlayerHardRadiusSafety(input: {
 }): A1DirectHardRadiusSafetyEvidence {
   const tick = input.situation.tick;
   const horizon = input.realization.horizonSeconds;
+  const playerCapability = input.situation.situated.playerCapability;
+  const companionCapability = input.situation.situated.companionCapability;
+
+  if (input.situation.situated.tick !== tick) {
+    throw new Error("A1.2e situated evidence tick must align with the A1 situation.");
+  }
   if (input.realization.kind !== "A1_DIRECT_CANDIDATE_REALIZATION") {
     throw new Error("A1.2e evidence adapter accepts DIRECT realization only.");
   }
@@ -296,37 +309,137 @@ export function evaluateA1DirectPlayerHardRadiusSafety(input: {
   if (!Number.isFinite(horizon) || horizon <= 0 || Math.abs(input.playerFuture.horizonSeconds - horizon) > EVIDENCE_EPSILON) {
     throw new Error("A1.2e DIRECT/player-future horizons must align.");
   }
+  if (playerCapability.actorId !== "player" || companionCapability.actorId !== "companion") {
+    throw new Error("A1.2e requires current player/companion MovementCapability truth.");
+  }
 
-  const playerOrigin = input.situation.situated.playerBody.position;
-  const companionOrigin = input.situation.situated.companionBody.position;
+  const playerOrigin = finiteVector(
+    input.situation.situated.playerBody.position,
+    "A1.2e current player origin"
+  );
+  const companionOrigin = finiteVector(
+    input.situation.situated.companionBody.position,
+    "A1.2e current companion origin"
+  );
+  const commandVelocity = finiteVector(
+    input.realization.commandVelocity,
+    "A1.2e DIRECT command velocity"
+  );
+  const predictedDisplacement = finiteVector(
+    input.realization.predictedDisplacement,
+    "A1.2e DIRECT predicted displacement"
+  );
+  const nominalPlayerVelocity = finiteVector(
+    input.playerFuture.nominalVelocity,
+    "A1.2e player nominal velocity"
+  );
+  const effectivePlayerVelocity = finiteVector(
+    input.playerFuture.effectiveVelocity,
+    "A1.2e player effective velocity"
+  );
+
+  if (input.realization.reachabilityClaim !== "DIRECT_COMMAND_ADMISSIBLE_ONLY") {
+    throw new Error("A1.2e DIRECT realization lacks qualified command-admissibility provenance.");
+  }
+  if (input.realization.worldLegalityClaim !== "NONE_A1_2B") {
+    throw new Error("A1.2e DIRECT realization unexpectedly claims World legality before G2.");
+  }
+  if (!approximatelyEqual(input.realization.capabilityMaxSpeed, companionCapability.maxSpeed)) {
+    throw new Error("A1.2e DIRECT realization maxSpeed must match current companion MovementCapability.");
+  }
+  if (magnitude(commandVelocity) > companionCapability.maxSpeed + EVIDENCE_EPSILON) {
+    throw new Error("A1.2e DIRECT command velocity exceeds current companion MovementCapability maxSpeed.");
+  }
+  const expectedDisplacement = {
+    x: commandVelocity.x * horizon,
+    y: commandVelocity.y * horizon
+  };
+  if (vectorDistance(predictedDisplacement, expectedDisplacement) > EVIDENCE_EPSILON) {
+    throw new Error("A1.2e DIRECT predicted displacement is inconsistent with command velocity and horizon.");
+  }
+
   if (vectorDistance(input.playerFuture.origin, playerOrigin) > EVIDENCE_EPSILON) {
     throw new Error("A1.2e player future origin must match current player body position.");
   }
   if (input.playerFuture.commandAuthorityClaim !== "NONE_A1_2C_PREDICTION_ONLY") {
     throw new Error("A1.2e player future unexpectedly carries command authority.");
   }
-  if (input.realization.reachabilityClaim !== "DIRECT_COMMAND_ADMISSIBLE_ONLY") {
-    throw new Error("A1.2e DIRECT realization lacks qualified command-admissibility provenance.");
+  if (input.playerFuture.semanticOrientationAuthority !== "NONE_PHYSICAL_FUTURE_ONLY") {
+    throw new Error("A1.2e player future unexpectedly carries semantic-orientation authority.");
+  }
+  if (input.playerFuture.worldLegalityClaim !== "STATIC_SWEEP_ONLY_A1_2C") {
+    throw new Error("A1.2e player future carries unexpected World-legality provenance.");
+  }
+  if (input.playerFuture.dynamicCooperationClaim !== "NONE_A1_2C") {
+    throw new Error("A1.2e player future carries unexpected dynamic-cooperation provenance.");
+  }
+  if (input.playerFuture.velocityEvidenceSource !== expectedVelocityEvidenceSource(input.playerFuture.family)) {
+    throw new Error("A1.2e player future velocity provenance does not match its hypothesis family.");
   }
 
-  const clipFraction = input.playerFuture.staticFeasibility.clipped
-    ? input.playerFuture.staticFeasibility.feasibleFraction
+  const feasibility = input.playerFuture.staticFeasibility;
+  if (feasibility.query !== "PLAYER_HARD_RADIUS_STATIC_SWEEP") {
+    throw new Error("A1.2e player future lacks qualified hard-radius static-sweep provenance.");
+  }
+  if (feasibility.initialOverlapPolicy !== "allow-egress") {
+    throw new Error("A1.2e player future carries an unexpected static initial-overlap policy.");
+  }
+  if (!approximatelyEqual(feasibility.radius, playerCapability.radius)) {
+    throw new Error("A1.2e player future static radius must match current player hard radius.");
+  }
+  if (!isFiniteVector(feasibility.intendedEndpoint) || !isFiniteVector(feasibility.feasibleEndpoint)) {
+    throw new Error("A1.2e player future static endpoints must be finite.");
+  }
+
+  const expectedIntendedEndpoint = addScaled(playerOrigin, nominalPlayerVelocity, horizon);
+  if (vectorDistance(feasibility.intendedEndpoint, expectedIntendedEndpoint) > EVIDENCE_EPSILON) {
+    throw new Error("A1.2e player future intended endpoint is inconsistent with nominal velocity and horizon.");
+  }
+  const expectedEffectiveVelocity = {
+    x: (feasibility.feasibleEndpoint.x - playerOrigin.x) / horizon,
+    y: (feasibility.feasibleEndpoint.y - playerOrigin.y) / horizon
+  };
+  if (vectorDistance(effectivePlayerVelocity, expectedEffectiveVelocity) > EVIDENCE_EPSILON) {
+    throw new Error("A1.2e player future effective velocity is inconsistent with its feasible endpoint.");
+  }
+
+  const intendedDistance = vectorDistance(feasibility.intendedEndpoint, playerOrigin);
+  const feasibleDistance = vectorDistance(feasibility.feasibleEndpoint, playerOrigin);
+  const expectedFraction = intendedDistance > EVIDENCE_EPSILON
+    ? Math.max(0, Math.min(1, feasibleDistance / intendedDistance))
     : 1;
+  if (!approximatelyEqual(feasibility.intendedDistance, intendedDistance)) {
+    throw new Error("A1.2e player future intended distance is internally inconsistent.");
+  }
+  if (!approximatelyEqual(feasibility.feasibleDistance, feasibleDistance)) {
+    throw new Error("A1.2e player future feasible distance is internally inconsistent.");
+  }
+  if (!approximatelyEqual(feasibility.feasibleFraction, expectedFraction)) {
+    throw new Error("A1.2e player future feasible fraction is internally inconsistent.");
+  }
+
+  if (feasibility.clear) {
+    if (feasibility.clipped || feasibility.blockerLabel !== null) {
+      throw new Error("A1.2e clear player future cannot also carry clipped/blocker evidence.");
+    }
+    if (vectorDistance(feasibility.feasibleEndpoint, feasibility.intendedEndpoint) > EVIDENCE_EPSILON) {
+      throw new Error("A1.2e clear player future must preserve its intended endpoint.");
+    }
+  } else if (!feasibility.clipped || feasibility.blockerLabel === null) {
+    throw new Error("A1.2e blocked player future requires clipped first-blocker provenance.");
+  }
+
+  const clipFraction = feasibility.clipped ? feasibility.feasibleFraction : 1;
   if (!Number.isFinite(clipFraction) || clipFraction < 0 || clipFraction > 1) {
     throw new Error("A1.2e player static clip fraction must be within [0, 1].");
   }
   const movingUntilSeconds = horizon * clipFraction;
   const expectedFeasibleEndpoint = addScaled(
     playerOrigin,
-    input.playerFuture.nominalVelocity,
+    nominalPlayerVelocity,
     movingUntilSeconds
   );
-  if (
-    vectorDistance(
-      expectedFeasibleEndpoint,
-      input.playerFuture.staticFeasibility.feasibleEndpoint
-    ) > EVIDENCE_EPSILON
-  ) {
+  if (vectorDistance(expectedFeasibleEndpoint, feasibility.feasibleEndpoint) > EVIDENCE_EPSILON) {
     throw new Error("A1.2e player future clip timing is inconsistent with its feasible endpoint.");
   }
 
@@ -335,13 +448,13 @@ export function evaluateA1DirectPlayerHardRadiusSafety(input: {
     horizonSeconds: horizon,
     companion: {
       origin: companionOrigin,
-      velocity: input.realization.commandVelocity,
-      radius: input.situation.situated.companionCapability.radius
+      velocity: commandVelocity,
+      radius: companionCapability.radius
     },
     player: {
       origin: playerOrigin,
-      velocity: input.playerFuture.nominalVelocity,
-      radius: input.situation.situated.playerCapability.radius,
+      velocity: nominalPlayerVelocity,
+      radius: playerCapability.radius,
       movingUntilSeconds
     }
   });
@@ -352,7 +465,7 @@ export function evaluateA1DirectPlayerHardRadiusSafety(input: {
     candidateFamily: input.realization.family,
     playerFutureId: input.playerFuture.id,
     playerFutureFamily: input.playerFuture.family,
-    playerStaticClipped: input.playerFuture.staticFeasibility.clipped,
+    playerStaticClipped: feasibility.clipped,
     playerStaticClipFraction: clipFraction,
     inputProvenance: "QUALIFIED_A1_2B_DIRECT_PLUS_A1_2C_PLAYER_FUTURE"
   };
