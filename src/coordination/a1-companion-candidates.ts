@@ -322,6 +322,15 @@ export function realizeA1TemporalCandidate(input: {
       "A1 TEMPORAL initial velocity exceeds the continuity donor's explicit 1.5x capability input envelope."
     );
   }
+  const accelerationEnvelope = Math.max(
+    actuationModel.maxAcceleration,
+    actuationModel.maxBrakingAcceleration
+  );
+  if (magnitude(initialAcceleration) > accelerationEnvelope + EPSILON) {
+    throw new Error(
+      "A1 TEMPORAL initial acceleration lies outside the explicit experimental actuation-model envelope."
+    );
+  }
   const boundedDesired = clampMagnitude(desiredVelocity, capability.maxSpeed);
   const preferredMove = scale(boundedDesired.value, 1 / capability.maxSpeed);
   const config: MotionContinuityConfig = {
