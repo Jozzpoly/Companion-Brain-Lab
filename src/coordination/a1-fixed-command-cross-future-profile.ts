@@ -1,4 +1,4 @@
-import type { A1ConcreteDirectCommandProposal } from "./a1-concrete-command-proposals";
+import type { A1ConcreteCommandProposal } from "./a1-concrete-command-proposals";
 import {
   qualifyA1DirectCandidateStatic,
   type A1DirectStaticQualification
@@ -122,7 +122,7 @@ function finiteVector(value: Vec2, label: string): Vec2 {
 
 function common(input: {
   futureFamily: A1PlayerFutureFamily;
-  proposal: A1ConcreteDirectCommandProposal;
+  proposal: A1ConcreteCommandProposal;
 }): A1FixedCommandFutureCommon {
   return {
     futureFamily: input.futureFamily,
@@ -139,7 +139,7 @@ function common(input: {
 function validateInput(input: {
   situation: A1Situation;
   interventionPlan: A1PlayerFutureInterventionPlan;
-  proposal: A1ConcreteDirectCommandProposal;
+  proposal: A1ConcreteCommandProposal;
 }): void {
   const { situation, interventionPlan, proposal } = input;
   if (proposal.kind !== "A1_CONCRETE_DIRECT_COMMAND_PROPOSAL") {
@@ -196,7 +196,7 @@ function validateInput(input: {
 function staticQualification(input: {
   world: LabWorld;
   situation: A1Situation;
-  proposal: A1ConcreteDirectCommandProposal;
+  proposal: A1ConcreteCommandProposal;
 }): A1DirectStaticQualification {
   return qualifyA1DirectCandidateStatic({
     situation: input.situation,
@@ -228,7 +228,7 @@ export function buildA1FixedCommandCrossFutureProfile(input: {
   world: LabWorld;
   situation: A1Situation;
   interventionPlan: A1PlayerFutureInterventionPlan;
-  proposal: A1ConcreteDirectCommandProposal;
+  proposal: A1ConcreteCommandProposal;
 }): A1FixedCommandCrossFutureProfile {
   validateInput(input);
   const qualification = staticQualification(input);
