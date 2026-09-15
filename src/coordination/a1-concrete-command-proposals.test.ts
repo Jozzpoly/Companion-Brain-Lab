@@ -88,7 +88,7 @@ describe("Authority-A1.2o concrete DIRECT command proposals", () => {
     }
   });
 
-  it("deduplicates identical H1/H2 executable commands while retaining both generation origins", async () => {
+  it("deduplicates shared H1/H2 commands while preserving genuinely future-specific commands", async () => {
     const world = await LabWorld.create("open");
     try {
       const after = world.step([playerIntent(1, 0), companionHold()]);
@@ -108,11 +108,30 @@ describe("Authority-A1.2o concrete DIRECT command proposals", () => {
       expect(
         proposals.proposals.reduce((sum, proposal) => sum + proposal.generationOriginCount, 0)
       ).toBe(14);
-      expect(proposals.proposals.every((proposal) => {
-        const futures = new Set(proposal.generationOrigins.map((origin) => origin.futureFamily));
+
+      const futureFamilies = (proposal: (typeof proposals.proposals)[number]) =>
+        new Set(proposal.generationOrigins.map((origin) => origin.futureFamily));
+      const shared = proposals.proposals.filter((proposal) => {
+        const futures = futureFamilies(proposal);
         return futures.has("OWNER_REQUEST_CONTINUATION") && futures.has("BODY_RESPONSE_CONTINUATION");
-      })).toBe(true);
-      expect(proposals.proposals.some((proposal) => proposal.generationOriginCount > 2)).toBe(true);
+      });
+      const futureSpecific = proposals.proposals.filter((proposal) => futureFamilies(proposal).size === 1);
+
+      expect(shared.length).toBeGreaterThan(0);
+      expect(futureSpecific.length).toBeGreaterThan(0);
+
+      const sharedHold = shared.find(
+        (proposal) => Math.hypot(proposal.commandVelocity.x, proposal.commandVelocity.y) <= 1e-9
+      );
+      if (!sharedHold) throw new Error("missing shared zero/HOLD concrete command");
+      const sharedHoldFutures = new Set(
+        sharedHold.generationOrigins
+          .filter((origin) => origin.seedFamily === "HOLD")
+          .map((origin) => origin.futureFamily)
+      );
+      expect(sharedHoldFutures).toEqual(
+        new Set(["OWNER_REQUEST_CONTINUATION", "BODY_RESPONSE_CONTINUATION"])
+      );
       expect(proposals.commandDedupClaim).toBe("DEDUP_BY_EXECUTABLE_COMMAND_VELOCITY_A1_2O");
     } finally {
       world.dispose();
