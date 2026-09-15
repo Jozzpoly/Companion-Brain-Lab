@@ -113,15 +113,112 @@ function scale(value: Vec2, amount: number): Vec2 {
   return { x: value.x * amount, y: value.y * amount };
 }
 
+function isFiniteVector(value: Vec2): boolean {
+  return Number.isFinite(value.x) && Number.isFinite(value.y);
+}
+
 function finiteVector(value: Vec2, label: string): Vec2 {
-  if (!Number.isFinite(value.x) || !Number.isFinite(value.y)) {
+  if (!isFiniteVector(value)) {
     throw new Error(`${label} requires finite x/y components.`);
   }
   return { ...value };
 }
 
 function approximatelyEqual(a: number, b: number): boolean {
-  return Math.abs(a - b) <= EPSILON;
+  return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= EPSILON;
+}
+
+function pushFutureIntegrityReasons(input: {
+  future: A1PlayerFutureHypothesis;
+  playerOrigin: Vec2;
+  horizon: number;
+  playerRadius: number;
+  reasons: string[];
+}): void {
+  const { future, playerOrigin, horizon, playerRadius, reasons } = input;
+  const label = `player future ${future.id}`;
+  const feasibility = future.staticFeasibility;
+
+  if (!isFiniteVector(future.nominalVelocity) || !isFiniteVector(future.effectiveVelocity)) {
+    reasons.push(`${label} contains non-finite velocity evidence`);
+    return;
+  }
+  if (!isFiniteVector(feasibility.intendedEndpoint) || !isFiniteVector(feasibility.feasibleEndpoint)) {
+    reasons.push(`${label} contains non-finite static-feasibility endpoints`);
+    return;
+  }
+  if (future.worldLegalityClaim !== "STATIC_SWEEP_ONLY_A1_2C") {
+    reasons.push(`${label} carries unexpected World-legality claim`);
+  }
+  if (future.dynamicCooperationClaim !== "NONE_A1_2C") {
+    reasons.push(`${label} carries unexpected dynamic-cooperation claim`);
+  }
+  if (feasibility.query !== "PLAYER_HARD_RADIUS_STATIC_SWEEP") {
+    reasons.push(`${label} carries unexpected static-feasibility query provenance`);
+  }
+  if (feasibility.initialOverlapPolicy !== "allow-egress") {
+    reasons.push(`${label} carries unexpected static initial-overlap policy`);
+  }
+  if (!approximatelyEqual(feasibility.radius, playerRadius)) {
+    reasons.push(`${label} static radius does not match current player hard radius`);
+  }
+
+  const expectedIntendedEndpoint = add(playerOrigin, scale(future.nominalVelocity, horizon));
+  if (vectorDistance(feasibility.intendedEndpoint, expectedIntendedEndpoint) > EPSILON) {
+    reasons.push(`${label} intended endpoint does not match nominal velocity over the declared horizon`);
+  }
+  const expectedEffectiveVelocity = scale(
+    subtract(feasibility.feasibleEndpoint, playerOrigin),
+    1 / horizon
+  );
+  if (vectorDistance(future.effectiveVelocity, expectedEffectiveVelocity) > EPSILON) {
+    reasons.push(`${label} effective velocity does not match its feasible endpoint`);
+  }
+
+  const intendedDistance = vectorDistance(feasibility.intendedEndpoint, playerOrigin);
+  const feasibleDistance = vectorDistance(feasibility.feasibleEndpoint, playerOrigin);
+  if (!approximatelyEqual(feasibility.intendedDistance, intendedDistance)) {
+    reasons.push(`${label} intended distance is internally inconsistent`);
+  }
+  if (!approximatelyEqual(feasibility.feasibleDistance, feasibleDistance)) {
+    reasons.push(`${label} feasible distance is internally inconsistent`);
+  }
+  const expectedFraction = intendedDistance > EPSILON
+    ? Math.max(0, Math.min(1, feasibleDistance / intendedDistance))
+    : 1;
+  if (!approximatelyEqual(feasibility.feasibleFraction, expectedFraction)) {
+    reasons.push(`${label} feasible fraction is internally inconsistent`);
+  }
+
+  if (feasibility.clear) {
+    if (feasibility.clipped) reasons.push(`${label} cannot be clear and clipped`);
+    if (feasibility.blockerLabel !== null) reasons.push(`${label} cannot be clear while naming a blocker`);
+    if (vectorDistance(feasibility.feasibleEndpoint, feasibility.intendedEndpoint) > EPSILON) {
+      reasons.push(`${label} clear future must preserve its intended endpoint`);
+    }
+  } else {
+    if (!feasibility.clipped) reasons.push(`${label} blocked future must be marked clipped`);
+    if (feasibility.blockerLabel === null) reasons.push(`${label} blocked future requires blocker provenance`);
+  }
+
+  if (
+    future.family === "OWNER_REQUEST_CONTINUATION" &&
+    future.velocityEvidenceSource !== "SAME_STEP_OWNER_REQUEST"
+  ) {
+    reasons.push(`${label} H1 velocity provenance is invalid`);
+  }
+  if (
+    future.family === "BODY_RESPONSE_CONTINUATION" &&
+    future.velocityEvidenceSource !== "CURRENT_OBSERVED_BODY_RESPONSE"
+  ) {
+    reasons.push(`${label} H2 velocity provenance is invalid`);
+  }
+  if (
+    future.family === "TRANSITION_HOLD" &&
+    future.velocityEvidenceSource !== "A1_2C_TRANSITION_HOLD_CONTROL"
+  ) {
+    reasons.push(`${label} H3 velocity provenance is invalid`);
+  }
 }
 
 function g0AlignmentReasons(input: {
@@ -134,6 +231,7 @@ function g0AlignmentReasons(input: {
   const tick = input.situation.tick;
   const horizon = input.realization.horizonSeconds;
   const playerOrigin = input.situation.situated.playerBody.position;
+  const playerRadius = input.situation.situated.playerCapability.radius;
 
   if (input.situation.situated.tick !== tick) {
     reasons.push("situated evidence tick does not equal A1 situation tick");
@@ -156,8 +254,20 @@ function g0AlignmentReasons(input: {
   if (input.playerFutures.aggregationClaim !== "NO_AVERAGING_OR_CENTROID_A1_2C") {
     reasons.push("player-future set carries unexpected aggregation claim");
   }
+  if (input.playerFutures.worldLegalityClaim !== "STATIC_SWEEP_ONLY_A1_2C") {
+    reasons.push("player-future set carries unexpected World-legality claim");
+  }
+  if (input.playerFutures.dynamicCooperationClaim !== "NONE_A1_2C") {
+    reasons.push("player-future set carries unexpected dynamic-cooperation claim");
+  }
 
+  const familyCounts = new Map<A1PlayerFutureHypothesis["family"], number>();
+  const ids = new Set<string>();
   for (const future of input.playerFutures.hypotheses) {
+    familyCounts.set(future.family, (familyCounts.get(future.family) ?? 0) + 1);
+    if (ids.has(future.id)) reasons.push(`duplicate player-future id ${future.id}`);
+    ids.add(future.id);
+
     if (future.sourceTick !== tick) {
       reasons.push(`player future ${future.id} source tick is misaligned`);
     }
@@ -173,6 +283,21 @@ function g0AlignmentReasons(input: {
     if (future.semanticOrientationAuthority !== "NONE_PHYSICAL_FUTURE_ONLY") {
       reasons.push(`player future ${future.id} carries forbidden semantic-orientation authority`);
     }
+    pushFutureIntegrityReasons({
+      future,
+      playerOrigin,
+      horizon,
+      playerRadius,
+      reasons
+    });
+  }
+
+  if (
+    familyCounts.get("OWNER_REQUEST_CONTINUATION") !== 1 ||
+    familyCounts.get("BODY_RESPONSE_CONTINUATION") !== 1 ||
+    (familyCounts.get("TRANSITION_HOLD") ?? 0) > 1
+  ) {
+    reasons.push("player-future set does not preserve the mandatory H1/H2 structure or contains duplicate H3");
   }
 
   return reasons;
