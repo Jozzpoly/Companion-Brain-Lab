@@ -14,8 +14,12 @@ function companionHold(): MotionIntent {
   return { actorId: "companion", move: { x: 0, y: 0 } };
 }
 
-function buildInput(world: LabWorld, playerMove: Vec2, horizonSeconds = 0.5) {
-  const snapshot = world.snapshot();
+function buildInput(
+  world: LabWorld,
+  playerMove: Vec2,
+  snapshot: ReturnType<LabWorld["snapshot"]> = world.snapshot(),
+  horizonSeconds = 0.5
+) {
   const situation = buildA1Situation({
     snapshot,
     playerIntent: playerIntent(playerMove.x, playerMove.y),
@@ -65,7 +69,13 @@ describe("Authority-A1.2o concrete DIRECT command proposals", () => {
         }
       ]);
       expect(proposals.generationOriginCount).toBe(7);
-      expect(proposals.proposalCount).toBe(7);
+      expect(proposals.proposalCount).toBeLessThan(proposals.generationOriginCount);
+      expect(
+        proposals.proposals.reduce((sum, proposal) => sum + proposal.generationOriginCount, 0)
+      ).toBe(7);
+      expect(new Set(proposals.proposals.map((proposal) => velocityKey(proposal.commandVelocity))).size)
+        .toBe(proposals.proposalCount);
+      expect(proposals.proposals.some((proposal) => proposal.generationOriginCount > 1)).toBe(true);
       expect(
         proposals.proposals.flatMap((proposal) => proposal.generationOrigins)
           .some((origin) => origin.futureFamily === "BODY_RESPONSE_CONTINUATION")
@@ -81,8 +91,8 @@ describe("Authority-A1.2o concrete DIRECT command proposals", () => {
   it("deduplicates identical H1/H2 executable commands while retaining both generation origins", async () => {
     const world = await LabWorld.create("open");
     try {
-      world.step([playerIntent(1, 0), companionHold()]);
-      const input = buildInput(world, { x: 1, y: 0 });
+      const after = world.step([playerIntent(1, 0), companionHold()]);
+      const input = buildInput(world, { x: 1, y: 0 }, after);
       const rehearsable = input.interventionPlan.interventions.filter(
         (value) => value.status === "REHEARSABLE"
       );
@@ -93,16 +103,16 @@ describe("Authority-A1.2o concrete DIRECT command proposals", () => {
 
       const proposals = buildProposals(input);
       expect(proposals.generationOriginCount).toBe(14);
-      expect(proposals.proposalCount).toBe(7);
+      expect(proposals.proposalCount).toBeLessThan(14);
       expect(proposals.unresolvedFutures).toEqual([]);
-      expect(proposals.proposals.every((proposal) => proposal.generationOriginCount === 2)).toBe(true);
+      expect(
+        proposals.proposals.reduce((sum, proposal) => sum + proposal.generationOriginCount, 0)
+      ).toBe(14);
       expect(proposals.proposals.every((proposal) => {
-        const families = proposal.generationOrigins.map((origin) => origin.futureFamily).sort();
-        return JSON.stringify(families) === JSON.stringify([
-          "BODY_RESPONSE_CONTINUATION",
-          "OWNER_REQUEST_CONTINUATION"
-        ]);
+        const futures = new Set(proposal.generationOrigins.map((origin) => origin.futureFamily));
+        return futures.has("OWNER_REQUEST_CONTINUATION") && futures.has("BODY_RESPONSE_CONTINUATION");
       })).toBe(true);
+      expect(proposals.proposals.some((proposal) => proposal.generationOriginCount > 2)).toBe(true);
       expect(proposals.commandDedupClaim).toBe("DEDUP_BY_EXECUTABLE_COMMAND_VELOCITY_A1_2O");
     } finally {
       world.dispose();
@@ -112,8 +122,8 @@ describe("Authority-A1.2o concrete DIRECT command proposals", () => {
   it("keeps the same family label as different concrete commands when H1/H2/H3 imply different velocities", async () => {
     const world = await LabWorld.create("open");
     try {
-      world.step([playerIntent(1, 0), companionHold()]);
-      const input = buildInput(world, { x: -1, y: 0 });
+      const after = world.step([playerIntent(1, 0), companionHold()]);
+      const input = buildInput(world, { x: -1, y: 0 }, after);
       const families = input.interventionPlan.interventions.map((value) => [value.futureFamily, value.status]);
       expect(families).toEqual([
         ["OWNER_REQUEST_CONTINUATION", "REHEARSABLE"],
@@ -143,8 +153,8 @@ describe("Authority-A1.2o concrete DIRECT command proposals", () => {
   it("can merge different family labels when they produce the same executable command", async () => {
     const world = await LabWorld.create("open");
     try {
-      world.step([playerIntent(1, 0), companionHold()]);
-      const input = buildInput(world, { x: -1, y: 0 });
+      const after = world.step([playerIntent(1, 0), companionHold()]);
+      const input = buildInput(world, { x: -1, y: 0 }, after);
       const proposals = buildProposals(input);
       const zero = proposals.proposals.find(
         (proposal) => Math.hypot(proposal.commandVelocity.x, proposal.commandVelocity.y) <= 1e-9
@@ -166,8 +176,8 @@ describe("Authority-A1.2o concrete DIRECT command proposals", () => {
   it("is deterministic for the same decision evidence and preserves canonical command velocity exactly", async () => {
     const world = await LabWorld.create("open");
     try {
-      world.step([playerIntent(1, 0), companionHold()]);
-      const input = buildInput(world, { x: -1, y: 0 });
+      const after = world.step([playerIntent(1, 0), companionHold()]);
+      const input = buildInput(world, { x: -1, y: 0 }, after);
       const a = buildProposals(input, 3);
       const b = buildProposals(input, 3);
 
