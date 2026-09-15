@@ -3,7 +3,8 @@ import type { ActorSnapshot, StaticCircleTraversalResult, Vec2, WorldSnapshot } 
 import type { A1RelationshipOrientationEvidence } from "./a1-relationship-orientation";
 import {
   sampleA1RelationshipSemanticField,
-  type A1RelationshipSemanticProfile
+  type A1RelationshipObjectiveProfile,
+  type A1RelationshipSamplingConfig
 } from "./a1-relationship-utility";
 import { projectA1RelationshipSemanticField } from "./a1-relationship-projection";
 
@@ -59,13 +60,14 @@ function clearTraversal(from: Vec2, to: Vec2, radius: number): StaticCircleTrave
   };
 }
 
-const COVERAGE_PROFILE: A1RelationshipSemanticProfile = {
-  preferredRadius: 1.45,
-  radialSigma: 0.3,
-  radialWeight: 1,
-  directionalWeight: 0,
-  sampleDirections: 16,
-  sampleRadii: [1.45],
+const COVERAGE_OBJECTIVE: A1RelationshipObjectiveProfile = {
+  radial: { preferredRadius: 1.45, sigma: 0.3, weight: 1 },
+  directional: { kind: "NONE" }
+};
+
+const COVERAGE_SAMPLING: A1RelationshipSamplingConfig = {
+  directions: 16,
+  radii: [1.45],
   nearBestUtilityWindow: 0
 };
 
@@ -74,7 +76,8 @@ describe("Authority-A1.1c route qualification strategy", () => {
     const tick = 31;
     const field = sampleA1RelationshipSemanticField({
       orientation: noOrientation(tick),
-      profile: COVERAGE_PROFILE
+      objective: COVERAGE_OBJECTIVE,
+      sampling: COVERAGE_SAMPLING
     });
 
     const semanticPriority = projectA1RelationshipSemanticField({
@@ -115,7 +118,8 @@ describe("Authority-A1.1c route qualification strategy", () => {
     const tick = 41;
     const field = sampleA1RelationshipSemanticField({
       orientation: noOrientation(tick),
-      profile: COVERAGE_PROFILE
+      objective: COVERAGE_OBJECTIVE,
+      sampling: COVERAGE_SAMPLING
     });
     const semanticUtilities = new Map(field.samples.map((sample) => [sample.id, sample.utility.totalUtility]));
 
