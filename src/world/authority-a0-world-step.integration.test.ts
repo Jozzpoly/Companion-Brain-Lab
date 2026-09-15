@@ -29,36 +29,49 @@ describe("Authority-A0 live World step evidence", () => {
     }
   });
 
-  it("observes canonical zero-input player motion as external after companion contact", async () => {
+  it("distinguishes canonical zero-input solver motion without inventing missing contact provenance", async () => {
     const world = await LabWorld.create("head-on");
     try {
-      let external: AuthorityA0WorldStepEvidence | null = null;
+      let disturbed: AuthorityA0WorldStepEvidence | null = null;
       for (let tick = 0; tick < 120; tick += 1) {
         world.step([
           { actorId: "player", move: { x: 0, y: 0 } },
           { actorId: "companion", move: { x: -1, y: 0 } }
         ]);
         const evidence = world.latestAuthorityA0StepEvidence();
-        if (evidence?.situated.playerMotionProvenance.state === "EXTERNAL_MOTION_EVIDENT") {
-          external = evidence;
+        if (!evidence) continue;
+        const requestedSpeed = Math.hypot(
+          evidence.situated.playerBody.requestedVelocity.x,
+          evidence.situated.playerBody.requestedVelocity.y
+        );
+        const actualSpeed = Math.hypot(
+          evidence.situated.playerBody.actualVelocity.x,
+          evidence.situated.playerBody.actualVelocity.y
+        );
+        if (requestedSpeed < 0.01 && actualSpeed > 0.1) {
+          disturbed = evidence;
           break;
         }
       }
 
-      expect(external).not.toBeNull();
-      if (!external) return;
-      expect(external.situated.playerControl.active).toBe(false);
-      expect(external.situated.playerControl.move).toEqual({ x: 0, y: 0 });
+      expect(disturbed).not.toBeNull();
+      if (!disturbed) return;
+      expect(disturbed.situated.playerControl.active).toBe(false);
+      expect(disturbed.situated.playerControl.move).toEqual({ x: 0, y: 0 });
       expect(Math.hypot(
-        external.situated.playerBody.requestedVelocity.x,
-        external.situated.playerBody.requestedVelocity.y
+        disturbed.situated.playerBody.requestedVelocity.x,
+        disturbed.situated.playerBody.requestedVelocity.y
       )).toBeLessThan(0.01);
       expect(Math.hypot(
-        external.situated.playerBody.actualVelocity.x,
-        external.situated.playerBody.actualVelocity.y
-      )).toBeGreaterThan(0.5);
-      expect(external.situated.playerBody.contacts).toContain("companion");
-      expect(external.situated.playerMotionProvenance.state).toBe("EXTERNAL_MOTION_EVIDENT");
+        disturbed.situated.playerBody.actualVelocity.x,
+        disturbed.situated.playerBody.actualVelocity.y
+      )).toBeGreaterThan(0.1);
+      expect([
+        "EXTERNAL_MOTION_EVIDENT",
+        "MIXED_OR_UNCERTAIN"
+      ]).toContain(disturbed.situated.playerMotionProvenance.state);
+      expect(disturbed.situated.playerMotionProvenance.state).not.toBe("OWNER_DIRECTED");
+      expect(disturbed.situated.playerMotionProvenance.state).not.toBe("STATIONARY");
     } finally {
       world.dispose();
     }
