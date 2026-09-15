@@ -15,6 +15,8 @@ export type OutcomeAttributionState =
   | "NO_MEANINGFUL_MOTION";
 
 export interface OutcomeAttributionEvidence {
+  observationTick: number;
+  outcomeTick: number;
   state: OutcomeAttributionState;
   reason: string;
   commandedSpeed: number;
@@ -46,11 +48,16 @@ function alignment(a: Vec2, b: Vec2, epsilon: number): number | null {
 export function evaluateOutcomeAttribution(input: {
   before: ActorSnapshot;
   after: ActorSnapshot;
+  observationTick: number;
+  outcomeTick: number;
   commandedVelocity: Vec2;
   finalConstraintIntervened?: boolean;
 }): OutcomeAttributionEvidence {
   if (input.before.id !== input.after.id) {
     throw new Error("Outcome attribution requires before/after snapshots for the same actor.");
+  }
+  if (input.outcomeTick !== input.observationTick + 1) {
+    throw new Error("Outcome attribution requires adjacent observation/outcome ticks.");
   }
   if (![input.commandedVelocity.x, input.commandedVelocity.y].every(Number.isFinite)) {
     throw new Error("Outcome attribution requires a finite commanded velocity.");
@@ -69,6 +76,8 @@ export function evaluateOutcomeAttribution(input: {
   const finalConstraintIntervened = input.finalConstraintIntervened ?? false;
 
   const base = {
+    observationTick: input.observationTick,
+    outcomeTick: input.outcomeTick,
     commandedSpeed,
     requestedSpeed,
     actualSpeed,
