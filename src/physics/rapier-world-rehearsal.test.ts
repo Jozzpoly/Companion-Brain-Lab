@@ -42,6 +42,34 @@ function actor(actors: readonly ActorSnapshot[], id: "player" | "companion"): Ac
   return found;
 }
 
+/**
+ * Rehearsal intentionally accepts already-formed world-unit velocities, while
+ * live World derives requestedVelocity through intent normalization * speed.
+ * Those two semantically identical inputs can differ by sub-ulp JS arithmetic
+ * (for example 2.4 vs 2.4000000000000004). Physical equivalence therefore
+ * remains exact for state/contact outcomes, while command bookkeeping and the
+ * diagnostic motionError are compared only within a microscopic tolerance.
+ */
+function expectPhysicalActorsEquivalent(
+  actualActors: readonly ActorSnapshot[],
+  expectedActors: readonly ActorSnapshot[]
+): void {
+  expect(actualActors.map((candidate) => candidate.id)).toEqual(
+    expectedActors.map((candidate) => candidate.id)
+  );
+
+  for (const expectedActor of expectedActors) {
+    const actualActor = actor(actualActors, expectedActor.id);
+    expect(actualActor.position).toEqual(expectedActor.position);
+    expect(actualActor.actualVelocity).toEqual(expectedActor.actualVelocity);
+    expect(actualActor.radius).toBe(expectedActor.radius);
+    expect(actualActor.contacts).toEqual(expectedActor.contacts);
+    expect(actualActor.requestedVelocity.x).toBeCloseTo(expectedActor.requestedVelocity.x, 12);
+    expect(actualActor.requestedVelocity.y).toBeCloseTo(expectedActor.requestedVelocity.y, 12);
+    expect(actualActor.motionError).toBeCloseTo(expectedActor.motionError, 12);
+  }
+}
+
 describe("Authority-A1.2g Rapier snapshot rehearsal substrate", () => {
   it("is query-only at the LabWorld boundary, including tick and A0 observer state", async () => {
     const world = await LabWorld.create("pillar");
@@ -76,7 +104,7 @@ describe("Authority-A1.2g Rapier snapshot rehearsal substrate", () => {
     }
   });
 
-  it("matches equivalent live pillar steps frame-for-frame and reproduces static-contact slide", async () => {
+  it("matches equivalent live pillar steps physically frame-for-frame and reproduces static-contact slide", async () => {
     const rehearsalWorld = await LabWorld.create("pillar");
     const liveWorld = await LabWorld.create("pillar");
     try {
@@ -91,7 +119,7 @@ describe("Authority-A1.2g Rapier snapshot rehearsal substrate", () => {
       expect(rehearsal.frames).toHaveLength(count);
       for (let index = 0; index < count; index += 1) {
         expect(rehearsal.frames[index]?.stepIndex).toBe(index);
-        expect(rehearsal.frames[index]?.actors).toEqual(liveFrames[index]);
+        expectPhysicalActorsEquivalent(rehearsal.frames[index]!.actors, liveFrames[index]!);
       }
 
       const pillarContactFrames = rehearsal.frames.filter((frame) =>
@@ -120,7 +148,7 @@ describe("Authority-A1.2g Rapier snapshot rehearsal substrate", () => {
       );
 
       for (let index = 0; index < count; index += 1) {
-        expect(rehearsal.frames[index]?.actors).toEqual(liveFrames[index]);
+        expectPhysicalActorsEquivalent(rehearsal.frames[index]!.actors, liveFrames[index]!);
       }
 
       const contactFrame = rehearsal.frames.find((frame) =>
@@ -156,7 +184,7 @@ describe("Authority-A1.2g Rapier snapshot rehearsal substrate", () => {
       );
 
       for (let index = 0; index < futureSteps; index += 1) {
-        expect(rehearsal.frames[index]?.actors).toEqual(liveFrames[index]);
+        expectPhysicalActorsEquivalent(rehearsal.frames[index]!.actors, liveFrames[index]!);
       }
       expect(rehearsalWorld.snapshot()).toEqual(forkSnapshot);
       expect(rehearsalWorld.latestAuthorityA0StepEvidence()).toEqual(forkA0);
