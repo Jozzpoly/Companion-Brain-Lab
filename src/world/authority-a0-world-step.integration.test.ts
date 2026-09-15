@@ -22,6 +22,7 @@ describe("Authority-A0 live World step evidence", () => {
       expect(evidence.situated.playerControl.move).toEqual({ x: 1, y: 0 });
       expect(evidence.situated.playerCapability.maxSpeed).toBe(3);
       expect(evidence.situated.companionCapability.maxSpeed).toBe(3);
+      expect(evidence.playerOutcomeBody.sourceTick).toBe(1);
       expect(evidence.companionVelocityCommand.velocity).toEqual({ x: -1.5, y: 0 });
       expect(evidence.companionVelocityCommand.sourceTick).toBe(0);
     } finally {
@@ -29,7 +30,7 @@ describe("Authority-A0 live World step evidence", () => {
     }
   });
 
-  it("distinguishes canonical zero-input solver motion without inventing missing contact provenance", async () => {
+  it("distinguishes canonical zero-input solver motion in the immediate post-World outcome", async () => {
     const world = await LabWorld.create("head-on");
     try {
       let disturbed: AuthorityA0WorldStepEvidence | null = null;
@@ -41,12 +42,12 @@ describe("Authority-A0 live World step evidence", () => {
         const evidence = world.latestAuthorityA0StepEvidence();
         if (!evidence) continue;
         const requestedSpeed = Math.hypot(
-          evidence.situated.playerBody.requestedVelocity.x,
-          evidence.situated.playerBody.requestedVelocity.y
+          evidence.playerOutcomeBody.requestedVelocity.x,
+          evidence.playerOutcomeBody.requestedVelocity.y
         );
         const actualSpeed = Math.hypot(
-          evidence.situated.playerBody.actualVelocity.x,
-          evidence.situated.playerBody.actualVelocity.y
+          evidence.playerOutcomeBody.actualVelocity.x,
+          evidence.playerOutcomeBody.actualVelocity.y
         );
         if (requestedSpeed < 0.01 && actualSpeed > 0.1) {
           disturbed = evidence;
@@ -58,20 +59,21 @@ describe("Authority-A0 live World step evidence", () => {
       if (!disturbed) return;
       expect(disturbed.situated.playerControl.active).toBe(false);
       expect(disturbed.situated.playerControl.move).toEqual({ x: 0, y: 0 });
+      expect(disturbed.playerOutcomeBody.sourceTick).toBe(disturbed.outcomeTick);
       expect(Math.hypot(
-        disturbed.situated.playerBody.requestedVelocity.x,
-        disturbed.situated.playerBody.requestedVelocity.y
+        disturbed.playerOutcomeBody.requestedVelocity.x,
+        disturbed.playerOutcomeBody.requestedVelocity.y
       )).toBeLessThan(0.01);
       expect(Math.hypot(
-        disturbed.situated.playerBody.actualVelocity.x,
-        disturbed.situated.playerBody.actualVelocity.y
+        disturbed.playerOutcomeBody.actualVelocity.x,
+        disturbed.playerOutcomeBody.actualVelocity.y
       )).toBeGreaterThan(0.1);
       expect([
         "EXTERNAL_MOTION_EVIDENT",
         "MIXED_OR_UNCERTAIN"
-      ]).toContain(disturbed.situated.playerMotionProvenance.state);
-      expect(disturbed.situated.playerMotionProvenance.state).not.toBe("OWNER_DIRECTED");
-      expect(disturbed.situated.playerMotionProvenance.state).not.toBe("STATIONARY");
+      ]).toContain(disturbed.playerOutcomeMotionProvenance.state);
+      expect(disturbed.playerOutcomeMotionProvenance.state).not.toBe("OWNER_DIRECTED");
+      expect(disturbed.playerOutcomeMotionProvenance.state).not.toBe("STATIONARY");
     } finally {
       world.dispose();
     }
@@ -87,11 +89,13 @@ describe("Authority-A0 live World step evidence", () => {
       const first = world.latestAuthorityA0StepEvidence();
       if (!first) throw new Error("missing first A0 evidence");
       first.situated.playerControl.move.x = 999;
+      first.playerOutcomeBody.actualVelocity.x = 999;
       first.companionVelocityCommand.velocity.x = 999;
       (first.companionOutcomeAttribution.contacts as string[]).push("fake");
 
       const second = world.latestAuthorityA0StepEvidence();
       expect(second?.situated.playerControl.move.x).toBe(1);
+      expect(second?.playerOutcomeBody.actualVelocity.x).not.toBe(999);
       expect(second?.companionVelocityCommand.velocity.x).toBe(0);
       expect(second?.companionOutcomeAttribution.contacts).not.toContain("fake");
     } finally {
