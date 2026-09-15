@@ -9,9 +9,10 @@ import type {
 } from "../world/types";
 import type { A1RelationshipOrientationEvidence } from "./a1-relationship-orientation";
 import {
-  A1_DEFAULT_RELATIONSHIP_PROFILE,
+  A1_DEFAULT_RELATIONSHIP_OBJECTIVE,
   sampleA1RelationshipSemanticField,
-  type A1RelationshipSemanticProfile
+  type A1RelationshipObjectiveProfile,
+  type A1RelationshipSamplingConfig
 } from "./a1-relationship-utility";
 import {
   projectA1RelationshipSemanticField,
@@ -103,6 +104,12 @@ function projectionById(
   if (!result) throw new Error(`missing projection ${id}`);
   return result;
 }
+
+const FOUR_DIRECTION_SAMPLING: A1RelationshipSamplingConfig = {
+  directions: 4,
+  radii: [1.45],
+  nearBestUtilityWindow: 0.01
+};
 
 describe("Authority-A1.1c relative world projection", () => {
   it("projects relative state by translation without introducing world-space semantics", () => {
@@ -210,18 +217,10 @@ describe("Authority-A1.1c relative world projection", () => {
   });
 
   it("marks locally impossible semantic samples NOT_APPLICABLE rather than fabricating route-unreachable truth", () => {
-    const profile: A1RelationshipSemanticProfile = {
-      ...A1_DEFAULT_RELATIONSHIP_PROFILE,
-      preferredRadius: 1.45,
-      radialSigma: 0.45,
-      directionalWeight: 1,
-      sampleDirections: 4,
-      sampleRadii: [1.45],
-      nearBestUtilityWindow: 0.01
-    };
     const field = sampleA1RelationshipSemanticField({
       orientation: semanticOrientation(3, { x: 1, y: 0 }),
-      profile
+      objective: A1_DEFAULT_RELATIONSHIP_OBJECTIVE,
+      sampling: FOUR_DIRECTION_SAMPLING
     });
     const current = snapshot({
       tick: 3,
@@ -276,18 +275,19 @@ describe("Authority-A1.1c relative world projection", () => {
         actors: physical.snapshot(),
         obstacles: spec.obstacles
       };
-      const profile: A1RelationshipSemanticProfile = {
-        preferredRadius: 1.45,
-        radialSigma: 0.3,
-        radialWeight: 1,
-        directionalWeight: 0,
-        sampleDirections: 4,
-        sampleRadii: [1.45],
+      const objective: A1RelationshipObjectiveProfile = {
+        radial: { preferredRadius: 1.45, sigma: 0.3, weight: 1 },
+        directional: { kind: "NONE" }
+      };
+      const sampling: A1RelationshipSamplingConfig = {
+        directions: 4,
+        radii: [1.45],
         nearBestUtilityWindow: 0
       };
       const field = sampleA1RelationshipSemanticField({
         orientation: noOrientation(17),
-        profile
+        objective,
+        sampling
       });
       let observedQueries = 0;
       const projection = projectA1RelationshipSemanticField({
