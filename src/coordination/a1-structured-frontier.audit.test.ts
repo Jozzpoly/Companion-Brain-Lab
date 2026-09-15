@@ -235,7 +235,7 @@ function summarizeFuture(
     comparableProposalIds: comparableIds,
     g4DominatedProposalIds: comparableIds.filter((proposalId) => !g4Ids.includes(proposalId)),
     g4FrontierIds: g4Ids,
-    qPaceParetoAllIds,
+    qPaceParetoAllIds: qPaceAllIds,
     g4ThenQPaceIds,
     qPaceThenG4Ids,
     qPaceRemovedAfterG4Ids: g4Ids.filter((proposalId) => !g4ThenQPaceIds.includes(proposalId)),
