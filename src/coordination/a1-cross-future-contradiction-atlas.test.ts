@@ -124,6 +124,36 @@ function future(
   return value;
 }
 
+function utilityDiscriminates(order: string): boolean {
+  return order === "A_HIGHER" || order === "B_HIGHER";
+}
+
+function cooperationDiscriminates(relation: string): boolean {
+  return relation === "A_PREFERRED" || relation === "B_PREFERRED";
+}
+
+function decisionInformation(atlas: ReturnType<typeof buildA1CrossFutureContradictionAtlas>) {
+  const ownerUtilityDiscriminatingPairs = atlas.pairs.filter((pair) =>
+    utilityDiscriminates(pair.ownerUtilityOrder)
+  );
+  const ownerUtilityEqualPairs = atlas.pairs.filter((pair) => pair.ownerUtilityOrder === "EQUAL");
+  const ownerCooperationDiscriminatingPairs = atlas.pairs.filter((pair) =>
+    cooperationDiscriminates(pair.ownerCooperationRelation)
+  );
+  const alternateUtilityDiscriminatesWhenOwnerEqual = atlas.pairs.filter((pair) =>
+    pair.ownerUtilityOrder === "EQUAL" && pair.observations.some((observation) =>
+      observation.futureFamily !== "OWNER_REQUEST_CONTINUATION" &&
+      utilityDiscriminates(observation.utilityOrder)
+    )
+  );
+  return {
+    ownerUtilityDiscriminatingPairs,
+    ownerUtilityEqualPairs,
+    ownerCooperationDiscriminatingPairs,
+    alternateUtilityDiscriminatesWhenOwnerEqual
+  };
+}
+
 describe("Authority-A1.2s1 cross-future contradiction atlas", () => {
   it("preserves missing H2/H3 evidence instead of manufacturing votes or adverse outcomes", async () => {
     const world = await LabWorld.create("open");
@@ -162,32 +192,60 @@ describe("Authority-A1.2s1 cross-future contradiction atlas", () => {
     }
   });
 
-  it("finds a real reversal pair where Owner-request utility ordering conflicts with an alternate future", async () => {
+  it("records the reversal decision-information gap instead of fabricating an Owner-vs-alternate conflict", async () => {
     const world = await LabWorld.create("open");
     try {
       const after = world.step([playerIntent(1, 0), companionHold()]);
       const decision = buildDecision({ world, playerMove: { x: -1, y: 0 }, snapshot: after });
       const atlas = buildA1CrossFutureContradictionAtlas(buildResearch({ world, decision }));
-      const conflict = atlas.pairs.find((pair) => pair.hasOwnerAlternateUtilityPreferenceConflict);
-      const diagnostic = atlas.pairs.map((pair) => ({
-        pair: [pair.proposalAId, pair.proposalBId],
-        orders: pair.observations.map((observation) => [
-          observation.futureFamily,
-          observation.utilityOrder,
-          observation.cooperationRelation
-        ])
-      }));
+      const info = decisionInformation(atlas);
 
-      expect(conflict, JSON.stringify(diagnostic)).toBeDefined();
-      expect(conflict?.hasCrossFutureUtilityPreferenceConflict).toBe(true);
-      expect(["A_HIGHER", "B_HIGHER"]).toContain(conflict?.ownerUtilityOrder);
-      const owner = future(conflict!, "OWNER_REQUEST_CONTINUATION");
-      const alternates = conflict!.observations.filter(
-        (observation) => observation.futureFamily !== "OWNER_REQUEST_CONTINUATION"
-      );
-      const opposite = owner.utilityOrder === "A_HIGHER" ? "B_HIGHER" : "A_HIGHER";
-      expect(alternates.some((observation) => observation.utilityOrder === opposite)).toBe(true);
-      expect(conflict?.selectionClaim).toBe("NONE_CONTRADICTION_ATLAS_ONLY_A1_2S1");
+      expect(info.ownerUtilityDiscriminatingPairs).toHaveLength(0);
+      expect(info.ownerUtilityEqualPairs).toHaveLength(atlas.pairCount);
+      expect(info.ownerCooperationDiscriminatingPairs).toHaveLength(0);
+      expect(info.alternateUtilityDiscriminatesWhenOwnerEqual.length).toBeGreaterThan(0);
+      expect(atlas.pairs.some((pair) => pair.hasOwnerAlternateUtilityPreferenceConflict)).toBe(false);
+      expect(atlas.pairs.every((pair) => pair.ownerCooperationRelation === "NO_PREFERENCE")).toBe(true);
+      expect(atlas.weightingClaim).toBe("NONE_A1_2S1");
+      expect(atlas.selectionClaim).toBe("NONE_CONTRADICTION_ATLAS_ONLY_A1_2S1");
+    } finally {
+      world.dispose();
+    }
+  });
+
+  it("characterizes whether reversal H1 decision information appears at longer bounded horizons", async () => {
+    const world = await LabWorld.create("open");
+    try {
+      const after = world.step([playerIntent(1, 0), companionHold()]);
+      const horizons = [0.5, 1, 1.5] as const;
+      const characterization = horizons.map((horizonSeconds) => {
+        const decision = buildDecision({
+          world,
+          playerMove: { x: -1, y: 0 },
+          snapshot: after,
+          horizonSeconds
+        });
+        const atlas = buildA1CrossFutureContradictionAtlas(buildResearch({ world, decision }));
+        const info = decisionInformation(atlas);
+        return {
+          horizonSeconds,
+          proposalCount: decision.proposalSet.proposalCount,
+          pairCount: atlas.pairCount,
+          ownerUtilityDiscriminatingPairCount: info.ownerUtilityDiscriminatingPairs.length,
+          ownerUtilityEqualPairCount: info.ownerUtilityEqualPairs.length,
+          ownerCooperationDiscriminatingPairCount: info.ownerCooperationDiscriminatingPairs.length,
+          alternateUtilityDiscriminatesWhenOwnerEqualPairCount:
+            info.alternateUtilityDiscriminatesWhenOwnerEqual.length
+        };
+      });
+
+      console.log("[A1_2S1_INFO] reversal-horizon-decision-information", JSON.stringify(characterization));
+      expect(characterization).toHaveLength(3);
+      expect(characterization[0]!.horizonSeconds).toBe(0.5);
+      expect(characterization[0]!.ownerUtilityDiscriminatingPairCount).toBe(0);
+      expect(characterization[0]!.ownerUtilityEqualPairCount).toBe(characterization[0]!.pairCount);
+      expect(characterization[0]!.alternateUtilityDiscriminatesWhenOwnerEqualPairCount).toBeGreaterThan(0);
+      expect(characterization.every((entry) => entry.pairCount >= 0)).toBe(true);
     } finally {
       world.dispose();
     }
