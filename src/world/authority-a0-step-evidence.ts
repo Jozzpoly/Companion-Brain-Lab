@@ -15,9 +15,10 @@ import {
   type VelocityCommand
 } from "../coordination/velocity-command";
 import type { MovementCapability } from "./movement-capability";
-import type { MotionIntent, WorldSnapshot } from "./types";
+import type { MotionIntent, ScenarioId, WorldSnapshot } from "./types";
 
 export interface AuthorityA0WorldStepEvidence {
+  scenarioId: ScenarioId;
   observationTick: number;
   outcomeTick: number;
   situated: SituatedEvidenceFrame;
@@ -63,6 +64,9 @@ export function buildAuthorityA0WorldStepEvidence(input: {
   if (input.after.tick !== input.before.tick + 1) {
     throw new Error("A0 World step evidence requires adjacent observation/outcome ticks.");
   }
+  if (input.after.scenarioId !== input.before.scenarioId) {
+    throw new Error("A0 World step evidence requires one scenario across observation and outcome.");
+  }
 
   const playerIntent = intentFor(input.intents, "player");
   const companionIntent = intentFor(input.intents, "companion");
@@ -74,6 +78,7 @@ export function buildAuthorityA0WorldStepEvidence(input: {
   const playerOutcomeBody = bodyEvidenceFromSnapshot(input.after, "player");
 
   return {
+    scenarioId: input.before.scenarioId,
     observationTick: input.before.tick,
     outcomeTick: input.after.tick,
     situated: buildSituatedEvidenceFrame({
@@ -97,6 +102,7 @@ export function cloneAuthorityA0WorldStepEvidence(
   value: AuthorityA0WorldStepEvidence
 ): AuthorityA0WorldStepEvidence {
   return {
+    scenarioId: value.scenarioId,
     observationTick: value.observationTick,
     outcomeTick: value.outcomeTick,
     situated: {
