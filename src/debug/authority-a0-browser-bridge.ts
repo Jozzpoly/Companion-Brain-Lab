@@ -3,6 +3,10 @@ import {
   type AuthorityA0WorldStepEvidence
 } from "../world/authority-a0-step-evidence";
 import { subscribeAuthorityA0StepEvidence } from "../world/world";
+import {
+  runAuthorityA0HardRouteBrowserQualification,
+  type AuthorityA0HardRouteBrowserQualification
+} from "./authority-a0-hard-route-browser-probe";
 
 const QUERY_FLAG = "a0debug";
 const BUFFER_CAPACITY = 480;
@@ -15,6 +19,8 @@ export interface AuthorityA0BrowserIncident {
   capturedAt: string;
   frameCount: number;
   scenarios: string[];
+  hardRouteQualification: AuthorityA0HardRouteBrowserQualification | null;
+  hardRouteQualificationError: string | null;
   frames: AuthorityA0WorldStepEvidence[];
 }
 
@@ -37,11 +43,37 @@ function cloneFrames(values: readonly AuthorityA0WorldStepEvidence[]): Authority
   return values.map((value) => cloneAuthorityA0WorldStepEvidence(value));
 }
 
+function cloneHardRouteQualification(
+  value: AuthorityA0HardRouteBrowserQualification | null
+): AuthorityA0HardRouteBrowserQualification | null {
+  if (!value) return null;
+  return {
+    fixture: value.fixture,
+    target: { ...value.target },
+    evidence: {
+      ...value.evidence,
+      hardRouteNodeIds: [...value.evidence.hardRouteNodeIds],
+      desiredRouteNodeIds: [...value.evidence.desiredRouteNodeIds]
+    }
+  };
+}
+
 export function installAuthorityA0BrowserBridge(search: string): void {
   const params = new URLSearchParams(search);
   if (params.get(QUERY_FLAG) !== "1" || window.__authorityA0BrowserBridge) return;
 
   const frames: AuthorityA0WorldStepEvidence[] = [];
+  let hardRouteQualification: AuthorityA0HardRouteBrowserQualification | null = null;
+  let hardRouteQualificationError: string | null = null;
+
+  void runAuthorityA0HardRouteBrowserQualification()
+    .then((value) => {
+      hardRouteQualification = cloneHardRouteQualification(value);
+    })
+    .catch((error: unknown) => {
+      hardRouteQualificationError = error instanceof Error ? error.message : String(error);
+    });
+
   const unsubscribe = subscribeAuthorityA0StepEvidence((evidence) => {
     frames.push(cloneAuthorityA0WorldStepEvidence(evidence));
     if (frames.length > BUFFER_CAPACITY) {
@@ -56,6 +88,8 @@ export function installAuthorityA0BrowserBridge(search: string): void {
     capturedAt: new Date().toISOString(),
     frameCount: frames.length,
     scenarios: [...new Set(frames.map((frame) => frame.scenarioId))],
+    hardRouteQualification: cloneHardRouteQualification(hardRouteQualification),
+    hardRouteQualificationError,
     frames: cloneFrames(frames)
   });
 
