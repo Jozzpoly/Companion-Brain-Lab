@@ -93,6 +93,8 @@ export function buildAuthorityA0WorldStepEvidence(input: {
     companionOutcomeAttribution: evaluateOutcomeAttribution({
       before: actor(input.before, "companion"),
       after: actor(input.after, "companion"),
+      observationTick: input.before.tick,
+      outcomeTick: input.after.tick,
       commandedVelocity: companionVelocityCommand.velocity
     })
   };
