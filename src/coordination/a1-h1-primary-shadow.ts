@@ -3,6 +3,7 @@ import {
   type A1CandidateEvidenceCertificate,
   type A1CandidateEvidenceCertificateSet
 } from "./a1-candidate-evidence-certificate";
+import type { A1CompanionCandidateFamily } from "./a1-companion-candidates";
 import { buildA1CommandRobustnessResearchSet } from "./a1-command-robustness-research-dossier";
 import { buildA1ConcreteCommandProposalSet } from "./a1-concrete-command-proposals";
 import { buildA1FixedCommandCrossFutureProfile } from "./a1-fixed-command-cross-future-profile";
@@ -32,6 +33,58 @@ interface FrontierRow {
   dominatedByProposalIds: readonly string[];
 }
 
+export interface A1H1PrimaryShadowGenerationOriginTrace {
+  futureId: string;
+  futureFamily: A1PlayerFutureFamily;
+  futureCausalMeaning: string;
+  seedId: string;
+  taggedSeedId: string;
+  seedFamily: A1CompanionCandidateFamily;
+  seedLocalBasisSource: "NONE" | "CURRENT_RELATIVE_OFFSET";
+  desiredVelocity: Vec2;
+  commandVelocity: Vec2;
+  capabilityClipped: boolean;
+}
+
+export interface A1H1PrimaryShadowProposalStageTrace {
+  proposalId: string;
+  commandVelocity: Vec2;
+  generationOriginCount: number;
+  generationOrigins: readonly A1H1PrimaryShadowGenerationOriginTrace[];
+  h1GenerationOrigins: readonly A1H1PrimaryShadowGenerationOriginTrace[];
+  h1PhysicalStatus: "REHEARSED" | "UNRESOLVED" | "ABSENT" | "UPSTREAM_REJECTED";
+  h1FutureId: string | null;
+  h1PlayerVelocity: Vec2 | null;
+  g3Decision: string | null;
+  g3Status: string | null;
+  relationStatus: string;
+  comparisonEligible: boolean;
+  q: number | null;
+  paceDelta: number | null;
+  dominatedByProposalIds: readonly string[];
+  g4Frontier: boolean;
+  qPaceDominatedByProposalIds: readonly string[];
+  structuredFrontier: boolean;
+}
+
+export interface A1H1PrimaryShadowStageTrace {
+  kind: "A1_H1_PRIMARY_STAGE_ATTRIBUTION_TRACE";
+  sourceTick: number;
+  horizonSeconds: number;
+  proposalCount: number;
+  generationOriginCount: number;
+  proposals: readonly A1H1PrimaryShadowProposalStageTrace[];
+  semantics: {
+    computationPath: "SAME_A1_H1_PRIMARY_SHADOW_EVALUATION_PASS";
+    proposalIdentity: "A1_2O_EXECUTABLE_COMMAND";
+    tangentIdentity: "POSITIVE_NEGATIVE_PRESERVED_AS_GENERATION_ORIGINS";
+    h1: "OWNER_REQUEST_CONTINUATION";
+    selection: "NONE_RESEARCH_TRACE_ONLY";
+    sidePreference: "NONE";
+    movementAuthority: "NONE_SHADOW_ONLY";
+  };
+}
+
 export interface A1H1PrimaryShadowCandidate {
   proposalId: string;
   commandVelocity: Vec2;
@@ -48,6 +101,7 @@ export interface A1H1PrimaryShadowHorizonResult {
   comparableIds: readonly string[];
   g4FrontierIds: readonly string[];
   structuredFrontierIds: readonly string[];
+  stageTrace: A1H1PrimaryShadowStageTrace;
   shadowDecisionState: "SINGLETON_H1_FRONTIER" | "H1_FRONTIER_AMBIGUOUS" | "H1_FRONTIER_UNAVAILABLE";
   singletonShadowCandidate: A1H1PrimaryShadowCandidate | null;
   frontierCandidates: readonly A1H1PrimaryShadowCandidate[];
@@ -120,6 +174,101 @@ function structuredFrontier(rows: readonly FrontierRow[]): FrontierRow[] {
   return g4.filter((candidate) =>
     !g4.some((other) => other.proposalId !== candidate.proposalId && qPaceDominates(other, candidate))
   );
+}
+
+function cloneOrigin(origin: {
+  futureId: string;
+  futureFamily: A1PlayerFutureFamily;
+  futureCausalMeaning: string;
+  seedId: string;
+  taggedSeedId: string;
+  seedFamily: A1CompanionCandidateFamily;
+  seedLocalBasisSource: "NONE" | "CURRENT_RELATIVE_OFFSET";
+  desiredVelocity: Vec2;
+  commandVelocity: Vec2;
+  capabilityClipped: boolean;
+}): A1H1PrimaryShadowGenerationOriginTrace {
+  return {
+    futureId: origin.futureId,
+    futureFamily: origin.futureFamily,
+    futureCausalMeaning: origin.futureCausalMeaning,
+    seedId: origin.seedId,
+    taggedSeedId: origin.taggedSeedId,
+    seedFamily: origin.seedFamily,
+    seedLocalBasisSource: origin.seedLocalBasisSource,
+    desiredVelocity: { ...origin.desiredVelocity },
+    commandVelocity: { ...origin.commandVelocity },
+    capabilityClipped: origin.capabilityClipped
+  };
+}
+
+function buildStageTrace(input: {
+  proposalSet: ReturnType<typeof buildA1ConcreteCommandProposalSet>;
+  certificates: A1CandidateEvidenceCertificateSet;
+  comparable: readonly FrontierRow[];
+  g4: readonly FrontierRow[];
+  frontier: readonly FrontierRow[];
+}): A1H1PrimaryShadowStageTrace {
+  const comparableById = new Map(input.comparable.map((row) => [row.proposalId, row]));
+  const g4Ids = new Set(input.g4.map((row) => row.proposalId));
+  const frontierIds = new Set(input.frontier.map((row) => row.proposalId));
+
+  const proposals = input.proposalSet.proposals.map((proposal): A1H1PrimaryShadowProposalStageTrace => {
+    const certificate = input.certificates.certificates.find((value) => value.proposalId === proposal.proposalId);
+    if (!certificate) throw new Error(`A1 H1 stage trace lost certificate ${proposal.proposalId}.`);
+    const h1 = future(certificate, H1);
+    const physical = h1.robustness.physical;
+    const relationNode = h1.robustness.relationNode;
+    const row = comparableById.get(proposal.proposalId) ?? null;
+    const q = h1.relationship.relationshipUtility?.terminalUtility.totalUtility ?? null;
+    const paceDelta = h1.radialPace.radialPace?.absoluteRadialErrorDelta ?? null;
+    const generationOrigins = proposal.generationOrigins.map(cloneOrigin);
+    const h1GenerationOrigins = generationOrigins.filter((origin) => origin.futureFamily === H1);
+    const qPaceDominatedByProposalIds = row && g4Ids.has(proposal.proposalId)
+      ? input.g4
+          .filter((other) => other.proposalId !== proposal.proposalId && qPaceDominates(other, row))
+          .map((other) => other.proposalId)
+      : [];
+
+    return {
+      proposalId: proposal.proposalId,
+      commandVelocity: { ...proposal.commandVelocity },
+      generationOriginCount: proposal.generationOriginCount,
+      generationOrigins,
+      h1GenerationOrigins,
+      h1PhysicalStatus: physical.status,
+      h1FutureId: h1.futureId,
+      h1PlayerVelocity: physical.status === "REHEARSED" ? { ...physical.playerVelocity } : null,
+      g3Decision: relationNode.g3Decision,
+      g3Status: relationNode.g3Status,
+      relationStatus: relationNode.relationStatus,
+      comparisonEligible: relationNode.comparisonEligible,
+      q,
+      paceDelta,
+      dominatedByProposalIds: [...h1.robustness.dominatedByProposalIds],
+      g4Frontier: g4Ids.has(proposal.proposalId),
+      qPaceDominatedByProposalIds,
+      structuredFrontier: frontierIds.has(proposal.proposalId)
+    };
+  });
+
+  return {
+    kind: "A1_H1_PRIMARY_STAGE_ATTRIBUTION_TRACE",
+    sourceTick: input.proposalSet.sourceTick,
+    horizonSeconds: input.proposalSet.horizonSeconds,
+    proposalCount: input.proposalSet.proposalCount,
+    generationOriginCount: input.proposalSet.generationOriginCount,
+    proposals,
+    semantics: {
+      computationPath: "SAME_A1_H1_PRIMARY_SHADOW_EVALUATION_PASS",
+      proposalIdentity: "A1_2O_EXECUTABLE_COMMAND",
+      tangentIdentity: "POSITIVE_NEGATIVE_PRESERVED_AS_GENERATION_ORIGINS",
+      h1: "OWNER_REQUEST_CONTINUATION",
+      selection: "NONE_RESEARCH_TRACE_ONLY",
+      sidePreference: "NONE",
+      movementAuthority: "NONE_SHADOW_ONLY"
+    }
+  };
 }
 
 function candidateFromRow(
@@ -208,6 +357,7 @@ export function evaluateA1H1PrimaryShadowHorizon(input: {
   const g4 = g4Frontier(comparable);
   const frontier = structuredFrontier(comparable);
   const frontierCandidates = frontier.map((row) => candidateFromRow(row, certificates, origins));
+  const stageTrace = buildStageTrace({ proposalSet, certificates, comparable, g4, frontier });
 
   return {
     horizonSeconds: input.horizonSeconds,
@@ -216,6 +366,7 @@ export function evaluateA1H1PrimaryShadowHorizon(input: {
     comparableIds: comparable.map((row) => row.proposalId),
     g4FrontierIds: g4.map((row) => row.proposalId),
     structuredFrontierIds: frontier.map((row) => row.proposalId),
+    stageTrace,
     shadowDecisionState:
       frontier.length === 1 ? "SINGLETON_H1_FRONTIER" :
       frontier.length === 0 ? "H1_FRONTIER_UNAVAILABLE" :
