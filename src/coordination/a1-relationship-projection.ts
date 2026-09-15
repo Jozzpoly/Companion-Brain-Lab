@@ -15,6 +15,8 @@ export type A1ProjectionRouteQualification =
   | "HARD_REACHABLE"
   | "HARD_UNREACHABLE";
 
+export type A1RouteQualificationStrategy = "SEMANTIC_PRIORITY" | "STRATIFIED_COVERAGE";
+
 export interface A1RelationshipProjectionSample {
   sampleId: string;
   semanticEligible: boolean;
@@ -36,7 +38,9 @@ export interface A1RelationshipProjectionField {
   companionRadius: number;
   desiredClearance: number;
   routeBudget: number;
+  routeQualificationStrategy: A1RouteQualificationStrategy;
   routeCoverageComplete: boolean;
+  routeEvaluatedSampleIds: readonly string[];
   counts: {
     totalSamples: number;
     semanticEligible: number;
@@ -79,6 +83,13 @@ function validatedClearance(value: number): number {
   return value;
 }
 
+function validatedStrategy(value: A1RouteQualificationStrategy): A1RouteQualificationStrategy {
+  if (value !== "SEMANTIC_PRIORITY" && value !== "STRATIFIED_COVERAGE") {
+    throw new Error(`Unsupported A1 route qualification strategy: ${String(value)}.`);
+  }
+  return value;
+}
+
 export function projectA1RelativeState(playerPosition: Vec2, relativeOffset: Vec2): Vec2 {
   const player = finiteVector(playerPosition, "A1 player projection position");
   const relative = finiteVector(relativeOffset, "A1 relative projection offset");
@@ -109,17 +120,129 @@ function projectionSample(
   };
 }
 
-function candidateOrder(
+function semanticSample(
+  semanticById: ReadonlyMap<string, A1RelationshipSemanticSample>,
+  sampleId: string
+): A1RelationshipSemanticSample {
+  const result = semanticById.get(sampleId);
+  if (!result) throw new Error(`A1 projection lost semantic sample provenance for ${sampleId}.`);
+  return result;
+}
+
+function semanticPriorityOrder(
   semanticById: ReadonlyMap<string, A1RelationshipSemanticSample>,
   a: A1RelationshipProjectionSample,
   b: A1RelationshipProjectionSample
 ): number {
-  const semanticA = semanticById.get(a.sampleId);
-  const semanticB = semanticById.get(b.sampleId);
-  if (!semanticA || !semanticB) throw new Error("A1 projection lost semantic sample provenance.");
+  const semanticA = semanticSample(semanticById, a.sampleId);
+  const semanticB = semanticSample(semanticById, b.sampleId);
   const utilityDelta = semanticB.utility.totalUtility - semanticA.utility.totalUtility;
   if (Math.abs(utilityDelta) > 1e-12) return utilityDelta;
-  return a.sampleId.localeCompare(b.sampleId);
+  if (semanticA.radiusIndex !== semanticB.radiusIndex) return semanticA.radiusIndex - semanticB.radiusIndex;
+  return semanticA.directionIndex - semanticB.directionIndex;
+}
+
+function circularDirectionDistance(a: number, b: number, directionCount: number): number {
+  const raw = Math.abs(a - b);
+  return Math.min(raw, directionCount - raw);
+}
+
+function normalizedSampleDistance(
+  field: A1RelationshipSemanticField,
+  a: A1RelationshipSemanticSample,
+  b: A1RelationshipSemanticSample
+): number {
+  const angularScale = Math.max(1, field.sampleDirections / 2);
+  const radialScale = Math.max(1, field.sampleRadii.length - 1);
+  const angular = circularDirectionDistance(a.directionIndex, b.directionIndex, field.sampleDirections) / angularScale;
+  const radial = Math.abs(a.radiusIndex - b.radiusIndex) / radialScale;
+  return Math.hypot(angular, radial);
+}
+
+function selectSemanticPriority(
+  field: A1RelationshipSemanticField,
+  semanticById: ReadonlyMap<string, A1RelationshipSemanticSample>,
+  candidates: readonly A1RelationshipProjectionSample[],
+  budget: number
+): A1RelationshipProjectionSample[] {
+  void field;
+  return [...candidates]
+    .sort((a, b) => semanticPriorityOrder(semanticById, a, b))
+    .slice(0, budget);
+}
+
+function selectStratifiedCoverage(
+  field: A1RelationshipSemanticField,
+  semanticById: ReadonlyMap<string, A1RelationshipSemanticSample>,
+  candidates: readonly A1RelationshipProjectionSample[],
+  budget: number
+): A1RelationshipProjectionSample[] {
+  if (budget <= 0 || candidates.length === 0) return [];
+
+  const remaining = [...candidates].sort((a, b) => semanticPriorityOrder(semanticById, a, b));
+  const selected: A1RelationshipProjectionSample[] = [];
+
+  // Seed with the semantically strongest candidate, then greedily maximize
+  // minimum distance in the relative sampling lattice. Utility remains a
+  // deterministic tie-break, not the definition of coverage.
+  const first = remaining.shift();
+  if (first) selected.push(first);
+
+  while (selected.length < budget && remaining.length > 0) {
+    let bestIndex = 0;
+    let bestCoverage = -1;
+
+    for (let index = 0; index < remaining.length; index += 1) {
+      const candidate = remaining[index];
+      if (!candidate) continue;
+      const semanticCandidate = semanticSample(semanticById, candidate.sampleId);
+      let minimumDistance = Number.POSITIVE_INFINITY;
+
+      for (const existing of selected) {
+        const semanticExisting = semanticSample(semanticById, existing.sampleId);
+        minimumDistance = Math.min(
+          minimumDistance,
+          normalizedSampleDistance(field, semanticCandidate, semanticExisting)
+        );
+      }
+
+      if (minimumDistance > bestCoverage + 1e-12) {
+        bestCoverage = minimumDistance;
+        bestIndex = index;
+        continue;
+      }
+
+      if (Math.abs(minimumDistance - bestCoverage) <= 1e-12) {
+        const currentBest = remaining[bestIndex];
+        if (
+          currentBest &&
+          semanticPriorityOrder(semanticById, candidate, currentBest) < 0
+        ) {
+          bestIndex = index;
+        }
+      }
+    }
+
+    const [next] = remaining.splice(bestIndex, 1);
+    if (!next) break;
+    selected.push(next);
+  }
+
+  return selected;
+}
+
+function selectRouteCandidates(input: {
+  field: A1RelationshipSemanticField;
+  semanticById: ReadonlyMap<string, A1RelationshipSemanticSample>;
+  candidates: readonly A1RelationshipProjectionSample[];
+  strategy: A1RouteQualificationStrategy;
+  budget: number;
+}): A1RelationshipProjectionSample[] {
+  if (input.budget <= 0) return [];
+  if (input.strategy === "STRATIFIED_COVERAGE") {
+    return selectStratifiedCoverage(input.field, input.semanticById, input.candidates, input.budget);
+  }
+  return selectSemanticPriority(input.field, input.semanticById, input.candidates, input.budget);
 }
 
 export function projectA1RelationshipSemanticField(input: {
@@ -128,6 +251,7 @@ export function projectA1RelationshipSemanticField(input: {
   query: StaticTraversalQuery;
   routeBudget?: number;
   desiredClearance?: number;
+  routeQualificationStrategy?: A1RouteQualificationStrategy;
 }): A1RelationshipProjectionField {
   if (input.field.sourceTick !== input.snapshot.tick) {
     throw new Error(
@@ -137,6 +261,7 @@ export function projectA1RelationshipSemanticField(input: {
 
   const routeBudget = validatedBudget(input.routeBudget ?? A1_RELATIONSHIP_ROUTE_BUDGET);
   const desiredClearance = validatedClearance(input.desiredClearance ?? S2C_ROUTE_CLEARANCE);
+  const routeQualificationStrategy = validatedStrategy(input.routeQualificationStrategy ?? "SEMANTIC_PRIORITY");
   const player = actor(input.snapshot, "player");
   const companion = actor(input.snapshot, "companion");
   const semanticById = new Map(input.field.samples.map((sample) => [sample.id, sample]));
@@ -147,9 +272,7 @@ export function projectA1RelationshipSemanticField(input: {
   const samples = input.field.samples.map((sample) =>
     projectionSample(input.snapshot, player, companion, sample, desiredClearance)
   );
-  const routeCandidates = samples
-    .filter((sample) => sample.semanticEligible && sample.hardFit)
-    .sort((a, b) => candidateOrder(semanticById, a, b));
+  const routeCandidates = samples.filter((sample) => sample.semanticEligible && sample.hardFit);
 
   for (const candidate of routeCandidates) candidate.routeQualification = "UNTESTED";
 
@@ -159,7 +282,14 @@ export function projectA1RelationshipSemanticField(input: {
     return input.query(from, to, radius, options);
   };
 
-  const evaluated = routeCandidates.slice(0, routeBudget);
+  const evaluated = selectRouteCandidates({
+    field: input.field,
+    semanticById,
+    candidates: routeCandidates,
+    strategy: routeQualificationStrategy,
+    budget: Math.min(routeBudget, routeCandidates.length)
+  });
+
   for (const candidate of evaluated) {
     const truth = evaluateHardRouteTruth({
       snapshot: input.snapshot,
@@ -193,7 +323,9 @@ export function projectA1RelationshipSemanticField(input: {
     companionRadius: companion.radius,
     desiredClearance,
     routeBudget,
+    routeQualificationStrategy,
     routeCoverageComplete: routeEvaluated === routeCandidates.length,
+    routeEvaluatedSampleIds: evaluated.map((sample) => sample.sampleId),
     counts: {
       totalSamples: samples.length,
       semanticEligible,
