@@ -441,7 +441,7 @@ export class RapierPhysicalWorld {
       { id: "boundary.top", x: width / 2, y: -WALL_THICKNESS / 2, hw: width / 2, hh: WALL_THICKNESS / 2 },
       { id: "boundary.bottom", x: width / 2, y: height + WALL_THICKNESS / 2, hw: width / 2, hh: WALL_THICKNESS / 2 },
       { id: "boundary.left", x: -WALL_THICKNESS / 2, y: height / 2, hw: WALL_THICKNESS / 2, hh: height / 2 },
-      { id: "boundary.right", x: width + WALL_THICKNESS / 2, y: height / 2, hw: WALL_THICKNESS / 2, hh: WALL_THICKNESS / 2 }
+      { id: "boundary.right", x: width + WALL_THICKNESS / 2, y: height / 2, hw: WALL_THICKNESS / 2, hh: height / 2 }
     ];
     for (const wall of walls) {
       const collider = this.world.createCollider(
