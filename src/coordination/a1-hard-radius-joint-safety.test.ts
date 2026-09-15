@@ -86,6 +86,28 @@ describe("Authority-A1.2e hard-radius piecewise safety primitive", () => {
     expect(result.physicalState).toBe("OVERLAP_PREDICTED");
   });
 
+  it("reports overlap already present at t=0 even when bodies immediately separate", () => {
+    const result = evaluateA1HardRadiusPiecewiseSafety({
+      sourceTick: 0,
+      horizonSeconds: 1,
+      companion: {
+        origin: { x: 0.4, y: 0 },
+        velocity: { x: 4, y: 0 },
+        radius: 0.3
+      },
+      player: {
+        origin: { x: 0, y: 0 },
+        velocity: { x: -4, y: 0 },
+        radius: 0.3,
+        movingUntilSeconds: 1
+      }
+    });
+
+    expect(result.closestApproachTimeSeconds).toBeCloseTo(0, 12);
+    expect(result.closestCenterDistance).toBeCloseTo(0.4, 12);
+    expect(result.physicalState).toBe("OVERLAP_PREDICTED");
+  });
+
   it("distinguishes exact hard-radius touch from penetration", () => {
     const result = evaluateA1HardRadiusPiecewiseSafety({
       sourceTick: 0,
@@ -107,6 +129,64 @@ describe("Authority-A1.2e hard-radius piecewise safety primitive", () => {
     expect(result.closestCenterDistance).toBeCloseTo(0.6, 12);
     expect(result.hardClearance).toBeCloseTo(0, 12);
     expect(result.physicalState).toBe("TOUCH_ONLY");
+  });
+
+  it("does not erase a sub-epsilon moving phase that contains the only overlap", () => {
+    const movingUntilSeconds = 5e-9;
+    const result = evaluateA1HardRadiusPiecewiseSafety({
+      sourceTick: 0,
+      horizonSeconds: 1,
+      companion: {
+        origin: { x: 0, y: 0 },
+        velocity: { x: 0, y: 0 },
+        radius: 0.3
+      },
+      player: {
+        origin: { x: -0.7, y: 0 },
+        velocity: { x: 2.8e8, y: 0 },
+        radius: 0.3,
+        movingUntilSeconds
+      }
+    });
+
+    expect(result.segments.map((segment) => segment.phase)).toEqual([
+      "PLAYER_MOVING",
+      "PLAYER_STOPPED_AFTER_STATIC_CLIP"
+    ]);
+    expect(result.closestPhase).toBe("PLAYER_MOVING");
+    expect(result.closestApproachTimeSeconds).toBeGreaterThan(0);
+    expect(result.closestApproachTimeSeconds).toBeLessThan(movingUntilSeconds);
+    expect(result.physicalState).toBe("OVERLAP_PREDICTED");
+  });
+
+  it("does not erase a sub-epsilon stopped tail that contains the only overlap", () => {
+    const horizonSeconds = 1e-6;
+    const stoppedTailSeconds = 5e-9;
+    const movingUntilSeconds = horizonSeconds - stoppedTailSeconds;
+    const velocity = 4e7;
+    const result = evaluateA1HardRadiusPiecewiseSafety({
+      sourceTick: 0,
+      horizonSeconds,
+      companion: {
+        origin: { x: 0, y: 0 },
+        velocity: { x: velocity, y: 0 },
+        radius: 0.3
+      },
+      player: {
+        origin: { x: 0.7, y: 0 },
+        velocity: { x: velocity, y: 0 },
+        radius: 0.3,
+        movingUntilSeconds
+      }
+    });
+
+    expect(result.segments.map((segment) => segment.phase)).toEqual([
+      "PLAYER_MOVING",
+      "PLAYER_STOPPED_AFTER_STATIC_CLIP"
+    ]);
+    expect(result.closestPhase).toBe("PLAYER_STOPPED_AFTER_STATIC_CLIP");
+    expect(result.closestApproachTimeSeconds).toBeGreaterThan(movingUntilSeconds);
+    expect(result.physicalState).toBe("OVERLAP_PREDICTED");
   });
 
   it("catches a collision after static clipping that an average-velocity approximation would miss", () => {
@@ -241,6 +321,95 @@ describe("Authority-A1.2e hard-radius piecewise safety primitive", () => {
       ]);
       expect(result.inputProvenance).toBe("QUALIFIED_A1_2B_DIRECT_PLUS_A1_2C_PLAYER_FUTURE");
       expect(result.gateAuthorityClaim).toBe("NONE_A1_2E_PRIMITIVE_ONLY");
+    } finally {
+      world.dispose();
+    }
+  });
+
+  it("rejects forged A1.2b displacement before claiming qualified adapter provenance", async () => {
+    const world = await LabWorld.create("open");
+    try {
+      const situation = buildA1Situation({
+        snapshot: world.snapshot(),
+        playerIntent: { actorId: "player", move: { x: 1, y: 0 } },
+        playerCapability: world.actorMovementCapability("player"),
+        companionCapability: world.actorMovementCapability("companion"),
+        previousWorldStep: null
+      });
+      const horizon = 0.5;
+      const playerFuture = buildA1PlayerFutureHypotheses({
+        situation,
+        horizonSeconds: horizon,
+        staticTraversal: (from, target, radius, options) =>
+          world.staticCircleTraversal(from, target, radius, options)
+      }).hypotheses[0]!;
+      const realization = realizeA1DirectCandidate({
+        candidate: {
+          id: "a1-2e-forged-direct",
+          family: "HOLD",
+          sourceTick: situation.tick,
+          desiredVelocity: { x: 0, y: 0 },
+          localBasisSource: "NONE"
+        },
+        capability: world.actorMovementCapability("companion"),
+        horizonSeconds: horizon
+      });
+      const forged = {
+        ...realization,
+        predictedDisplacement: { x: 1, y: 0 }
+      };
+
+      expect(() => evaluateA1DirectPlayerHardRadiusSafety({
+        situation,
+        realization: forged,
+        playerFuture
+      })).toThrow(/predicted displacement.*inconsistent/i);
+    } finally {
+      world.dispose();
+    }
+  });
+
+  it("rejects forged A1.2c hard-radius evidence before claiming qualified adapter provenance", async () => {
+    const world = await LabWorld.create("open");
+    try {
+      const situation = buildA1Situation({
+        snapshot: world.snapshot(),
+        playerIntent: { actorId: "player", move: { x: 1, y: 0 } },
+        playerCapability: world.actorMovementCapability("player"),
+        companionCapability: world.actorMovementCapability("companion"),
+        previousWorldStep: null
+      });
+      const horizon = 0.5;
+      const playerFuture = buildA1PlayerFutureHypotheses({
+        situation,
+        horizonSeconds: horizon,
+        staticTraversal: (from, target, radius, options) =>
+          world.staticCircleTraversal(from, target, radius, options)
+      }).hypotheses[0]!;
+      const realization = realizeA1DirectCandidate({
+        candidate: {
+          id: "a1-2e-valid-direct",
+          family: "HOLD",
+          sourceTick: situation.tick,
+          desiredVelocity: { x: 0, y: 0 },
+          localBasisSource: "NONE"
+        },
+        capability: world.actorMovementCapability("companion"),
+        horizonSeconds: horizon
+      });
+      const forgedFuture = {
+        ...playerFuture,
+        staticFeasibility: {
+          ...playerFuture.staticFeasibility,
+          radius: playerFuture.staticFeasibility.radius + 0.1
+        }
+      };
+
+      expect(() => evaluateA1DirectPlayerHardRadiusSafety({
+        situation,
+        realization,
+        playerFuture: forgedFuture
+      })).toThrow(/static radius.*current player hard radius/i);
     } finally {
       world.dispose();
     }
