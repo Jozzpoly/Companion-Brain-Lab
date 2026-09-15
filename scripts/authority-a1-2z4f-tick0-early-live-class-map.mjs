@@ -153,7 +153,12 @@ try {
   await page.locator('[data-action="scenario-head-on"]').click();
   await waitForPanel(page, (text) => text.includes("scenario Head-on contact") && text.includes("PAUSED"), 15_000, "paused head-on reset");
   await page.locator('[data-action="cycle-a1-authority"]').click();
-  await waitForPanel(page, (text) => text.includes("A1 DIRECT") && text.includes("PASS-THROUGH ONLY") && text.includes("PAUSED"), 10_000, "paused A1 DIRECT");
+  await waitForPanel(
+    page,
+    (text) => text.includes("A1 DIRECT") && text.includes("DIRECT active · waiting for first SPATIAL decision") && text.includes("PAUSED"),
+    10_000,
+    "paused pre-decision A1 DIRECT"
+  );
 
   await page.keyboard.down("d");
   const probes = [];
