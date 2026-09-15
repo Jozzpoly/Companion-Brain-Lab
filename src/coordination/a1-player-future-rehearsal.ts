@@ -76,9 +76,6 @@ function requireRehearsable(
       `A1.2i refuses unresolved player future ${intervention.futureId}: ${intervention.unresolvedReason}.`
     );
   }
-  if (intervention.mode !== "REPEAT_WORLD_VELOCITY") {
-    throw new Error(`A1.2i player future ${intervention.futureId} has unsupported intervention mode.`);
-  }
   if (intervention.physicsExecutionClaim !== "NONE_A1_2H_PURE_CONTRACT") {
     throw new Error(`A1.2i player future ${intervention.futureId} has unexpected upstream physics authority.`);
   }
