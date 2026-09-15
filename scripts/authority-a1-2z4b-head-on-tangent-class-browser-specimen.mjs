@@ -107,9 +107,12 @@ async function runVariant(browser, variant) {
     await page.waitForTimeout(150);
     await assertNoFault(page, errors, variant.id);
 
+    // Capture the participant pre-action frame first. Screenshot capture itself can
+    // span multiple live World steps, so the A0 frame baseline must be sampled
+    // afterwards or those idle steps contaminate the bounded action window.
+    const participantBefore = await canvas.screenshot({ type: "jpeg", quality: 60 });
     const beforeIncident = await bridgeIncident(page);
     const baseCount = headOnFrames(beforeIncident).length;
-    const participantBefore = await canvas.screenshot({ type: "jpeg", quality: 60 });
 
     await page.keyboard.down("d");
     await page.keyboard.down("ArrowRight");
