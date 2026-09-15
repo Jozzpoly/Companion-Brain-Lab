@@ -18,6 +18,27 @@ import type {
   WorldSnapshot
 } from "./types";
 
+export type AuthorityA0StepObserver = (evidence: AuthorityA0WorldStepEvidence) => void;
+
+const authorityA0StepObservers = new Set<AuthorityA0StepObserver>();
+
+export function subscribeAuthorityA0StepEvidence(observer: AuthorityA0StepObserver): () => void {
+  authorityA0StepObservers.add(observer);
+  return () => {
+    authorityA0StepObservers.delete(observer);
+  };
+}
+
+function publishAuthorityA0StepEvidence(evidence: AuthorityA0WorldStepEvidence): void {
+  for (const observer of authorityA0StepObservers) {
+    try {
+      observer(cloneAuthorityA0WorldStepEvidence(evidence));
+    } catch (error) {
+      console.error("[AUTHORITY_A0_OBSERVER] observer failed without affecting World authority", error);
+    }
+  }
+}
+
 export class LabWorld {
   private tickValue = 0;
   private latestAuthorityA0EvidenceValue: AuthorityA0WorldStepEvidence | null = null;
@@ -82,6 +103,9 @@ export class LabWorld {
       playerCapability: this.actorMovementCapability("player"),
       companionCapability: this.actorMovementCapability("companion")
     });
+    if (authorityA0StepObservers.size > 0) {
+      publishAuthorityA0StepEvidence(this.latestAuthorityA0EvidenceValue);
+    }
     return after;
   }
 
