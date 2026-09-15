@@ -96,6 +96,31 @@ function nearlyEqual(a: number, b: number, epsilon = EPSILON): boolean {
   return Math.abs(a - b) <= epsilon;
 }
 
+function copyObjective(objective: A1RelationshipObjectiveProfile): A1RelationshipObjectiveProfile {
+  const radial = { ...objective.radial };
+  if (objective.directional.kind === "NONE") {
+    return { radial, directional: { kind: "NONE" } };
+  }
+  if (objective.directional.kind === "AVOID_FORWARD_HEMISPHERE") {
+    return {
+      radial,
+      directional: {
+        kind: "AVOID_FORWARD_HEMISPHERE",
+        weight: objective.directional.weight
+      }
+    };
+  }
+  return {
+    radial,
+    directional: {
+      kind: "PREFER_BEARING",
+      preferredBearingRadians: objective.directional.preferredBearingRadians,
+      sigmaRadians: objective.directional.sigmaRadians,
+      weight: objective.directional.weight
+    }
+  };
+}
+
 function objectiveRadialMatches(
   profile: A1FixedCommandRadialPaceProfile,
   objective: A1RelationshipObjectiveProfile
@@ -269,7 +294,8 @@ export function buildA1CandidateEvidenceCertificateSet(input: {
   objective: A1RelationshipObjectiveProfile;
 }): A1CandidateEvidenceCertificateSet {
   validateResearch(input.research);
-  const objectiveSignature = a1RelationshipObjectiveSignature(input.objective);
+  const objective = copyObjective(input.objective);
+  const objectiveSignature = a1RelationshipObjectiveSignature(objective);
   const relationshipMap = profileMap(
     input.relationshipProfiles,
     input.research.dossiers.length,
@@ -291,7 +317,7 @@ export function buildA1CandidateEvidenceCertificateSet(input: {
       dossier,
       relationship: relationshipProfile,
       pace: paceProfile,
-      objective: input.objective,
+      objective,
       objectiveSignature
     });
     const futures = FUTURE_FAMILIES.map((family) => alignedFuture({
@@ -310,7 +336,7 @@ export function buildA1CandidateEvidenceCertificateSet(input: {
       sourceDossier: dossier,
       relationshipProfile,
       paceProfile,
-      objective: input.objective,
+      objective: copyObjective(objective),
       objectiveSignature,
       futures,
       identityClaim: "A1_2S0_Q_U_PROPOSAL_AND_FUTURE_IDENTITY_ALIGNED_A1_2V",
@@ -333,7 +359,7 @@ export function buildA1CandidateEvidenceCertificateSet(input: {
     horizonSeconds: input.research.horizonSeconds,
     proposalIds: [...input.research.proposalIds],
     certificates,
-    objective: input.objective,
+    objective: copyObjective(objective),
     objectiveSignature,
     exactCoverageClaim: "EXACT_A1_2S0_PROPOSAL_SET_A1_2V",
     compositionClaim: "A1_2S0_Q_U_ALIGNED_WITHOUT_POLICY_A1_2V",
