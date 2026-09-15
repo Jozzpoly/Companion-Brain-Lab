@@ -1,0 +1,20 @@
+name: A1.2y summary probe
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/a1-2y-summary-probe.yml'
+      - 'src/coordination/**'
+
+jobs:
+  summary:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install dependencies without npm Arborist peer-resolution path
+        run: npm install --legacy-peer-deps
+      - name: Run only A1.2y robustness audit
+        run: npx vitest run src/coordination/a1-cross-future-frontier-robustness.audit.test.ts --reporter=verbose
