@@ -63,7 +63,11 @@ function alignment(a: Vec2, b: Vec2): number | null {
   return (a.x * b.x + a.y * b.y) / (aLength * bLength);
 }
 
-function bodyEvidence(snapshot: WorldSnapshot, value: ActorSnapshot): PlayerBodyEvidence {
+export function bodyEvidenceFromSnapshot(
+  snapshot: WorldSnapshot,
+  id: "player" | "companion"
+): PlayerBodyEvidence {
+  const value = actor(snapshot, id);
   return {
     sourceTick: snapshot.tick,
     position: { ...value.position },
@@ -141,9 +145,7 @@ export function buildSituatedEvidenceFrame(input: {
   playerCapability: MovementCapability;
   companionCapability: MovementCapability;
 }): SituatedEvidenceFrame {
-  const player = actor(input.snapshot, "player");
-  const companion = actor(input.snapshot, "companion");
-  const playerBody = bodyEvidence(input.snapshot, player);
+  const playerBody = bodyEvidenceFromSnapshot(input.snapshot, "player");
 
   return {
     tick: input.snapshot.tick,
@@ -155,7 +157,7 @@ export function buildSituatedEvidenceFrame(input: {
     playerBody,
     playerMotionProvenance: classifyObservedPlayerMotion(playerBody),
     playerCapability: { ...input.playerCapability },
-    companionBody: bodyEvidence(input.snapshot, companion),
+    companionBody: bodyEvidenceFromSnapshot(input.snapshot, "companion"),
     companionCapability: { ...input.companionCapability }
   };
 }
