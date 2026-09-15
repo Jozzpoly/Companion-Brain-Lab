@@ -112,7 +112,7 @@ describe("Authority-A1.2p fixed-command cross-future physical profile", () => {
     }
   });
 
-  it("reuses one H1-specific concrete command unchanged under both H1 and OWNER_DIRECTED H2", async () => {
+  it("reuses one actually future-specific concrete command unchanged under both rehearsable H1 and H2", async () => {
     const world = await LabWorld.create("open");
     try {
       const after = world.step([playerIntent(1, 0), companionHold()]);
@@ -130,14 +130,24 @@ describe("Authority-A1.2p fixed-command cross-future physical profile", () => {
       }
       expect(h1Intervention.repeatedVelocity).not.toEqual(h2Intervention.repeatedVelocity);
 
-      const proposal = proposalFromFuture({
-        decision,
-        futureFamily: "OWNER_REQUEST_CONTINUATION",
-        seedFamily: "PLAYER_FEED_FORWARD"
+      const proposal = decision.proposalSet.proposals.find((candidate) => {
+        const futures = new Set(candidate.generationOrigins.map((origin) => origin.futureFamily));
+        return futures.size === 1 &&
+          (futures.has("OWNER_REQUEST_CONTINUATION") || futures.has("BODY_RESPONSE_CONTINUATION"));
       });
-      expect(proposal.generationOrigins.some(
-        (origin) => origin.futureFamily === "BODY_RESPONSE_CONTINUATION"
-      )).toBe(false);
+      if (!proposal) throw new Error("expected at least one actually future-specific H1/H2 concrete command");
+      const originFutureFamily = proposal.generationOrigins[0]?.futureFamily;
+      if (
+        originFutureFamily !== "OWNER_REQUEST_CONTINUATION" &&
+        originFutureFamily !== "BODY_RESPONSE_CONTINUATION"
+      ) {
+        throw new Error("future-specific command did not originate from H1/H2");
+      }
+      expect(proposal.generationOrigins.every((origin) => origin.futureFamily === originFutureFamily)).toBe(true);
+      const otherFutureFamily = originFutureFamily === "OWNER_REQUEST_CONTINUATION"
+        ? "BODY_RESPONSE_CONTINUATION"
+        : "OWNER_REQUEST_CONTINUATION";
+      expect(proposal.generationOrigins.some((origin) => origin.futureFamily === otherFutureFamily)).toBe(false);
 
       const profile = buildA1FixedCommandCrossFutureProfile({
         world,
