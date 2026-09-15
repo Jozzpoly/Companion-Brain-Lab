@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildA1PlayerFutureHypotheses } from "./a1-player-future-hypotheses";
 import { buildA1Situation } from "./a1-situation";
-import { LabWorld, S0_STEP_SECONDS } from "../world/world";
+import { LabWorld } from "../world/world";
+import { S0_STEP_SECONDS } from "../physics/rapier-physical-world";
 import type { MotionIntent } from "../world/types";
 
 const PLAYER_INPUT: MotionIntent = {
