@@ -9,6 +9,10 @@ on:
       - "foundation/**"
   pull_request:
 
+concurrency:
+  group: validate-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -17,6 +21,30 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - run: npm install
+      - name: Install dependencies
+        run: |
+          if npm install; then
+            echo "Dependency install completed through normal npm peer resolution."
+            exit 0
+          fi
+
+          latest_log="$(ls -t "$HOME"/.npm/_logs/*-debug-0.log 2>/dev/null | head -n 1 || true)"
+          echo "::group::npm debug log"
+          if [ -n "$latest_log" ]; then
+            cat "$latest_log"
+          else
+            echo "npm failed without a discoverable debug log"
+          fi
+          echo "::endgroup::"
+
+          if [ -z "$latest_log" ] || ! grep -Fq "Cannot read properties of null (reading 'edgesOut')" "$latest_log"; then
+            echo "npm failed for a reason other than the known Arborist edgesOut null-dereference; refusing fallback."
+            exit 1
+          fi
+
+          echo "Known npm Arborist edgesOut crash detected; retrying with peer auto-resolution disabled."
+          rm -rf node_modules
+          npm install --legacy-peer-deps
+          echo "NPM_ARBORIST_EDGESOUT_FALLBACK_USED=1"
       - run: npm run check
       - run: npm run browser:audit
