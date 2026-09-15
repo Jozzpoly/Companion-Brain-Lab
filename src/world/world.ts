@@ -1,4 +1,9 @@
 import { RapierPhysicalWorld } from "../physics/rapier-physical-world";
+import {
+  buildAuthorityA0WorldStepEvidence,
+  cloneAuthorityA0WorldStepEvidence,
+  type AuthorityA0WorldStepEvidence
+} from "./authority-a0-step-evidence";
 import { movementCapabilityFromScenario, type MovementCapability } from "./movement-capability";
 import { scenario } from "./scenarios";
 import type {
@@ -15,6 +20,7 @@ import type {
 
 export class LabWorld {
   private tickValue = 0;
+  private latestAuthorityA0EvidenceValue: AuthorityA0WorldStepEvidence | null = null;
 
   private constructor(
     private readonly scenarioIdValue: ScenarioId,
@@ -31,6 +37,12 @@ export class LabWorld {
 
   actorMovementCapability(actorId: ActorId): MovementCapability {
     return movementCapabilityFromScenario(scenario(this.scenarioIdValue), actorId);
+  }
+
+  latestAuthorityA0StepEvidence(): AuthorityA0WorldStepEvidence | null {
+    return this.latestAuthorityA0EvidenceValue
+      ? cloneAuthorityA0WorldStepEvidence(this.latestAuthorityA0EvidenceValue)
+      : null;
   }
 
   directTraversal(actorId: ActorId, target: Vec2): DirectTraversalResult {
@@ -51,10 +63,11 @@ export class LabWorld {
   }
 
   step(intents: readonly MotionIntent[]): WorldSnapshot {
+    const before = this.snapshot();
     const actors = this.physical.step(intents);
     this.tickValue += 1;
     const spec = scenario(this.scenarioIdValue);
-    return {
+    const after: WorldSnapshot = {
       tick: this.tickValue,
       scenarioId: this.scenarioIdValue,
       width: spec.width,
@@ -62,6 +75,14 @@ export class LabWorld {
       actors,
       obstacles: spec.obstacles
     };
+    this.latestAuthorityA0EvidenceValue = buildAuthorityA0WorldStepEvidence({
+      before,
+      after,
+      intents,
+      playerCapability: this.actorMovementCapability("player"),
+      companionCapability: this.actorMovementCapability("companion")
+    });
+    return after;
   }
 
   snapshot(): WorldSnapshot {
