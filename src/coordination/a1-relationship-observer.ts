@@ -48,6 +48,7 @@ interface A1HeavyRelationshipObservation {
 }
 
 export interface A1RelationshipObserverDebug {
+  lastAttemptTick: number | null;
   latestTick: number | null;
   observations: number;
   heavyAttempts: number;
@@ -149,6 +150,7 @@ export class A1RelationshipObserver {
   private latestOrientationValue: A1RelationshipOrientationEvidence | null = null;
   private latestSemanticValue: A1RelationshipSemanticField | null = null;
   private latestHeavyValue: A1HeavyRelationshipObservation | null = null;
+  private lastAttemptTickValue: number | null = null;
   private latestTickValue: number | null = null;
   private lastHeavyAttemptTickValue: number | null = null;
   private observationsValue = 0;
@@ -164,6 +166,7 @@ export class A1RelationshipObserver {
     this.latestOrientationValue = null;
     this.latestSemanticValue = null;
     this.latestHeavyValue = null;
+    this.lastAttemptTickValue = null;
     this.latestTickValue = null;
     this.lastHeavyAttemptTickValue = null;
     this.observationsValue = 0;
@@ -176,12 +179,14 @@ export class A1RelationshipObserver {
     snapshot: WorldSnapshot;
     query: StaticTraversalQuery;
   }): A1RelationshipObserverDebug {
-    validateSituationSnapshotAlignment(input.situation, input.snapshot);
-    if (this.latestTickValue !== null && input.situation.tick <= this.latestTickValue) {
+    if (this.lastAttemptTickValue !== null && input.situation.tick <= this.lastAttemptTickValue) {
       throw new Error(
-        `A1 relationship observer must strictly advance World time: t${input.situation.tick} follows t${this.latestTickValue}; duplicate/backward observation requires reset.`
+        `A1 relationship observer must strictly advance World time: attempted t${input.situation.tick} after attempt t${this.lastAttemptTickValue}; duplicate/backward observation requires reset.`
       );
     }
+    this.lastAttemptTickValue = input.situation.tick;
+
+    validateSituationSnapshotAlignment(input.situation, input.snapshot);
 
     const orientation = evaluateA1RelationshipOrientation({
       situation: input.situation,
@@ -241,6 +246,7 @@ export class A1RelationshipObserver {
       : null;
 
     return {
+      lastAttemptTick: this.lastAttemptTickValue,
       latestTick,
       observations: this.observationsValue,
       heavyAttempts: this.heavyAttemptsValue,
