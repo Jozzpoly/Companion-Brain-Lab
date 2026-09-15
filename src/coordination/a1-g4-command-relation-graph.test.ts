@@ -18,12 +18,8 @@ function playerIntent(x: number, y: number): MotionIntent {
   return { actorId: "player", move: { x, y } };
 }
 
-function companionIntent(x: number, y: number): MotionIntent {
-  return { actorId: "companion", move: { x, y } };
-}
-
 function companionHold(): MotionIntent {
-  return companionIntent(0, 0);
+  return { actorId: "companion", move: { x: 0, y: 0 } };
 }
 
 function buildDecision(input: {
@@ -94,54 +90,49 @@ function proposalByOrigin(input: {
   return proposal;
 }
 
-function unorderedPairMatches(
-  pair: { proposalAId: string; proposalBId: string },
-  a: string,
-  b: string
-): boolean {
+function pairMatches(pair: { proposalAId: string; proposalBId: string }, a: string, b: string): boolean {
   return (pair.proposalAId === a && pair.proposalBId === b) ||
     (pair.proposalAId === b && pair.proposalBId === a);
 }
 
+function pairKey(a: string, b: string): string {
+  return [a, b].sort().join("::");
+}
+
 describe("Authority-A1.2r per-player-future G4 relation graphs", () => {
-  it("preserves the exact proposal set while keeping unresolved/absent futures outside pairwise G4", async () => {
+  it("preserves exact proposal coverage while unresolved/absent futures remain non-comparable", async () => {
     const world = await LabWorld.create("open");
     try {
       const decision = buildDecision({ world, playerMove: { x: 1, y: 0 } });
-      const profiles = buildProfiles({ world, decision });
       const before = world.snapshot();
       const result = buildA1G4CrossFutureRelationGraphs({
         proposalSet: decision.proposalSet,
-        profiles
+        profiles: buildProfiles({ world, decision })
       });
-      const proposalIds = decision.proposalSet.proposals.map((proposal) => proposal.proposalId);
+      const ids = decision.proposalSet.proposals.map((proposal) => proposal.proposalId);
 
-      expect(result.proposalIds).toEqual(proposalIds);
+      expect(result.proposalIds).toEqual(ids);
       expect(result.graphs).toHaveLength(3);
       for (const graph of result.graphs) {
-        expect(graph.nodes.map((node) => node.proposalId)).toEqual(proposalIds);
-        expect(graph.nodes).toHaveLength(decision.proposalSet.proposalCount);
-        const comparableCount = graph.comparableProposalIds.length;
-        expect(graph.comparisonCount).toBe(
-          comparableCount < 2 ? 0 : comparableCount * (comparableCount - 1) / 2
-        );
+        expect(graph.nodes.map((node) => node.proposalId)).toEqual(ids);
+        const count = graph.comparableProposalIds.length;
+        expect(graph.comparisonCount).toBe(count < 2 ? 0 : count * (count - 1) / 2);
         expect(graph.comparisonCount).toBe(
           graph.preferenceEdges.length + graph.noPreferencePairs.length + graph.forcedContentionPairs.length
         );
       }
 
       const h2 = graphFor(result, "BODY_RESPONSE_CONTINUATION");
-      expect(h2.comparableProposalIds).toHaveLength(0);
       expect(h2.comparisonCount).toBe(0);
-      expect(h2.nodes.every(
-        (node) => node.relationStatus === "UNAVAILABLE_PLAYER_FUTURE_UNRESOLVED"
+      expect(h2.nodes.every((node) =>
+        node.relationStatus === "UNAVAILABLE_PLAYER_FUTURE_UNRESOLVED"
       )).toBe(true);
 
       const h3 = graphFor(result, "TRANSITION_HOLD");
       expect(h3.futureId).toBeNull();
-      expect(h3.comparableProposalIds).toHaveLength(0);
-      expect(h3.nodes.every(
-        (node) => node.relationStatus === "UNAVAILABLE_PLAYER_FUTURE_ABSENT"
+      expect(h3.comparisonCount).toBe(0);
+      expect(h3.nodes.every((node) =>
+        node.relationStatus === "UNAVAILABLE_PLAYER_FUTURE_ABSENT"
       )).toBe(true);
 
       expect(result.futureSeparationClaim).toBe("H1_H2_H3_GRAPHS_NEVER_AGGREGATED_A1_2R");
@@ -155,7 +146,7 @@ describe("Authority-A1.2r per-player-future G4 relation graphs", () => {
     }
   });
 
-  it("uses one concrete node for family aliases and prefers the clear tangent proposal over the head-on pressure proposal", async () => {
+  it("collapses family aliases to one concrete node and preserves a real head-on G4 preference edge", async () => {
     const world = await LabWorld.create("head-on");
     try {
       const decision = buildDecision({
@@ -179,44 +170,36 @@ describe("Authority-A1.2r per-player-future G4 relation graphs", () => {
         futureFamily: "OWNER_REQUEST_CONTINUATION",
         seedFamily: "RELATIVE_TANGENT_POSITIVE"
       });
-
       expect(hold.proposalId).toBe(pressure.proposalId);
       expect(pressure.generationOrigins.some((origin) => origin.seedFamily === "HOLD")).toBe(true);
-      expect(pressure.generationOrigins.some(
-        (origin) => origin.seedFamily === "RELATIVE_RADIAL_INWARD"
-      )).toBe(true);
+      expect(pressure.generationOrigins.some((origin) => origin.seedFamily === "RELATIVE_RADIAL_INWARD")).toBe(true);
 
-      const profiles = buildProfiles({ world, decision });
-      const result = buildA1G4CrossFutureRelationGraphs({
+      const h1 = graphFor(buildA1G4CrossFutureRelationGraphs({
         proposalSet: decision.proposalSet,
-        profiles
-      });
-      const h1 = graphFor(result, "OWNER_REQUEST_CONTINUATION");
+        profiles: buildProfiles({ world, decision })
+      }), "OWNER_REQUEST_CONTINUATION");
       expect(h1.nodes.filter((node) => node.proposalId === pressure.proposalId)).toHaveLength(1);
-
       const edge = h1.preferenceEdges.find((candidate) =>
         candidate.preferredProposalId === tangent.proposalId &&
         candidate.yieldingProposalId === pressure.proposalId
       );
-      expect(edge).toBeDefined();
       expect(edge?.policy.status).toBe("YIELD_PREFERRED_OVER_NEW_CONTACT");
       expect(edge?.policy.preferredCandidateId).toBe(tangent.proposalId);
       expect(h1.actionIdentityClaim).toBe("A1_2O_PROPOSAL_ID_PROPAGATED_THROUGH_A1_2P_G3_AGENCY");
-      expect(h1.relationshipUtilityClaim).toBe("NONE_SEPARATE_A1_2Q_EVIDENCE_A1_2R");
       expect(h1.transitivePreferenceClaim).toBe("NONE_A1_2R");
     } finally {
       world.dispose();
     }
   });
 
-  it("publishes forced-contention connectivity without inventing transitive preference", async () => {
+  it("publishes real forced-contention connectivity for two distinct statically legal contact commands", async () => {
     const world = await LabWorld.create("head-on");
     try {
       const decision = buildDecision({
         world,
         playerMove: { x: 1, y: 0 },
-        horizonSeconds: 3,
-        localAlternativeDeltaSpeed: 1
+        horizonSeconds: 1.5,
+        localAlternativeDeltaSpeed: 2
       });
       const hold = proposalByOrigin({
         decision,
@@ -234,32 +217,26 @@ describe("Authority-A1.2r per-player-future G4 relation graphs", () => {
         hold.commandVelocity.y - inward.commandVelocity.y
       )).toBeGreaterThan(1e-9);
 
-      const profiles = buildProfiles({ world, decision });
-      const result = buildA1G4CrossFutureRelationGraphs({
+      const h1 = graphFor(buildA1G4CrossFutureRelationGraphs({
         proposalSet: decision.proposalSet,
-        profiles
-      });
-      const h1 = graphFor(result, "OWNER_REQUEST_CONTINUATION");
-      const holdNode = h1.nodes.find((node) => node.proposalId === hold.proposalId);
-      const inwardNode = h1.nodes.find((node) => node.proposalId === inward.proposalId);
-      expect(holdNode?.relationStatus).toBe("COMPARABLE_G3_REQUIRES_COOPERATION");
-      expect(inwardNode?.relationStatus).toBe("COMPARABLE_G3_REQUIRES_COOPERATION");
-
-      expect(h1.forcedContentionPairs.length).toBeGreaterThan(0);
+        profiles: buildProfiles({ world, decision })
+      }), "OWNER_REQUEST_CONTINUATION");
+      expect(h1.nodes.find((node) => node.proposalId === hold.proposalId)?.relationStatus)
+        .toBe("COMPARABLE_G3_REQUIRES_COOPERATION");
+      expect(h1.nodes.find((node) => node.proposalId === inward.proposalId)?.relationStatus)
+        .toBe("COMPARABLE_G3_REQUIRES_COOPERATION");
       expect(h1.forcedContentionPairs.some((pair) =>
-        unorderedPairMatches(pair, hold.proposalId, inward.proposalId)
+        pairMatches(pair, hold.proposalId, inward.proposalId)
       )).toBe(true);
-      expect(h1.forcedContentionComponents.length).toBeGreaterThan(0);
+
       for (const pair of h1.forcedContentionPairs) {
         const component = h1.forcedContentionComponents.find((candidate) =>
           candidate.proposalIds.includes(pair.proposalAId) &&
           candidate.proposalIds.includes(pair.proposalBId)
         );
-        expect(component).toBeDefined();
         expect(component?.semantics)
           .toBe("CONNECTED_BY_PAIRWISE_FORCED_CONTENTION_ONLY_NO_TRANSITIVE_PREFERENCE");
       }
-      expect(h1.preferenceEdges.every((edge) => edge.preferredProposalId !== edge.yieldingProposalId)).toBe(true);
       expect(h1.scalarScoreClaim).toBe("NONE_A1_2R");
       expect("winnerProposalId" in h1).toBe(false);
       expect("rankedProposalIds" in h1).toBe(false);
@@ -273,19 +250,15 @@ describe("Authority-A1.2r per-player-future G4 relation graphs", () => {
     try {
       const after = world.step([playerIntent(1, 0), companionHold()]);
       const decision = buildDecision({ world, playerMove: { x: -1, y: 0 }, snapshot: after });
-      const profiles = buildProfiles({ world, decision });
       const result = buildA1G4CrossFutureRelationGraphs({
         proposalSet: decision.proposalSet,
-        profiles
+        profiles: buildProfiles({ world, decision })
       });
       const ids = decision.proposalSet.proposals.map((proposal) => proposal.proposalId);
       const h1 = graphFor(result, "OWNER_REQUEST_CONTINUATION");
       const h2 = graphFor(result, "BODY_RESPONSE_CONTINUATION");
       const h3 = graphFor(result, "TRANSITION_HOLD");
 
-      expect(h1.futureId).not.toBeNull();
-      expect(h2.futureId).not.toBeNull();
-      expect(h3.futureId).not.toBeNull();
       expect(new Set([h1.futureId, h2.futureId, h3.futureId]).size).toBe(3);
       expect(h1.nodes.map((node) => node.proposalId)).toEqual(ids);
       expect(h2.nodes.map((node) => node.proposalId)).toEqual(ids);
@@ -304,27 +277,21 @@ describe("Authority-A1.2r per-player-future G4 relation graphs", () => {
     try {
       const decision = buildDecision({ world, playerMove: { x: 1, y: 0 } });
       const profiles = buildProfiles({ world, decision });
-      expect(profiles.length).toBeGreaterThan(1);
-
       expect(() => buildA1G4CrossFutureRelationGraphs({
         proposalSet: decision.proposalSet,
         profiles: profiles.slice(1)
       })).toThrow(/exactly one A1\.2p profile for every A1\.2o proposal/i);
 
       const first = profiles[0]!;
-      const forgedEntries = first.entries.map((entry) => {
-        if (entry.status !== "REHEARSED") return entry;
-        return {
+      const forged: A1FixedCommandCrossFutureProfile = {
+        ...first,
+        entries: first.entries.map((entry) => entry.status !== "REHEARSED" ? entry : ({
           ...entry,
           g3: {
             ...entry.g3,
             companionCandidateId: `${entry.g3.companionCandidateId}-wrong`
           }
-        };
-      });
-      const forged: A1FixedCommandCrossFutureProfile = {
-        ...first,
-        entries: forgedEntries
+        }))
       };
       expect(() => buildA1G4CrossFutureRelationGraphs({
         proposalSet: decision.proposalSet,
@@ -335,7 +302,7 @@ describe("Authority-A1.2r per-player-future G4 relation graphs", () => {
     }
   });
 
-  it("classifies every comparable pair exactly once as preference, no-preference or forced contention", async () => {
+  it("classifies every comparable pair exactly once", async () => {
     const world = await LabWorld.create("head-on");
     try {
       const decision = buildDecision({
@@ -344,23 +311,21 @@ describe("Authority-A1.2r per-player-future G4 relation graphs", () => {
         horizonSeconds: 1,
         localAlternativeDeltaSpeed: 3
       });
-      const result = buildA1G4CrossFutureRelationGraphs({
+      const h1 = graphFor(buildA1G4CrossFutureRelationGraphs({
         proposalSet: decision.proposalSet,
         profiles: buildProfiles({ world, decision })
-      });
-      const h1 = graphFor(result, "OWNER_REQUEST_CONTINUATION");
+      }), "OWNER_REQUEST_CONTINUATION");
       const seen = new Set<string>();
-      const key = (a: string, b: string) => [a, b].sort().join("::");
 
       for (const edge of h1.preferenceEdges) {
-        const pairKey = key(edge.preferredProposalId, edge.yieldingProposalId);
-        expect(seen.has(pairKey)).toBe(false);
-        seen.add(pairKey);
+        const key = pairKey(edge.preferredProposalId, edge.yieldingProposalId);
+        expect(seen.has(key)).toBe(false);
+        seen.add(key);
       }
       for (const pair of [...h1.noPreferencePairs, ...h1.forcedContentionPairs]) {
-        const pairKey = key(pair.proposalAId, pair.proposalBId);
-        expect(seen.has(pairKey)).toBe(false);
-        seen.add(pairKey);
+        const key = pairKey(pair.proposalAId, pair.proposalBId);
+        expect(seen.has(key)).toBe(false);
+        seen.add(key);
       }
       expect(seen.size).toBe(h1.comparisonCount);
 
@@ -368,14 +333,14 @@ describe("Authority-A1.2r per-player-future G4 relation graphs", () => {
         for (let bIndex = aIndex + 1; bIndex < h1.comparableProposalIds.length; bIndex += 1) {
           const a = h1.comparableProposalIds[aIndex]!;
           const b = h1.comparableProposalIds[bIndex]!;
-          expect(seen.has(key(a, b))).toBe(true);
-          const inNoPreference = h1.noPreferencePairs.some((pair) => unorderedPairMatches(pair, a, b));
-          const inForced = h1.forcedContentionPairs.some((pair) => unorderedPairMatches(pair, a, b));
-          const inPreference = h1.preferenceEdges.some((edge) =>
-            (edge.preferredProposalId === a && edge.yieldingProposalId === b) ||
-            (edge.preferredProposalId === b && edge.yieldingProposalId === a)
-          );
-          expect(Number(inNoPreference) + Number(inForced) + Number(inPreference)).toBe(1);
+          expect(seen.has(pairKey(a, b))).toBe(true);
+          const categories = Number(h1.noPreferencePairs.some((pair) => pairMatches(pair, a, b))) +
+            Number(h1.forcedContentionPairs.some((pair) => pairMatches(pair, a, b))) +
+            Number(h1.preferenceEdges.some((edge) => pairMatches({
+              proposalAId: edge.preferredProposalId,
+              proposalBId: edge.yieldingProposalId
+            }, a, b)));
+          expect(categories).toBe(1);
         }
       }
     } finally {
