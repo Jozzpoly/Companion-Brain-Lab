@@ -4,6 +4,7 @@ export type CausalPanelAction =
   | "reset"
   | "cycle-mode"
   | "toggle-actuator"
+  | "cycle-a1-authority"
   | "cycle-time"
   | "capture-incident"
   | "scenario-open"
@@ -52,7 +53,7 @@ const DEFAULT_LAYERS: Readonly<Record<WorldDebugLayer, boolean>> = {
   contacts: true
 };
 
-const DEFAULT_OPEN_SECTION_IDS = new Set(["run", "recovery", "route", "motion"]);
+const DEFAULT_OPEN_SECTION_IDS = new Set(["run", "recovery", "route", "motion", "a1"]);
 
 export class CausalPanelDisclosureState {
   private readonly remembered = new Map<string, boolean>();
@@ -150,6 +151,7 @@ export class CausalPanel {
       button("Reset", "reset"),
       button("Brain mode", "cycle-mode"),
       button("Direct / Natural", "toggle-actuator"),
+      button("A1 authority", "cycle-a1-authority"),
       button("Time scale", "cycle-time"),
       button("Capture incident", "capture-incident")
     );

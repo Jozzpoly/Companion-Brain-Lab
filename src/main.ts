@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { R1LabScene } from "./app/r1-lab-scene";
 import { installAuthorityA0BrowserBridge } from "./debug/authority-a0-browser-bridge";
+import { installAuthorityA10BrowserBridge } from "./debug/authority-a1-browser-bridge";
 import { scheduleFoundationFaultProbe } from "./debug/foundation-fault-probe";
 import {
   installRuntimeFaultSentinel,
@@ -16,6 +17,7 @@ const reportRuntimeFault = installRuntimeFaultSentinel({
 
 try {
   installAuthorityA0BrowserBridge(window.location.search);
+  installAuthorityA10BrowserBridge(window.location.search);
 
   game = new Phaser.Game({
     type: Phaser.AUTO,
