@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LabWorld } from "../world/world";
+import { evaluateA1H1PrimaryShadowHorizon } from "./a1-h1-primary-shadow";
 import { buildA1Situation } from "./a1-situation";
 import { A1AuthorityRuntime } from "./a1-authority-runtime";
 
@@ -87,6 +88,75 @@ describe("Authority-A1 isolated selector runtime", () => {
       const second = runtime.debugState();
       expect(second.latestSituation?.situated.playerControl.move.x).toBe(1);
       expect(second.latestSituation?.playerRequestedVelocity.velocity.x).toBe(3);
+    } finally {
+      world.dispose();
+    }
+  });
+
+  it("carries cloned Owner-memory evidence from observer through runtime into H1 research without movement authority", async () => {
+    const world = await LabWorld.create("head-on");
+    try {
+      const runtime = new A1AuthorityRuntime();
+      runtime.setVariant("direct");
+      const baseline = { actorId: "companion" as const, move: { x: 0, y: 0 } };
+
+      const t0Snapshot = world.snapshot();
+      const t0Situation = buildA1Situation({
+        snapshot: t0Snapshot,
+        playerIntent: { actorId: "player", move: { x: 1, y: 0 } },
+        playerCapability: world.actorMovementCapability("player"),
+        companionCapability: world.actorMovementCapability("companion"),
+        previousWorldStep: null
+      });
+      expect(runtime.observeRelationship({
+        situation: t0Situation,
+        snapshot: t0Snapshot,
+        query: (from, target, radius, options) => world.staticCircleTraversal(from, target, radius, options)
+      })).not.toBeNull();
+      expect(runtime.resolveCompanionIntent({ baselineIntent: baseline, situation: t0Situation })).toEqual(baseline);
+      expect(runtime.latestRelationshipOrientationEvidence()?.source).toBe("SAME_STEP_OWNER");
+
+      const t1Snapshot = world.step([
+        { actorId: "player", move: { x: 1, y: 0 } },
+        baseline
+      ]);
+      const t1Situation = buildA1Situation({
+        snapshot: t1Snapshot,
+        playerIntent: { actorId: "player", move: { x: 0, y: 0 } },
+        playerCapability: world.actorMovementCapability("player"),
+        companionCapability: world.actorMovementCapability("companion"),
+        previousWorldStep: world.latestAuthorityA0StepEvidence()
+      });
+      expect(runtime.observeRelationship({
+        situation: t1Situation,
+        snapshot: t1Snapshot,
+        query: (from, target, radius, options) => world.staticCircleTraversal(from, target, radius, options)
+      })).not.toBeNull();
+      expect(runtime.resolveCompanionIntent({ baselineIntent: baseline, situation: t1Situation })).toEqual(baseline);
+
+      const firstEvidence = runtime.latestRelationshipOrientationEvidence();
+      expect(firstEvidence).not.toBeNull();
+      expect(firstEvidence?.tick).toBe(t1Situation.tick);
+      expect(firstEvidence?.source).toBe("OWNER_MEMORY");
+      expect(firstEvidence?.direction).toEqual({ x: 1, y: 0 });
+      expect(firstEvidence?.ageTicks).toBe(1);
+
+      firstEvidence!.direction!.x = 999;
+      firstEvidence!.samplingBasis.x = 999;
+      firstEvidence!.nextMemory!.direction.x = 999;
+      const secondEvidence = runtime.latestRelationshipOrientationEvidence();
+      expect(secondEvidence?.direction).toEqual({ x: 1, y: 0 });
+      expect(secondEvidence?.samplingBasis).toEqual({ x: 1, y: 0 });
+      expect(secondEvidence?.nextMemory?.direction).toEqual({ x: 1, y: 0 });
+
+      const h1 = evaluateA1H1PrimaryShadowHorizon({
+        world,
+        situation: t1Situation,
+        horizonSeconds: 1,
+        orientation: secondEvidence!
+      });
+      expect(h1.stageTrace.proposals.some((proposal) => proposal.comparisonEligible && proposal.q !== null)).toBe(true);
+      expect(runtime.resolveCompanionIntent({ baselineIntent: baseline, situation: t1Situation })).toEqual(baseline);
     } finally {
       world.dispose();
     }
