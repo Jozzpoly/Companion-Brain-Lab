@@ -4,8 +4,15 @@ import type { ActorSnapshot, MotionIntent, Vec2, WorldSnapshot } from "../world/
 import { evaluateShadowPlayerCorridor } from "./shadow-player-corridor";
 import { evaluateShadowPlayerFlowConflict } from "./shadow-player-flow-conflict";
 
-type Phase = "APPROACH" | "CONTACT_PUSH" | "WITHDRAW" | "QUIET_CLEAR";
-type ConflictState = ReturnType<typeof evaluateShadowPlayerFlowConflict>["state"];
+type Phase =
+  | "APPROACH"
+  | "CONTACT_PUSH"
+  | "WITHDRAW_CONTACT"
+  | "PHYSICAL_CLEAR_BUT_CLOSE"
+  | "COMFORT_CLEAR"
+  | "QUIET_STABLE";
+type ConflictEvaluation = ReturnType<typeof evaluateShadowPlayerFlowConflict>;
+type ConflictState = ConflictEvaluation["state"];
 
 interface TraceRow {
   tick: number;
@@ -57,7 +64,7 @@ describe("A1 conflict-evidence persistence necessity audit", () => {
     let previousDirectionTick: number | null = null;
     const trace: TraceRow[] = [];
 
-    const sample = (phase: Phase, companionMove: Vec2): void => {
+    const sample = (phase: Phase, companionMove: Vec2): ConflictEvaluation => {
       const corridor = evaluateShadowPlayerCorridor({
         snapshot,
         previousDirection,
@@ -83,6 +90,7 @@ describe("A1 conflict-evidence persistence necessity audit", () => {
         physicalClearance: conflict.physicalClearance,
         comfortClearance: conflict.comfortClearance
       });
+      return conflict;
     };
 
     try {
@@ -112,27 +120,33 @@ describe("A1 conflict-evidence persistence necessity audit", () => {
         sample("CONTACT_PUSH", { x: -1, y: 0 });
       }
 
-      let cleared = false;
+      let reachedPhysicalClear = false;
+      let reachedComfortClear = false;
       for (let step = 0; step < 24; step += 1) {
-        sample("WITHDRAW", { x: 1, y: 0 });
         snapshot = world.step([
           motion("player", { x: 0, y: 0 }),
           motion("companion", { x: 1, y: 0 })
         ]);
-        if (!hasContact(snapshot)) {
-          sample("WITHDRAW", { x: 1, y: 0 });
-          cleared = true;
+
+        const contact = hasContact(snapshot);
+        if (!contact) reachedPhysicalClear = true;
+        const phase: Phase = contact ? "WITHDRAW_CONTACT" : "PHYSICAL_CLEAR_BUT_CLOSE";
+        const conflict = sample(phase, { x: 1, y: 0 });
+        if (!contact && conflict.state === "CLEAR") {
+          trace[trace.length - 1]!.phase = "COMFORT_CLEAR";
+          reachedComfortClear = true;
           break;
         }
       }
-      expect(cleared).toBe(true);
+      expect(reachedPhysicalClear).toBe(true);
+      expect(reachedComfortClear).toBe(true);
 
       for (let step = 0; step < 8; step += 1) {
         snapshot = world.step([
           motion("player", { x: 0, y: 0 }),
           motion("companion", { x: 0, y: 0 })
         ]);
-        sample("QUIET_CLEAR", { x: 0, y: 0 });
+        sample("QUIET_STABLE", { x: 0, y: 0 });
       }
 
       let activeTransitions = 0;
@@ -153,27 +167,34 @@ describe("A1 conflict-evidence persistence necessity audit", () => {
       const firstActive = trace.find((row) => activeConflict(row.conflictState)) ?? null;
       const lastActive = [...trace].reverse().find((row) => activeConflict(row.conflictState)) ?? null;
       const firstContact = trace.find((row) => row.contact) ?? null;
-      const firstClearAfterContact = firstContact
+      const firstPhysicalClearAfterContact = firstContact
         ? trace.find((row) => row.tick >= firstContact.tick && !row.contact) ?? null
         : null;
+      const firstComfortClearAfterContact = firstContact
+        ? trace.find((row) => row.tick >= firstContact.tick && row.conflictState === "CLEAR") ?? null
+        : null;
+
+      const summary = {
+        sampleCount: trace.length,
+        activeTransitions,
+        activeEpisodes,
+        stateTransitions,
+        firstActiveTick: firstActive?.tick ?? null,
+        lastActiveTick: lastActive?.tick ?? null,
+        firstContactTick: firstContact?.tick ?? null,
+        firstPhysicalClearTick: firstPhysicalClearAfterContact?.tick ?? null,
+        firstComfortClearTick: firstComfortClearAfterContact?.tick ?? null,
+        finalConflictState: trace.at(-1)?.conflictState ?? null,
+        finalPhysicalClearance: trace.at(-1)?.physicalClearance ?? null,
+        finalComfortClearance: trace.at(-1)?.comfortClearance ?? null,
+        statelessConflictEvidenceChatterObserved: activeEpisodes > 1 || activeTransitions > 2
+      };
 
       console.info("[A1_CONFLICT_EVIDENCE_PERSISTENCE_NECESSITY]", JSON.stringify({
         trace,
-        summary: {
-          sampleCount: trace.length,
-          activeTransitions,
-          activeEpisodes,
-          stateTransitions,
-          firstActiveTick: firstActive?.tick ?? null,
-          lastActiveTick: lastActive?.tick ?? null,
-          firstContactTick: firstContact?.tick ?? null,
-          firstPhysicalClearTick: firstClearAfterContact?.tick ?? null,
-          finalConflictState: trace.at(-1)?.conflictState ?? null,
-          finalPhysicalClearance: trace.at(-1)?.physicalClearance ?? null,
-          finalComfortClearance: trace.at(-1)?.comfortClearance ?? null,
-          statelessConflictEvidenceChatterObserved: activeEpisodes > 1 || activeTransitions > 2
-        },
+        summary,
         interpretationBoundary: {
+          physicalClearIsNotComfortClear: true,
           thisAuditDoesNotCreateYieldPolicy: true,
           thisAuditDoesNotAssumePersistentCommitmentIsNecessary: true,
           persistenceIsJustifiedOnlyIfEvidenceOrBehaviorNeedsIt: true
@@ -182,8 +203,14 @@ describe("A1 conflict-evidence persistence necessity audit", () => {
       }));
 
       expect(trace.some((row) => row.conflictState === "PHYSICAL_CONFLICT")).toBe(true);
+      expect(trace.some((row) => row.conflictState === "COMFORT_CONFLICT")).toBe(true);
       expect(trace.some((row) => row.phase === "APPROACH" && row.conflictState === "CLEAR")).toBe(true);
-      expect(trace.some((row) => row.phase === "QUIET_CLEAR" && row.conflictState === "CLEAR")).toBe(true);
+      expect(trace.some((row) => row.phase === "PHYSICAL_CLEAR_BUT_CLOSE" && row.conflictState === "COMFORT_CONFLICT")).toBe(true);
+      expect(trace.some((row) => row.phase === "COMFORT_CLEAR" && row.conflictState === "CLEAR")).toBe(true);
+      expect(trace.filter((row) => row.phase === "QUIET_STABLE").every((row) => row.conflictState === "CLEAR")).toBe(true);
+      expect(summary.activeEpisodes).toBe(1);
+      expect(summary.activeTransitions).toBe(2);
+      expect(summary.statelessConflictEvidenceChatterObserved).toBe(false);
     } finally {
       world.dispose();
     }
