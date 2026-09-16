@@ -59,10 +59,14 @@ jobs:
           retention-days: 7
       - name: Capture A1.2z4g tick-7-8-9 stage attribution trace
         run: node scripts/authority-a1-2z4g-stage-attribution-trace.mjs
-      - name: Upload A1.2z4g stage attribution trace
+      - name: Canonicalize A1.2z4g H1 tangent semantic summary
+        run: node scripts/authority-a1-2z4g-h1-semantic-summary.mjs
+      - name: Upload A1.2z4g stage attribution evidence
         uses: actions/upload-artifact@v4
         with:
           name: a1-2z4g-stage-attribution-${{ github.sha }}
-          path: artifacts/a1-2z4g-stage-attribution-trace.json
+          path: |
+            artifacts/a1-2z4g-stage-attribution-trace.json
+            artifacts/a1-2z4g-h1-semantic-summary.json
           if-no-files-found: error
           retention-days: 7
