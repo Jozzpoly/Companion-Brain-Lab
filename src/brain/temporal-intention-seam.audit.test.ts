@@ -4,7 +4,7 @@ import type { ActorSnapshot, MotionIntent, Vec2, WorldSnapshot } from "../world/
 import { buildA1Situation } from "../coordination/a1-situation";
 import { evaluateA1RelationshipOrientation } from "../coordination/a1-relationship-orientation";
 import { evaluateShadowPlayerCorridor } from "../coordination/shadow-player-corridor";
-import { ProgressRecoveryMonitor } from "./progress-recovery";
+import { classifyObservedPlayerMotion } from "../coordination/situated-evidence";
 import { RelationalPositioningBrain } from "./relational-positioning";
 
 function actor(snapshot: WorldSnapshot, id: "player" | "companion"): ActorSnapshot {
@@ -40,6 +40,7 @@ function syntheticSnapshot(options: {
   playerRequestedVelocity: Vec2;
   playerActualVelocity?: Vec2;
   playerPosition?: Vec2;
+  playerContacts?: string[];
 }): WorldSnapshot {
   return {
     tick: options.tick,
@@ -63,7 +64,7 @@ function syntheticSnapshot(options: {
         requestedVelocity: { ...options.playerRequestedVelocity },
         actualVelocity: { ...(options.playerActualVelocity ?? options.playerRequestedVelocity) },
         motionError: 0,
-        contacts: []
+        contacts: (options.playerContacts ?? []).map((withId) => ({ with: withId }))
       }
     ],
     obstacles: []
@@ -121,7 +122,38 @@ describe("temporal intention seam audit", () => {
     }
   });
 
-  it("shows a retained relational slot label changing world-space meaning by meters when its moving reference frame reverses", () => {
+  it("isolates a false relationship-frame rotation caused by external body motion with no Owner request", () => {
+    const brain = new RelationalPositioningBrain();
+    const ownerDirected = brain.decision(syntheticSnapshot({
+      tick: 0,
+      playerRequestedVelocity: { x: 3, y: 0 }
+    }));
+    const externallyMovedSnapshot = syntheticSnapshot({
+      tick: 6,
+      playerRequestedVelocity: { x: 0, y: 0 },
+      playerActualVelocity: { x: -3, y: 0 },
+      playerContacts: ["companion"]
+    });
+    const player = actor(externallyMovedSnapshot, "player");
+    const provenance = classifyObservedPlayerMotion({
+      sourceTick: externallyMovedSnapshot.tick,
+      position: { ...player.position },
+      requestedVelocity: { ...player.requestedVelocity },
+      actualVelocity: { ...player.actualVelocity },
+      motionError: player.motionError,
+      contacts: player.contacts.map((contact) => contact.with)
+    });
+    const externallyDriven = brain.decision(externallyMovedSnapshot);
+
+    expect(provenance.state).toBe("EXTERNAL_MOTION_EVIDENT");
+    expect(ownerDirected.selectedSlot).toBe("back");
+    expect(externallyDriven.selectedSlot).toBe(ownerDirected.selectedSlot);
+    expect(externallyDriven.reason).toContain("retain");
+    expect(externallyDriven.playerDirection).toEqual({ x: -1, y: 0 });
+    expect(distance(ownerDirected.target, externallyDriven.target)).toBeGreaterThan(2.8);
+  });
+
+  it("keeps genuine Owner reversal as a control: large world-space target rotation can still be the same relative relationship meaning", () => {
     const brain = new RelationalPositioningBrain();
     const initial = brain.decision(syntheticSnapshot({
       tick: 0,
@@ -136,71 +168,6 @@ describe("temporal intention seam audit", () => {
     expect(reversed.selectedSlot).toBe(initial.selectedSlot);
     expect(reversed.reason).toContain("retain");
     expect(distance(initial.target, reversed.target)).toBeGreaterThan(2.8);
-  });
-
-  it("shows recovery spending old no-progress debt across that same-label semantic target reversal", () => {
-    const relationship = new RelationalPositioningBrain();
-    const initial = relationship.decision(syntheticSnapshot({
-      tick: 0,
-      playerRequestedVelocity: { x: 3, y: 0 }
-    }));
-    const reversed = relationship.decision(syntheticSnapshot({
-      tick: 6,
-      playerRequestedVelocity: { x: -3, y: 0 }
-    }));
-
-    expect(reversed.selectedSlot).toBe(initial.selectedSlot);
-    expect(distance(initial.target, reversed.target)).toBeGreaterThan(2.8);
-
-    const sameIdentity = new ProgressRecoveryMonitor();
-    const revisedIdentity = new ProgressRecoveryMonitor();
-    const position = { x: 1, y: 4 };
-    const objectiveKey = `spatial-slot:${initial.selectedSlot}`;
-
-    const observe = (
-      monitor: ProgressRecoveryMonitor,
-      tick: number,
-      key: string,
-      target: Vec2
-    ) => monitor.observe({
-      tick,
-      objectiveKey: key,
-      position,
-      target,
-      routeStatus: "direct",
-      routeRemainingDistance: distance(position, target),
-      commandedSpeed: 1,
-      actualSpeed: 0,
-      contacts: []
-    });
-
-    for (let tick = 0; tick < 35; tick += 1) {
-      observe(sameIdentity, tick, objectiveKey, initial.target);
-      observe(revisedIdentity, tick, objectiveKey, initial.target);
-    }
-
-    const aliased = observe(sameIdentity, 35, objectiveKey, reversed.target);
-    const explicitlyRevised = observe(
-      revisedIdentity,
-      35,
-      `${objectiveKey}:semantic-revision-2`,
-      reversed.target
-    );
-
-    // The stable slot-derived key lets the old episode reach its bounded trigger
-    // on the first observation of the semantically reversed world-space target.
-    // consumeRetry() then intentionally resets noProgressSinceTick to this tick,
-    // so the post-action counter reads 1 even though the decision was enabled by
-    // the preceding 35 ticks. The revised semantic identity does not inherit it.
-    expect(aliased.state).toBe("RECOVERING");
-    expect(aliased.action).toBe("RETRY_LOCAL");
-    expect(aliased.reason).toContain("bounded trigger window");
-    expect(aliased.retryCount).toBe(1);
-    expect(aliased.noProgressTicks).toBe(1);
-
-    expect(explicitlyRevised.action).toBe("NONE");
-    expect(explicitlyRevised.retryCount).toBe(0);
-    expect(explicitlyRevised.noProgressTicks).toBe(1);
   });
 
   it("shows why neither tactical reconsideration count nor moving target coordinates are semantic objective identity", () => {
