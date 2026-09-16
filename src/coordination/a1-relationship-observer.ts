@@ -105,6 +105,34 @@ function cloneSampling(value: A1RelationshipSamplingConfig): A1RelationshipSampl
   };
 }
 
+function cloneOrientationMemory(
+  value: A1RelationshipOrientationMemory | null
+): A1RelationshipOrientationMemory | null {
+  return value
+    ? {
+        provenance: "OWNER_CONTROL",
+        direction: { ...value.direction },
+        sourceTick: value.sourceTick,
+        sourceStrength: value.sourceStrength
+      }
+    : null;
+}
+
+function cloneOrientationEvidence(value: A1RelationshipOrientationEvidence): A1RelationshipOrientationEvidence {
+  return {
+    tick: value.tick,
+    source: value.source,
+    direction: value.direction ? { ...value.direction } : null,
+    sourceTick: value.sourceTick,
+    ageTicks: value.ageTicks,
+    strength: value.strength,
+    samplingBasis: { ...value.samplingBasis },
+    samplingBasisSource: value.samplingBasisSource,
+    nextMemory: cloneOrientationMemory(value.nextMemory),
+    reason: value.reason
+  };
+}
+
 function validateConfig(input: Partial<A1RelationshipObserverConfig>): A1RelationshipObserverConfig {
   const heavyIntervalTicks = input.heavyIntervalTicks ?? A1_RELATIONSHIP_HEAVY_INTERVAL_TICKS;
   const routeBudget = input.routeBudget ?? A1_RELATIONSHIP_OBSERVER_ROUTE_BUDGET;
@@ -234,6 +262,10 @@ export class A1RelationshipObserver {
     }
 
     return this.debugState();
+  }
+
+  latestOrientationEvidence(): A1RelationshipOrientationEvidence | null {
+    return this.latestOrientationValue ? cloneOrientationEvidence(this.latestOrientationValue) : null;
   }
 
   debugState(): A1RelationshipObserverDebug {
