@@ -196,7 +196,7 @@ describe("A1/CCC temporal model divergence audit", () => {
       const cccDirection = cccRelease?.region.playerDirection;
       expect(a1Direction).not.toBeNull();
       expect(cccDirection).not.toBeNull();
-      if (!a1Direction || !cccDirection || releaseTick === null) return;
+      if (!releaseA1 || !cccRelease || !a1Direction || !cccDirection || releaseTick === null) return;
       expect(dot(a1Direction, cccDirection)).toBeLessThan(-0.9);
 
       console.info("[A1_CCC_TEMPORAL_DIVERGENCE_REAL_WORLD]", JSON.stringify({
