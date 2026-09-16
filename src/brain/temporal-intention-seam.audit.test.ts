@@ -82,7 +82,7 @@ function syntheticSnapshot(options: {
         requestedVelocity: { ...options.playerRequestedVelocity },
         actualVelocity: { ...(options.playerActualVelocity ?? options.playerRequestedVelocity) },
         motionError: 0,
-        contacts: (options.playerContacts ?? []).map((withId) => ({ with: withId }))
+        contacts: (options.playerContacts ?? []).map((withId) => ({ with: withId, contactCount: 1 }))
       }
     ],
     obstacles: []
