@@ -137,7 +137,7 @@ describe("temporal intention seam audit", () => {
     expect(distance(initial.target, reversed.target)).toBeGreaterThan(2.8);
   });
 
-  it("shows recovery carrying no-progress debt across that same-label semantic target reversal", () => {
+  it("shows recovery spending old no-progress debt across that same-label semantic target reversal", () => {
     const relationship = new RelationalPositioningBrain();
     const initial = relationship.decision(syntheticSnapshot({
       tick: 0,
@@ -186,10 +186,16 @@ describe("temporal intention seam audit", () => {
       reversed.target
     );
 
+    // The stable slot-derived key lets the old episode reach its bounded trigger
+    // on the first observation of the semantically reversed world-space target.
+    // consumeRetry() then intentionally resets noProgressSinceTick to this tick,
+    // so the post-action counter reads 1 even though the decision was enabled by
+    // the preceding 35 ticks. The revised semantic identity does not inherit it.
     expect(aliased.state).toBe("RECOVERING");
     expect(aliased.action).toBe("RETRY_LOCAL");
+    expect(aliased.reason).toContain("bounded trigger window");
     expect(aliased.retryCount).toBe(1);
-    expect(aliased.noProgressTicks).toBe(36);
+    expect(aliased.noProgressTicks).toBe(1);
 
     expect(explicitlyRevised.action).toBe("NONE");
     expect(explicitlyRevised.retryCount).toBe(0);
