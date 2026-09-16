@@ -1,176 +1,234 @@
 import { describe, expect, it } from "vitest";
-import type { MovementCapability } from "../world/movement-capability";
-import type {
-  ActorSnapshot,
-  MotionIntent,
-  StaticCircleTraversalResult,
-  Vec2,
-  WorldSnapshot
-} from "../world/types";
-import { A1RelationshipObserver } from "./a1-relationship-observer";
-import { buildA1Situation } from "./a1-situation";
-import { evaluateShadowCoordinationFrame } from "./shadow-coordination-frame";
+import { LabWorld } from "../world/world";
+import type { ActorSnapshot, MotionIntent, Vec2, WorldSnapshot } from "../world/types";
+import {
+  evaluateA1RelationshipOrientation,
+  type A1RelationshipOrientationEvidence,
+  type A1RelationshipOrientationMemory
+} from "./a1-relationship-orientation";
+import { buildA1Situation, type A1Situation } from "./a1-situation";
+import { evaluateShadowCoordinationFrame, type ShadowCoordinationFrame } from "./shadow-coordination-frame";
 
-const PLAYER_CAPABILITY: MovementCapability = {
-  actorId: "player",
-  maxSpeed: 3,
-  radius: 0.3,
-  source: "actor-spec"
-};
+function actor(snapshot: WorldSnapshot, id: "player" | "companion"): ActorSnapshot {
+  const value = snapshot.actors.find((entry) => entry.id === id);
+  if (!value) throw new Error(`A1/CCC divergence audit missing ${id}.`);
+  return value;
+}
 
-const COMPANION_CAPABILITY: MovementCapability = {
-  actorId: "companion",
-  maxSpeed: 3,
-  radius: 0.3,
-  source: "actor-spec"
-};
+function motion(actorId: "player" | "companion", move: Vec2): MotionIntent {
+  return { actorId, move: { ...move } };
+}
 
-function distance(a: Vec2, b: Vec2): number {
-  return Math.hypot(a.x - b.x, a.y - b.y);
+function magnitude(value: Vec2): number {
+  return Math.hypot(value.x, value.y);
 }
 
 function dot(a: Vec2, b: Vec2): number {
   return a.x * b.x + a.y * b.y;
 }
 
-function clearTraversal(from: Vec2, to: Vec2, radius: number): StaticCircleTraversalResult {
-  return {
-    from: { ...from },
-    to: { ...to },
-    radius,
-    distance: distance(from, to),
-    clear: true,
-    blocker: null
-  };
+function hasContact(snapshot: WorldSnapshot): boolean {
+  return actor(snapshot, "player").contacts.some((contact) => contact.with === "companion") &&
+    actor(snapshot, "companion").contacts.some((contact) => contact.with === "player");
 }
 
-function motion(move: Vec2): MotionIntent {
-  return { actorId: "player", move: { ...move } };
-}
-
-function snapshot(input: {
-  tick: number;
-  requested: Vec2;
-  actual: Vec2;
-  contacted?: boolean;
-}): WorldSnapshot {
-  const player: ActorSnapshot = {
-    id: "player",
-    position: { x: 4, y: 4 },
-    radius: 0.3,
-    requestedVelocity: { ...input.requested },
-    actualVelocity: { ...input.actual },
-    motionError: Math.hypot(input.actual.x - input.requested.x, input.actual.y - input.requested.y),
-    contacts: input.contacted ? [{ with: "companion", contactCount: 1 }] : []
-  };
-  const companion: ActorSnapshot = {
-    id: "companion",
-    position: { x: 1, y: 4 },
-    radius: 0.3,
-    requestedVelocity: { x: 0, y: 0 },
-    actualVelocity: { x: 0, y: 0 },
-    motionError: 0,
-    contacts: input.contacted ? [{ with: "player", contactCount: 1 }] : []
-  };
-  return {
-    tick: input.tick,
-    scenarioId: "open",
-    width: 12,
-    height: 8,
-    actors: [player, companion],
-    obstacles: []
-  };
-}
-
-function situation(world: WorldSnapshot, ownerMove: Vec2) {
-  return buildA1Situation({
-    snapshot: world,
-    playerIntent: motion(ownerMove),
-    playerCapability: PLAYER_CAPABILITY,
-    companionCapability: COMPANION_CAPABILITY,
-    previousWorldStep: null
+function observeA1(input: {
+  world: LabWorld;
+  snapshot: WorldSnapshot;
+  ownerMove: Vec2;
+  memory: A1RelationshipOrientationMemory | null;
+}): {
+  situation: A1Situation;
+  orientation: A1RelationshipOrientationEvidence;
+  nextMemory: A1RelationshipOrientationMemory | null;
+} {
+  const situation = buildA1Situation({
+    snapshot: input.snapshot,
+    playerIntent: motion("player", input.ownerMove),
+    playerCapability: input.world.actorMovementCapability("player"),
+    companionCapability: input.world.actorMovementCapability("companion"),
+    previousWorldStep: input.snapshot.tick === 0
+      ? null
+      : input.world.latestAuthorityA0StepEvidence()
   });
+  const orientation = evaluateA1RelationshipOrientation({
+    situation,
+    memory: input.memory
+  });
+  return { situation, orientation, nextMemory: orientation.nextMemory };
 }
 
 describe("A1/CCC temporal model divergence audit", () => {
-  it("keeps opposing remembered player directions after a solver-like external reversal and release", () => {
-    const a1 = new A1RelationshipObserver();
+  it("keeps Owner semantic memory opposite to CCC solver-motion memory after a real head-on push and release", async () => {
+    const world = await LabWorld.create("head-on");
+    let snapshot = world.snapshot();
+    let memory: A1RelationshipOrientationMemory | null = null;
+    let contactTick: number | null = null;
+    let externalTick: number | null = null;
+    let externalA1: A1RelationshipOrientationEvidence | null = null;
+    let externalSituation: A1Situation | null = null;
+    let cccExternal: ShadowCoordinationFrame | null = null;
 
-    const ownerDirected = snapshot({
-      tick: 0,
-      requested: { x: 3, y: 0 },
-      actual: { x: 3, y: 0 }
-    });
-    const a1AtOwner = a1.observe({
-      situation: situation(ownerDirected, { x: 1, y: 0 }),
-      snapshot: ownerDirected,
-      query: clearTraversal
-    });
-    const cccAtOwner = evaluateShadowCoordinationFrame({
-      snapshot: ownerDirected,
-      query: clearTraversal,
-      physicalSpeedCapability: 3
-    });
+    try {
+      // Establish fresh +X Owner semantics while the two bodies close head-on.
+      for (let step = 0; step < 90; step += 1) {
+        const observed = observeA1({
+          world,
+          snapshot,
+          ownerMove: { x: 1, y: 0 },
+          memory
+        });
+        memory = observed.nextMemory;
+        expect(observed.orientation.source).toBe("SAME_STEP_OWNER");
+        expect(observed.orientation.direction).toEqual({ x: 1, y: 0 });
 
-    expect(a1AtOwner.orientation?.source).toBe("SAME_STEP_OWNER");
-    expect(a1AtOwner.orientation?.direction).toEqual({ x: 1, y: 0 });
-    expect(cccAtOwner.region.playerHeadingSource).toBe("actual");
-    expect(cccAtOwner.region.playerDirection).toEqual({ x: 1, y: 0 });
+        snapshot = world.step([
+          motion("player", { x: 1, y: 0 }),
+          motion("companion", { x: -1, y: 0 })
+        ]);
+        if (hasContact(snapshot)) {
+          contactTick = snapshot.tick;
+          break;
+        }
+      }
 
-    const externallyReversed = snapshot({
-      tick: 6,
-      requested: { x: 0, y: 0 },
-      actual: { x: -3, y: 0 },
-      contacted: true
-    });
-    const externalSituation = situation(externallyReversed, { x: 0, y: 0 });
-    expect(externalSituation.situated.playerMotionProvenance.state).toBe("EXTERNAL_MOTION_EVIDENT");
+      expect(contactTick).not.toBeNull();
 
-    const a1AtExternal = a1.observe({
-      situation: externalSituation,
-      snapshot: externallyReversed,
-      query: clearTraversal
-    });
-    const cccAtExternal = evaluateShadowCoordinationFrame({
-      snapshot: externallyReversed,
-      query: clearTraversal,
-      physicalSpeedCapability: 3,
-      history: cccAtOwner.nextHistory
-    });
+      // The Owner now releases movement while the companion keeps pushing left.
+      // Find a real completed World step where the player's body moves materially
+      // despite a zero request and reciprocal contact proves an external cause.
+      for (let step = 0; step < 28; step += 1) {
+        const observed = observeA1({
+          world,
+          snapshot,
+          ownerMove: { x: 0, y: 0 },
+          memory
+        });
+        memory = observed.nextMemory;
+        const player = actor(snapshot, "player");
+        const externallyDriven =
+          observed.situation.situated.playerMotionProvenance.state === "EXTERNAL_MOTION_EVIDENT" &&
+          magnitude(player.requestedVelocity) < 0.08 &&
+          player.actualVelocity.x < -0.15 &&
+          hasContact(snapshot);
 
-    expect(a1AtExternal.orientation?.source).toBe("OWNER_MEMORY");
-    expect(a1AtExternal.orientation?.ageTicks).toBe(6);
-    expect(a1AtExternal.orientation?.direction).toEqual({ x: 1, y: 0 });
-    expect(cccAtExternal.region.playerHeadingSource).toBe("actual");
-    expect(cccAtExternal.region.playerDirection).toEqual({ x: -1, y: 0 });
+        if (externallyDriven) {
+          externalTick = snapshot.tick;
+          externalA1 = observed.orientation;
+          externalSituation = observed.situation;
+          cccExternal = evaluateShadowCoordinationFrame({
+            snapshot,
+            query: (from, to, radius) => world.staticCircleTraversal(from, to, radius),
+            physicalSpeedCapability: world.actorMovementCapability("companion").maxSpeed
+          });
+          break;
+        }
 
-    const released = snapshot({
-      tick: 12,
-      requested: { x: 0, y: 0 },
-      actual: { x: 0, y: 0 }
-    });
-    const a1AtRelease = a1.observe({
-      situation: situation(released, { x: 0, y: 0 }),
-      snapshot: released,
-      query: clearTraversal
-    });
-    const cccAtRelease = evaluateShadowCoordinationFrame({
-      snapshot: released,
-      query: clearTraversal,
-      physicalSpeedCapability: 3,
-      history: cccAtExternal.nextHistory
-    });
+        snapshot = world.step([
+          motion("player", { x: 0, y: 0 }),
+          motion("companion", { x: -1, y: 0 })
+        ]);
+      }
 
-    expect(a1AtRelease.orientation?.source).toBe("OWNER_MEMORY");
-    expect(a1AtRelease.orientation?.ageTicks).toBe(12);
-    expect(a1AtRelease.orientation?.direction).toEqual({ x: 1, y: 0 });
-    expect(cccAtRelease.region.playerHeadingSource).toBe("previous");
-    expect(cccAtRelease.region.playerDirection).toEqual({ x: -1, y: 0 });
-    expect(cccAtRelease.region.playerHeadingStrength).toBeGreaterThan(0);
+      expect(externalTick).not.toBeNull();
+      expect(externalSituation?.situated.playerMotionProvenance.state).toBe("EXTERNAL_MOTION_EVIDENT");
+      expect(externalA1?.source).toBe("OWNER_MEMORY");
+      expect(externalA1?.direction).toEqual({ x: 1, y: 0 });
+      expect(cccExternal?.region.playerHeadingSource).toBe("actual");
+      expect(cccExternal?.region.playerDirection.x).toBeLessThan(-0.9);
+      expect(cccExternal?.nextHistory.previousPlayerDirection?.x).toBeLessThan(-0.9);
+      expect(cccExternal?.nextHistory.previousPlayerDirectionAgeTicks).toBe(0);
 
-    const a1Direction = a1AtRelease.orientation?.direction;
-    expect(a1Direction).not.toBeNull();
-    if (!a1Direction) return;
-    expect(dot(a1Direction, cccAtRelease.region.playerDirection)).toBeLessThan(-0.99);
+      if (!cccExternal || externalTick === null) return;
+
+      // Separate the bodies while the Owner remains released. A1 must preserve
+      // bounded Owner-derived +X semantics; CCC must preserve the solver-derived
+      // -X trajectory in its own fading history after the body is stationary.
+      snapshot = world.step([
+        motion("player", { x: 0, y: 0 }),
+        motion("companion", { x: 1, y: 0 })
+      ]);
+
+      let releaseTick: number | null = null;
+      let releaseA1: A1RelationshipOrientationEvidence | null = null;
+      let cccRelease: ShadowCoordinationFrame | null = null;
+
+      for (let step = 0; step < 20; step += 1) {
+        const observed = observeA1({
+          world,
+          snapshot,
+          ownerMove: { x: 0, y: 0 },
+          memory
+        });
+        memory = observed.nextMemory;
+        const player = actor(snapshot, "player");
+        const physicallyReleased =
+          !hasContact(snapshot) &&
+          magnitude(player.requestedVelocity) < 0.08 &&
+          magnitude(player.actualVelocity) < 0.08;
+
+        if (physicallyReleased) {
+          releaseTick = snapshot.tick;
+          releaseA1 = observed.orientation;
+          cccRelease = evaluateShadowCoordinationFrame({
+            snapshot,
+            query: (from, to, radius) => world.staticCircleTraversal(from, to, radius),
+            physicalSpeedCapability: world.actorMovementCapability("companion").maxSpeed,
+            history: cccExternal.nextHistory
+          });
+          break;
+        }
+
+        snapshot = world.step([
+          motion("player", { x: 0, y: 0 }),
+          motion("companion", { x: 1, y: 0 })
+        ]);
+      }
+
+      expect(releaseTick).not.toBeNull();
+      expect(releaseA1?.source).toBe("OWNER_MEMORY");
+      expect(releaseA1?.direction).toEqual({ x: 1, y: 0 });
+      expect(cccRelease?.region.playerHeadingSource).toBe("previous");
+      expect(cccRelease?.region.playerDirection.x).toBeLessThan(-0.9);
+      expect(cccRelease?.region.playerHeadingStrength).toBeGreaterThan(0);
+
+      const a1Direction = releaseA1?.direction;
+      const cccDirection = cccRelease?.region.playerDirection;
+      expect(a1Direction).not.toBeNull();
+      expect(cccDirection).not.toBeNull();
+      if (!a1Direction || !cccDirection || releaseTick === null) return;
+      expect(dot(a1Direction, cccDirection)).toBeLessThan(-0.9);
+
+      console.info("[A1_CCC_TEMPORAL_DIVERGENCE_REAL_WORLD]", JSON.stringify({
+        contactTick,
+        externalTick,
+        releaseTick,
+        externalProvenance: externalSituation?.situated.playerMotionProvenance.state,
+        a1External: {
+          source: externalA1?.source,
+          direction: externalA1?.direction,
+          ageTicks: externalA1?.ageTicks,
+          strength: externalA1?.strength
+        },
+        cccExternal: {
+          source: cccExternal.region.playerHeadingSource,
+          direction: cccExternal.region.playerDirection
+        },
+        a1Release: {
+          source: releaseA1.source,
+          direction: releaseA1.direction,
+          ageTicks: releaseA1.ageTicks,
+          strength: releaseA1.strength
+        },
+        cccRelease: {
+          source: cccRelease.region.playerHeadingSource,
+          direction: cccRelease.region.playerDirection,
+          strength: cccRelease.region.playerHeadingStrength
+        },
+        runtimeAuthority: "NONE_AUDIT_ONLY"
+      }));
+    } finally {
+      world.dispose();
+    }
   });
 });
