@@ -3,6 +3,7 @@ import {
   evaluateA1H1PrimaryLiveStateShadow,
   type A1H1PrimaryShadowEvaluation
 } from "../coordination/a1-h1-primary-shadow";
+import type { A1RelationshipOrientationEvidence } from "../coordination/a1-relationship-orientation";
 import { cloneA1Situation, type A1Situation } from "../coordination/a1-situation";
 import type { MotionIntent, WorldSnapshot } from "../world/types";
 import type { LabWorld } from "../world/world";
@@ -30,6 +31,7 @@ export interface AuthorityA12z4cProbeEvidence {
   tick: number;
   variant: "direct" | "temporal";
   situation: A1Situation;
+  relationshipOrientation: A1RelationshipOrientationEvidence;
   selectedCompanionIntent: MotionIntent | null;
   evaluation: A1H1PrimaryShadowEvaluation;
 }
@@ -66,6 +68,10 @@ function cloneEvaluation(value: A1H1PrimaryShadowEvaluation): A1H1PrimaryShadowE
   return structuredClone(value);
 }
 
+function cloneOrientation(value: A1RelationshipOrientationEvidence): A1RelationshipOrientationEvidence {
+  return structuredClone(value);
+}
+
 function cloneEvidence(value: AuthorityA12z4cProbeEvidence): AuthorityA12z4cProbeEvidence {
   return {
     requestId: value.requestId,
@@ -74,6 +80,7 @@ function cloneEvidence(value: AuthorityA12z4cProbeEvidence): AuthorityA12z4cProb
     tick: value.tick,
     variant: value.variant,
     situation: cloneA1Situation(value.situation),
+    relationshipOrientation: cloneOrientation(value.relationshipOrientation),
     selectedCompanionIntent: cloneIntent(value.selectedCompanionIntent),
     evaluation: cloneEvaluation(value.evaluation)
   };
@@ -82,8 +89,9 @@ function cloneEvidence(value: AuthorityA12z4cProbeEvidence): AuthorityA12z4cProb
 /**
  * Z4c is explicit browser research apparatus only. It wraps the existing scene
  * decision function so the requested probe runs after A1 has captured the exact
- * same-tick situation but before the live World step. The original intent result
- * is returned unchanged; the evaluator itself only advances Rapier snapshot clones.
+ * same-tick situation and relationship-orientation evidence but before the live
+ * World step. The original intent result is returned unchanged; the evaluator
+ * itself only advances Rapier snapshot clones.
  */
 export function installAuthorityA12z4cBrowserBridge(search: string, scenePrototype: object): void {
   const params = new URLSearchParams(search);
@@ -114,22 +122,26 @@ export function installAuthorityA12z4cBrowserBridge(search: string, scenePrototy
 
     const runtime = this.a1Authority.debugState();
     const situation = runtime.latestSituation;
+    const relationshipOrientation = this.a1Authority.latestRelationshipOrientationEvidence();
     const ready =
       this.world !== null &&
       this.companionMode === "spatial" &&
       this.a1Authority.enabled() &&
       (runtime.variant === "direct" || runtime.variant === "temporal") &&
       situation !== null &&
+      relationshipOrientation !== null &&
+      relationshipOrientation.tick === situation.tick &&
       situation.tick === before.tick &&
       this.world.snapshot().tick === before.tick;
-    if (!ready || !situation || !this.world || runtime.variant === "off") return result;
+    if (!ready || !situation || !relationshipOrientation || !this.world || runtime.variant === "off") return result;
 
     pendingRequestId = null;
     const startedAt = performance.now();
     try {
       const evaluation = evaluateA1H1PrimaryLiveStateShadow({
         world: this.world,
-        situation
+        situation,
+        orientation: relationshipOrientation
       });
       const durationMs = performance.now() - startedAt;
       const selectedCompanionIntent = result.intents.find((intent) => intent.actorId === "companion") ?? null;
@@ -140,6 +152,7 @@ export function installAuthorityA12z4cBrowserBridge(search: string, scenePrototy
         tick: situation.tick,
         variant: runtime.variant,
         situation: cloneA1Situation(situation),
+        relationshipOrientation: cloneOrientation(relationshipOrientation),
         selectedCompanionIntent: cloneIntent(selectedCompanionIntent),
         evaluation: cloneEvaluation(evaluation)
       };
