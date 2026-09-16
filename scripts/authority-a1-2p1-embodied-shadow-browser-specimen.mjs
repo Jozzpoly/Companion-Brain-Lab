@@ -198,9 +198,15 @@ try {
     "paused A1 DIRECT"
   );
 
+  // The qualified tick-0 H1 specimen is explicitly an Owner +X head-on state.
+  // Assemble that input while paused so the very first exact step observes the
+  // same decision situation as the unit-level qualification fixture.
+  await page.keyboard.down("d");
+
   const probes = [];
   probes.push(await requestProjection(page, "tick-0"));
   invariant(probes[0].tick === 0, `First deterministic P1 projection expected tick 0, got ${probes[0].tick}.`);
+  invariant(probes[0].playerMove.x === 1 && probes[0].playerMove.y === 0, "Tick-0 P1 did not capture Owner +X input.");
   invariant(probes[0].frontierState === "SINGLETON_H1_FRONTIER", `Tick-0 P1 expected singleton H1 frontier, got ${probes[0].frontierState}.`);
   invariant(probes[0].candidateCount === 1, `Tick-0 P1 expected one embodied frontier candidate, got ${probes[0].candidateCount}.`);
   invariant(
@@ -210,7 +216,6 @@ try {
 
   // Advance to a nonzero exact live state using seven additional explicit Owner
   // +X steps (the first projection already advanced t0 -> t1).
-  await page.keyboard.down("d");
   for (let index = 0; index < 7; index += 1) {
     await singleStep(page, `owner-approach-${index + 2}`);
   }
@@ -233,7 +238,7 @@ try {
     browser: browser.version(),
     scenario: "head-on",
     horizonSeconds: HORIZON_SECONDS,
-    scheduler: "PAUSED_RESET_EXACT_SINGLE_STEP",
+    scheduler: "PAUSED_RESET_FULL_INPUT_ASSEMBLY_EXACT_SINGLE_STEP",
     probeCount: probes.length,
     probes,
     semantics: {
