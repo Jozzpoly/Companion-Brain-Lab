@@ -4,6 +4,7 @@ import {
   A1RelationshipObserver,
   type A1RelationshipObserverDebug
 } from "./a1-relationship-observer";
+import type { A1RelationshipOrientationEvidence } from "./a1-relationship-orientation";
 import { cloneA1Situation, type A1Situation } from "./a1-situation";
 
 export const A1_AUTHORITY_VARIANTS = ["off", "direct", "temporal"] as const;
@@ -92,6 +93,10 @@ export class A1AuthorityRuntime {
       }
       return null;
     }
+  }
+
+  latestRelationshipOrientationEvidence(): A1RelationshipOrientationEvidence | null {
+    return this.relationshipObserver.latestOrientationEvidence();
   }
 
   resolveCompanionIntent(input: {
