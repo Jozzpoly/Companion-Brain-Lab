@@ -66,39 +66,23 @@ function trajectoryFrom(frames) {
   }));
 }
 
-async function waitForCommandStart(page, baseCount, expectedY, timeout = 5_000) {
+async function singleStepAfter(page, previousObservationTick, timeout = 5_000) {
+  await page.locator('[data-action="single-step"]').click();
   const handle = await page.waitForFunction(
-    ({ baseCount, expectedComponent, expectedY }) => {
+    (previousTick) => {
       const frames = (window.__authorityA0BrowserBridge?.incident().frames ?? [])
         .filter((frame) => frame.scenarioId === "head-on");
-      const candidates = frames.slice(baseCount);
-      const match = candidates.find((frame) =>
-        frame.situated.playerControl.move.x > 0.99 &&
-        Math.abs(frame.situated.playerControl.move.y) <= 1e-5 &&
-        Math.abs(frame.companionVelocityCommand.velocity.x - expectedComponent) <= 1e-5 &&
-        Math.abs(frame.companionVelocityCommand.velocity.y - expectedY) <= 1e-5
-      );
-      return match ? { observationTick: match.observationTick } : null;
+      const latest = frames.at(-1);
+      return latest && latest.observationTick > previousTick
+        ? { observationTick: latest.observationTick }
+        : null;
     },
-    { baseCount, expectedComponent: EXPECTED_COMPONENT, expectedY },
+    previousObservationTick,
     { timeout }
   );
   const value = await handle.jsonValue();
-  invariant(value && Number.isInteger(value.observationTick), "Expected command never reached A0 evidence.");
+  invariant(value && Number.isInteger(value.observationTick), "Single-step did not publish a newer A0 head-on frame.");
   return value.observationTick;
-}
-
-async function waitForCommandWindow(page, startObservationTick, count, timeout = 5_000) {
-  await page.waitForFunction(
-    ({ startObservationTick, count }) => {
-      const frames = (window.__authorityA0BrowserBridge?.incident().frames ?? [])
-        .filter((frame) => frame.scenarioId === "head-on");
-      const startIndex = frames.findIndex((frame) => frame.observationTick === startObservationTick);
-      return startIndex >= 0 && frames.length >= startIndex + count;
-    },
-    { startObservationTick, count },
-    { timeout }
-  );
 }
 
 async function assertNoFault(page, errors, label) {
@@ -125,34 +109,64 @@ async function runVariant(browser, variant) {
     const canvas = page.locator("#game-root canvas");
     await canvas.waitFor({ state: "visible", timeout: 15_000 });
     await page.waitForFunction(() => window.__authorityA0BrowserBridge?.enabled === true, null, { timeout: 10_000 });
+
+    // Freeze the scheduler before constructing the specimen. The old 150 ms
+    // running-world settle window allowed a machine-dependent number of physics
+    // frames to leak between reset and compound-input assembly, so the mirrored
+    // variants could begin from measurably different physical states.
+    await page.locator('[data-action="toggle-pause"]').click();
+    await waitForPanel(page, (text) => text.includes("PAUSED"), 10_000, `${variant.id} initial pause`);
+
+    // Reset while paused so every variant starts from the exact authored head-on
+    // state regardless of browser/runner timing.
     await page.locator('[data-action="scenario-head-on"]').click();
-    await waitForPanel(page, (text) => text.includes("scenario Head-on contact"), 10_000, `${variant.id} head-on`);
+    await waitForPanel(
+      page,
+      (text) => text.includes("scenario Head-on contact") && text.includes("PAUSED"),
+      10_000,
+      `${variant.id} paused head-on reset`
+    );
     await page.locator('[data-action="cycle-mode"]').click();
     await waitForPanel(
       page,
-      (text) => text.includes("mode MANUAL") && text.includes("A1 OFF"),
+      (text) => text.includes("mode MANUAL") && text.includes("A1 OFF") && text.includes("PAUSED"),
       10_000,
-      `${variant.id} MANUAL/A1 OFF`
+      `${variant.id} PAUSED MANUAL/A1 OFF`
     );
-    await page.waitForTimeout(150);
     await assertNoFault(page, errors, variant.id);
 
     const participantBefore = await canvas.screenshot({ type: "jpeg", quality: 60 });
     const beforeIncident = await bridgeIncident(page);
-    const baseCount = headOnFrames(beforeIncident).length;
+    const beforeFrames = headOnFrames(beforeIncident);
+    const baseCount = beforeFrames.length;
+    let latestObservationTick = beforeFrames.at(-1)?.observationTick ?? -1;
 
-    // Keyboard events are necessarily delivered sequentially. Do not count those
-    // transient assembly ticks as execution of the intended compound command.
-    // Anchor the bounded specimen to the first A0 frame that actually observes
-    // player +X together with the complete reflected tangent companion velocity.
+    // Assemble the complete command while the world is paused. Keyboard event
+    // ordering can no longer create transient physics ticks. Then advance exactly
+    // 60 world frames through the explicit single-step control.
     await page.keyboard.down("d");
     await page.keyboard.down("ArrowRight");
     await page.keyboard.down(variant.verticalKey);
-    const commandStartObservationTick = await waitForCommandStart(page, baseCount, variant.expectedY);
 
-    await waitForCommandWindow(page, commandStartObservationTick, 30);
-    const participantMid = await canvas.screenshot({ type: "jpeg", quality: 60 });
-    await waitForCommandWindow(page, commandStartObservationTick, WORLD_FRAMES);
+    latestObservationTick = await singleStepAfter(page, latestObservationTick);
+    const firstIncident = await bridgeIncident(page);
+    const firstFrames = headOnFrames(firstIncident);
+    const firstCommandFrame = firstFrames.at(-1);
+    invariant(firstCommandFrame, `${variant.id}: first deterministic command step produced no A0 frame.`);
+    invariant(
+      isExpectedCommandFrame(firstCommandFrame, variant.expectedY),
+      `${variant.id}: first deterministic step did not observe the complete compound command.`
+    );
+    const commandStartObservationTick = firstCommandFrame.observationTick;
+
+    let participantMid = null;
+    for (let completedFrames = 1; completedFrames < WORLD_FRAMES; completedFrames += 1) {
+      latestObservationTick = await singleStepAfter(page, latestObservationTick);
+      if (completedFrames === 29) {
+        participantMid = await canvas.screenshot({ type: "jpeg", quality: 60 });
+      }
+    }
+    invariant(participantMid, `${variant.id}: deterministic midpoint screenshot was not captured.`);
 
     await page.keyboard.up("d");
     await page.keyboard.up("ArrowRight");
@@ -164,6 +178,10 @@ async function runVariant(browser, variant) {
     const allFrames = headOnFrames(incident);
     const startIndex = allFrames.findIndex((frame) => frame.observationTick === commandStartObservationTick);
     invariant(startIndex >= 0, `${variant.id}: command-start A0 frame left the incident buffer.`);
+    invariant(
+      startIndex === baseCount,
+      `${variant.id}: unexpected pre-command transition frames escaped paused assembly (${startIndex - baseCount}).`
+    );
     const frames = allFrames.slice(startIndex, startIndex + WORLD_FRAMES);
     const trajectory = trajectoryFrom(frames);
 
@@ -250,13 +268,14 @@ try {
   invariant(mirrorInitialError <= 1e-9, `Tangent specimens did not start from the same physical state (${mirrorInitialError}).`);
 
   const summary = {
-    schema: "companion-brain-lab-a1-2z4b-head-on-tangent-class-browser-v2",
+    schema: "companion-brain-lab-a1-2z4b-head-on-tangent-class-browser-v3",
     authority: "ZERO_A1_2_MOVEMENT_AUTHORITY_MANUAL_SPECIMEN_ONLY",
     sourceSha: process.env.GITHUB_SHA ?? null,
     browser: await browser.version(),
     scenario: "head-on",
     worldFramesPerVariant: WORLD_FRAMES,
-    actionWindow: "FIRST_A0_FRAME_WITH_COMPLETE_COMPOUND_COMMAND_THROUGH_NEXT_60_WORLD_FRAMES",
+    scheduler: "PAUSED_RESET_FULL_INPUT_ASSEMBLY_EXACT_SINGLE_STEP",
+    actionWindow: "FIRST_A0_FRAME_WITH_COMPLETE_COMPOUND_COMMAND_THROUGH_EXACTLY_60_SINGLE_STEPPED_WORLD_FRAMES",
     relationToZ4: "EXECUTES_BOTH_REFLECTED_TANGENT_COMMANDS_AS_BOUNDED_MANUAL_BROWSER_SPECIMENS_NO_SELECTOR_CLAIM",
     results: results.map(({ trajectory, ...result }) => result)
   };
