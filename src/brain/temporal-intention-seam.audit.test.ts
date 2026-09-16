@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { LabWorld } from "../world/world";
-import type { ActorSnapshot, MotionIntent, Vec2, WorldSnapshot } from "../world/types";
+import type {
+  ActorSnapshot,
+  MotionIntent,
+  StaticCircleTraversalResult,
+  Vec2,
+  WorldSnapshot
+} from "../world/types";
 import { buildA1Situation } from "../coordination/a1-situation";
 import { evaluateA1RelationshipOrientation } from "../coordination/a1-relationship-orientation";
 import { evaluateShadowPlayerCorridor } from "../coordination/shadow-player-corridor";
+import { evaluateShadowCoordinationFrame } from "../coordination/shadow-coordination-frame";
 import { classifyObservedPlayerMotion } from "../coordination/situated-evidence";
 import { RelationalPositioningBrain } from "./relational-positioning";
 
@@ -33,6 +40,17 @@ function dot(a: Vec2, b: Vec2): number {
 
 function distance(a: Vec2, b: Vec2): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function clearTraversal(from: Vec2, to: Vec2, radius: number): StaticCircleTraversalResult {
+  return {
+    from: { ...from },
+    to: { ...to },
+    radius,
+    distance: distance(from, to),
+    clear: true,
+    blocker: null
+  };
 }
 
 function syntheticSnapshot(options: {
@@ -151,6 +169,56 @@ describe("temporal intention seam audit", () => {
     expect(externallyDriven.reason).toContain("retain");
     expect(externallyDriven.playerDirection).toEqual({ x: -1, y: 0 });
     expect(distance(ownerDirected.target, externallyDriven.target)).toBeGreaterThan(2.8);
+  });
+
+  it("shows externally-caused actual motion contaminating CCC direction memory after the body becomes stationary", () => {
+    const externallyMoved = syntheticSnapshot({
+      tick: 0,
+      playerRequestedVelocity: { x: 0, y: 0 },
+      playerActualVelocity: { x: -3, y: 0 },
+      playerContacts: ["companion"]
+    });
+    const player = actor(externallyMoved, "player");
+    expect(classifyObservedPlayerMotion({
+      sourceTick: 0,
+      position: { ...player.position },
+      requestedVelocity: { ...player.requestedVelocity },
+      actualVelocity: { ...player.actualVelocity },
+      motionError: player.motionError,
+      contacts: player.contacts.map((contact) => contact.with)
+    }).state).toBe("EXTERNAL_MOTION_EVIDENT");
+
+    const contaminated = evaluateShadowCoordinationFrame({
+      snapshot: externallyMoved,
+      query: clearTraversal,
+      physicalSpeedCapability: 3
+    });
+    expect(contaminated.region.playerHeadingSource).toBe("actual");
+    expect(contaminated.region.playerDirection).toEqual({ x: -1, y: 0 });
+    expect(contaminated.nextHistory.previousPlayerDirection).toEqual({ x: -1, y: 0 });
+    expect(contaminated.nextHistory.previousPlayerDirectionAgeTicks).toBe(0);
+    expect(contaminated.nextHistory.previousCorridorDirection).toEqual({ x: -1, y: 0 });
+    expect(contaminated.nextHistory.previousCorridorDirectionAgeTicks).toBe(0);
+
+    const stationary = syntheticSnapshot({
+      tick: 6,
+      playerRequestedVelocity: { x: 0, y: 0 },
+      playerActualVelocity: { x: 0, y: 0 }
+    });
+    const persisted = evaluateShadowCoordinationFrame({
+      snapshot: stationary,
+      query: clearTraversal,
+      physicalSpeedCapability: 3,
+      history: contaminated.nextHistory
+    });
+
+    expect(persisted.region.playerHeadingSource).toBe("previous");
+    expect(persisted.region.playerDirection).toEqual({ x: -1, y: 0 });
+    expect(persisted.region.playerHeadingStrength).toBeGreaterThan(0);
+    expect(persisted.playerCorridor.velocitySource).toBe("stationary");
+    expect(persisted.playerCorridor.previousDirection).toEqual({ x: -1, y: 0 });
+    expect(persisted.nextHistory.previousPlayerDirection).toEqual({ x: -1, y: 0 });
+    expect(persisted.nextHistory.previousPlayerDirectionAgeTicks).toBe(6);
   });
 
   it("keeps genuine Owner reversal as a control: large world-space target rotation can still be the same relative relationship meaning", () => {
