@@ -29,8 +29,8 @@ function h1Q(profile: ReturnType<typeof buildA1TerminalRelationshipUtilityProfil
   return entry?.relationshipUtility?.terminalUtility.totalUtility ?? null;
 }
 
-describe("A1 H1 semantic-memory discontinuity audit", () => {
-  it("shows H1 q matching directionless semantics when A1 Owner memory is still live", async () => {
+describe("A1 H1 semantic-memory contract regression", () => {
+  it("fails closed without inactive-control semantic evidence and preserves explicit Owner memory in H1 q", async () => {
     const world = await LabWorld.create("head-on");
     try {
       const initialSituation = buildA1Situation({
@@ -61,14 +61,14 @@ describe("A1 H1 semantic-memory discontinuity audit", () => {
         situation,
         memory: initialOrientation.nextMemory
       });
-      const forgotten = evaluateA1RelationshipOrientation({ situation });
+      const explicitNone = evaluateA1RelationshipOrientation({ situation });
 
       expect(remembered.source).toBe("OWNER_MEMORY");
       expect(remembered.direction).toEqual({ x: 1, y: 0 });
       expect(remembered.ageTicks).toBe(1);
       expect(remembered.strength).toBeGreaterThan(0.99);
-      expect(forgotten.source).toBe("NONE");
-      expect(forgotten.direction).toBeNull();
+      expect(explicitNone.source).toBe("NONE");
+      expect(explicitNone.direction).toBeNull();
 
       const horizonSeconds = 1;
       const hypotheses = buildA1PlayerFutureHypotheses({
@@ -99,61 +99,85 @@ describe("A1 H1 semantic-memory discontinuity audit", () => {
           objective: A1_DEFAULT_RELATIONSHIP_OBJECTIVE
         })
       );
-      const forgottenProfiles = physicalProfiles.map((profile) =>
+      const directionlessProfiles = physicalProfiles.map((profile) =>
         buildA1TerminalRelationshipUtilityProfile({
           profile,
           situation,
-          orientation: forgotten,
+          orientation: explicitNone,
           objective: A1_DEFAULT_RELATIONSHIP_OBJECTIVE
         })
       );
 
       expect(rememberedProfiles.every((profile) => profile.orientationSource === "OWNER_MEMORY")).toBe(true);
-      expect(forgottenProfiles.every((profile) => profile.orientationSource === "NONE")).toBe(true);
+      expect(directionlessProfiles.every((profile) => profile.orientationSource === "NONE")).toBe(true);
 
-      const h1 = evaluateA1H1PrimaryShadowHorizon({
+      expect(() => evaluateA1H1PrimaryShadowHorizon({
         world,
         situation,
         horizonSeconds
+      })).toThrow(/requires explicit relationship orientation evidence when same-step Owner control is inactive/);
+
+      const rememberedH1 = evaluateA1H1PrimaryShadowHorizon({
+        world,
+        situation,
+        horizonSeconds,
+        orientation: remembered
       });
-      const traceRows = h1.stageTrace.proposals.filter((row) =>
+      const directionlessH1 = evaluateA1H1PrimaryShadowHorizon({
+        world,
+        situation,
+        horizonSeconds,
+        orientation: explicitNone
+      });
+
+      const rememberedRows = rememberedH1.stageTrace.proposals.filter((row) =>
         row.comparisonEligible && row.q !== null
       );
-      expect(traceRows.length).toBeGreaterThan(0);
+      const directionlessRows = directionlessH1.stageTrace.proposals.filter((row) =>
+        row.comparisonEligible && row.q !== null
+      );
+      expect(rememberedRows.length).toBeGreaterThan(0);
+      expect(directionlessRows.map((row) => row.proposalId)).toEqual(
+        rememberedRows.map((row) => row.proposalId)
+      );
 
       let materiallyDifferentCount = 0;
-      const evidence = traceRows.map((row) => {
+      const evidence = rememberedRows.map((row) => {
+        const directionlessRow = directionlessRows.find((candidate) => candidate.proposalId === row.proposalId);
         const rememberedProfile = rememberedProfiles.find((profile) => profile.proposalId === row.proposalId);
-        const forgottenProfile = forgottenProfiles.find((profile) => profile.proposalId === row.proposalId);
+        const directionlessProfile = directionlessProfiles.find((profile) => profile.proposalId === row.proposalId);
+        expect(directionlessRow).toBeDefined();
         expect(rememberedProfile).toBeDefined();
-        expect(forgottenProfile).toBeDefined();
-        if (!rememberedProfile || !forgottenProfile || row.q === null) {
-          throw new Error(`H1 semantic-memory audit lost proposal ${row.proposalId}.`);
+        expect(directionlessProfile).toBeDefined();
+        if (!directionlessRow || !rememberedProfile || !directionlessProfile || row.q === null || directionlessRow.q === null) {
+          throw new Error(`H1 semantic-memory regression lost proposal ${row.proposalId}.`);
         }
 
         const rememberedQ = h1Q(rememberedProfile);
-        const forgottenQ = h1Q(forgottenProfile);
+        const directionlessQ = h1Q(directionlessProfile);
         expect(rememberedQ).not.toBeNull();
-        expect(forgottenQ).not.toBeNull();
-        if (rememberedQ === null || forgottenQ === null) {
-          throw new Error(`H1 semantic-memory audit lost H1 utility for ${row.proposalId}.`);
+        expect(directionlessQ).not.toBeNull();
+        if (rememberedQ === null || directionlessQ === null) {
+          throw new Error(`H1 semantic-memory regression lost H1 utility for ${row.proposalId}.`);
         }
 
-        expect(row.q).toBeCloseTo(forgottenQ, 12);
-        const semanticDelta = Math.abs(rememberedQ - forgottenQ);
+        expect(row.q).toBeCloseTo(rememberedQ, 12);
+        expect(directionlessRow.q).toBeCloseTo(directionlessQ, 12);
+        const semanticDelta = Math.abs(rememberedQ - directionlessQ);
         if (semanticDelta > 1e-4) materiallyDifferentCount += 1;
         return {
           proposalId: row.proposalId,
-          h1TraceQ: row.q,
+          rememberedTraceQ: row.q,
+          directionlessTraceQ: directionlessRow.q,
           rememberedQ,
-          directionlessQ: forgottenQ,
+          directionlessQ,
           semanticDelta
         };
       });
 
       expect(materiallyDifferentCount).toBeGreaterThan(0);
 
-      console.info("[A1_H1_SEMANTIC_MEMORY_DISCONTINUITY]", JSON.stringify({
+      console.info("[A1_H1_SEMANTIC_MEMORY_CONTRACT_REGRESSION]", JSON.stringify({
         sourceTick: situation.tick,
         rememberedOrientation: {
           source: remembered.source,
@@ -162,18 +186,19 @@ describe("A1 H1 semantic-memory discontinuity audit", () => {
           strength: remembered.strength,
           direction: remembered.direction
         },
-        h1CallerOrientationWithoutMemory: {
-          source: forgotten.source,
-          direction: forgotten.direction,
-          strength: forgotten.strength
+        explicitDirectionlessOrientation: {
+          source: explicitNone.source,
+          direction: explicitNone.direction,
+          strength: explicitNone.strength
         },
-        comparableProposalCount: traceRows.length,
+        comparableProposalCount: rememberedRows.length,
         materiallyDifferentCount,
         proposalEvidence: evidence,
         interpretation: {
-          a1ObserverCanRetainOwnerSemanticsWhileH1ForgetsThem: true,
-          h1QCurrentlyMatchesDirectionlessUtility: true,
-          semanticMemoryLossCanChangeCounterfactualUtility: true
+          omittedInactiveControlEvidenceFailsClosed: true,
+          explicitOwnerMemoryControlsH1Utility: true,
+          explicitNoneRemainsAvailableWhenSemanticallyJustified: true,
+          semanticMemoryLossCanNoLongerOccurByOmission: true
         },
         runtimeAuthority: "NONE_AUDIT_ONLY"
       }));
