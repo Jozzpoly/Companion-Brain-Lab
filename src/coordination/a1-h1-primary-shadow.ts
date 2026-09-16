@@ -12,7 +12,10 @@ import type { A1PlayerFutureFamily } from "./a1-player-future-hypotheses";
 import { buildA1PlayerFutureHypotheses } from "./a1-player-future-hypotheses";
 import { buildA1PlayerFutureInterventionPlan } from "./a1-player-future-interventions";
 import { buildA1FixedCommandRadialPaceProfile } from "./a1-radial-pace-evidence";
-import { evaluateA1RelationshipOrientation } from "./a1-relationship-orientation";
+import {
+  evaluateA1RelationshipOrientation,
+  type A1RelationshipOrientationEvidence
+} from "./a1-relationship-orientation";
 import { A1_DEFAULT_RELATIONSHIP_OBJECTIVE } from "./a1-relationship-utility";
 import type { A1Situation } from "./a1-situation";
 import { buildA1TerminalRelationshipUtilityProfile } from "./a1-terminal-relationship-utility";
@@ -289,11 +292,34 @@ function candidateFromRow(
   };
 }
 
+function resolveH1Orientation(input: {
+  situation: A1Situation;
+  orientation?: A1RelationshipOrientationEvidence;
+}): A1RelationshipOrientationEvidence {
+  if (input.orientation) {
+    if (input.orientation.tick !== input.situation.tick) {
+      throw new Error(
+        `A1 H1 shadow requires same-tick relationship orientation evidence: situation t${input.situation.tick}, orientation t${input.orientation.tick}.`
+      );
+    }
+    return input.orientation;
+  }
+
+  const stateless = evaluateA1RelationshipOrientation({ situation: input.situation });
+  if (stateless.source === "NONE" && !input.situation.situated.playerControl.active) {
+    throw new Error(
+      "A1 H1 shadow requires explicit relationship orientation evidence when same-step Owner control is inactive; omitted evidence cannot be interpreted as semantic NONE."
+    );
+  }
+  return stateless;
+}
+
 export function evaluateA1H1PrimaryShadowHorizon(input: {
   world: LabWorld;
   situation: A1Situation;
   horizonSeconds: number;
   localAlternativeDeltaSpeed?: number;
+  orientation?: A1RelationshipOrientationEvidence;
 }): A1H1PrimaryShadowHorizonResult {
   const localAlternativeDeltaSpeed = input.localAlternativeDeltaSpeed ??
     A1_H1_PRIMARY_SHADOW_LOCAL_ALTERNATIVE_DELTA_SPEED;
@@ -317,7 +343,10 @@ export function evaluateA1H1PrimaryShadowHorizon(input: {
       proposal
     })
   );
-  const orientation = evaluateA1RelationshipOrientation({ situation: input.situation });
+  const orientation = resolveH1Orientation({
+    situation: input.situation,
+    orientation: input.orientation
+  });
   const relationshipProfiles = physicalProfiles.map((profile) =>
     buildA1TerminalRelationshipUtilityProfile({
       profile,
@@ -380,13 +409,15 @@ export function evaluateA1H1PrimaryLiveStateShadow(input: {
   world: LabWorld;
   situation: A1Situation;
   horizons?: readonly number[];
+  orientation?: A1RelationshipOrientationEvidence;
 }): A1H1PrimaryShadowEvaluation {
   const horizons = input.horizons ?? A1_H1_PRIMARY_SHADOW_HORIZONS;
   const results = horizons.map((horizonSeconds) =>
     evaluateA1H1PrimaryShadowHorizon({
       world: input.world,
       situation: input.situation,
-      horizonSeconds
+      horizonSeconds,
+      orientation: input.orientation
     })
   );
 
