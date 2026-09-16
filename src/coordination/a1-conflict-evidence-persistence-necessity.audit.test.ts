@@ -135,10 +135,6 @@ describe("A1 conflict-evidence persistence necessity audit", () => {
         sample("QUIET_CLEAR", { x: 0, y: 0 });
       }
 
-      expect(trace.some((row) => row.conflictState === "PHYSICAL_CONFLICT")).toBe(true);
-      expect(trace.some((row) => row.phase === "APPROACH" && row.conflictState === "CLEAR")).toBe(true);
-      expect(trace.some((row) => row.phase === "QUIET_CLEAR" && row.conflictState === "CLEAR")).toBe(true);
-
       let activeTransitions = 0;
       let activeEpisodes = 0;
       let previousActive = activeConflict(trace[0]?.conflictState ?? "UNAVAILABLE");
@@ -172,6 +168,9 @@ describe("A1 conflict-evidence persistence necessity audit", () => {
           lastActiveTick: lastActive?.tick ?? null,
           firstContactTick: firstContact?.tick ?? null,
           firstPhysicalClearTick: firstClearAfterContact?.tick ?? null,
+          finalConflictState: trace.at(-1)?.conflictState ?? null,
+          finalPhysicalClearance: trace.at(-1)?.physicalClearance ?? null,
+          finalComfortClearance: trace.at(-1)?.comfortClearance ?? null,
           statelessConflictEvidenceChatterObserved: activeEpisodes > 1 || activeTransitions > 2
         },
         interpretationBoundary: {
@@ -181,6 +180,10 @@ describe("A1 conflict-evidence persistence necessity audit", () => {
         },
         runtimeAuthority: "NONE_AUDIT_ONLY"
       }));
+
+      expect(trace.some((row) => row.conflictState === "PHYSICAL_CONFLICT")).toBe(true);
+      expect(trace.some((row) => row.phase === "APPROACH" && row.conflictState === "CLEAR")).toBe(true);
+      expect(trace.some((row) => row.phase === "QUIET_CLEAR" && row.conflictState === "CLEAR")).toBe(true);
     } finally {
       world.dispose();
     }
