@@ -39,6 +39,7 @@ function syntheticSnapshot(options: {
   tick: number;
   playerRequestedVelocity: Vec2;
   playerActualVelocity?: Vec2;
+  playerPosition?: Vec2;
 }): WorldSnapshot {
   return {
     tick: options.tick,
@@ -57,7 +58,7 @@ function syntheticSnapshot(options: {
       },
       {
         id: "player",
-        position: { x: 4, y: 4 },
+        position: { ...(options.playerPosition ?? { x: 4, y: 4 }) },
         radius: 0.3,
         requestedVelocity: { ...options.playerRequestedVelocity },
         actualVelocity: { ...(options.playerActualVelocity ?? options.playerRequestedVelocity) },
@@ -200,5 +201,37 @@ describe("temporal intention seam audit", () => {
     expect(explicitlyRevised.action).toBe("NONE");
     expect(explicitlyRevised.retryCount).toBe(0);
     expect(explicitlyRevised.noProgressTicks).toBe(1);
+  });
+
+  it("shows why neither tactical reconsideration count nor moving target coordinates are semantic objective identity", () => {
+    const stationaryFrame = new RelationalPositioningBrain();
+    const first = stationaryFrame.decision(syntheticSnapshot({
+      tick: 0,
+      playerRequestedVelocity: { x: 3, y: 0 }
+    }));
+    const refreshed = stationaryFrame.decision(syntheticSnapshot({
+      tick: 6,
+      playerRequestedVelocity: { x: 3, y: 0 }
+    }));
+
+    expect(refreshed.selectedSlot).toBe(first.selectedSlot);
+    expect(refreshed.target).toEqual(first.target);
+    expect(refreshed.reconsiderationCount).toBe(first.reconsiderationCount + 1);
+
+    const movingFrame = new RelationalPositioningBrain();
+    const movingFirst = movingFrame.decision(syntheticSnapshot({
+      tick: 0,
+      playerRequestedVelocity: { x: 3, y: 0 },
+      playerPosition: { x: 4, y: 4 }
+    }));
+    const movingRefreshed = movingFrame.decision(syntheticSnapshot({
+      tick: 6,
+      playerRequestedVelocity: { x: 3, y: 0 },
+      playerPosition: { x: 4.5, y: 4 }
+    }));
+
+    expect(movingRefreshed.selectedSlot).toBe(movingFirst.selectedSlot);
+    expect(movingRefreshed.reason).toContain("best slot remains");
+    expect(distance(movingFirst.target, movingRefreshed.target)).toBeCloseTo(0.5, 9);
   });
 });
