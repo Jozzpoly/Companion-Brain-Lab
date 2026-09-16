@@ -91,6 +91,7 @@ describe("A1 legacy relationship contamination lifecycle audit", () => {
     let semanticSlot: string | null = null;
     let targetDivergenceMeters: number | null = null;
     let motorDirectionDot: number | null = null;
+    let motorDirectionAngleDegrees: number | null = null;
 
     let releaseTick: number | null = null;
     let releaseA1: A1RelationshipOrientationEvidence | null = null;
@@ -178,6 +179,7 @@ describe("A1 legacy relationship contamination lifecycle audit", () => {
           const ownerSemanticMotor = intentToward(snapshot, semanticTarget).move;
           if (magnitude(contaminatedMotor) > 0.1 && magnitude(ownerSemanticMotor) > 0.1) {
             motorDirectionDot = dot(normalized(contaminatedMotor), normalized(ownerSemanticMotor));
+            motorDirectionAngleDegrees = Math.acos(Math.max(-1, Math.min(1, motorDirectionDot))) * 180 / Math.PI;
           }
           break;
         }
@@ -196,7 +198,11 @@ describe("A1 legacy relationship contamination lifecycle audit", () => {
       expect(targetDivergenceMeters).not.toBeNull();
       expect(targetDivergenceMeters ?? 0).toBeGreaterThan(2.5);
       expect(motorDirectionDot).not.toBeNull();
-      expect(motorDirectionDot ?? 1).toBeLessThan(-0.8);
+      // The scientific boundary is qualitative: the two objectives command
+      // opposite motor half-planes (>90 degrees apart). #1179 measured about
+      // 135 degrees; requiring an arbitrary >143-degree severity was unjustified.
+      expect(motorDirectionDot ?? 1).toBeLessThan(0);
+      expect(motorDirectionAngleDegrees ?? 0).toBeGreaterThan(90);
 
       // Separate the bodies while Owner input stays released. This is the point
       // at which physical conflict stops being a plausible reason to retain any
@@ -310,7 +316,8 @@ describe("A1 legacy relationship contamination lifecycle audit", () => {
             target: semanticTarget
           },
           targetDivergenceMeters,
-          motorDirectionDot
+          motorDirectionDot,
+          motorDirectionAngleDegrees
         },
         release: {
           a1OrientationSource: releaseA1?.source,
