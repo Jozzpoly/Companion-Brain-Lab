@@ -1,0 +1,48 @@
+name: a1-commitment-live
+
+on:
+  push:
+    branches:
+      - experiment/a1-opportunity-persistence
+    paths:
+      - "src/debug/relationship-commitment-shadow-browser-bridge.ts"
+      - "src/coordination/a1-spatial-commitment-evidence.ts"
+      - "src/coordination/a1-spatial-commitment-reference.ts"
+      - "src/coordination/a1-relationship-orientation.ts"
+      - "src/coordination/a1-relationship-projection.ts"
+      - "src/coordination/a1-relationship-utility.ts"
+      - "src/coordination/a1-accessibility-fragments.ts"
+      - "src/app/r1-lab-scene.ts"
+      - "src/main.ts"
+      - "scripts/a1-commitment-live-browser-specimen.mjs"
+      - ".github/workflows/a1-commitment-live.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: a1-commitment-live-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  commitment-live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+      - name: Typecheck
+        run: npx tsc -p tsconfig.json --noEmit
+      - name: Build
+        run: npm run build
+      - name: Capture live commitment lifecycle
+        run: node scripts/a1-commitment-live-browser-specimen.mjs
+      - name: Upload live commitment lifecycle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-commitment-live-${{ github.sha }}
+          path: artifacts/a1-commitment-live
+          if-no-files-found: error
+          retention-days: 7

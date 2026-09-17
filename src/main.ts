@@ -6,6 +6,7 @@ import { installAuthorityA12p1BrowserBridge } from "./debug/authority-a1-2p1-bro
 import { installAuthorityA12z4cBrowserBridge } from "./debug/authority-a1-2z4c-browser-bridge";
 import { installAuthorityA10BrowserBridge } from "./debug/authority-a1-browser-bridge";
 import { scheduleFoundationFaultProbe } from "./debug/foundation-fault-probe";
+import { installRelationshipCommitmentShadowBrowserBridge } from "./debug/relationship-commitment-shadow-browser-bridge";
 import { installRelationshipSemanticPerturbationBrowserBridge } from "./debug/relationship-semantic-perturbation-browser-bridge";
 import { installRelationshipSemanticPhysicsShadowBrowserBridge } from "./debug/relationship-semantic-physics-shadow-browser-bridge";
 import {
@@ -29,6 +30,9 @@ try {
   // The query-only semantic physics shadow must wrap the unperturbed R1 output.
   // The physical perturbation apparatus is installed outside it afterwards.
   installRelationshipSemanticPhysicsShadowBrowserBridge(window.location.search, R1LabScene.prototype);
+  // Query-only commitment observation wraps the unperturbed R1 result and never
+  // changes intents. The perturbation apparatus remains the outermost wrapper.
+  installRelationshipCommitmentShadowBrowserBridge(window.location.search, R1LabScene.prototype);
   installRelationshipSemanticPerturbationBrowserBridge(window.location.search, R1LabScene.prototype);
 
   game = new Phaser.Game({
