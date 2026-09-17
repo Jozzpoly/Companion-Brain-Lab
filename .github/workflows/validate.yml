@@ -49,7 +49,9 @@ jobs:
       - run: npm run check
       - run: npm run browser:audit
       - name: Capture live relationship semantic provenance replay
-        run: node scripts/relationship-semantic-provenance-live-browser-probe.mjs
+        run: |
+          mkdir -p artifacts/relationship-semantic-provenance-live
+          node scripts/relationship-semantic-provenance-live-browser-probe.mjs 2>&1 | tee artifacts/relationship-semantic-provenance-live/run.log
       - name: Upload live relationship semantic provenance replay
         if: always()
         uses: actions/upload-artifact@v4
