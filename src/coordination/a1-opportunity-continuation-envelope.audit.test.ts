@@ -124,57 +124,89 @@ function nearestContinuation(
   return best;
 }
 
+async function traceEnvelope(world: LabWorld, degrees: readonly number[]) {
+  const observations = [] as Awaited<ReturnType<typeof observe>>[];
+  for (const [tick, degreesValue] of degrees.entries()) {
+    observations.push(await observe(world, tick, degreesValue * Math.PI / 180));
+  }
+
+  const first = observations[0];
+  if (!first) throw new Error("Continuation envelope lost initial observation.");
+  const initialWorldTarget = { ...first.semanticBest.worldPosition };
+  let committedWorldTarget = { ...initialWorldTarget };
+  let committedSampleId = first.semanticBest.sampleId;
+  const transitions: Array<Record<string, unknown>> = [];
+
+  for (let index = 1; index < observations.length; index += 1) {
+    const current = observations[index];
+    if (!current) continue;
+    const continuation = nearestContinuation(current.candidates, committedWorldTarget);
+    const continuationDisplacement = distance(continuation.worldPosition, committedWorldTarget);
+    const semanticBestDisplacement = distance(current.semanticBest.worldPosition, committedWorldTarget);
+    const utilityGapFromBest = current.semanticBest.utility - continuation.utility;
+
+    transitions.push({
+      fromDegrees: degrees[index - 1],
+      toDegrees: degrees[index],
+      candidateCount: current.candidates.length,
+      previousCommittedSampleId: committedSampleId,
+      continuationSampleId: continuation.sampleId,
+      semanticBestSampleId: current.semanticBest.sampleId,
+      continuationDisplacement,
+      semanticBestDisplacement,
+      avoidedWorldChase: semanticBestDisplacement - continuationDisplacement,
+      continuationUtility: continuation.utility,
+      semanticBestUtility: current.semanticBest.utility,
+      utilityGapFromBest,
+      driftFromInitialWorldTarget: distance(continuation.worldPosition, initialWorldTarget),
+      continuationRelativeOffset: continuation.relativeOffset
+    });
+
+    committedWorldTarget = { ...continuation.worldPosition };
+    committedSampleId = continuation.sampleId;
+  }
+
+  return {
+    initialSampleId: first.semanticBest.sampleId,
+    initialWorldTarget,
+    transitions,
+    summary: {
+      maxContinuationDisplacement: Math.max(...transitions.map((transition) => Number(transition.continuationDisplacement))),
+      maxSemanticBestDisplacement: Math.max(...transitions.map((transition) => Number(transition.semanticBestDisplacement))),
+      maxUtilityGapFromBest: Math.max(...transitions.map((transition) => Number(transition.utilityGapFromBest))),
+      finalDriftFromInitialWorldTarget: Number(transitions.at(-1)?.driftFromInitialWorldTarget ?? 0),
+      sampleSwitchCount: transitions.filter(
+        (transition) => transition.previousCommittedSampleId !== transition.continuationSampleId
+      ).length
+    }
+  };
+}
+
 describe("A1 default-window spatial continuation envelope", () => {
-  it("measures whether relationally valid reachable candidates can absorb Owner turns without chasing the rotating semantic optimum", async () => {
+  it("maps dense 5-degree continuation pressure through a full half-turn", async () => {
     const world = await LabWorld.create("open");
     try {
-      const degrees = [0, 5, 10, 15, 20, 30, 45, 60, 75, 90, 120, 150, 180];
-      const observations = [] as Awaited<ReturnType<typeof observe>>[];
-      for (const [tick, degreesValue] of degrees.entries()) {
-        observations.push(await observe(world, tick, degreesValue * Math.PI / 180));
-      }
-
-      const first = observations[0];
-      if (!first) throw new Error("Continuation envelope lost initial observation.");
-      let committedWorldTarget = { ...first.semanticBest.worldPosition };
-      let committedSampleId = first.semanticBest.sampleId;
-      const transitions: Array<Record<string, unknown>> = [];
-
-      for (let index = 1; index < observations.length; index += 1) {
-        const current = observations[index];
-        if (!current) continue;
-        const continuation = nearestContinuation(current.candidates, committedWorldTarget);
-        const continuationDisplacement = distance(continuation.worldPosition, committedWorldTarget);
-        const semanticBestDisplacement = distance(current.semanticBest.worldPosition, committedWorldTarget);
-        const utilityGapFromBest = current.semanticBest.utility - continuation.utility;
-
-        transitions.push({
-          fromDegrees: degrees[index - 1],
-          toDegrees: degrees[index],
-          candidateCount: current.candidates.length,
-          previousCommittedSampleId: committedSampleId,
-          continuationSampleId: continuation.sampleId,
-          semanticBestSampleId: current.semanticBest.sampleId,
-          continuationDisplacement,
-          semanticBestDisplacement,
-          avoidedWorldChase: semanticBestDisplacement - continuationDisplacement,
-          continuationUtility: continuation.utility,
-          semanticBestUtility: current.semanticBest.utility,
-          utilityGapFromBest,
-          continuationRelativeOffset: continuation.relativeOffset
-        });
-
-        committedWorldTarget = { ...continuation.worldPosition };
-        committedSampleId = continuation.sampleId;
-      }
-
-      expect(transitions).toHaveLength(degrees.length - 1);
-      expect(transitions.every((transition) => Number(transition.candidateCount) > 0)).toBe(true);
-      console.info(`[A1_OPPORTUNITY_CONTINUATION_ENVELOPE] ${JSON.stringify({
+      const degrees = Array.from({ length: 37 }, (_, index) => index * 5);
+      const trace = await traceEnvelope(world, degrees);
+      expect(trace.transitions).toHaveLength(36);
+      expect(trace.transitions.every((transition) => Number(transition.candidateCount) > 0)).toBe(true);
+      console.info(`[A1_OPPORTUNITY_CONTINUATION_DENSE] ${JSON.stringify({
         samplingWindow: A1_DEFAULT_RELATIONSHIP_SAMPLING.nearBestUtilityWindow,
-        initialSampleId: first.semanticBest.sampleId,
-        initialWorldTarget: first.semanticBest.worldPosition,
-        transitions
+        ...trace
+      })}`);
+    } finally {
+      world.dispose();
+    }
+  });
+
+  it("keeps abrupt 90-degree turns as a control rather than conflating them with gradual temporal continuation", async () => {
+    const world = await LabWorld.create("open");
+    try {
+      const trace = await traceEnvelope(world, [0, 90, 180]);
+      expect(trace.transitions).toHaveLength(2);
+      console.info(`[A1_OPPORTUNITY_CONTINUATION_ABRUPT] ${JSON.stringify({
+        samplingWindow: A1_DEFAULT_RELATIONSHIP_SAMPLING.nearBestUtilityWindow,
+        ...trace
       })}`);
     } finally {
       world.dispose();
