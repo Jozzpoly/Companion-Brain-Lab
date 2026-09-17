@@ -114,6 +114,7 @@ function declaration(
     kind: "A1_SPATIAL_COMMITMENT_DECLARATION",
     sourceTick,
     objectiveSignature,
+    orientationRegime: "DIRECTIONLESS",
     referenceFrame: "WORLD_FIXED",
     anchorProvenance: "AUDIT_CONTROL"
   };
