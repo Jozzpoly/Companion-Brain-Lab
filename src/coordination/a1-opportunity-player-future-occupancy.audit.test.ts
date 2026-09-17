@@ -64,7 +64,7 @@ describe("A1 commitment occupancy across separate player futures", () => {
     const world = await LabWorld.create("open");
     try {
       const after = world.step([playerIntent(1, 0), companionHold()]);
-      const currentPlayer = after.find((actor) => actor.id === "player");
+      const currentPlayer = after.actors.find((actor) => actor.id === "player");
       if (!currentPlayer) throw new Error("missing player");
       const anchor = {
         x: currentPlayer.position.x + 0.8,
