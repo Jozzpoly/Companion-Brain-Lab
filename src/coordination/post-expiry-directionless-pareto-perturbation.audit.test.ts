@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { scenario } from "../world/scenarios";
 import type { ActorId, ActorSnapshot, ScenarioId, Vec2, WorldSnapshot } from "../world/types";
 import { LabWorld } from "../world/world";
-import { buildA1AccessibilityEvidence } from "./a1-accessibility-fragments";
+import {
+  buildA1AccessibilityEvidence,
+  compareA1AccessibilityContinuity
+} from "./a1-accessibility-fragments";
 import type { A1RelationshipOrientationEvidence } from "./a1-relationship-orientation";
 import { projectA1RelationshipSemanticField } from "./a1-relationship-projection";
 import {
@@ -50,6 +53,7 @@ function magnitude(value: Vec2): number {
 
 function snapshotAt(
   scenarioId: ScenarioId,
+  tick: number,
   playerPosition: Vec2,
   companionPosition: Vec2
 ): WorldSnapshot {
@@ -69,7 +73,7 @@ function snapshotAt(
   };
 
   return {
-    tick: 0,
+    tick,
     scenarioId,
     width: spec.width,
     height: spec.height,
@@ -172,6 +176,9 @@ async function observeLandscape(snapshot: WorldSnapshot) {
     }
 
     return {
+      field,
+      projection,
+      accessibility,
       reachableCount: reachable.length,
       frontier,
       frontierIds: frontier.map((point) => point.sampleId),
@@ -182,6 +189,8 @@ async function observeLandscape(snapshot: WorldSnapshot) {
   }
 }
 
+type LandscapeObservation = Awaited<ReturnType<typeof observeLandscape>>;
+
 async function observePerturbationFamily(input: {
   scenarioId: ScenarioId;
   playerPosition: Vec2;
@@ -189,20 +198,20 @@ async function observePerturbationFamily(input: {
 }) {
   const observations = [] as Array<{
     id: string;
+    comparisonTick: number;
     playerPosition: Vec2;
     companionPosition: Vec2;
-    reachableCount: number;
-    frontierIds: readonly string[];
-    frontier: readonly ReachablePoint[];
-    projectionCounts: Awaited<ReturnType<typeof observeLandscape>>["projectionCounts"];
-  }>;
+  } & LandscapeObservation>;
 
-  for (const perturbation of PERTURBATIONS) {
+  for (const [comparisonTick, perturbation] of PERTURBATIONS.entries()) {
     const playerPosition = add(input.playerPosition, perturbation.playerDelta);
     const companionPosition = add(input.companionPosition, perturbation.companionDelta);
-    const observation = await observeLandscape(snapshotAt(input.scenarioId, playerPosition, companionPosition));
+    const observation = await observeLandscape(
+      snapshotAt(input.scenarioId, comparisonTick, playerPosition, companionPosition)
+    );
     observations.push({
       id: perturbation.id,
+      comparisonTick,
       playerPosition,
       companionPosition,
       ...observation
@@ -211,13 +220,15 @@ async function observePerturbationFamily(input: {
 
   const base = observations.find((observation) => observation.id === "BASE");
   if (!base) throw new Error("Pareto perturbation audit lost BASE observation.");
-  const baseIds = new Set(base.frontierIds);
+  const baseFrontierIds = new Set(base.frontierIds);
+  const baseReachableIds = new Set(base.accessibility.confirmedReachableSampleIds);
 
   const summary = {
     scenario: input.scenarioId,
     perturbationMeters: PERTURBATION_METERS,
     semanticSource: "NONE_DIRECTIONLESS",
     observationWindow: 1,
+    comparisonTickContract: "AUDIT_ORDER_ONLY_NOT_RUNTIME_ELAPSED_TIME",
     base: {
       reachableCount: base.reachableCount,
       frontierSize: base.frontier.length,
@@ -225,22 +236,56 @@ async function observePerturbationFamily(input: {
     },
     perturbations: observations
       .filter((observation) => observation.id !== "BASE")
-      .map((observation) => ({
-        id: observation.id,
-        playerPosition: observation.playerPosition,
-        companionPosition: observation.companionPosition,
-        reachableCount: observation.reachableCount,
-        frontierSize: observation.frontier.length,
-        frontierJaccardVsBase: jaccard(base.frontierIds, observation.frontierIds),
-        addedFrontierSampleIds: observation.frontierIds.filter((sampleId) => !baseIds.has(sampleId)),
-        removedFrontierSampleIds: base.frontierIds.filter((sampleId) => !observation.frontierIds.includes(sampleId)),
-        frontier: observation.frontier
-      })),
+      .map((observation) => {
+        const continuity = compareA1AccessibilityContinuity({
+          previous: {
+            field: base.field,
+            projection: base.projection,
+            accessibility: base.accessibility
+          },
+          current: {
+            field: observation.field,
+            projection: observation.projection,
+            accessibility: observation.accessibility
+          }
+        });
+        expect(continuity.semanticComparability).toBe("COMPARABLE");
+        expect(continuity.confirmedReachableOverlapRatio).not.toBeNull();
+        expect(continuity.accessibilityChanged).not.toBeNull();
+
+        return {
+          id: observation.id,
+          comparisonTick: observation.comparisonTick,
+          playerPosition: observation.playerPosition,
+          companionPosition: observation.companionPosition,
+          reachableCount: observation.reachableCount,
+          reachableAddedSampleIds: observation.accessibility.confirmedReachableSampleIds.filter(
+            (sampleId) => !baseReachableIds.has(sampleId)
+          ),
+          reachableRemovedSampleIds: base.accessibility.confirmedReachableSampleIds.filter(
+            (sampleId) => !observation.accessibility.confirmedReachableSampleIds.includes(sampleId)
+          ),
+          accessibilityContinuity: {
+            semanticComparability: continuity.semanticComparability,
+            semanticEligibleOverlapRatio: continuity.semanticEligibleOverlapRatio,
+            confirmedReachableOverlapRatio: continuity.confirmedReachableOverlapRatio,
+            accessibilityChanged: continuity.accessibilityChanged,
+            playerTranslationDelta: continuity.playerTranslationDelta,
+            fragmentMatches: continuity.fragmentMatches
+          },
+          frontierSize: observation.frontier.length,
+          frontierJaccardVsBase: jaccard(base.frontierIds, observation.frontierIds),
+          addedFrontierSampleIds: observation.frontierIds.filter((sampleId) => !baseFrontierIds.has(sampleId)),
+          removedFrontierSampleIds: base.frontierIds.filter((sampleId) => !observation.frontierIds.includes(sampleId)),
+          frontier: observation.frontier
+        };
+      }),
     interpretation: {
       winnerSelected: false,
       utilityWeightSelected: false,
       runtimeAuthorityChanged: false,
-      qualityThresholdApplied: false
+      qualityThresholdApplied: false,
+      accessibilityContinuityUsesExistingContract: true
     },
     authority: "NONE_AUDIT_ONLY"
   } as const;
