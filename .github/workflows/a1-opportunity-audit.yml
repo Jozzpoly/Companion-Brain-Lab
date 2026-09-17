@@ -10,6 +10,7 @@ on:
       - "src/coordination/a1-spatial-commitment-reference.ts"
       - "src/coordination/a1-spatial-commitment-review.ts"
       - "src/coordination/a1-spatial-commitment-material.ts"
+      - "src/coordination/a1-spatial-commitment-actor-occupancy.ts"
       - "src/coordination/a1-accessibility-fragments.ts"
       - "src/coordination/a1-relationship-orientation.ts"
       - "src/coordination/a1-relationship-projection.ts"
