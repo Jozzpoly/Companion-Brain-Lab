@@ -46,6 +46,35 @@ export interface RelationalCandidate {
 
 export type RelationalObjectiveState = "TARGET" | "NO_VALID_RELATIONAL_SLOT";
 
+export type RelationalSemanticOrientationSource = "SAME_STEP_OWNER" | "OWNER_MEMORY" | "NONE";
+
+/**
+ * Structural semantic-orientation contract consumed by the legacy relationship
+ * geometry. It intentionally does not import A1 types into the lower-level brain
+ * module; A1RelationshipOrientationEvidence is structurally compatible with it.
+ */
+export interface RelationalSemanticOrientationEvidence {
+  tick: number;
+  source: RelationalSemanticOrientationSource;
+  direction: Vec2 | null;
+  sourceTick: number | null;
+  ageTicks: number | null;
+  strength: number;
+}
+
+export type RelationalFrameProvenance =
+  | "OWNER_SEMANTIC_EVIDENCE"
+  | "RETAINED_LAST_SEMANTIC_FRAME"
+  | "WORLD_AXIS_FALLBACK";
+
+export interface RelationalSemanticFrameEvidence {
+  evidenceSource: RelationalSemanticOrientationSource;
+  evidenceSourceTick: number | null;
+  evidenceAgeTicks: number | null;
+  evidenceStrength: number;
+  frameProvenance: RelationalFrameProvenance;
+}
+
 export interface RelationalDecision {
   mode: "relational";
   objectiveState: RelationalObjectiveState;
@@ -56,6 +85,11 @@ export interface RelationalDecision {
   reconsiderationCount: number;
   reconsideredAtTick: number;
   reason: string;
+  /**
+   * Present only when the provenance-safe semantic-input path produced this
+   * relationship frame. Legacy donor calls intentionally leave it undefined.
+   */
+  semanticFrame?: RelationalSemanticFrameEvidence;
 }
 
 function magnitude(v: Vec2): number {
@@ -88,6 +122,55 @@ function rotate(forward: Vec2, angle: number): Vec2 {
 
 function candidateIsClear(snapshot: WorldSnapshot, point: Vec2, radius: number): boolean {
   return circleFitsStaticWorld(snapshot, point, radius);
+}
+
+function cloneSemanticOrientation(
+  value: RelationalSemanticOrientationEvidence
+): RelationalSemanticOrientationEvidence {
+  return {
+    tick: value.tick,
+    source: value.source,
+    direction: value.direction ? { ...value.direction } : null,
+    sourceTick: value.sourceTick,
+    ageTicks: value.ageTicks,
+    strength: value.strength
+  };
+}
+
+function validateSemanticOrientation(
+  snapshot: WorldSnapshot,
+  value: RelationalSemanticOrientationEvidence
+): RelationalSemanticOrientationEvidence {
+  if (value.tick !== snapshot.tick) {
+    throw new Error(
+      `Relational semantic orientation must match snapshot tick: evidence t${value.tick}, snapshot t${snapshot.tick}.`
+    );
+  }
+  if (!Number.isFinite(value.strength) || value.strength < 0 || value.strength > 1 + 1e-9) {
+    throw new Error("Relational semantic orientation strength must be finite in [0, 1].");
+  }
+
+  if (value.source === "NONE") {
+    if (value.direction !== null || value.sourceTick !== null || value.ageTicks !== null || value.strength > 1e-9) {
+      throw new Error("Relational NONE semantic orientation must not carry direction, source tick, age, or strength.");
+    }
+    return cloneSemanticOrientation(value);
+  }
+
+  if (!value.direction || value.sourceTick === null || value.ageTicks === null || value.strength <= 1e-9) {
+    throw new Error("Owner-derived relational semantic orientation requires direction, source tick, age, and strength.");
+  }
+  if (!Number.isInteger(value.sourceTick) || value.sourceTick < 0 || value.sourceTick > snapshot.tick) {
+    throw new Error("Relational semantic orientation source tick is invalid for the current snapshot.");
+  }
+  if (!Number.isInteger(value.ageTicks) || value.ageTicks < 0 || value.ageTicks !== snapshot.tick - value.sourceTick) {
+    throw new Error("Relational semantic orientation age must match snapshot tick minus source tick.");
+  }
+  const direction = normalized(value.direction);
+  if (magnitude(direction) < 0.99) {
+    throw new Error("Owner-derived relational semantic orientation requires a finite nonzero direction.");
+  }
+  return { ...cloneSemanticOrientation(value), direction };
 }
 
 export function evaluateRelationalCandidates(
@@ -190,6 +273,8 @@ export function chaseIntent(snapshot: WorldSnapshot): MotionIntent {
 
 export class RelationalPositioningBrain {
   private lastPlayerDirection: Vec2 = { x: 1, y: 0 };
+  private hasOwnerSemanticFrame = false;
+  private latestSemanticOrientationValue: RelationalSemanticOrientationEvidence | null = null;
   private selectedSlot: string | null = null;
   private decisionValue: RelationalDecision | null = null;
   private reconsiderationCount = 0;
@@ -197,6 +282,8 @@ export class RelationalPositioningBrain {
 
   reset(): void {
     this.lastPlayerDirection = { x: 1, y: 0 };
+    this.hasOwnerSemanticFrame = false;
+    this.latestSemanticOrientationValue = null;
     this.selectedSlot = null;
     this.decisionValue = null;
     this.reconsiderationCount = 0;
@@ -210,9 +297,35 @@ export class RelationalPositioningBrain {
 
   decision(snapshot: WorldSnapshot): RelationalDecision {
     if (this.decisionValue === null || snapshot.tick >= this.nextReconsiderTick) {
-      this.reconsider(snapshot);
+      this.reconsiderLegacy(snapshot);
     }
     if (!this.decisionValue) throw new Error("Relational brain failed to produce a decision.");
+    return this.decisionValue;
+  }
+
+  intentWithSemanticOrientation(
+    snapshot: WorldSnapshot,
+    orientation: RelationalSemanticOrientationEvidence
+  ): MotionIntent {
+    const decision = this.decisionWithSemanticOrientation(snapshot, orientation);
+    return intentToward(snapshot, decision.target);
+  }
+
+  decisionWithSemanticOrientation(
+    snapshot: WorldSnapshot,
+    orientation: RelationalSemanticOrientationEvidence
+  ): RelationalDecision {
+    const validated = validateSemanticOrientation(snapshot, orientation);
+    this.latestSemanticOrientationValue = validated;
+    if (validated.direction) {
+      this.lastPlayerDirection = { ...validated.direction };
+      this.hasOwnerSemanticFrame = true;
+    }
+
+    if (this.decisionValue === null || snapshot.tick >= this.nextReconsiderTick) {
+      this.reconsiderSemantic(snapshot);
+    }
+    if (!this.decisionValue) throw new Error("Relational brain failed to produce a semantic decision.");
     return this.decisionValue;
   }
 
@@ -220,8 +333,38 @@ export class RelationalPositioningBrain {
     return this.decisionValue;
   }
 
-  private reconsider(snapshot: WorldSnapshot): void {
+  private semanticFrameEvidence(): RelationalSemanticFrameEvidence {
+    const orientation = this.latestSemanticOrientationValue;
+    if (!orientation) {
+      throw new Error("Relational semantic reconsideration requires same-tick semantic orientation evidence.");
+    }
+    const frameProvenance: RelationalFrameProvenance = orientation.direction
+      ? "OWNER_SEMANTIC_EVIDENCE"
+      : this.hasOwnerSemanticFrame
+        ? "RETAINED_LAST_SEMANTIC_FRAME"
+        : "WORLD_AXIS_FALLBACK";
+    return {
+      evidenceSource: orientation.source,
+      evidenceSourceTick: orientation.sourceTick,
+      evidenceAgeTicks: orientation.ageTicks,
+      evidenceStrength: orientation.strength,
+      frameProvenance
+    };
+  }
+
+  private reconsiderLegacy(snapshot: WorldSnapshot): void {
     this.lastPlayerDirection = observedPlayerDirection(snapshot, this.lastPlayerDirection);
+    this.commitReconsideration(snapshot, undefined);
+  }
+
+  private reconsiderSemantic(snapshot: WorldSnapshot): void {
+    this.commitReconsideration(snapshot, this.semanticFrameEvidence());
+  }
+
+  private commitReconsideration(
+    snapshot: WorldSnapshot,
+    semanticFrame: RelationalSemanticFrameEvidence | undefined
+  ): void {
     const candidates = evaluateRelationalCandidates(snapshot, this.lastPlayerDirection, this.selectedSlot);
     const hasValidCandidate = candidates.some((candidate) => candidate.valid);
     this.reconsiderationCount += 1;
@@ -242,7 +385,8 @@ export class RelationalPositioningBrain {
         candidates,
         reconsiderationCount: this.reconsiderationCount,
         reconsideredAtTick: snapshot.tick,
-        reason: "NO_VALID_RELATIONAL_SLOT: all legacy slots are currently illegal; hold current position and reconsider"
+        reason: "NO_VALID_RELATIONAL_SLOT: all legacy slots are currently illegal; hold current position and reconsider",
+        ...(semanticFrame ? { semanticFrame: { ...semanticFrame } } : {})
       };
       this.nextReconsiderTick = snapshot.tick + TACTICAL_INTERVAL_TICKS;
       return;
@@ -259,7 +403,8 @@ export class RelationalPositioningBrain {
       candidates,
       reconsiderationCount: this.reconsiderationCount,
       reconsideredAtTick: snapshot.tick,
-      reason: selection.reason
+      reason: selection.reason,
+      ...(semanticFrame ? { semanticFrame: { ...semanticFrame } } : {})
     };
     this.nextReconsiderTick = snapshot.tick + TACTICAL_INTERVAL_TICKS;
   }
