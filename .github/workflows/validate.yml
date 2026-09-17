@@ -48,6 +48,16 @@ jobs:
           echo "NPM_ARBORIST_EDGESOUT_FALLBACK_USED=1"
       - run: npm run check
       - run: npm run browser:audit
+      - name: Capture live relationship semantic provenance replay
+        run: node scripts/relationship-semantic-provenance-live-browser-probe.mjs
+      - name: Upload live relationship semantic provenance replay
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relationship-semantic-provenance-live-${{ github.sha }}
+          path: artifacts/relationship-semantic-provenance-live
+          if-no-files-found: error
+          retention-days: 7
       - name: Upload A1.2p1 embodied shadow browser evidence
         uses: actions/upload-artifact@v4
         with:
