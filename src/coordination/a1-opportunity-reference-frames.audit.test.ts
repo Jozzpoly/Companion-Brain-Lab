@@ -198,4 +198,71 @@ describe("A1 spatial commitment reference frames", () => {
       world.dispose();
     }
   });
+
+  it("shows declared-frame projection is endpoint-defined while tick-local continuation is sampling-rate dependent", async () => {
+    const world = await LabWorld.create("open");
+    try {
+      const player = { x: 3, y: 4 };
+      const initial = await observe(world, 0, player, 0);
+      const initialAnchor = { ...initial.semanticBest.worldPosition };
+      const initialOffset = {
+        x: initialAnchor.x - player.x,
+        y: initialAnchor.y - player.y
+      };
+      const finalRadians = Math.PI;
+      const finalObservation = await observe(world, 100, player, finalRadians);
+      const anchors = {
+        WORLD_FIXED: { ...initialAnchor },
+        PLAYER_TRANSLATED: { ...initialAnchor },
+        PLAYER_RIGID: {
+          x: player.x + rotate(initialOffset, finalRadians).x,
+          y: player.y + rotate(initialOffset, finalRadians).y
+        }
+      };
+      const endpointFrameProjection = Object.fromEntries(Object.entries(anchors).map(([frame, anchor]) => {
+        const projected = nearestToAnchor(finalObservation.candidates, anchor);
+        return [frame, {
+          sampleId: projected.sampleId,
+          worldPosition: projected.worldPosition,
+          pressureDistance: distance(projected.worldPosition, anchor),
+          utilityGapFromBest: finalObservation.semanticBest.utility - projected.utility
+        }];
+      }));
+
+      const traceLocalContinuation = async (degrees: readonly number[]) => {
+        let committedTarget = { ...initialAnchor };
+        let committedSampleId = initial.semanticBest.sampleId;
+        for (let index = 1; index < degrees.length; index += 1) {
+          const radians = (degrees[index] ?? 0) * Math.PI / 180;
+          const current = await observe(world, index, player, radians);
+          const projected = nearestToAnchor(current.candidates, committedTarget);
+          committedTarget = { ...projected.worldPosition };
+          committedSampleId = projected.sampleId;
+        }
+        return { committedTarget, committedSampleId };
+      };
+
+      const directLocal = await traceLocalContinuation([0, 180]);
+      const denseLocal = await traceLocalContinuation(Array.from({ length: 37 }, (_, index) => index * 5));
+      const localEndpointDivergence = distance(directLocal.committedTarget, denseLocal.committedTarget);
+
+      expect(localEndpointDivergence).toBeGreaterThan(1);
+      expect(Number(endpointFrameProjection.WORLD_FIXED?.pressureDistance)).toBeLessThanOrEqual(1e-9);
+      expect(Number(endpointFrameProjection.PLAYER_TRANSLATED?.pressureDistance)).toBeLessThanOrEqual(1e-9);
+      expect(Number(endpointFrameProjection.PLAYER_RIGID?.pressureDistance)).toBeLessThanOrEqual(1e-9);
+
+      console.info(`[A1_OPPORTUNITY_REFERENCE_FRAME_RATE_INVARIANCE] ${JSON.stringify({
+        initialSampleId: initial.semanticBest.sampleId,
+        initialAnchor,
+        endpointFrameProjection,
+        localContinuation: {
+          direct: directLocal,
+          dense5Degree: denseLocal,
+          endpointDivergence: localEndpointDivergence
+        }
+      })}`);
+    } finally {
+      world.dispose();
+    }
+  });
 });
