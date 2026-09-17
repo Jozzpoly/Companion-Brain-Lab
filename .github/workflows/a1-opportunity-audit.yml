@@ -1,0 +1,31 @@
+name: a1-opportunity-audit
+
+on:
+  push:
+    branches:
+      - experiment/a1-opportunity-persistence
+    paths:
+      - "src/coordination/a1-opportunity-persistence-sweep.audit.test.ts"
+      - "src/coordination/a1-accessibility-fragments.ts"
+      - "src/coordination/a1-relationship-projection.ts"
+      - "src/navigation/hard-route-truth.ts"
+      - "src/navigation/static-router.ts"
+      - ".github/workflows/a1-opportunity-audit.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: a1-opportunity-audit-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  opportunity-sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+      - name: Run opportunity persistence sweep
+        run: npx vitest run src/coordination/a1-opportunity-persistence-sweep.audit.test.ts --reporter=verbose
