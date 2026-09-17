@@ -185,6 +185,14 @@ describe("relationship orientation provenance repair", () => {
       }
       expect(releaseTick).not.toBeNull();
 
+      // The release observation already consumed this World tick. Advance once
+      // before entering the expiry phase so the canonical tracker is never
+      // sampled twice at the same tick.
+      snapshot = world.step([
+        motion("player", { x: 0, y: 0 }),
+        motion("companion", { x: 0, y: 0 })
+      ]);
+
       // Continue through complete Owner-memory expiry and several six-tick
       // tactical reconsiderations. The repaired brain may explicitly retain its
       // last genuine semantic frame for continuity, but it must label that frame
