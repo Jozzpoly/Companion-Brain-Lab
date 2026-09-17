@@ -207,8 +207,7 @@ async function auditGeometryPolicy(snapshot: WorldSnapshot) {
       relativeRadius: magnitude(candidate.sample.relativeOffset),
       target: candidate.sample.worldPosition,
       semanticUtility: candidate.sample.semanticUtility,
-      hardRouteCost: candidate.hardCost,
-      routeMode: candidate.sample.routeTruth?.routeMode ?? null
+      hardRouteCost: candidate.hardCost
     });
 
     const summary = {
