@@ -52,7 +52,12 @@ export interface A1SpatialCommitmentFitEvidence {
   anchorProvenance: string;
   referenceResolutionStatus: A1SpatialCommitmentReferenceResolutionStatus;
   referenceUnresolvedReason: A1SpatialCommitmentReferenceUnresolvedReason;
+  referenceSourceBasisProvenance: A1SpatialCommitmentReferenceBasisProvenance;
+  referenceSourceBasisSourceTick: number | null;
+  referenceSourceBasisAgeTicksAtCommitment: number | null;
   referenceBasisProvenance: A1SpatialCommitmentReferenceBasisProvenance;
+  referenceBasisSourceTick: number | null;
+  referenceBasisAgeTicks: number | null;
   resolvedAnchorWorldPosition: Vec2 | null;
   commitmentObjectiveSignature: string;
   currentObjectiveSignature: string;
@@ -213,7 +218,12 @@ export function buildA1SpatialCommitmentFitEvidence(input: {
     anchorProvenance: input.declaration.anchorProvenance,
     referenceResolutionStatus: input.referenceResolution.status,
     referenceUnresolvedReason: input.referenceResolution.unresolvedReason,
+    referenceSourceBasisProvenance: input.referenceResolution.sourceBasisProvenance,
+    referenceSourceBasisSourceTick: input.referenceResolution.sourceBasisSourceTick,
+    referenceSourceBasisAgeTicksAtCommitment: input.referenceResolution.sourceBasisAgeTicksAtCommitment,
     referenceBasisProvenance: input.referenceResolution.currentBasisProvenance,
+    referenceBasisSourceTick: input.referenceResolution.currentBasisSourceTick,
+    referenceBasisAgeTicks: input.referenceResolution.currentBasisAgeTicks,
     resolvedAnchorWorldPosition: anchor,
     commitmentObjectiveSignature: input.declaration.objectiveSignature,
     currentObjectiveSignature: input.field.objectiveSignature,

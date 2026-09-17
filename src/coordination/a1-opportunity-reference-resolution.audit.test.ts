@@ -53,6 +53,7 @@ describe("A1 spatial commitment reference resolution", () => {
     const sourceAnchor = { x: 3, y: 5.45 };
     const currentPlayer = { x: 4, y: 4 };
     const sourceDirection = { x: 1, y: 0 };
+    const sourceOrientation = orientation(0, sourceDirection);
     const expectedRigidAnchor = { x: 2.55, y: 4 };
 
     const live = resolveA1SpatialCommitmentReference({
@@ -61,7 +62,7 @@ describe("A1 spatial commitment reference resolution", () => {
       sourceAnchorWorldPosition: sourceAnchor,
       sourcePlayerWorldPosition: sourcePlayer,
       currentPlayerWorldPosition: currentPlayer,
-      sourceSemanticDirection: sourceDirection,
+      sourceOrientation,
       currentOrientation: orientation(1, { x: 0, y: 1 })
     });
     const retained = resolveA1SpatialCommitmentReference({
@@ -70,7 +71,7 @@ describe("A1 spatial commitment reference resolution", () => {
       sourceAnchorWorldPosition: sourceAnchor,
       sourcePlayerWorldPosition: sourcePlayer,
       currentPlayerWorldPosition: currentPlayer,
-      sourceSemanticDirection: sourceDirection,
+      sourceOrientation,
       currentOrientation: none(2),
       retainedCurrentSemanticBasis: {
         provenance: "RETAINED_LAST_SEMANTIC_FRAME",
@@ -84,7 +85,7 @@ describe("A1 spatial commitment reference resolution", () => {
       sourceAnchorWorldPosition: sourceAnchor,
       sourcePlayerWorldPosition: sourcePlayer,
       currentPlayerWorldPosition: currentPlayer,
-      sourceSemanticDirection: sourceDirection,
+      sourceOrientation,
       currentOrientation: none(2)
     });
     const translatedControl = resolveA1SpatialCommitmentReference({
@@ -97,11 +98,18 @@ describe("A1 spatial commitment reference resolution", () => {
     });
 
     expect(live.status).toBe("RESOLVED");
+    expect(live.sourceBasisProvenance).toBe("CANONICAL_SEMANTIC_ORIENTATION");
+    expect(live.sourceBasisSourceTick).toBe(0);
+    expect(live.sourceBasisAgeTicksAtCommitment).toBe(0);
     expect(live.currentBasisProvenance).toBe("CANONICAL_SEMANTIC_ORIENTATION");
+    expect(live.currentBasisSourceTick).toBe(1);
+    expect(live.currentBasisAgeTicks).toBe(0);
     expectPoint(live.resolvedAnchorWorldPosition, expectedRigidAnchor);
 
     expect(retained.status).toBe("RESOLVED");
     expect(retained.currentBasisProvenance).toBe("RETAINED_LAST_SEMANTIC_FRAME");
+    expect(retained.currentBasisSourceTick).toBe(1);
+    expect(retained.currentBasisAgeTicks).toBe(1);
     expect(retained.currentSamplingBasisSource).toBe("WORLD_AXIS_SAMPLING_ONLY");
     expectPoint(retained.resolvedAnchorWorldPosition, expectedRigidAnchor);
 
@@ -119,7 +127,8 @@ describe("A1 spatial commitment reference resolution", () => {
       source: {
         player: sourcePlayer,
         anchor: sourceAnchor,
-        semanticDirection: sourceDirection
+        semanticDirection: sourceDirection,
+        orientationEvidence: sourceOrientation
       },
       currentPlayer,
       live,
