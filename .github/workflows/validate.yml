@@ -61,6 +61,19 @@ jobs:
           path: artifacts/relationship-semantic-provenance-live
           if-no-files-found: error
           retention-days: 7
+      - name: Capture live relationship semantic expiry behavior
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/relationship-semantic-expiry-live
+          node scripts/relationship-semantic-expiry-live-browser-probe.mjs 2>&1 | tee artifacts/relationship-semantic-expiry-live/run.log
+      - name: Upload live relationship semantic expiry behavior
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relationship-semantic-expiry-live-${{ github.sha }}
+          path: artifacts/relationship-semantic-expiry-live
+          if-no-files-found: error
+          retention-days: 7
       - name: Upload A1.2p1 embodied shadow browser evidence
         uses: actions/upload-artifact@v4
         with:
