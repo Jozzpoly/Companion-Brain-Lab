@@ -40,6 +40,10 @@ function actor(snapshot, id) {
   return value;
 }
 
+function hasContact(actorSnapshot, withId) {
+  return actorSnapshot.contacts.some((contact) => contact.with === withId && contact.contactCount > 0);
+}
+
 function intentsEqual(a, b) {
   return a?.actorId === b?.actorId && a?.move?.x === b?.move?.x && a?.move?.y === b?.move?.y;
 }
@@ -133,7 +137,7 @@ function analyzeBranch(branch, sourceSnapshot) {
     const player = frame.actors.find((candidate) => candidate.id === "player");
     const companion = frame.actors.find((candidate) => candidate.id === "companion");
     invariant(player && companion, `${branch.policy}: rehearsal frame missing actor.`);
-    if (player.contacts.includes("companion")) contactFrames += 1;
+    if (hasContact(player, "companion")) contactFrames += 1;
     maxPlayerDisplacementMeters = Math.max(maxPlayerDisplacementMeters, distance(player.position, initialPlayer));
     maxPlayerSpeed = Math.max(maxPlayerSpeed, magnitude(player.actualVelocity));
     minSeparationMeters = Math.min(minSeparationMeters, distance(player.position, companion.position));
@@ -256,7 +260,7 @@ try {
   await driveCompanionTo(page, waypoint1, "stage-outward");
   await driveCompanionTo(page, waypoint2, "stage-around-corner");
   const staged = await driveCompanionTo(page, stageTarget, "stage-retained-forward-side");
-  invariant(staged.a1Frame.situation.situated.playerBody.contacts.includes("companion") === false, "Staging contacted player before shadow trigger.");
+  invariant(hasContact(staged.a1Frame.situation.situated.playerBody, "companion") === false, "Staging contacted player before shadow trigger.");
 
   await armShadow(page, retainedForward);
   const armed = await shadow(page);
