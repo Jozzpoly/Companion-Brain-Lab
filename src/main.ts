@@ -6,6 +6,7 @@ import { installAuthorityA12p1BrowserBridge } from "./debug/authority-a1-2p1-bro
 import { installAuthorityA12z4cBrowserBridge } from "./debug/authority-a1-2z4c-browser-bridge";
 import { installAuthorityA10BrowserBridge } from "./debug/authority-a1-browser-bridge";
 import { scheduleFoundationFaultProbe } from "./debug/foundation-fault-probe";
+import { installRelationshipSemanticPerturbationBrowserBridge } from "./debug/relationship-semantic-perturbation-browser-bridge";
 import {
   installRuntimeFaultSentinel,
   normalizeRuntimeFault
@@ -24,6 +25,7 @@ try {
   installAuthorityA11fBrowserBridge(window.location.search);
   installAuthorityA12z4cBrowserBridge(window.location.search, R1LabScene.prototype);
   installAuthorityA12p1BrowserBridge(window.location.search, R1LabScene.prototype);
+  installRelationshipSemanticPerturbationBrowserBridge(window.location.search, R1LabScene.prototype);
 
   game = new Phaser.Game({
     type: Phaser.AUTO,
