@@ -193,9 +193,19 @@ try {
   await page.locator('[data-action="cycle-a1-authority"]').click();
   await waitForPanel(
     page,
-    (text) => text.includes("PAUSED") && text.includes("A1 DIRECT") && text.includes("PASS-THROUGH ONLY"),
+    (text) =>
+      text.includes("PAUSED") &&
+      text.includes("A1 DIRECT") &&
+      text.includes("waiting for first SPATIAL decision"),
     10_000,
-    "paused A1 DIRECT"
+    "paused A1 DIRECT pre-decision"
+  );
+  const preStepA11f = await a11f(page);
+  invariant(preStepA11f?.frameCount === 0, "P1 deterministic tick-0 setup leaked an A1.1f frame before the first exact step.");
+  const preStepP1 = await p1(page);
+  invariant(
+    preStepP1?.requestCount === 0 && preStepP1?.completedCount === 0 && preStepP1?.pendingRequestId === null,
+    "P1 deterministic tick-0 setup leaked a projection request before the first exact step."
   );
 
   // The qualified tick-0 H1 specimen is explicitly an Owner +X head-on state.
