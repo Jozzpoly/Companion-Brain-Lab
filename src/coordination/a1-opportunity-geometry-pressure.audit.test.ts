@@ -9,6 +9,11 @@ import {
   A1_DEFAULT_RELATIONSHIP_SAMPLING,
   sampleA1RelationshipSemanticField
 } from "./a1-relationship-utility";
+import {
+  buildA1SpatialCommitmentFitEvidence,
+  type A1SpatialCommitmentDeclaration
+} from "./a1-spatial-commitment-evidence";
+import { resolveA1SpatialCommitmentReference } from "./a1-spatial-commitment-reference";
 
 function distance(a: Vec2, b: Vec2): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
@@ -92,17 +97,6 @@ async function observe(world: LabWorld, tick: number, playerPosition: Vec2) {
   return { field, projection, accessibility, candidates, semanticBest };
 }
 
-function nearestToAnchor<T extends { sampleId: string; utility: number; worldPosition: Vec2 }>(candidates: readonly T[], anchor: Vec2): T {
-  const candidate = [...candidates].sort((a, b) => {
-    const distanceDelta = distance(a.worldPosition, anchor) - distance(b.worldPosition, anchor);
-    if (Math.abs(distanceDelta) > 1e-12) return distanceDelta;
-    const utilityDelta = b.utility - a.utility;
-    return Math.abs(utilityDelta) > 1e-12 ? utilityDelta : a.sampleId.localeCompare(b.sampleId);
-  })[0];
-  if (!candidate) throw new Error("Geometry-pressure audit has no candidate.");
-  return candidate;
-}
-
 describe("A1 spatial commitment projection under obstacle pressure", () => {
   it("separates a translated commitment anchor from the nearest still-reachable relational target as the pillar occludes it", async () => {
     const world = await LabWorld.create("pillar");
@@ -111,15 +105,46 @@ describe("A1 spatial commitment projection under obstacle pressure", () => {
       const initial = await observe(world, 0, playerPositions[0]!);
       const initialPlayer = playerPositions[0]!;
       const initialAnchor = { ...initial.semanticBest.worldPosition };
+      const declaration: A1SpatialCommitmentDeclaration = {
+        kind: "A1_SPATIAL_COMMITMENT_DECLARATION",
+        sourceTick: 0,
+        objectiveSignature: initial.field.objectiveSignature,
+        orientationRegime: "DIRECTIONLESS",
+        referenceFrame: "PLAYER_TRANSLATED",
+        anchorProvenance: "QUERY_ONLY_PILLAR_PRESSURE"
+      };
       const observations: Array<Record<string, unknown>> = [];
 
       for (const [index, playerPosition] of playerPositions.entries()) {
         const current = index === 0 ? initial : await observe(world, index, playerPosition);
-        const translatedAnchor = {
-          x: initialAnchor.x + (playerPosition.x - initialPlayer.x),
-          y: initialAnchor.y + (playerPosition.y - initialPlayer.y)
-        };
-        const projectedCommitment = nearestToAnchor(current.candidates, translatedAnchor);
+        const referenceResolution = resolveA1SpatialCommitmentReference({
+          commitmentSourceTick: declaration.sourceTick,
+          referenceFrame: declaration.referenceFrame,
+          sourceAnchorWorldPosition: initialAnchor,
+          sourcePlayerWorldPosition: initialPlayer,
+          currentPlayerWorldPosition: playerPosition,
+          currentOrientation: noneOrientation(index)
+        });
+        const fit = buildA1SpatialCommitmentFitEvidence({
+          declaration,
+          referenceResolution,
+          field: current.field,
+          projection: current.projection,
+          accessibility: current.accessibility
+        });
+        expect(referenceResolution.status).toBe("RESOLVED");
+        expect(fit.semanticStatus).toBe("COMPARABLE");
+        expect(fit.referenceResolutionStatus).toBe("RESOLVED");
+        expect(fit.pressureStatus).toBe("EXACT_ON_SAMPLED_MESH");
+        expect(fit.sampledPressureDistance).not.toBeNull();
+        const translatedAnchor = referenceResolution.resolvedAnchorWorldPosition;
+        if (!translatedAnchor) throw new Error("Geometry-pressure contract lost translated anchor.");
+        const projectedCommitment = current.candidates.find(
+          (candidate) => candidate.sampleId === fit.nearestConfirmedSampleId
+        );
+        if (!projectedCommitment) {
+          throw new Error(`Geometry-pressure contract lost nearest sample ${String(fit.nearestConfirmedSampleId)}.`);
+        }
         const exactAnchorSample = current.projection.samples.find(
           (sample) => distance(sample.worldPosition, translatedAnchor) <= 1e-9
         );
@@ -130,7 +155,10 @@ describe("A1 spatial commitment projection under obstacle pressure", () => {
           anchorRouteQualification: exactAnchorSample?.routeQualification ?? null,
           anchorHardStatus: exactAnchorSample?.routeTruth?.hardStatus ?? null,
           projectedSampleId: projectedCommitment.sampleId,
-          commitmentPressureDistance: distance(projectedCommitment.worldPosition, translatedAnchor),
+          referenceResolutionStatus: fit.referenceResolutionStatus,
+          semanticStatus: fit.semanticStatus,
+          pressureStatus: fit.pressureStatus,
+          commitmentPressureDistance: fit.sampledPressureDistance,
           projectedUtility: projectedCommitment.utility,
           semanticBestUtility: current.semanticBest.utility,
           utilityGapFromBest: current.semanticBest.utility - projectedCommitment.utility,
@@ -145,6 +173,7 @@ describe("A1 spatial commitment projection under obstacle pressure", () => {
       console.info(`[A1_OPPORTUNITY_GEOMETRY_PRESSURE] ${JSON.stringify({
         samplingWindow: A1_DEFAULT_RELATIONSHIP_SAMPLING.nearBestUtilityWindow,
         initialSampleId: initial.semanticBest.sampleId,
+        declaration,
         initialAnchor,
         observations,
         summary: {
