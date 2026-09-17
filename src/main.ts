@@ -7,6 +7,7 @@ import { installAuthorityA12z4cBrowserBridge } from "./debug/authority-a1-2z4c-b
 import { installAuthorityA10BrowserBridge } from "./debug/authority-a1-browser-bridge";
 import { scheduleFoundationFaultProbe } from "./debug/foundation-fault-probe";
 import { installRelationshipSemanticPerturbationBrowserBridge } from "./debug/relationship-semantic-perturbation-browser-bridge";
+import { installRelationshipSemanticPhysicsShadowBrowserBridge } from "./debug/relationship-semantic-physics-shadow-browser-bridge";
 import {
   installRuntimeFaultSentinel,
   normalizeRuntimeFault
@@ -25,6 +26,9 @@ try {
   installAuthorityA11fBrowserBridge(window.location.search);
   installAuthorityA12z4cBrowserBridge(window.location.search, R1LabScene.prototype);
   installAuthorityA12p1BrowserBridge(window.location.search, R1LabScene.prototype);
+  // The query-only semantic physics shadow must wrap the unperturbed R1 output.
+  // The physical perturbation apparatus is installed outside it afterwards.
+  installRelationshipSemanticPhysicsShadowBrowserBridge(window.location.search, R1LabScene.prototype);
   installRelationshipSemanticPerturbationBrowserBridge(window.location.search, R1LabScene.prototype);
 
   game = new Phaser.Game({
