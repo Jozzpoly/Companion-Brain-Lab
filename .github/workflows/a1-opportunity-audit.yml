@@ -6,6 +6,7 @@ on:
       - experiment/a1-opportunity-persistence
     paths:
       - "src/coordination/a1-opportunity-*.audit.test.ts"
+      - "src/coordination/a1-spatial-commitment-evidence.ts"
       - "src/coordination/a1-accessibility-fragments.ts"
       - "src/coordination/a1-relationship-orientation.ts"
       - "src/coordination/a1-relationship-projection.ts"
@@ -29,5 +30,7 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --legacy-peer-deps
+      - name: Typecheck A1 opportunity surface
+        run: npx tsc -p tsconfig.json --noEmit
       - name: Run A1 opportunity audits
         run: npx vitest run src/coordination/a1-opportunity-*.audit.test.ts --reporter=verbose
