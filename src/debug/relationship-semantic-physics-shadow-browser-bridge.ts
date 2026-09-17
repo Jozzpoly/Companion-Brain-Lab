@@ -176,7 +176,7 @@ export function installRelationshipSemanticPhysicsShadowBrowserBridge(
       const externallyDrivenOpposite =
         magnitude(player.requestedVelocity) < 0.08 &&
         player.actualVelocity.x * frame.x + player.actualVelocity.y * frame.y < -0.15 &&
-        player.contacts.includes("companion");
+        player.contacts.some((contact) => contact.with === "companion" && contact.contactCount > 0);
 
       if (externallyDrivenOpposite) {
         assertWorldAligned(world, before);
