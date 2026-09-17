@@ -157,6 +157,7 @@ function analyzeBranch(branch, sourceSnapshot) {
     companionMove: branch.companionMove,
     companionRawVelocity: branch.companionRawVelocity,
     radialTarget: branch.radialTarget,
+    a1Research: branch.a1Research,
     frameCount: branch.rehearsal.frames.length,
     contactFrames,
     maxPlayerDisplacementMeters,
@@ -288,6 +289,7 @@ try {
   invariant(captureA1 !== null, "Twin-shadow source tick has no aligned A1.1f frame.");
   invariant(captureSemantic !== null, "Twin-shadow source tick has no aligned perturbation frame.");
   invariant(capture.semantics.stateAlignment === "EXACT_PRE_WORLD_STEP_LIVE_STATE", "Twin-shadow did not capture exact pre-step state.");
+  invariant(capture.semantics.runtimeSelection === "NONE", "Twin-shadow research branch leaked into runtime selection.");
   invariant(capture.canonicalOrientation.source === "NONE" && capture.canonicalOrientation.direction === null, "Twin-shadow source was not semantic NONE.");
   invariant(captureA1.observation.orientation?.source === "NONE", "A1 was not directionless at twin-shadow source.");
   invariant(capture.baselineRelationship.semanticFrame?.frameProvenance === "RETAINED_LAST_SEMANTIC_FRAME", "Twin-shadow retained branch lacks stale-continuity provenance.");
@@ -295,7 +297,7 @@ try {
   invariant(intentsEqual(capture.retainedCompanionIntent, captureA1.selectedCompanionIntent), "Twin-shadow retained command is not the exact live pre-perturbation command.");
   invariant(captureSemantic.apparatusApplied === true, "Physical disturbance apparatus was not applied at twin-shadow source tick.");
   invariant(dot(normalized(captureSemantic.executedCompanionIntent.move), pushMove) > 0.999, "Physical disturbance apparatus did not execute the intended push.");
-  invariant(capture.branches.length === 3, "Twin-shadow capture requires exactly three policy branches.");
+  invariant(capture.branches.length === 4, "Twin-shadow capture requires exactly four research/control branches.");
 
   const branchMetrics = capture.branches.map((branch) => analyzeBranch(branch, capture.sourceSnapshot));
   for (const metrics of branchMetrics) {
@@ -307,12 +309,30 @@ try {
   const retained = branchMetrics.find((entry) => entry.policy === "RETAINED_LIVE_COMMAND");
   const radial = branchMetrics.find((entry) => entry.policy === "RADIAL_NONE_CURRENT_RELATIVE");
   const hold = branchMetrics.find((entry) => entry.policy === "HOLD_CURRENT_BODY");
-  invariant(retained && radial && hold, "Twin-shadow branch metrics are incomplete.");
+  const a1Directionless = branchMetrics.find((entry) => entry.policy === "A1_DIRECTIONLESS_MIN_HARD_ROUTE");
+  invariant(retained && radial && hold && a1Directionless, "Twin-shadow branch metrics are incomplete.");
 
   const retainedBranch = capture.branches.find((entry) => entry.policy === "RETAINED_LIVE_COMMAND");
   const radialBranch = capture.branches.find((entry) => entry.policy === "RADIAL_NONE_CURRENT_RELATIVE");
-  invariant(retainedBranch && radialBranch, "Twin-shadow branch commands are incomplete.");
-  const commandDot = dot(normalized(retainedBranch.companionMove), normalized(radialBranch.companionMove));
+  const a1Branch = capture.branches.find((entry) => entry.policy === "A1_DIRECTIONLESS_MIN_HARD_ROUTE");
+  invariant(retainedBranch && radialBranch && a1Branch, "Twin-shadow branch commands are incomplete.");
+  invariant(a1Branch.a1Research !== null, "Directionless A1 shadow branch lacks research provenance.");
+  invariant(a1Branch.a1Research.samplingBasisSource === "WORLD_AXIS_SAMPLING_ONLY", "Directionless A1 shadow branch gained semantic direction.");
+  invariant(a1Branch.a1Research.directionalSemanticsActive === false, "Directionless A1 shadow branch activated directional semantics.");
+  invariant(a1Branch.a1Research.routeCoverageComplete === true, "Directionless A1 shadow branch used partial route coverage.");
+  invariant(a1Branch.a1Research.hardReachableCount > 0, "Directionless A1 shadow branch had no hard-reachable set.");
+  invariant(a1Branch.a1Research.selectedHardRouteCost >= 0, "Directionless A1 shadow branch lacks valid selected route cost.");
+
+  const retainedVsRadialCommandDot = dot(
+    normalized(retainedBranch.companionMove),
+    normalized(radialBranch.companionMove)
+  );
+  const retainedVsA1CommandDot = magnitude(a1Branch.companionMove) > 1e-9
+    ? dot(normalized(retainedBranch.companionMove), normalized(a1Branch.companionMove))
+    : null;
+  const radialVsA1CommandDot = magnitude(a1Branch.companionMove) > 1e-9
+    ? dot(normalized(radialBranch.companionMove), normalized(a1Branch.companionMove))
+    : null;
 
   const participant = await page.locator("#game-root canvas").screenshot({ type: "jpeg", quality: 75 });
   const research = await page.screenshot({ type: "jpeg", quality: 65, fullPage: true });
@@ -325,7 +345,7 @@ try {
   await assertNoFault(page, errors);
 
   const summary = {
-    schema: "companion-brain-lab-relationship-semantic-post-expiry-twin-shadow-live-v1",
+    schema: "companion-brain-lab-relationship-semantic-post-expiry-twin-shadow-live-v2",
     sourceSha: process.env.GITHUB_SHA ?? null,
     browser: browser.version(),
     scenario: "open",
@@ -346,9 +366,12 @@ try {
       policy: branch.policy,
       companionMove: branch.companionMove,
       companionRawVelocity: branch.companionRawVelocity,
-      radialTarget: branch.radialTarget
+      radialTarget: branch.radialTarget,
+      a1Research: branch.a1Research
     })),
-    retainedVsRadialCommandDot: commandDot,
+    retainedVsRadialCommandDot,
+    retainedVsA1CommandDot,
+    radialVsA1CommandDot,
     branchMetrics,
     interpretation: {
       sameExactPreStepState: true,
@@ -356,12 +379,16 @@ try {
       horizonIsOneTacticalInterval: true,
       canonicalNoneInAllBranches: true,
       radialBranchUsesNoDirectionalOwnerSemantics: true,
+      a1DirectionlessBranchUsesNoDirectionalOwnerSemantics: true,
+      a1DirectionlessBranchHasCompleteRouteCoverage: true,
+      a1DirectionlessBranchSelectionIsResearchOnly: true,
       holdIsNeutralControl: true,
       counterfactualBranchesHaveNoAuthority: true,
       a1MovementAuthorityChanged: false,
       scalarWinnerScore: null,
       replacementPolicySelected: false,
-      retainedPolicyOwnerQualified: false
+      retainedPolicyOwnerQualified: false,
+      a1DirectionlessPolicyOwnerQualified: false
     },
     imageBytes: {
       participant: participant.length,
