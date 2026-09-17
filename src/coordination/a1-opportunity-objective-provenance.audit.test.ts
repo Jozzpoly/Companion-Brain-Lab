@@ -163,8 +163,7 @@ describe("A1 spatial commitment objective provenance", () => {
       const physicalTraversal = world.staticCircleTraversal(
         companion.position,
         anchor,
-        companion.radius,
-        { hardRoute: true }
+        companion.radius
       );
       const nearestCurrent = nearestToAnchor(current.candidates, anchor);
       const continuity = compareA1AccessibilityContinuity({ previous, current });
