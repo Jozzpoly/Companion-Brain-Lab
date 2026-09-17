@@ -18,6 +18,7 @@ import {
 import type { SpatialLocomotionDecision } from "../brain/spatial-locomotion";
 import { A1AuthorityRuntime } from "../coordination/a1-authority-runtime";
 import { buildA1Situation } from "../coordination/a1-situation";
+import { RelationshipOrientationTracker } from "../coordination/relationship-orientation-tracker";
 import type { ShadowCoordinationFrame } from "../coordination/shadow-coordination-frame";
 import { publishAuthorityA11fBrowserObservation } from "../debug/authority-a1-1f-browser-bridge";
 import { publishAuthorityA10BrowserDecision } from "../debug/authority-a1-browser-bridge";
@@ -158,6 +159,7 @@ export class R1LabScene extends Phaser.Scene {
   private timeScaleIndex = 2;
 
   private readonly relationalBrain = new RelationalPositioningBrain();
+  private readonly relationshipOrientation = new RelationshipOrientationTracker();
   private readonly spatialStack = new R1WorkbenchSpatialStack();
   private readonly a1Authority = new A1AuthorityRuntime();
   private relationalDecision: RelationalDecision | null = null;
@@ -302,6 +304,22 @@ export class R1LabScene extends Phaser.Scene {
     this.shadowCoordinationError = null;
     this.decisionRoutePlan = null;
 
+    const relationshipSemantic = (
+      this.companionMode === "relational" || this.companionMode === "spatial"
+    ) ? (() => {
+      const situation = buildA1Situation({
+        snapshot: before,
+        playerIntent,
+        playerCapability: this.world!.actorMovementCapability("player"),
+        companionCapability: this.world!.actorMovementCapability("companion"),
+        previousWorldStep: this.world!.latestAuthorityA0StepEvidence()
+      });
+      return {
+        situation,
+        orientation: this.relationshipOrientation.observe(situation)
+      };
+    })() : null;
+
     if (this.companionMode === "manual") {
       this.relationalDecision = null;
       this.spatialDecision = null;
@@ -315,12 +333,14 @@ export class R1LabScene extends Phaser.Scene {
       target = { ...actor(before, "player").position };
       companionIntent = chaseIntent(before);
     } else if (this.companionMode === "relational") {
-      companionIntent = this.relationalBrain.intent(before);
+      if (!relationshipSemantic) throw new Error("RELATIONAL mode requires canonical semantic orientation.");
+      companionIntent = this.relationalBrain.intentWithSemanticOrientation(before, relationshipSemantic.orientation);
       this.relationalDecision = this.relationalBrain.debugState();
       target = this.relationalDecision ? { ...this.relationalDecision.target } : null;
       this.spatialDecision = null;
     } else {
-      const relationship = this.relationalBrain.decision(before);
+      if (!relationshipSemantic) throw new Error("SPATIAL mode requires canonical semantic orientation.");
+      const relationship = this.relationalBrain.decisionWithSemanticOrientation(before, relationshipSemantic.orientation);
       this.relationalDecision = relationship;
       target = { ...relationship.target };
       objectiveKey = `spatial-slot:${relationship.selectedSlot}`;
@@ -342,19 +362,15 @@ export class R1LabScene extends Phaser.Scene {
     }
 
     if (this.companionMode === "spatial" && this.a1Authority.enabled()) {
+      if (!relationshipSemantic) throw new Error("Active A1 SPATIAL mode requires canonical relationship semantics.");
       const baselineCompanionIntent: MotionIntent = {
         actorId: "companion",
         move: { ...companionIntent.move }
       };
-      const situation = buildA1Situation({
-        snapshot: before,
-        playerIntent,
-        playerCapability: this.world.actorMovementCapability("player"),
-        companionCapability: this.world.actorMovementCapability("companion"),
-        previousWorldStep: this.world.latestAuthorityA0StepEvidence()
-      });
+      const situation = relationshipSemantic.situation;
       this.a1Authority.observeRelationship({
         situation,
+        orientation: relationshipSemantic.orientation,
         snapshot: before,
         query: bindWorldStaticTraversalQuery(this.world)
       });
@@ -1274,6 +1290,7 @@ export class R1LabScene extends Phaser.Scene {
 
   private resetBrains(): void {
     this.relationalBrain.reset();
+    this.relationshipOrientation.reset();
     this.spatialStack.reset();
     this.relationalDecision = null;
     this.clearSpatialDebug();
