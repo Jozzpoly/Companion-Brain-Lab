@@ -153,9 +153,10 @@ try {
   }
   invariant(contactTick !== null, "Controlled companion -X perturbation did not create player-companion contact within 60 exact ticks.");
 
-  // Release Owner input while the apparatus keeps pushing. We now require a
-  // real live state in which the body moves -X with near-zero Owner request and
-  // the causal evidence classifies that motion as externally driven.
+  // Release Owner input while the apparatus keeps pushing. We require a live
+  // solver-push state that lands on a baseline tactical reconsideration tick so
+  // the baseline decision's semanticFrame is same-tick evidence, not a retained
+  // decision object from the previous six-tick tactical interval.
   await page.keyboard.up("d");
   let witness = null;
   for (let index = 0; index < 24; index += 1) {
@@ -168,13 +169,14 @@ try {
       Math.hypot(body.requestedVelocity.x, body.requestedVelocity.y) < 0.08 &&
       body.actualVelocity.x < -0.15 &&
       body.contacts.includes("companion") &&
-      provenance.state === "EXTERNAL_MOTION_EVIDENT"
+      provenance.state === "EXTERNAL_MOTION_EVIDENT" &&
+      aligned.perturbFrame.baselineRelationship?.reconsideredAtTick === aligned.a1Frame.tick
     ) {
       witness = aligned;
       break;
     }
   }
-  invariant(witness !== null, "Controlled live replay did not reach solver-driven player -X evidence after Owner release.");
+  invariant(witness !== null, "Controlled live replay did not reach a baseline reconsideration during solver-driven player -X evidence after Owner release.");
 
   const { a1Frame, perturbFrame } = witness;
   invariant(perturbFrame.apparatusApplied === true, "Witness was not produced under explicit apparatus perturbation.");
@@ -221,6 +223,7 @@ try {
       baselineRelationship: {
         playerDirection: perturbFrame.baselineRelationship?.playerDirection ?? null,
         selectedSlot: perturbFrame.baselineRelationship?.selectedSlot ?? null,
+        reconsideredAtTick: perturbFrame.baselineRelationship?.reconsideredAtTick ?? null,
         semanticFrame: perturbFrame.baselineRelationship?.semanticFrame ?? null
       },
       a1Orientation: a1Frame.observation.orientation,
@@ -237,6 +240,7 @@ try {
       baselineOwnerMeaningPreserved: true,
       a1OwnerMeaningPreserved: true,
       baselineAndA1ConsumeSameCanonicalOrientation: true,
+      baselineReconsideredOnWitnessTick: true,
       a1MovementAuthorityChanged: false,
       physicalPerturbationOwner: "TEST_APPARATUS_ONLY",
       noneExpiryPolicyQualified: false
