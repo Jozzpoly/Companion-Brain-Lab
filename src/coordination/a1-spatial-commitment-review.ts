@@ -1,5 +1,6 @@
 import type { A1SpatialCommitmentFitEvidence } from "./a1-spatial-commitment-evidence";
 import type { A1SpatialCommitmentMaterialEvidence } from "./a1-spatial-commitment-material";
+import type { A1SpatialCommitmentActorOccupancyEvidence } from "./a1-spatial-commitment-actor-occupancy";
 
 const ZERO_EPSILON = 1e-9;
 
@@ -11,7 +12,8 @@ export type A1SpatialCommitmentReviewFact =
   | "NO_CONFIRMED_REACHABLE_SAMPLED_OPPORTUNITY"
   | "SAMPLED_ANCHOR_OFFSET_OBSERVED"
   | "STATIC_ANCHOR_TARGET_BLOCKED"
-  | "STATIC_ANCHOR_ROUTE_UNREACHABLE";
+  | "STATIC_ANCHOR_ROUTE_UNREACHABLE"
+  | "CURRENT_PLAYER_BODY_OVERLAP";
 
 export type A1SpatialCommitmentReviewUncertainty =
   | "PARTIAL_ROUTE_COVERAGE"
@@ -35,6 +37,8 @@ export interface A1SpatialCommitmentReviewEvidence {
   sampledPressureDistance: number | null;
   materialStatus: A1SpatialCommitmentMaterialEvidence["status"] | "NOT_SUPPLIED";
   materialEvidenceScope: "NOT_SUPPLIED" | "STATIC_WORLD_ONLY_DYNAMIC_ACTORS_NOT_EVALUATED";
+  actorOccupancyStatus: A1SpatialCommitmentActorOccupancyEvidence["status"] | "NOT_SUPPLIED";
+  actorOccupancyEvidenceScope: "NOT_SUPPLIED" | "CURRENT_TICK_ONLY_NO_FUTURE_PREDICTION";
   evidenceScope: "SAMPLED_MESH_ONLY_CONTINUOUS_OPPORTUNITY_NOT_ESTABLISHED";
   decisionClaim: "NONE_EVIDENCE_ONLY";
   scalarScoreClaim: "NONE";
@@ -42,6 +46,7 @@ export interface A1SpatialCommitmentReviewEvidence {
   runtimeAuthorityClaim: "NONE";
   sourceFit: A1SpatialCommitmentFitEvidence;
   sourceMaterial: A1SpatialCommitmentMaterialEvidence | null;
+  sourceActorOccupancy: A1SpatialCommitmentActorOccupancyEvidence | null;
 }
 
 function referenceMode(
@@ -154,6 +159,51 @@ function validateMaterial(
   }
 }
 
+function validateActorOccupancy(
+  fit: A1SpatialCommitmentFitEvidence,
+  actorOccupancy: A1SpatialCommitmentActorOccupancyEvidence
+): void {
+  if (actorOccupancy.kind !== "A1_SPATIAL_COMMITMENT_ACTOR_OCCUPANCY_EVIDENCE") {
+    throw new Error("A1 commitment review requires qualified actor-occupancy evidence.");
+  }
+  if (
+    actorOccupancy.sourceTick !== fit.sourceTick ||
+    actorOccupancy.commitmentSourceTick !== fit.commitmentSourceTick
+  ) {
+    throw new Error("A1 commitment review actor occupancy is not tick/commitment aligned with fit evidence.");
+  }
+
+  if (fit.referenceResolutionStatus === "UNRESOLVED") {
+    if (
+      actorOccupancy.status !== "REFERENCE_UNRESOLVED" ||
+      actorOccupancy.anchorWorldPosition !== null
+    ) {
+      throw new Error("A1 commitment review requires unresolved actor occupancy when the fit reference is unresolved.");
+    }
+    return;
+  }
+
+  if (
+    actorOccupancy.status === "REFERENCE_UNRESOLVED" ||
+    actorOccupancy.anchorWorldPosition === null
+  ) {
+    throw new Error("A1 commitment review refuses unresolved actor occupancy for a resolved fit reference.");
+  }
+
+  const anchor = fit.resolvedAnchorWorldPosition;
+  if (!anchor) {
+    throw new Error("A1 commitment review resolved fit unexpectedly lacks an anchor.");
+  }
+  if (
+    Math.hypot(
+      actorOccupancy.anchorWorldPosition.x - anchor.x,
+      actorOccupancy.anchorWorldPosition.y - anchor.y
+    ) > ZERO_EPSILON
+  ) {
+    throw new Error("A1 commitment review actor-occupancy anchor does not match the fit reference anchor.");
+  }
+}
+
 /**
  * Observational composition only. This function deliberately does not decide
  * whether the companion should keep, release, replace or execute a commitment.
@@ -162,10 +212,12 @@ function validateMaterial(
  */
 export function buildA1SpatialCommitmentReviewEvidence(
   fit: A1SpatialCommitmentFitEvidence,
-  material: A1SpatialCommitmentMaterialEvidence | null = null
+  material: A1SpatialCommitmentMaterialEvidence | null = null,
+  actorOccupancy: A1SpatialCommitmentActorOccupancyEvidence | null = null
 ): A1SpatialCommitmentReviewEvidence {
   validateFit(fit);
   if (material) validateMaterial(fit, material);
+  if (actorOccupancy) validateActorOccupancy(fit, actorOccupancy);
 
   const facts: A1SpatialCommitmentReviewFact[] = [];
   const uncertainties: A1SpatialCommitmentReviewUncertainty[] = [];
@@ -215,6 +267,10 @@ export function buildA1SpatialCommitmentReviewEvidence(
     uncertainties.push("STATIC_QUERY_DISAGREEMENT");
   }
 
+  if (actorOccupancy?.status === "PLAYER_BODY_OVERLAP") {
+    facts.push("CURRENT_PLAYER_BODY_OVERLAP");
+  }
+
   return {
     kind: "A1_SPATIAL_COMMITMENT_REVIEW_EVIDENCE",
     sourceTick: fit.sourceTick,
@@ -229,12 +285,17 @@ export function buildA1SpatialCommitmentReviewEvidence(
     materialEvidenceScope: material
       ? "STATIC_WORLD_ONLY_DYNAMIC_ACTORS_NOT_EVALUATED"
       : "NOT_SUPPLIED",
+    actorOccupancyStatus: actorOccupancy?.status ?? "NOT_SUPPLIED",
+    actorOccupancyEvidenceScope: actorOccupancy
+      ? "CURRENT_TICK_ONLY_NO_FUTURE_PREDICTION"
+      : "NOT_SUPPLIED",
     evidenceScope: "SAMPLED_MESH_ONLY_CONTINUOUS_OPPORTUNITY_NOT_ESTABLISHED",
     decisionClaim: "NONE_EVIDENCE_ONLY",
     scalarScoreClaim: "NONE",
     selectionClaim: "NONE",
     runtimeAuthorityClaim: "NONE",
     sourceFit: structuredClone(fit),
-    sourceMaterial: material ? structuredClone(material) : null
+    sourceMaterial: material ? structuredClone(material) : null,
+    sourceActorOccupancy: actorOccupancy ? structuredClone(actorOccupancy) : null
   };
 }
