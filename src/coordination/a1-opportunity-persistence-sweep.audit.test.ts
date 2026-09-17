@@ -89,7 +89,8 @@ function reachableRouteRealizations(observation: Observation): Map<string, strin
 
 function routeRealizationSummary(observation: Observation): Array<{
   realization: string;
-  sampleIds: string[];
+  sampleCount: number;
+  sampleIds?: string[];
 }> {
   const grouped = new Map<string, string[]>();
   for (const [sampleId, realization] of reachableRouteRealizations(observation)) {
@@ -98,8 +99,75 @@ function routeRealizationSummary(observation: Observation): Array<{
     grouped.set(realization, sampleIds);
   }
   return [...grouped.entries()]
-    .map(([realization, sampleIds]) => ({ realization, sampleIds: sampleIds.sort() }))
+    .map(([realization, sampleIds]) => ({
+      realization,
+      sampleCount: sampleIds.length,
+      sampleIds: realization === "DIRECT" ? undefined : sampleIds.sort()
+    }))
     .sort((a, b) => a.realization.localeCompare(b.realization));
+}
+
+function fragmentLineageSummary(previous: Observation, current: Observation) {
+  const previousFragments = previous.accessibility.fragments;
+  const currentFragments = current.accessibility.fragments;
+  const edges: Array<{ previous: number; current: number; sharedSampleCount: number; overlapRatio: number }> = [];
+
+  for (let previousIndex = 0; previousIndex < previousFragments.length; previousIndex += 1) {
+    const previousFragment = previousFragments[previousIndex];
+    if (!previousFragment) continue;
+    const previousSet = new Set(previousFragment.memberSampleIds);
+    for (let currentIndex = 0; currentIndex < currentFragments.length; currentIndex += 1) {
+      const currentFragment = currentFragments[currentIndex];
+      if (!currentFragment) continue;
+      const sharedSampleCount = currentFragment.memberSampleIds.filter((id) => previousSet.has(id)).length;
+      if (sharedSampleCount === 0) continue;
+      const union = new Set([...previousFragment.memberSampleIds, ...currentFragment.memberSampleIds]).size;
+      edges.push({
+        previous: previousIndex,
+        current: currentIndex,
+        sharedSampleCount,
+        overlapRatio: sharedSampleCount / union
+      });
+    }
+  }
+
+  const events: Array<Record<string, unknown>> = [];
+  for (let previousIndex = 0; previousIndex < previousFragments.length; previousIndex += 1) {
+    const successors = edges.filter((edge) => edge.previous === previousIndex);
+    if (successors.length === 0) events.push({ type: "DEATH", previous: previousIndex });
+    else if (successors.length > 1) {
+      events.push({ type: "SPLIT", previous: previousIndex, current: successors.map((edge) => edge.current) });
+    }
+  }
+  for (let currentIndex = 0; currentIndex < currentFragments.length; currentIndex += 1) {
+    const predecessors = edges.filter((edge) => edge.current === currentIndex);
+    if (predecessors.length === 0) events.push({ type: "BIRTH", current: currentIndex });
+    else if (predecessors.length > 1) {
+      events.push({ type: "MERGE", previous: predecessors.map((edge) => edge.previous), current: currentIndex });
+    }
+  }
+  for (const edge of edges) {
+    const predecessorCount = edges.filter((candidate) => candidate.current === edge.current).length;
+    const successorCount = edges.filter((candidate) => candidate.previous === edge.previous).length;
+    if (predecessorCount === 1 && successorCount === 1) {
+      events.push({ type: "CONTINUE", previous: edge.previous, current: edge.current, overlapRatio: edge.overlapRatio });
+    }
+  }
+
+  return {
+    previous: previousFragments.map((fragment, index) => ({
+      index,
+      memberCount: fragment.memberSampleIds.length,
+      representativeSampleId: fragment.representativeSampleId
+    })),
+    current: currentFragments.map((fragment, index) => ({
+      index,
+      memberCount: fragment.memberSampleIds.length,
+      representativeSampleId: fragment.representativeSampleId
+    })),
+    edges,
+    events
+  };
 }
 
 async function observe(scenarioId: ScenarioId, tick: number, point: SweepPoint) {
@@ -132,9 +200,7 @@ async function observe(scenarioId: ScenarioId, tick: number, point: SweepPoint) 
 
 async function runSweep(scenarioId: ScenarioId, points: readonly SweepPoint[]) {
   const observations = [] as Observation[];
-  for (const [index, point] of points.entries()) {
-    observations.push(await observe(scenarioId, index, point));
-  }
+  for (const [index, point] of points.entries()) observations.push(await observe(scenarioId, index, point));
 
   const transitions = [] as Array<Record<string, unknown>>;
   for (let index = 1; index < observations.length; index += 1) {
@@ -148,9 +214,7 @@ async function runSweep(scenarioId: ScenarioId, points: readonly SweepPoint[]) {
 
     const previousRoutes = reachableRouteRealizations(previous);
     const currentRoutes = reachableRouteRealizations(current);
-    const sharedReachableSampleIds = [...previousRoutes.keys()]
-      .filter((sampleId) => currentRoutes.has(sampleId))
-      .sort();
+    const sharedReachableSampleIds = [...previousRoutes.keys()].filter((sampleId) => currentRoutes.has(sampleId)).sort();
     const routeRealizationChangedSampleIds = sharedReachableSampleIds.filter(
       (sampleId) => previousRoutes.get(sampleId) !== currentRoutes.get(sampleId)
     );
@@ -168,6 +232,7 @@ async function runSweep(scenarioId: ScenarioId, points: readonly SweepPoint[]) {
       currentRouteRealizations: routeRealizationSummary(current),
       sharedReachableSampleCount: sharedReachableSampleIds.length,
       routeRealizationChangedSampleIds,
+      lineage: fragmentLineageSummary(previous, current),
       fragmentMatches: continuity.fragmentMatches.map((match) => ({
         overlapRatio: match.overlapRatio,
         previousRepresentativeSampleId: match.previousRepresentativeSampleId,
@@ -182,7 +247,7 @@ async function runSweep(scenarioId: ScenarioId, points: readonly SweepPoint[]) {
 }
 
 describe("A1 opportunity persistence geometry sweep", () => {
-  it("maps sampled accessibility and route-realization continuity while the player approaches the pillar", async () => {
+  it("maps accessibility lineage while the player approaches the pillar", async () => {
     const companionPosition = { x: 4.0, y: 4.0 };
     await runSweep("pillar", [
       { label: "x3.60", playerPosition: { x: 3.6, y: 4.0 }, companionPosition },
@@ -196,7 +261,7 @@ describe("A1 opportunity persistence geometry sweep", () => {
     ]);
   });
 
-  it("maps sampled accessibility and route-realization continuity through the doorway aperture", async () => {
+  it("maps accessibility lineage while the player moves vertically inside the doorway aperture", async () => {
     const companionPosition = { x: 4.6, y: 4.0 };
     await runSweep("doorway", [
       { label: "y3.55", playerPosition: { x: 5.0, y: 3.55 }, companionPosition },
@@ -206,6 +271,20 @@ describe("A1 opportunity persistence geometry sweep", () => {
       { label: "y4.15", playerPosition: { x: 5.0, y: 4.15 }, companionPosition },
       { label: "y4.30", playerPosition: { x: 5.0, y: 4.30 }, companionPosition },
       { label: "y4.45", playerPosition: { x: 5.0, y: 4.45 }, companionPosition }
+    ]);
+  });
+
+  it("maps accessibility lineage while the player passes through the doorway", async () => {
+    const companionPosition = { x: 4.2, y: 4.0 };
+    await runSweep("doorway", [
+      { label: "x4.40", playerPosition: { x: 4.4, y: 4.0 }, companionPosition },
+      { label: "x4.80", playerPosition: { x: 4.8, y: 4.0 }, companionPosition },
+      { label: "x5.20", playerPosition: { x: 5.2, y: 4.0 }, companionPosition },
+      { label: "x5.60", playerPosition: { x: 5.6, y: 4.0 }, companionPosition },
+      { label: "x6.00", playerPosition: { x: 6.0, y: 4.0 }, companionPosition },
+      { label: "x6.40", playerPosition: { x: 6.4, y: 4.0 }, companionPosition },
+      { label: "x6.80", playerPosition: { x: 6.8, y: 4.0 }, companionPosition },
+      { label: "x7.20", playerPosition: { x: 7.2, y: 4.0 }, companionPosition }
     ]);
   });
 });
