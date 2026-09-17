@@ -109,8 +109,8 @@ function worldPosition(
   return sample.worldPosition;
 }
 
-describe("A1 commitment fit orientation-regime falsifier", () => {
-  it("demonstrates that objective equality alone currently masks a directional-to-directionless semantic regime change", async () => {
+describe("A1 commitment fit orientation-regime contract", () => {
+  it("refuses directional-to-directionless fit even when objective and sampling signatures remain equal", async () => {
     const world = await LabWorld.create("open");
     try {
       const previous = await observe(world, sameStepOrientation(0));
@@ -124,6 +124,7 @@ describe("A1 commitment fit orientation-regime falsifier", () => {
         kind: "A1_SPATIAL_COMMITMENT_DECLARATION",
         sourceTick: previous.field.sourceTick,
         objectiveSignature: previous.field.objectiveSignature,
+        orientationRegime: "DIRECTIONAL",
         referenceFrame: "WORLD_FIXED",
         anchorProvenance: "ORIENTATION_REGIME_FALSIFIER"
       };
@@ -140,12 +141,14 @@ describe("A1 commitment fit orientation-regime falsifier", () => {
       expect(continuity.semanticComparability).toBe("NON_COMPARABLE");
       expect(continuity.nonComparabilityReason).toBe("ORIENTATION_REGIME_CHANGED");
 
-      // Characterize the current gap before repairing the fit contract: it only
-      // knows the objective signature, so it incorrectly calls this comparable.
-      expect(fit.semanticStatus).toBe("COMPARABLE");
-      expect(fit.pressureStatus).toBe("EXACT_ON_SAMPLED_MESH");
+      expect(fit.commitmentOrientationRegime).toBe("DIRECTIONAL");
+      expect(fit.currentOrientationRegime).toBe("DIRECTIONLESS");
+      expect(fit.semanticStatus).toBe("ORIENTATION_REGIME_CHANGED");
+      expect(fit.pressureStatus).toBe("NON_COMPARABLE");
+      expect(fit.sampledPressureDistance).toBeNull();
+      expect(fit.nearestConfirmedSampleId).toBeNull();
 
-      console.info(`[A1_SPATIAL_COMMITMENT_ORIENTATION_REGIME_GAP] ${JSON.stringify({
+      console.info(`[A1_SPATIAL_COMMITMENT_ORIENTATION_REGIME_CONTRACT] ${JSON.stringify({
         previous: {
           orientationSource: previous.field.orientationSource,
           samplingBasisSource: previous.field.samplingBasisSource,
@@ -164,13 +167,13 @@ describe("A1 commitment fit orientation-regime falsifier", () => {
           semanticComparability: continuity.semanticComparability,
           nonComparabilityReason: continuity.nonComparabilityReason
         },
-        commitmentFitBeforeRepair: {
+        commitmentFit: {
           semanticStatus: fit.semanticStatus,
           pressureStatus: fit.pressureStatus,
           sampledPressureDistance: fit.sampledPressureDistance,
           reason: fit.reason
         },
-        interpretation: "Commitment fit must carry the declaration orientation regime; objective-signature equality is insufficient semantic provenance."
+        interpretation: "Commitment fit now preserves the declaration orientation regime and refuses directional-to-directionless comparison despite equal objective and sampling signatures."
       })}`);
     } finally {
       world.dispose();
