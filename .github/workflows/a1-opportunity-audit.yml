@@ -8,6 +8,7 @@ on:
       - "src/coordination/a1-opportunity-*.audit.test.ts"
       - "src/coordination/a1-spatial-commitment-evidence.ts"
       - "src/coordination/a1-spatial-commitment-reference.ts"
+      - "src/coordination/a1-spatial-commitment-review.ts"
       - "src/coordination/a1-accessibility-fragments.ts"
       - "src/coordination/a1-relationship-orientation.ts"
       - "src/coordination/a1-relationship-projection.ts"
