@@ -1,4 +1,5 @@
 import type { A1SpatialCommitmentFitEvidence } from "./a1-spatial-commitment-evidence";
+import type { A1SpatialCommitmentMaterialEvidence } from "./a1-spatial-commitment-material";
 
 const ZERO_EPSILON = 1e-9;
 
@@ -8,10 +9,13 @@ export type A1SpatialCommitmentReviewFact =
   | "REFERENCE_SOURCE_BASIS_MISSING"
   | "REFERENCE_CURRENT_BASIS_MISSING"
   | "NO_CONFIRMED_REACHABLE_SAMPLED_OPPORTUNITY"
-  | "SAMPLED_ANCHOR_OFFSET_OBSERVED";
+  | "SAMPLED_ANCHOR_OFFSET_OBSERVED"
+  | "STATIC_ANCHOR_TARGET_BLOCKED"
+  | "STATIC_ANCHOR_ROUTE_UNREACHABLE";
 
 export type A1SpatialCommitmentReviewUncertainty =
-  | "PARTIAL_ROUTE_COVERAGE";
+  | "PARTIAL_ROUTE_COVERAGE"
+  | "STATIC_QUERY_DISAGREEMENT";
 
 export type A1SpatialCommitmentReferenceMode =
   | "NOT_REQUIRED"
@@ -29,12 +33,15 @@ export interface A1SpatialCommitmentReviewEvidence {
   referenceBasisAgeTicks: number | null;
   sampledPressureStatus: A1SpatialCommitmentFitEvidence["pressureStatus"];
   sampledPressureDistance: number | null;
+  materialStatus: A1SpatialCommitmentMaterialEvidence["status"] | "NOT_SUPPLIED";
+  materialEvidenceScope: "NOT_SUPPLIED" | "STATIC_WORLD_ONLY_DYNAMIC_ACTORS_NOT_EVALUATED";
   evidenceScope: "SAMPLED_MESH_ONLY_CONTINUOUS_OPPORTUNITY_NOT_ESTABLISHED";
   decisionClaim: "NONE_EVIDENCE_ONLY";
   scalarScoreClaim: "NONE";
   selectionClaim: "NONE";
   runtimeAuthorityClaim: "NONE";
   sourceFit: A1SpatialCommitmentFitEvidence;
+  sourceMaterial: A1SpatialCommitmentMaterialEvidence | null;
 }
 
 function referenceMode(
@@ -105,6 +112,48 @@ function validateFit(fit: A1SpatialCommitmentFitEvidence): void {
   }
 }
 
+function validateMaterial(
+  fit: A1SpatialCommitmentFitEvidence,
+  material: A1SpatialCommitmentMaterialEvidence
+): void {
+  if (material.kind !== "A1_SPATIAL_COMMITMENT_MATERIAL_EVIDENCE") {
+    throw new Error("A1 commitment review requires qualified material evidence.");
+  }
+  if (
+    material.sourceTick !== fit.sourceTick ||
+    material.commitmentSourceTick !== fit.commitmentSourceTick
+  ) {
+    throw new Error("A1 commitment review material evidence is not tick/commitment aligned with fit evidence.");
+  }
+
+  if (fit.referenceResolutionStatus === "UNRESOLVED") {
+    if (
+      material.status !== "REFERENCE_UNRESOLVED" ||
+      material.anchorWorldPosition !== null
+    ) {
+      throw new Error("A1 commitment review requires unresolved material evidence when the fit reference is unresolved.");
+    }
+    return;
+  }
+
+  if (material.status === "REFERENCE_UNRESOLVED" || material.anchorWorldPosition === null) {
+    throw new Error("A1 commitment review refuses unresolved material evidence for a resolved fit reference.");
+  }
+
+  const anchor = fit.resolvedAnchorWorldPosition;
+  if (!anchor) {
+    throw new Error("A1 commitment review resolved fit unexpectedly lacks an anchor.");
+  }
+  if (
+    Math.hypot(
+      material.anchorWorldPosition.x - anchor.x,
+      material.anchorWorldPosition.y - anchor.y
+    ) > ZERO_EPSILON
+  ) {
+    throw new Error("A1 commitment review material anchor does not match the fit reference anchor.");
+  }
+}
+
 /**
  * Observational composition only. This function deliberately does not decide
  * whether the companion should keep, release, replace or execute a commitment.
@@ -112,9 +161,11 @@ function validateFit(fit: A1SpatialCommitmentFitEvidence): void {
  * into a score, veto, winner or runtime command.
  */
 export function buildA1SpatialCommitmentReviewEvidence(
-  fit: A1SpatialCommitmentFitEvidence
+  fit: A1SpatialCommitmentFitEvidence,
+  material: A1SpatialCommitmentMaterialEvidence | null = null
 ): A1SpatialCommitmentReviewEvidence {
   validateFit(fit);
+  if (material) validateMaterial(fit, material);
 
   const facts: A1SpatialCommitmentReviewFact[] = [];
   const uncertainties: A1SpatialCommitmentReviewUncertainty[] = [];
@@ -156,6 +207,14 @@ export function buildA1SpatialCommitmentReviewEvidence(
     facts.push("SAMPLED_ANCHOR_OFFSET_OBSERVED");
   }
 
+  if (material?.status === "STATIC_TARGET_BLOCKED") {
+    facts.push("STATIC_ANCHOR_TARGET_BLOCKED");
+  } else if (material?.status === "STATIC_ROUTE_UNREACHABLE") {
+    facts.push("STATIC_ANCHOR_ROUTE_UNREACHABLE");
+  } else if (material?.status === "STATIC_QUERY_DISAGREEMENT") {
+    uncertainties.push("STATIC_QUERY_DISAGREEMENT");
+  }
+
   return {
     kind: "A1_SPATIAL_COMMITMENT_REVIEW_EVIDENCE",
     sourceTick: fit.sourceTick,
@@ -166,11 +225,16 @@ export function buildA1SpatialCommitmentReviewEvidence(
     referenceBasisAgeTicks: fit.referenceBasisAgeTicks,
     sampledPressureStatus: fit.pressureStatus,
     sampledPressureDistance: fit.sampledPressureDistance,
+    materialStatus: material?.status ?? "NOT_SUPPLIED",
+    materialEvidenceScope: material
+      ? "STATIC_WORLD_ONLY_DYNAMIC_ACTORS_NOT_EVALUATED"
+      : "NOT_SUPPLIED",
     evidenceScope: "SAMPLED_MESH_ONLY_CONTINUOUS_OPPORTUNITY_NOT_ESTABLISHED",
     decisionClaim: "NONE_EVIDENCE_ONLY",
     scalarScoreClaim: "NONE",
     selectionClaim: "NONE",
     runtimeAuthorityClaim: "NONE",
-    sourceFit: structuredClone(fit)
+    sourceFit: structuredClone(fit),
+    sourceMaterial: material ? structuredClone(material) : null
   };
 }
