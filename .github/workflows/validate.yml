@@ -50,6 +50,7 @@ jobs:
       - run: npm run browser:audit
       - name: Capture live relationship semantic provenance replay
         run: |
+          set -o pipefail
           mkdir -p artifacts/relationship-semantic-provenance-live
           node scripts/relationship-semantic-provenance-live-browser-probe.mjs 2>&1 | tee artifacts/relationship-semantic-provenance-live/run.log
       - name: Upload live relationship semantic provenance replay
