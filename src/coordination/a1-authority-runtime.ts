@@ -72,11 +72,16 @@ export class A1AuthorityRuntime {
    * evidence and cannot become control-flow authority over the companion command.
    * If multiple failures are accidentally reported in one World tick, preserve
    * the first causal failure rather than allowing a derivative error to overwrite it.
+   *
+   * When canonical orientation evidence is supplied by the live relationship
+   * substrate, A1 consumes that exact same-tick semantic truth instead of
+   * independently reconstructing a second temporal model.
    */
   observeRelationship(input: {
     situation: A1Situation;
     snapshot: WorldSnapshot;
     query: StaticTraversalQuery;
+    orientation?: A1RelationshipOrientationEvidence;
   }): A1RelationshipObserverDebug | null {
     if (!this.enabled()) return null;
 
