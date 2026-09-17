@@ -8,9 +8,13 @@ import { LabWorld } from "../world/world";
 import { buildA1AccessibilityEvidence } from "./a1-accessibility-fragments";
 import type { A1RelationshipOrientationEvidence } from "./a1-relationship-orientation";
 import { projectA1RelationshipSemanticField } from "./a1-relationship-projection";
-import { sampleA1RelationshipSemanticField } from "./a1-relationship-utility";
+import {
+  A1_DEFAULT_RELATIONSHIP_OBJECTIVE,
+  sampleA1RelationshipSemanticField
+} from "./a1-relationship-utility";
 
 const COST_EPSILON = 1e-12;
+const RADIUS_EPSILON = 1e-9;
 
 function magnitude(value: Vec2): number {
   return Math.hypot(value.x, value.y);
@@ -140,27 +144,47 @@ async function auditGeometryPolicy(snapshot: WorldSnapshot) {
       return [{ sample, hardCost }];
     });
 
-    candidates.sort((a, b) => {
+    const routeFirst = [...candidates].sort((a, b) => {
       const costDelta = a.hardCost - b.hardCost;
       if (Math.abs(costDelta) > COST_EPSILON) return costDelta;
       const utilityDelta = b.sample.semanticUtility - a.sample.semanticUtility;
       if (Math.abs(utilityDelta) > COST_EPSILON) return utilityDelta;
       return a.sample.sampleId.localeCompare(b.sample.sampleId);
-    });
+    })[0];
+    const semanticFirst = [...candidates].sort((a, b) => {
+      const utilityDelta = b.sample.semanticUtility - a.sample.semanticUtility;
+      if (Math.abs(utilityDelta) > COST_EPSILON) return utilityDelta;
+      const costDelta = a.hardCost - b.hardCost;
+      if (Math.abs(costDelta) > COST_EPSILON) return costDelta;
+      return a.sample.sampleId.localeCompare(b.sample.sampleId);
+    })[0];
 
-    const selected = candidates[0];
-    expect(selected).toBeDefined();
-    if (!selected) throw new Error("Directionless policy geometry audit found no selected candidate.");
-    expect(selected.sample.hardFit).toBe(true);
-    expect(selected.sample.routeQualification).toBe("HARD_REACHABLE");
-    expect(selected.sample.routeTruth?.hardReachable).toBe(true);
-    expect(circleFitsStaticWorld(snapshot, selected.sample.worldPosition, companion.radius)).toBe(true);
-    expect(distance(selected.sample.worldPosition, radialTarget)).toBeGreaterThan(1e-3);
+    expect(routeFirst).toBeDefined();
+    expect(semanticFirst).toBeDefined();
+    if (!routeFirst || !semanticFirst) {
+      throw new Error("Directionless policy geometry audit found no concrete HARD_REACHABLE candidate.");
+    }
+
+    const preferredRadius = A1_DEFAULT_RELATIONSHIP_OBJECTIVE.radial.preferredRadius;
+    const preferredReachable = candidates.filter(
+      ({ sample }) => Math.abs(magnitude(sample.relativeOffset) - preferredRadius) <= RADIUS_EPSILON
+    );
+    const bestPreferred = [...preferredReachable].sort((a, b) => {
+      const costDelta = a.hardCost - b.hardCost;
+      if (Math.abs(costDelta) > COST_EPSILON) return costDelta;
+      return a.sample.sampleId.localeCompare(b.sample.sampleId);
+    })[0] ?? null;
+
+    expect(routeFirst.sample.hardFit).toBe(true);
+    expect(routeFirst.sample.routeQualification).toBe("HARD_REACHABLE");
+    expect(routeFirst.sample.routeTruth?.hardReachable).toBe(true);
+    expect(circleFitsStaticWorld(snapshot, routeFirst.sample.worldPosition, companion.radius)).toBe(true);
+    expect(distance(routeFirst.sample.worldPosition, radialTarget)).toBeGreaterThan(1e-3);
 
     const route = planStaticShadowRoute({
       snapshot,
       start: companion.position,
-      target: selected.sample.worldPosition,
+      target: routeFirst.sample.worldPosition,
       radius: companion.radius,
       clearance: 0,
       query
@@ -169,7 +193,7 @@ async function auditGeometryPolicy(snapshot: WorldSnapshot) {
     expect(route.cost).not.toBeNull();
     expect(route.waypoints.length).toBeGreaterThan(0);
 
-    const commandTarget = route.waypoints[0] ?? selected.sample.worldPosition;
+    const commandTarget = route.waypoints[0] ?? routeFirst.sample.worldPosition;
     const commandDelta = {
       x: commandTarget.x - companion.position.x,
       y: commandTarget.y - companion.position.y
@@ -178,18 +202,35 @@ async function auditGeometryPolicy(snapshot: WorldSnapshot) {
     expect(Number.isFinite(commandDelta.y)).toBe(true);
     expect(magnitude(commandDelta)).toBeGreaterThan(1e-6);
 
+    const summarizeCandidate = (candidate: typeof routeFirst) => ({
+      sampleId: candidate.sample.sampleId,
+      relativeRadius: magnitude(candidate.sample.relativeOffset),
+      target: candidate.sample.worldPosition,
+      semanticUtility: candidate.sample.semanticUtility,
+      hardRouteCost: candidate.hardCost,
+      routeMode: candidate.sample.routeTruth?.routeMode ?? null
+    });
+
     const summary = {
       scenario: snapshot.scenarioId,
       radial: {
         target: radialTarget,
         routeStatus: radialRoute.status
       },
-      a1: {
-        selectedSampleId: selected.sample.sampleId,
-        selectedRelativeRadius: magnitude(selected.sample.relativeOffset),
-        selectedTarget: selected.sample.worldPosition,
-        selectedSemanticUtility: selected.sample.semanticUtility,
-        selectedHardRouteCost: selected.hardCost,
+      candidateField: {
+        concreteReachableCount: candidates.length,
+        preferredRadius,
+        preferredReachableCount: preferredReachable.length,
+        bestPreferred: bestPreferred ? summarizeCandidate(bestPreferred) : null
+      },
+      routeFirst: summarizeCandidate(routeFirst),
+      semanticFirst: summarizeCandidate(semanticFirst),
+      tradeoff: {
+        utilityGainSemanticFirst: semanticFirst.sample.semanticUtility - routeFirst.sample.semanticUtility,
+        hardCostPenaltySemanticFirst: semanticFirst.hardCost - routeFirst.hardCost,
+        sameWinner: semanticFirst.sample.sampleId === routeFirst.sample.sampleId
+      },
+      execution: {
         selectedRouteStatus: route.status,
         selectedRouteNodeIds: route.routeNodeIds,
         commandTarget,
@@ -199,27 +240,39 @@ async function auditGeometryPolicy(snapshot: WorldSnapshot) {
       authority: "NONE_AUDIT_ONLY"
     } as const;
 
-    console.info(`[POST_EXPIRY_DIRECTIONLESS_POLICY_GEOMETRY] ${JSON.stringify(summary)}`);
+    console.info(`[POST_EXPIRY_DIRECTIONLESS_POLICY_ORDERING] ${JSON.stringify(summary)}`);
     return summary;
   } finally {
     world.dispose();
   }
 }
 
+function requireRouteCostBiasWitness(summary: Awaited<ReturnType<typeof auditGeometryPolicy>>) {
+  expect(summary.candidateField.preferredReachableCount).toBeGreaterThan(0);
+  expect(summary.candidateField.bestPreferred).not.toBeNull();
+  expect(summary.semanticFirst.relativeRadius).toBeCloseTo(summary.candidateField.preferredRadius, 9);
+  expect(summary.routeFirst.relativeRadius).toBeLessThan(summary.candidateField.preferredRadius - RADIUS_EPSILON);
+  expect(summary.tradeoff.sameWinner).toBe(false);
+  expect(summary.tradeoff.utilityGainSemanticFirst).toBeGreaterThan(0);
+  expect(summary.tradeoff.hardCostPenaltySemanticFirst).toBeGreaterThan(0);
+}
+
 describe("post-expiry directionless policy geometry shadow audit", () => {
-  it("finds a reachable geometry-aware candidate beside the pillar where naive radial is invalid", async () => {
+  it("falsifies route-cost-first against reachable preferred-radius semantics beside the pillar", async () => {
     const summary = await auditGeometryPolicy(
       snapshotAt("pillar", { x: 3.8, y: 4 }, { x: 5.1, y: 4 })
     );
     expect(summary.radial.routeStatus).toBe("invalid-target");
-    expect(["direct", "routed"]).toContain(summary.a1.selectedRouteStatus);
+    expect(["direct", "routed"]).toContain(summary.execution.selectedRouteStatus);
+    requireRouteCostBiasWitness(summary);
   });
 
-  it("finds a reachable geometry-aware candidate beside doorway geometry where naive radial is invalid", async () => {
+  it("falsifies route-cost-first against reachable preferred-radius semantics beside doorway geometry", async () => {
     const summary = await auditGeometryPolicy(
       snapshotAt("doorway", { x: 4.7, y: 4 }, { x: 5.4, y: 4.45 })
     );
     expect(summary.radial.routeStatus).toBe("invalid-target");
-    expect(["direct", "routed"]).toContain(summary.a1.selectedRouteStatus);
+    expect(["direct", "routed"]).toContain(summary.execution.selectedRouteStatus);
+    requireRouteCostBiasWitness(summary);
   });
 });
