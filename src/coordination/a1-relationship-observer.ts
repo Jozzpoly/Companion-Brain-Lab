@@ -133,6 +133,54 @@ function cloneOrientationEvidence(value: A1RelationshipOrientationEvidence): A1R
   };
 }
 
+function validateProvidedOrientation(
+  situation: A1Situation,
+  value: A1RelationshipOrientationEvidence
+): A1RelationshipOrientationEvidence {
+  if (value.tick !== situation.tick) {
+    throw new Error(
+      `A1 relationship observer external orientation must match situation tick: orientation t${value.tick}, situation t${situation.tick}.`
+    );
+  }
+
+  if (value.source === "NONE") {
+    if (
+      value.direction !== null ||
+      value.sourceTick !== null ||
+      value.ageTicks !== null ||
+      value.strength !== 0 ||
+      value.nextMemory !== null
+    ) {
+      throw new Error("A1 relationship observer NONE orientation must be empty and memory-free.");
+    }
+    return cloneOrientationEvidence(value);
+  }
+
+  if (
+    value.direction === null ||
+    value.sourceTick === null ||
+    value.ageTicks === null ||
+    !Number.isFinite(value.strength) ||
+    value.strength <= 0 ||
+    !value.nextMemory
+  ) {
+    throw new Error("A1 relationship observer Owner-derived external orientation is incomplete.");
+  }
+  if (value.sourceTick + value.ageTicks !== situation.tick) {
+    throw new Error("A1 relationship observer external orientation age does not match the situation tick.");
+  }
+  if (value.source === "SAME_STEP_OWNER" && (value.sourceTick !== situation.tick || value.ageTicks !== 0)) {
+    throw new Error("A1 SAME_STEP_OWNER external orientation must originate at the current situation tick.");
+  }
+  if (
+    value.nextMemory.provenance !== "OWNER_CONTROL" ||
+    value.nextMemory.sourceTick !== value.sourceTick
+  ) {
+    throw new Error("A1 relationship observer external orientation memory provenance does not match its evidence.");
+  }
+  return cloneOrientationEvidence(value);
+}
+
 function validateConfig(input: Partial<A1RelationshipObserverConfig>): A1RelationshipObserverConfig {
   const heavyIntervalTicks = input.heavyIntervalTicks ?? A1_RELATIONSHIP_HEAVY_INTERVAL_TICKS;
   const routeBudget = input.routeBudget ?? A1_RELATIONSHIP_OBSERVER_ROUTE_BUDGET;
@@ -206,6 +254,7 @@ export class A1RelationshipObserver {
     situation: A1Situation;
     snapshot: WorldSnapshot;
     query: StaticTraversalQuery;
+    orientation?: A1RelationshipOrientationEvidence;
   }): A1RelationshipObserverDebug {
     if (this.lastAttemptTickValue !== null && input.situation.tick <= this.lastAttemptTickValue) {
       throw new Error(
@@ -216,18 +265,20 @@ export class A1RelationshipObserver {
 
     validateSituationSnapshotAlignment(input.situation, input.snapshot);
 
-    const orientation = evaluateA1RelationshipOrientation({
-      situation: input.situation,
-      memory: this.orientationMemoryValue
-    });
+    const orientation = input.orientation
+      ? validateProvidedOrientation(input.situation, input.orientation)
+      : evaluateA1RelationshipOrientation({
+          situation: input.situation,
+          memory: this.orientationMemoryValue
+        });
     const field = sampleA1RelationshipSemanticField({
       orientation,
       objective: this.config.objective,
       sampling: this.config.sampling
     });
 
-    this.orientationMemoryValue = orientation.nextMemory;
-    this.latestOrientationValue = orientation;
+    this.orientationMemoryValue = cloneOrientationMemory(orientation.nextMemory);
+    this.latestOrientationValue = cloneOrientationEvidence(orientation);
     this.latestSemanticValue = field;
     this.latestTickValue = input.situation.tick;
     this.observationsValue += 1;
