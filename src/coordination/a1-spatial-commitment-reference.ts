@@ -1,8 +1,11 @@
 import type { Vec2 } from "../world/types";
 import type { A1RelationshipOrientationEvidence } from "./a1-relationship-orientation";
-import type { A1SpatialCommitmentReferenceFrame } from "./a1-spatial-commitment-evidence";
-
 const EPSILON = 1e-12;
+
+export type A1SpatialCommitmentReferenceFrame =
+  | "WORLD_FIXED"
+  | "PLAYER_TRANSLATED"
+  | "PLAYER_RIGID";
 
 export type A1SpatialCommitmentReferenceResolutionStatus =
   | "RESOLVED"

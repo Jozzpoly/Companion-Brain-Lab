@@ -17,6 +17,7 @@ import {
   buildA1SpatialCommitmentFitEvidence,
   type A1SpatialCommitmentDeclaration
 } from "./a1-spatial-commitment-evidence";
+import { resolveA1SpatialCommitmentReference } from "./a1-spatial-commitment-reference";
 
 function sameStepOrientation(tick: number): A1RelationshipOrientationEvidence {
   return {
@@ -128,9 +129,17 @@ describe("A1 commitment fit orientation-regime contract", () => {
         referenceFrame: "WORLD_FIXED",
         anchorProvenance: "ORIENTATION_REGIME_FALSIFIER"
       };
+      const referenceResolution = resolveA1SpatialCommitmentReference({
+        commitmentSourceTick: declaration.sourceTick,
+        referenceFrame: declaration.referenceFrame,
+        sourceAnchorWorldPosition: anchor,
+        sourcePlayerWorldPosition: current.projection.playerPosition,
+        currentPlayerWorldPosition: current.projection.playerPosition,
+        currentOrientation: noOrientation(current.field.sourceTick)
+      });
       const fit = buildA1SpatialCommitmentFitEvidence({
         declaration,
-        resolvedAnchorWorldPosition: anchor,
+        referenceResolution,
         ...current
       });
 
@@ -141,6 +150,8 @@ describe("A1 commitment fit orientation-regime contract", () => {
       expect(continuity.semanticComparability).toBe("NON_COMPARABLE");
       expect(continuity.nonComparabilityReason).toBe("ORIENTATION_REGIME_CHANGED");
 
+      expect(referenceResolution.status).toBe("RESOLVED");
+      expect(fit.referenceResolutionStatus).toBe("RESOLVED");
       expect(fit.commitmentOrientationRegime).toBe("DIRECTIONAL");
       expect(fit.currentOrientationRegime).toBe("DIRECTIONLESS");
       expect(fit.semanticStatus).toBe("ORIENTATION_REGIME_CHANGED");

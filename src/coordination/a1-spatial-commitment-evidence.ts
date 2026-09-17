@@ -8,18 +8,17 @@ import type {
   A1RelationshipSemanticField,
   A1RelationshipSemanticSample
 } from "./a1-relationship-utility";
+import type {
+  A1SpatialCommitmentReferenceBasisProvenance,
+  A1SpatialCommitmentReferenceFrame,
+  A1SpatialCommitmentReferenceResolutionEvidence,
+  A1SpatialCommitmentReferenceResolutionStatus,
+  A1SpatialCommitmentReferenceUnresolvedReason
+} from "./a1-spatial-commitment-reference";
+
+export type { A1SpatialCommitmentReferenceFrame } from "./a1-spatial-commitment-reference";
 
 const EPSILON = 1e-12;
-
-/**
- * Provenance only. This module does not decide which frame is correct and does
- * not transport anchors between ticks. The caller must resolve the declared
- * commitment into World space before asking for fit evidence.
- */
-export type A1SpatialCommitmentReferenceFrame =
-  | "WORLD_FIXED"
-  | "PLAYER_TRANSLATED"
-  | "PLAYER_RIGID";
 
 export type A1SpatialCommitmentOrientationRegime =
   | "DIRECTIONAL"
@@ -51,7 +50,10 @@ export interface A1SpatialCommitmentFitEvidence {
   commitmentSourceTick: number;
   referenceFrame: A1SpatialCommitmentReferenceFrame;
   anchorProvenance: string;
-  resolvedAnchorWorldPosition: Vec2;
+  referenceResolutionStatus: A1SpatialCommitmentReferenceResolutionStatus;
+  referenceUnresolvedReason: A1SpatialCommitmentReferenceUnresolvedReason;
+  referenceBasisProvenance: A1SpatialCommitmentReferenceBasisProvenance;
+  resolvedAnchorWorldPosition: Vec2 | null;
   commitmentObjectiveSignature: string;
   currentObjectiveSignature: string;
   commitmentOrientationRegime: A1SpatialCommitmentOrientationRegime;
@@ -65,7 +67,8 @@ export interface A1SpatialCommitmentFitEvidence {
    * Distance to the nearest confirmed reachable sample. Exact only over the
    * current sampled mesh when coverage is COMPLETE. Under PARTIAL coverage it
    * is an upper bound because an untested sample may be closer. Null means the
-   * commitment is semantically non-comparable or no reachable sample is known.
+   * reference is unresolved, semantics are non-comparable, or no reachable
+   * sample is known.
    */
   sampledPressureDistance: number | null;
   nearestConfirmedSampleId: string | null;
@@ -109,6 +112,36 @@ function validateAlignment(input: AlignedCommitmentObservation): void {
   }
 }
 
+function validateReferenceResolution(
+  declaration: A1SpatialCommitmentDeclaration,
+  reference: A1SpatialCommitmentReferenceResolutionEvidence,
+  currentTick: number
+): void {
+  if (reference.kind !== "A1_SPATIAL_COMMITMENT_REFERENCE_RESOLUTION") {
+    throw new Error("A1 commitment fit requires reference-resolution evidence.");
+  }
+  if (
+    reference.commitmentSourceTick !== declaration.sourceTick ||
+    reference.referenceFrame !== declaration.referenceFrame
+  ) {
+    throw new Error("A1 commitment fit reference-resolution provenance does not match the declaration.");
+  }
+  if (reference.currentTick !== currentTick) {
+    throw new Error("A1 commitment fit requires same-tick reference resolution and semantic evidence.");
+  }
+  if (reference.status === "RESOLVED") {
+    if (!reference.resolvedAnchorWorldPosition || reference.unresolvedReason !== null) {
+      throw new Error("A1 resolved commitment reference must carry an anchor and no unresolved reason.");
+    }
+  } else if (
+    reference.resolvedAnchorWorldPosition !== null ||
+    reference.unresolvedReason === null ||
+    reference.currentBasisProvenance !== "UNRESOLVED"
+  ) {
+    throw new Error("A1 unresolved commitment reference must not carry a resolved anchor or resolved basis provenance.");
+  }
+}
+
 function semanticById(field: A1RelationshipSemanticField): Map<string, A1RelationshipSemanticSample> {
   return new Map(field.samples.map((sample) => [sample.id, sample]));
 }
@@ -123,27 +156,71 @@ function orientationRegime(field: A1RelationshipSemanticField): A1SpatialCommitm
     : "DIRECTIONLESS";
 }
 
+function semanticStatus(
+  declaration: A1SpatialCommitmentDeclaration,
+  field: A1RelationshipSemanticField
+): A1SpatialCommitmentSemanticStatus {
+  if (declaration.orientationRegime !== orientationRegime(field)) {
+    return "ORIENTATION_REGIME_CHANGED";
+  }
+  if (declaration.objectiveSignature !== field.objectiveSignature) {
+    return "OBJECTIVE_CHANGED";
+  }
+  return "COMPARABLE";
+}
+
+function emptyPressure(base: Omit<
+  A1SpatialCommitmentFitEvidence,
+  "pressureStatus" |
+  "sampledPressureDistance" |
+  "nearestConfirmedSampleId" |
+  "nearestConfirmedWorldPosition" |
+  "nearestConfirmedUtility" |
+  "utilityGapFromCurrentBest" |
+  "reason"
+>, reason: string): A1SpatialCommitmentFitEvidence {
+  return {
+    ...base,
+    pressureStatus: "NON_COMPARABLE",
+    sampledPressureDistance: null,
+    nearestConfirmedSampleId: null,
+    nearestConfirmedWorldPosition: null,
+    nearestConfirmedUtility: null,
+    utilityGapFromCurrentBest: null,
+    reason
+  };
+}
+
 export function buildA1SpatialCommitmentFitEvidence(input: {
   declaration: A1SpatialCommitmentDeclaration;
-  resolvedAnchorWorldPosition: Vec2;
+  referenceResolution: A1SpatialCommitmentReferenceResolutionEvidence;
   field: A1RelationshipSemanticField;
   projection: A1RelationshipProjectionField;
   accessibility: A1AccessibilityEvidence;
 }): A1SpatialCommitmentFitEvidence {
   validateAlignment(input);
-  const anchor = finiteVector(input.resolvedAnchorWorldPosition, "A1 commitment resolved anchor");
+  validateReferenceResolution(input.declaration, input.referenceResolution, input.field.sourceTick);
+
+  const currentSemanticStatus = semanticStatus(input.declaration, input.field);
+  const anchor = input.referenceResolution.resolvedAnchorWorldPosition
+    ? finiteVector(input.referenceResolution.resolvedAnchorWorldPosition, "A1 commitment resolved anchor")
+    : null;
   const base = {
     kind: "A1_SPATIAL_COMMITMENT_FIT" as const,
     sourceTick: input.field.sourceTick,
     commitmentSourceTick: input.declaration.sourceTick,
     referenceFrame: input.declaration.referenceFrame,
     anchorProvenance: input.declaration.anchorProvenance,
+    referenceResolutionStatus: input.referenceResolution.status,
+    referenceUnresolvedReason: input.referenceResolution.unresolvedReason,
+    referenceBasisProvenance: input.referenceResolution.currentBasisProvenance,
     resolvedAnchorWorldPosition: anchor,
     commitmentObjectiveSignature: input.declaration.objectiveSignature,
     currentObjectiveSignature: input.field.objectiveSignature,
     commitmentOrientationRegime: input.declaration.orientationRegime,
     currentOrientationRegime: orientationRegime(input.field),
     currentSamplingSignature: input.field.samplingSignature,
+    semanticStatus: currentSemanticStatus,
     coverage: input.accessibility.coverage,
     qualificationStrategy: input.accessibility.qualificationStrategy,
     confirmedReachableCount: input.accessibility.confirmedReachableSampleIds.length,
@@ -151,32 +228,29 @@ export function buildA1SpatialCommitmentFitEvidence(input: {
     samplingTruth: "SAMPLED_MESH_ONLY" as const
   };
 
-  if (input.declaration.orientationRegime !== orientationRegime(input.field)) {
-    return {
-      ...base,
-      semanticStatus: "ORIENTATION_REGIME_CHANGED",
-      pressureStatus: "NON_COMPARABLE",
-      sampledPressureDistance: null,
-      nearestConfirmedSampleId: null,
-      nearestConfirmedWorldPosition: null,
-      nearestConfirmedUtility: null,
-      utilityGapFromCurrentBest: null,
-      reason: "Commitment semantic orientation regime changed; spatial fit must not be interpreted across directional and directionless regimes."
-    };
+  if (input.referenceResolution.status === "UNRESOLVED") {
+    return emptyPressure(
+      base,
+      `Commitment reference is unresolved (${input.referenceResolution.unresolvedReason}); sampled pressure is unavailable. Semantic status: ${currentSemanticStatus}.`
+    );
   }
 
-  if (input.declaration.objectiveSignature !== input.field.objectiveSignature) {
-    return {
-      ...base,
-      semanticStatus: "OBJECTIVE_CHANGED",
-      pressureStatus: "NON_COMPARABLE",
-      sampledPressureDistance: null,
-      nearestConfirmedSampleId: null,
-      nearestConfirmedWorldPosition: null,
-      nearestConfirmedUtility: null,
-      utilityGapFromCurrentBest: null,
-      reason: "Commitment meaning changed; spatial fit must not be interpreted across objective signatures."
-    };
+  if (!anchor) {
+    throw new Error("A1 resolved commitment reference unexpectedly lost its anchor.");
+  }
+
+  if (currentSemanticStatus === "ORIENTATION_REGIME_CHANGED") {
+    return emptyPressure(
+      base,
+      "Commitment semantic orientation regime changed; spatial fit must not be interpreted across directional and directionless regimes."
+    );
+  }
+
+  if (currentSemanticStatus === "OBJECTIVE_CHANGED") {
+    return emptyPressure(
+      base,
+      "Commitment meaning changed; spatial fit must not be interpreted across objective signatures."
+    );
   }
 
   const semantic = semanticById(input.field);
@@ -205,7 +279,6 @@ export function buildA1SpatialCommitmentFitEvidence(input: {
   if (!nearest) {
     return {
       ...base,
-      semanticStatus: "COMPARABLE",
       pressureStatus: "NO_CONFIRMED_REACHABLE",
       sampledPressureDistance: null,
       nearestConfirmedSampleId: null,
@@ -225,7 +298,6 @@ export function buildA1SpatialCommitmentFitEvidence(input: {
 
   return {
     ...base,
-    semanticStatus: "COMPARABLE",
     pressureStatus,
     sampledPressureDistance: nearest.distance,
     nearestConfirmedSampleId: nearest.sampleId,
