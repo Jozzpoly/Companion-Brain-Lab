@@ -19,6 +19,8 @@ type SweepPoint = {
   companionPosition: Vec2;
 };
 
+type Observation = Awaited<ReturnType<typeof observe>>;
+
 function snapshotAt(
   scenarioId: ScenarioId,
   tick: number,
@@ -65,6 +67,41 @@ function noneOrientation(tick: number): A1RelationshipOrientationEvidence {
   };
 }
 
+function hardRouteRealization(sample: Observation["projection"]["samples"][number]): string {
+  if (sample.routeQualification !== "HARD_REACHABLE" || !sample.routeTruth) {
+    return sample.routeQualification;
+  }
+  if (sample.routeTruth.hardStatus === "direct") return "DIRECT";
+  if (sample.routeTruth.hardStatus !== "routed") return sample.routeTruth.hardStatus.toUpperCase();
+  const interior = sample.routeTruth.hardRouteNodeIds.filter(
+    (nodeId) => nodeId !== "start" && nodeId !== "target"
+  );
+  return interior.length > 0 ? interior.join(">") : "ROUTED_NO_INTERIOR_NODE";
+}
+
+function reachableRouteRealizations(observation: Observation): Map<string, string> {
+  return new Map(
+    observation.projection.samples
+      .filter((sample) => sample.routeQualification === "HARD_REACHABLE")
+      .map((sample) => [sample.sampleId, hardRouteRealization(sample)])
+  );
+}
+
+function routeRealizationSummary(observation: Observation): Array<{
+  realization: string;
+  sampleIds: string[];
+}> {
+  const grouped = new Map<string, string[]>();
+  for (const [sampleId, realization] of reachableRouteRealizations(observation)) {
+    const sampleIds = grouped.get(realization) ?? [];
+    sampleIds.push(sampleId);
+    grouped.set(realization, sampleIds);
+  }
+  return [...grouped.entries()]
+    .map(([realization, sampleIds]) => ({ realization, sampleIds: sampleIds.sort() }))
+    .sort((a, b) => a.realization.localeCompare(b.realization));
+}
+
 async function observe(scenarioId: ScenarioId, tick: number, point: SweepPoint) {
   const snapshot = snapshotAt(scenarioId, tick, point.playerPosition, point.companionPosition);
   const field = sampleA1RelationshipSemanticField({
@@ -94,7 +131,7 @@ async function observe(scenarioId: ScenarioId, tick: number, point: SweepPoint) 
 }
 
 async function runSweep(scenarioId: ScenarioId, points: readonly SweepPoint[]) {
-  const observations = [] as Awaited<ReturnType<typeof observe>>[];
+  const observations = [] as Observation[];
   for (const [index, point] of points.entries()) {
     observations.push(await observe(scenarioId, index, point));
   }
@@ -109,6 +146,15 @@ async function runSweep(scenarioId: ScenarioId, points: readonly SweepPoint[]) {
     expect(continuity.confirmedReachableOverlapRatio).not.toBeNull();
     expect(continuity.accessibilityChanged).not.toBeNull();
 
+    const previousRoutes = reachableRouteRealizations(previous);
+    const currentRoutes = reachableRouteRealizations(current);
+    const sharedReachableSampleIds = [...previousRoutes.keys()]
+      .filter((sampleId) => currentRoutes.has(sampleId))
+      .sort();
+    const routeRealizationChangedSampleIds = sharedReachableSampleIds.filter(
+      (sampleId) => previousRoutes.get(sampleId) !== currentRoutes.get(sampleId)
+    );
+
     transitions.push({
       from: previous.label,
       to: current.label,
@@ -118,6 +164,10 @@ async function runSweep(scenarioId: ScenarioId, points: readonly SweepPoint[]) {
       currentFragmentCount: current.accessibility.fragments.length,
       confirmedReachableOverlapRatio: continuity.confirmedReachableOverlapRatio,
       accessibilityChanged: continuity.accessibilityChanged,
+      previousRouteRealizations: routeRealizationSummary(previous),
+      currentRouteRealizations: routeRealizationSummary(current),
+      sharedReachableSampleCount: sharedReachableSampleIds.length,
+      routeRealizationChangedSampleIds,
       fragmentMatches: continuity.fragmentMatches.map((match) => ({
         overlapRatio: match.overlapRatio,
         previousRepresentativeSampleId: match.previousRepresentativeSampleId,
@@ -132,7 +182,7 @@ async function runSweep(scenarioId: ScenarioId, points: readonly SweepPoint[]) {
 }
 
 describe("A1 opportunity persistence geometry sweep", () => {
-  it("maps sampled accessibility continuity while the player approaches the pillar", async () => {
+  it("maps sampled accessibility and route-realization continuity while the player approaches the pillar", async () => {
     const companionPosition = { x: 4.0, y: 4.0 };
     await runSweep("pillar", [
       { label: "x3.60", playerPosition: { x: 3.6, y: 4.0 }, companionPosition },
@@ -146,7 +196,7 @@ describe("A1 opportunity persistence geometry sweep", () => {
     ]);
   });
 
-  it("maps sampled accessibility continuity while the player moves through the doorway aperture", async () => {
+  it("maps sampled accessibility and route-realization continuity through the doorway aperture", async () => {
     const companionPosition = { x: 4.6, y: 4.0 };
     await runSweep("doorway", [
       { label: "y3.55", playerPosition: { x: 5.0, y: 3.55 }, companionPosition },
