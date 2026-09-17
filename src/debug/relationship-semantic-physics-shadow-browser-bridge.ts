@@ -1,13 +1,18 @@
 import { intentToward, type RelationalDecision } from "../brain/relational-positioning";
+import { buildA1AccessibilityEvidence } from "../coordination/a1-accessibility-fragments";
 import type { A1RelationshipOrientationEvidence } from "../coordination/a1-relationship-orientation";
+import { projectA1RelationshipSemanticField } from "../coordination/a1-relationship-projection";
+import { sampleA1RelationshipSemanticField } from "../coordination/a1-relationship-utility";
+import { planStaticShadowRoute } from "../navigation/static-router";
 import type { PhysicalRehearsalResult } from "../physics/rapier-physical-world";
 import type { MotionIntent, Vec2, WorldSnapshot } from "../world/types";
 import { LabWorld } from "../world/world";
 
 const FLAG = "semanticshadow";
-const SCHEMA = "companion-brain-lab-relationship-semantic-physics-shadow-v1";
+const SCHEMA = "companion-brain-lab-relationship-semantic-physics-shadow-v2";
 const SHADOW_STEPS = 6;
 const PREFERRED_RADIUS = 1.45;
+const COST_EPSILON = 1e-12;
 
 interface RelationshipOrientationLike {
   latestEvidence(): A1RelationshipOrientationEvidence | null;
@@ -26,11 +31,34 @@ interface ComputeIntentsResult {
 
 type ComputeIntents = (this: SceneLike, before: WorldSnapshot) => ComputeIntentsResult;
 
+export interface RelationshipSemanticPhysicsShadowA1Research {
+  selectionHypothesis: "MINIMUM_HARD_ROUTE_WITHIN_DIRECTIONLESS_NEAR_BEST_SET";
+  samplingBasisSource: "WORLD_AXIS_SAMPLING_ONLY";
+  directionalSemanticsActive: false;
+  routeCoverageComplete: true;
+  semanticEligibleCount: number;
+  hardReachableCount: number;
+  fragmentCount: number;
+  selectedSampleId: string;
+  selectedTarget: Vec2;
+  selectedSemanticUtility: number;
+  selectedHardRouteCost: number;
+  selectedRouteStatus: "direct" | "routed";
+  selectedRouteNodeIds: readonly string[];
+  selectedRouteWaypoints: readonly Vec2[];
+  commandTarget: Vec2;
+}
+
 export interface RelationshipSemanticPhysicsShadowBranch {
-  policy: "RETAINED_LIVE_COMMAND" | "RADIAL_NONE_CURRENT_RELATIVE" | "HOLD_CURRENT_BODY";
+  policy:
+    | "RETAINED_LIVE_COMMAND"
+    | "RADIAL_NONE_CURRENT_RELATIVE"
+    | "HOLD_CURRENT_BODY"
+    | "A1_DIRECTIONLESS_MIN_HARD_ROUTE";
   companionMove: Vec2;
   companionRawVelocity: Vec2;
   radialTarget: Vec2 | null;
+  a1Research: RelationshipSemanticPhysicsShadowA1Research | null;
   rehearsal: PhysicalRehearsalResult;
 }
 
@@ -49,7 +77,8 @@ export interface RelationshipSemanticPhysicsShadowCapture {
     stateAlignment: "EXACT_PRE_WORLD_STEP_LIVE_STATE";
     physics: "LIVE_RAPIER_WORLD_SNAPSHOT_RESTORE";
     radialSemantics: "DIRECTIONLESS_CURRENT_RELATIVE_RADIUS_ONLY";
-    selection: "NONE_RESEARCH_COMPARISON_ONLY";
+    researchSelection: "A1_DIRECTIONLESS_MIN_HARD_ROUTE_BRANCH_ONLY";
+    runtimeSelection: "NONE";
     movementAuthority: "NONE_SHADOW_ONLY";
     liveWorldMutation: "NONE_QUERY_ONLY_CLONES";
   };
@@ -132,6 +161,112 @@ function repeatedSequence(playerVelocity: Vec2, companionVelocity: Vec2) {
   ]);
 }
 
+function buildDirectionlessA1Branch(input: {
+  world: LabWorld;
+  before: WorldSnapshot;
+  orientation: A1RelationshipOrientationEvidence;
+  companionSpeed: number;
+  rawPlayer: Vec2;
+}): RelationshipSemanticPhysicsShadowBranch {
+  if (
+    input.orientation.source !== "NONE" ||
+    input.orientation.direction !== null ||
+    input.orientation.strength !== 0 ||
+    input.orientation.samplingBasisSource !== "WORLD_AXIS_SAMPLING_ONLY"
+  ) {
+    throw new Error("Directionless A1 shadow branch requires canonical semantic NONE.");
+  }
+
+  const field = sampleA1RelationshipSemanticField({ orientation: input.orientation });
+  if (
+    field.samples.some((sample) =>
+      sample.utility.directionalSemanticsActive ||
+      sample.utility.directionalUtility !== null ||
+      sample.utility.effectiveDirectionalWeight !== 0
+    )
+  ) {
+    throw new Error("Directionless A1 shadow field unexpectedly activated directional utility.");
+  }
+
+  const projection = projectA1RelationshipSemanticField({
+    field,
+    snapshot: input.before,
+    query: (from, to, radius, options) => input.world.staticCircleTraversal(from, to, radius, options),
+    routeBudget: field.semanticEligibleSampleIds.length,
+    routeQualificationStrategy: "STRATIFIED_COVERAGE"
+  });
+  const accessibility = buildA1AccessibilityEvidence({ field, projection });
+  if (!projection.routeCoverageComplete || accessibility.coverage !== "COMPLETE") {
+    throw new Error("Directionless A1 shadow selection requires complete route coverage.");
+  }
+
+  const reachableIds = new Set(accessibility.confirmedReachableSampleIds);
+  const candidates = projection.samples.flatMap((sample) => {
+    if (!reachableIds.has(sample.sampleId) || sample.routeQualification !== "HARD_REACHABLE") return [];
+    const hardCost = sample.routeTruth?.hardCost;
+    if (hardCost === null || hardCost === undefined || !Number.isFinite(hardCost)) {
+      throw new Error(`Directionless A1 reachable sample ${sample.sampleId} lacks finite hard-route cost.`);
+    }
+    return [{ sample, hardCost }];
+  });
+  candidates.sort((a, b) => {
+    const costDelta = a.hardCost - b.hardCost;
+    if (Math.abs(costDelta) > COST_EPSILON) return costDelta;
+    const utilityDelta = b.sample.semanticUtility - a.sample.semanticUtility;
+    if (Math.abs(utilityDelta) > COST_EPSILON) return utilityDelta;
+    return a.sample.sampleId.localeCompare(b.sample.sampleId);
+  });
+
+  const selected = candidates[0];
+  if (!selected) throw new Error("Directionless A1 shadow set has no hard-reachable candidate.");
+  const companion = actor(input.before, "companion");
+  const route = planStaticShadowRoute({
+    snapshot: input.before,
+    start: companion.position,
+    target: selected.sample.worldPosition,
+    radius: companion.radius,
+    clearance: 0,
+    query: (from, to, radius, options) => input.world.staticCircleTraversal(from, to, radius, options)
+  });
+  if (route.status !== "direct" && route.status !== "routed") {
+    throw new Error(`Directionless A1 selected reachable sample produced ${route.status} route.`);
+  }
+  const commandTarget = route.waypoints[0] ?? selected.sample.worldPosition;
+  const intent = intentToward(input.before, commandTarget);
+  const rawVelocity = {
+    x: intent.move.x * input.companionSpeed,
+    y: intent.move.y * input.companionSpeed
+  };
+  const rehearsal = input.world.rehearseVelocitySequence(
+    repeatedSequence(input.rawPlayer, rawVelocity)
+  );
+
+  return {
+    policy: "A1_DIRECTIONLESS_MIN_HARD_ROUTE",
+    companionMove: { ...intent.move },
+    companionRawVelocity: rawVelocity,
+    radialTarget: null,
+    a1Research: {
+      selectionHypothesis: "MINIMUM_HARD_ROUTE_WITHIN_DIRECTIONLESS_NEAR_BEST_SET",
+      samplingBasisSource: "WORLD_AXIS_SAMPLING_ONLY",
+      directionalSemanticsActive: false,
+      routeCoverageComplete: true,
+      semanticEligibleCount: field.semanticEligibleSampleIds.length,
+      hardReachableCount: accessibility.confirmedReachableSampleIds.length,
+      fragmentCount: accessibility.fragments.length,
+      selectedSampleId: selected.sample.sampleId,
+      selectedTarget: { ...selected.sample.worldPosition },
+      selectedSemanticUtility: selected.sample.semanticUtility,
+      selectedHardRouteCost: selected.hardCost,
+      selectedRouteStatus: route.status,
+      selectedRouteNodeIds: [...route.routeNodeIds],
+      selectedRouteWaypoints: route.waypoints.map((waypoint) => ({ ...waypoint })),
+      commandTarget: { ...commandTarget }
+    },
+    rehearsal
+  };
+}
+
 export function installRelationshipSemanticPhysicsShadowBrowserBridge(
   search: string,
   scenePrototype: object
@@ -205,6 +340,13 @@ export function installRelationshipSemanticPhysicsShadowBrowserBridge(
         const retained = world.rehearseVelocitySequence(repeatedSequence(rawPlayer, retainedRaw));
         const radial = world.rehearseVelocitySequence(repeatedSequence(rawPlayer, radialRaw));
         const hold = world.rehearseVelocitySequence(repeatedSequence(rawPlayer, holdRaw));
+        const a1Directionless = buildDirectionlessA1Branch({
+          world,
+          before,
+          orientation,
+          companionSpeed,
+          rawPlayer
+        });
         assertWorldUnchanged(world, before);
 
         capture = {
@@ -221,6 +363,7 @@ export function installRelationshipSemanticPhysicsShadowBrowserBridge(
               companionMove: { ...companionIntent.move },
               companionRawVelocity: retainedRaw,
               radialTarget: null,
+              a1Research: null,
               rehearsal: structuredClone(retained)
             },
             {
@@ -228,6 +371,7 @@ export function installRelationshipSemanticPhysicsShadowBrowserBridge(
               companionMove: { ...radialIntent.move },
               companionRawVelocity: radialRaw,
               radialTarget,
+              a1Research: null,
               rehearsal: structuredClone(radial)
             },
             {
@@ -235,7 +379,15 @@ export function installRelationshipSemanticPhysicsShadowBrowserBridge(
               companionMove: { x: 0, y: 0 },
               companionRawVelocity: holdRaw,
               radialTarget: null,
+              a1Research: null,
               rehearsal: structuredClone(hold)
+            },
+            {
+              ...a1Directionless,
+              rehearsal: structuredClone(a1Directionless.rehearsal),
+              a1Research: a1Directionless.a1Research
+                ? structuredClone(a1Directionless.a1Research)
+                : null
             }
           ],
           semantics: {
@@ -244,7 +396,8 @@ export function installRelationshipSemanticPhysicsShadowBrowserBridge(
             stateAlignment: "EXACT_PRE_WORLD_STEP_LIVE_STATE",
             physics: "LIVE_RAPIER_WORLD_SNAPSHOT_RESTORE",
             radialSemantics: "DIRECTIONLESS_CURRENT_RELATIVE_RADIUS_ONLY",
-            selection: "NONE_RESEARCH_COMPARISON_ONLY",
+            researchSelection: "A1_DIRECTIONLESS_MIN_HARD_ROUTE_BRANCH_ONLY",
+            runtimeSelection: "NONE",
             movementAuthority: "NONE_SHADOW_ONLY",
             liveWorldMutation: "NONE_QUERY_ONLY_CLONES"
           }
