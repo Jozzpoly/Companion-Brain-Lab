@@ -21,16 +21,22 @@ export type A1SpatialCommitmentReferenceFrame =
   | "PLAYER_TRANSLATED"
   | "PLAYER_RIGID";
 
+export type A1SpatialCommitmentOrientationRegime =
+  | "DIRECTIONAL"
+  | "DIRECTIONLESS";
+
 export interface A1SpatialCommitmentDeclaration {
   kind: "A1_SPATIAL_COMMITMENT_DECLARATION";
   sourceTick: number;
   objectiveSignature: string;
+  orientationRegime: A1SpatialCommitmentOrientationRegime;
   referenceFrame: A1SpatialCommitmentReferenceFrame;
   anchorProvenance: string;
 }
 
 export type A1SpatialCommitmentSemanticStatus =
   | "COMPARABLE"
+  | "ORIENTATION_REGIME_CHANGED"
   | "OBJECTIVE_CHANGED";
 
 export type A1SampledCommitmentPressureStatus =
@@ -48,6 +54,8 @@ export interface A1SpatialCommitmentFitEvidence {
   resolvedAnchorWorldPosition: Vec2;
   commitmentObjectiveSignature: string;
   currentObjectiveSignature: string;
+  commitmentOrientationRegime: A1SpatialCommitmentOrientationRegime;
+  currentOrientationRegime: A1SpatialCommitmentOrientationRegime;
   currentSamplingSignature: string;
   semanticStatus: A1SpatialCommitmentSemanticStatus;
   coverage: A1AccessibilityEvidence["coverage"];
@@ -109,6 +117,12 @@ function projectionById(field: A1RelationshipProjectionField): Map<string, A1Rel
   return new Map(field.samples.map((sample) => [sample.sampleId, sample]));
 }
 
+function orientationRegime(field: A1RelationshipSemanticField): A1SpatialCommitmentOrientationRegime {
+  return field.samplingBasisSource === "SEMANTIC_ORIENTATION"
+    ? "DIRECTIONAL"
+    : "DIRECTIONLESS";
+}
+
 export function buildA1SpatialCommitmentFitEvidence(input: {
   declaration: A1SpatialCommitmentDeclaration;
   resolvedAnchorWorldPosition: Vec2;
@@ -127,6 +141,8 @@ export function buildA1SpatialCommitmentFitEvidence(input: {
     resolvedAnchorWorldPosition: anchor,
     commitmentObjectiveSignature: input.declaration.objectiveSignature,
     currentObjectiveSignature: input.field.objectiveSignature,
+    commitmentOrientationRegime: input.declaration.orientationRegime,
+    currentOrientationRegime: orientationRegime(input.field),
     currentSamplingSignature: input.field.samplingSignature,
     coverage: input.accessibility.coverage,
     qualificationStrategy: input.accessibility.qualificationStrategy,
@@ -134,6 +150,20 @@ export function buildA1SpatialCommitmentFitEvidence(input: {
     untestedCount: input.accessibility.untestedSampleIds.length,
     samplingTruth: "SAMPLED_MESH_ONLY" as const
   };
+
+  if (input.declaration.orientationRegime !== orientationRegime(input.field)) {
+    return {
+      ...base,
+      semanticStatus: "ORIENTATION_REGIME_CHANGED",
+      pressureStatus: "NON_COMPARABLE",
+      sampledPressureDistance: null,
+      nearestConfirmedSampleId: null,
+      nearestConfirmedWorldPosition: null,
+      nearestConfirmedUtility: null,
+      utilityGapFromCurrentBest: null,
+      reason: "Commitment semantic orientation regime changed; spatial fit must not be interpreted across directional and directionless regimes."
+    };
+  }
 
   if (input.declaration.objectiveSignature !== input.field.objectiveSignature) {
     return {
