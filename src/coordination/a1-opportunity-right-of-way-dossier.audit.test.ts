@@ -356,6 +356,81 @@ describe("A1 commitment right-of-way evidence dossier", () => {
     }
   });
 
+  it("preserves the mirror reversal where fresh H1 contacts while H2/H3 remain clear", async () => {
+    const world = await LabWorld.create("head-on");
+    try {
+      const after = world.step([
+        playerIntent(-1, 0),
+        { actorId: "companion", move: { x: 0, y: 0 } }
+      ]);
+      const currentFit = fit(after, { x: 5.5, y: 4 });
+      const { review, impact } = evidence(
+        world,
+        currentFit,
+        0.75,
+        { x: 1, y: 0 },
+        after
+      );
+      const dossier = buildA1SpatialCommitmentRightOfWayEvidenceDossier({
+        review,
+        impact
+      });
+      const deliberation = buildA1SpatialCommitmentDeliberationFrame(
+        review,
+        dossier
+      );
+      const disposition =
+        buildA1SpatialCommitmentRightOfWayShadowDisposition(deliberation);
+
+      expect(dossier.ownerRequestFutureId).toBe("owner-request-continuation");
+      expect(dossier.ownerRequestJointContactFrameCount).toBeGreaterThan(0);
+      expect(dossier.alternateJointContactFutureIds).toEqual([]);
+      expect(dossier.alternateJointNoContactRehearsedFutureIds).toEqual(
+        expect.arrayContaining([
+          "body-response-continuation",
+          "transition-hold"
+        ])
+      );
+      expect(dossier.alternateJointCausalUnresolvedFutureIds).toEqual([]);
+      expect(dossier.alternateJointReferenceUnresolvedFutureIds).toEqual([]);
+      expect(dossier.futureWeightingClaim).toBe("NONE");
+      expect(dossier.rightOfWayPriorityClaim).toBe("NONE");
+      expect(dossier.yieldPolicyClaim).toBe("NONE");
+
+      expect(disposition.status).toBe(
+        "H1_OWNER_FLOW_DIFFERENCE_OBSERVED_POLICY_UNRESOLVED"
+      );
+      expect(disposition.h1OwnerFlowDifferenceObserved).toBe(true);
+      expect(disposition.mappingToActionRelevanceClaim).toBe(
+        "NONE_MATERIALITY_AND_PRIORITY_UNRESOLVED"
+      );
+      expect(disposition.finalPolicyClaim).toBe("NONE");
+      expect(disposition.runtimeAuthorityClaim).toBe("NONE");
+
+      console.info(`[A1_RIGHT_OF_WAY_MIRROR_REVERSAL_FUTURES] ${JSON.stringify({
+        sourceTick: dossier.sourceTick,
+        horizonSeconds: dossier.horizonSeconds,
+        ownerRequestFutureId: dossier.ownerRequestFutureId,
+        ownerRequestJointContactFrameCount:
+          dossier.ownerRequestJointContactFrameCount,
+        alternateJointContactFutureIds:
+          dossier.alternateJointContactFutureIds,
+        alternateJointNoContactRehearsedFutureIds:
+          dossier.alternateJointNoContactRehearsedFutureIds,
+        alternateJointCausalUnresolvedFutureIds:
+          dossier.alternateJointCausalUnresolvedFutureIds,
+        shadowStatus: disposition.status,
+        futureWeightingClaim: dossier.futureWeightingClaim,
+        rightOfWayPriorityClaim: dossier.rightOfWayPriorityClaim,
+        yieldPolicyClaim: dossier.yieldPolicyClaim,
+        interpretation:
+          "The mirror reversal makes the fresh Owner-request H1 contact while the qualified prior body-response H2 and transition-hold H3 remain clear. This complements the opposite split and preserves future identity without probability, weighting, priority or policy."
+      })}`);
+    } finally {
+      world.dispose();
+    }
+  });
+
   it("keeps no-contact / zero-impact evidence explicitly non-authoritative about general safety", async () => {
     const world = await LabWorld.create("open");
     try {
