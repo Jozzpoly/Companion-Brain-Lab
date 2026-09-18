@@ -67,6 +67,16 @@ jobs:
           path: artifacts/os-prep3-ph01-open-turn-reversal
           if-no-files-found: error
           retention-days: 7
+      - name: Capture OS-PREP-3 PH-01 mirrored turn/reversal Twins
+        run: npm run browser:audit:os-prep3-ph01-mirror
+      - name: Upload OS-PREP-3 PH-01 mirrored turn/reversal evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: os-prep3-ph01-open-turn-reversal-mirror-${{ github.sha }}
+          path: artifacts/os-prep3-ph01-open-turn-reversal-mirror
+          if-no-files-found: error
+          retention-days: 7
       - name: Capture live relationship semantic provenance replay
         run: |
           set -o pipefail

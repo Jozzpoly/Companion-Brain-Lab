@@ -16,7 +16,8 @@
     "browser:audit": "node scripts/ccc0-browser-audit.mjs && node scripts/authority-a0-browser-audit.mjs && node scripts/authority-a1-0-browser-audit.mjs && node scripts/authority-a1-1f-browser-audit.mjs && npm run browser:audit:a1-2z3 && npm run browser:audit:a1-2z4b && npm run browser:audit:a1-2z4c && npm run browser:audit:a1-2z4d && npm run browser:audit:a1-2p1 && npm run browser:audit:a1-2p2 && npm run browser:audit:os-prep1",
     "browser:audit:a1-2p2": "node scripts/authority-a1-2p2-manual-direct-browser-specimen.mjs",
     "browser:audit:os-prep1": "node scripts/owner-sandbox-incident-p2-browser-specimen.mjs",
-    "browser:audit:os-prep3-ph01": "node scripts/os-prep3-ph01-open-turn-reversal-browser-specimen.mjs"
+    "browser:audit:os-prep3-ph01": "node scripts/os-prep3-ph01-open-turn-reversal-browser-specimen.mjs",
+    "browser:audit:os-prep3-ph01-mirror": "node scripts/os-prep3-ph01-open-turn-reversal-mirror-browser-specimen.mjs"
   },
   "dependencies": {
     "@dimforge/rapier2d-deterministic-compat": "0.20.0",
