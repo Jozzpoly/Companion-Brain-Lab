@@ -3,6 +3,7 @@ import { R1LabScene } from "./app/r1-lab-scene";
 import { installAuthorityA0BrowserBridge } from "./debug/authority-a0-browser-bridge";
 import { installAuthorityA11fBrowserBridge } from "./debug/authority-a1-1f-browser-bridge";
 import { installAuthorityA12p1BrowserBridge } from "./debug/authority-a1-2p1-browser-bridge";
+import { installAuthorityA12p2BrowserBridge } from "./debug/authority-a1-2p2-manual-browser-bridge";
 import { installAuthorityA12z4cBrowserBridge } from "./debug/authority-a1-2z4c-browser-bridge";
 import { installAuthorityA10BrowserBridge } from "./debug/authority-a1-browser-bridge";
 import { scheduleFoundationFaultProbe } from "./debug/foundation-fault-probe";
@@ -34,6 +35,10 @@ try {
   // changes intents. The perturbation apparatus remains the outermost wrapper.
   installRelationshipCommitmentShadowBrowserBridge(window.location.search, R1LabScene.prototype);
   installRelationshipSemanticPerturbationBrowserBridge(window.location.search, R1LabScene.prototype);
+  // P2 is intentionally outermost: existing research/shadow apparatus observes
+  // the unpromoted path first, then an explicit one-step authorization may replace
+  // only the final companion intent. semanticpush is rejected by the P2 bridge.
+  installAuthorityA12p2BrowserBridge(window.location.search, R1LabScene.prototype);
 
   game = new Phaser.Game({
     type: Phaser.AUTO,

@@ -13,7 +13,8 @@
     "browser:audit:a1-2z4c": "node scripts/authority-a1-2z4c-live-state-shadow-browser-specimen.mjs",
     "browser:audit:a1-2z4d": "node scripts/authority-a1-2z4d-class-support-browser-trace.mjs",
     "browser:audit:a1-2p1": "node scripts/authority-a1-2p1-embodied-shadow-browser-specimen.mjs",
-    "browser:audit": "node scripts/ccc0-browser-audit.mjs && node scripts/authority-a0-browser-audit.mjs && node scripts/authority-a1-0-browser-audit.mjs && node scripts/authority-a1-1f-browser-audit.mjs && npm run browser:audit:a1-2z3 && npm run browser:audit:a1-2z4b && npm run browser:audit:a1-2z4c && npm run browser:audit:a1-2z4d && npm run browser:audit:a1-2p1"
+    "browser:audit": "node scripts/ccc0-browser-audit.mjs && node scripts/authority-a0-browser-audit.mjs && node scripts/authority-a1-0-browser-audit.mjs && node scripts/authority-a1-1f-browser-audit.mjs && npm run browser:audit:a1-2z3 && npm run browser:audit:a1-2z4b && npm run browser:audit:a1-2z4c && npm run browser:audit:a1-2z4d && npm run browser:audit:a1-2p1 && npm run browser:audit:a1-2p2",
+    "browser:audit:a1-2p2": "node scripts/authority-a1-2p2-manual-direct-browser-specimen.mjs"
   },
   "dependencies": {
     "@dimforge/rapier2d-deterministic-compat": "0.20.0",
@@ -25,4 +26,4 @@
     "vite": "8.2.2",
     "vitest": "5.0.0"
   }
-}
+}\n
