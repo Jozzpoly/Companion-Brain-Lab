@@ -1,19 +1,10 @@
-import type {
-  A1SpatialCommitmentDeliberationFrame,
-  A1SpatialCommitmentDeliberationReason
-} from "./a1-spatial-commitment-deliberation";
-
-const CAUSAL_OWNER_FLOW_REASONS = new Set<A1SpatialCommitmentDeliberationReason>([
-  "OWNER_FLOW_ADDED_CONTACT_VS_HOLD",
-  "OWNER_FLOW_PROGRESS_DEFICIT_VS_HOLD",
-  "OWNER_FLOW_LATERAL_DEVIATION_VS_HOLD"
-]);
+import type { A1SpatialCommitmentDeliberationFrame } from "./a1-spatial-commitment-deliberation";
 
 export type A1SpatialCommitmentRightOfWayShadowDispositionStatus =
   | "INSUFFICIENT_RIGHT_OF_WAY_CONTEXT"
-  | "CONSIDER_YIELD_TO_OWNER_FLOW"
-  | "WITHHOLD_YIELD_INFERENCE_ALTERNATE_FUTURE_CONTEXT"
-  | "NO_CAUSAL_H1_YIELD_SIGNAL";
+  | "H1_OWNER_FLOW_DIFFERENCE_OBSERVED_POLICY_UNRESOLVED"
+  | "ALTERNATE_FUTURE_CONTEXT_PRESENT_POLICY_UNRESOLVED"
+  | "NO_H1_OWNER_FLOW_DIFFERENCE_OBSERVED_POLICY_UNRESOLVED";
 
 export interface A1SpatialCommitmentRightOfWayShadowDisposition {
   kind: "A1_SPATIAL_COMMITMENT_RIGHT_OF_WAY_SHADOW_DISPOSITION";
@@ -21,18 +12,20 @@ export interface A1SpatialCommitmentRightOfWayShadowDisposition {
   commitmentSourceTick: number;
   ownerRequestFutureId: string | null;
   status: A1SpatialCommitmentRightOfWayShadowDispositionStatus;
-  causalOwnerFlowReasons: readonly A1SpatialCommitmentDeliberationReason[];
+  h1OwnerFlowDifferenceObserved: boolean | null;
   alternateJointContactFutureIds: readonly string[];
   alternateJointCausalUnresolvedFutureIds: readonly string[];
   alternateJointReferenceUnresolvedFutureIds: readonly string[];
-  hypothesisClaim: "OWNER_FLOW_PRIORITY_SHADOW_HYPOTHESIS_V0";
-  causalScopeClaim: "EXACT_H1_OWNER_FLOW_INTERFERENCE_ONLY";
+  hypothesisClaim: "RIGHT_OF_WAY_POLICY_BOUNDARY_SHADOW_V0";
+  causalScopeClaim: "EXACT_H1_OWNER_FLOW_MEASUREMENT_ONLY";
   alternateFutureClaim: "PRESERVED_DIAGNOSTIC_CONTEXT_NO_VOTE_NO_VETO";
+  mappingToActionRelevanceClaim: "NONE_MATERIALITY_AND_PRIORITY_UNRESOLVED";
+  noDifferenceSafetyClaim: "NONE_NO_OBSERVED_DIFFERENCE_NOT_GENERAL_SAFETY";
   harmThresholdClaim: "NONE";
   scalarScoreClaim: "NONE";
   finalPolicyClaim: "NONE";
   finalRightOfWayPriorityClaim: "NONE";
-  selectionClaim: "NONE_SHADOW_DISPOSITION_ONLY";
+  selectionClaim: "NONE_OBSERVATIONAL_SHADOW_ONLY";
   runtimeAuthorityClaim: "NONE";
 }
 
@@ -57,35 +50,31 @@ function validateDeliberation(
     deliberation.rightOfWayContext.runtimeAuthorityClaim !== "NONE"
   ) {
     throw new Error(
-      "A1 right-of-way shadow disposition refuses deliberation that already contains probability, harm, priority, weighting, decision, selection, score or runtime authority."
+      "A1 right-of-way policy-boundary shadow refuses deliberation that already contains probability, harm, priority, weighting, decision, selection, score or runtime authority."
     );
   }
 }
 
-function causalOwnerFlowReasons(
+function observedH1Difference(
   deliberation: A1SpatialCommitmentDeliberationFrame
-): A1SpatialCommitmentDeliberationReason[] {
-  const yieldOption = deliberation.options.find(
-    (option) => option.option === "YIELD_TO_OWNER_FLOW"
-  );
-  if (!yieldOption) {
-    throw new Error(
-      "A1 right-of-way shadow disposition requires the fixed YIELD_TO_OWNER_FLOW deliberation hypothesis."
-    );
-  }
-  return yieldOption.reasonsForConsideration.filter((reason) =>
-    CAUSAL_OWNER_FLOW_REASONS.has(reason)
+): boolean | null {
+  const context = deliberation.rightOfWayContext;
+  if (context.status !== "SUPPLIED_H1_OWNER_FLOW_EVIDENCE") return null;
+  return (
+    (context.executionOnlyContactFrameCount ?? 0) > 0 ||
+    (context.peakPlayerProgressDeficitVsHold ?? 0) > 0 ||
+    (context.peakPlayerLateralDeltaMagnitudeVsHold ?? 0) > 0
   );
 }
 
 /**
- * First policy-shaped shadow hypothesis over the qualified right-of-way
+ * Observational policy-boundary witness over the qualified right-of-way
  * evidence chain.
  *
- * This does not choose a movement command. It only says whether the exact
- * Owner-request counterfactual supplies causal evidence worth considering as
- * a yield hypothesis. Alternate futures remain diagnostic context rather than
- * votes or vetoes.
+ * It classifies whether bounded H1 Owner-flow difference or alternate-future
+ * ambiguity is present. It deliberately does not map those measurements to
+ * maintain/defer/yield relevance. Materiality, harm and right-of-way priority
+ * remain unresolved future policy questions.
  */
 export function buildA1SpatialCommitmentRightOfWayShadowDisposition(
   deliberation: A1SpatialCommitmentDeliberationFrame
@@ -93,7 +82,7 @@ export function buildA1SpatialCommitmentRightOfWayShadowDisposition(
   validateDeliberation(deliberation);
 
   const context = deliberation.rightOfWayContext;
-  const reasons = causalOwnerFlowReasons(deliberation);
+  const h1OwnerFlowDifferenceObserved = observedH1Difference(deliberation);
   const alternateJointContactFutureIds = [
     ...context.alternateJointContactFutureIds
   ];
@@ -107,16 +96,16 @@ export function buildA1SpatialCommitmentRightOfWayShadowDisposition(
   let status: A1SpatialCommitmentRightOfWayShadowDispositionStatus;
   if (context.status !== "SUPPLIED_H1_OWNER_FLOW_EVIDENCE") {
     status = "INSUFFICIENT_RIGHT_OF_WAY_CONTEXT";
-  } else if (reasons.length > 0) {
-    status = "CONSIDER_YIELD_TO_OWNER_FLOW";
+  } else if (h1OwnerFlowDifferenceObserved) {
+    status = "H1_OWNER_FLOW_DIFFERENCE_OBSERVED_POLICY_UNRESOLVED";
   } else if (
     alternateJointContactFutureIds.length > 0 ||
     alternateJointCausalUnresolvedFutureIds.length > 0 ||
     alternateJointReferenceUnresolvedFutureIds.length > 0
   ) {
-    status = "WITHHOLD_YIELD_INFERENCE_ALTERNATE_FUTURE_CONTEXT";
+    status = "ALTERNATE_FUTURE_CONTEXT_PRESENT_POLICY_UNRESOLVED";
   } else {
-    status = "NO_CAUSAL_H1_YIELD_SIGNAL";
+    status = "NO_H1_OWNER_FLOW_DIFFERENCE_OBSERVED_POLICY_UNRESOLVED";
   }
 
   return {
@@ -125,18 +114,20 @@ export function buildA1SpatialCommitmentRightOfWayShadowDisposition(
     commitmentSourceTick: deliberation.commitmentSourceTick,
     ownerRequestFutureId: deliberation.ownerRequestFutureId,
     status,
-    causalOwnerFlowReasons: reasons,
+    h1OwnerFlowDifferenceObserved,
     alternateJointContactFutureIds,
     alternateJointCausalUnresolvedFutureIds,
     alternateJointReferenceUnresolvedFutureIds,
-    hypothesisClaim: "OWNER_FLOW_PRIORITY_SHADOW_HYPOTHESIS_V0",
-    causalScopeClaim: "EXACT_H1_OWNER_FLOW_INTERFERENCE_ONLY",
+    hypothesisClaim: "RIGHT_OF_WAY_POLICY_BOUNDARY_SHADOW_V0",
+    causalScopeClaim: "EXACT_H1_OWNER_FLOW_MEASUREMENT_ONLY",
     alternateFutureClaim: "PRESERVED_DIAGNOSTIC_CONTEXT_NO_VOTE_NO_VETO",
+    mappingToActionRelevanceClaim: "NONE_MATERIALITY_AND_PRIORITY_UNRESOLVED",
+    noDifferenceSafetyClaim: "NONE_NO_OBSERVED_DIFFERENCE_NOT_GENERAL_SAFETY",
     harmThresholdClaim: "NONE",
     scalarScoreClaim: "NONE",
     finalPolicyClaim: "NONE",
     finalRightOfWayPriorityClaim: "NONE",
-    selectionClaim: "NONE_SHADOW_DISPOSITION_ONLY",
+    selectionClaim: "NONE_OBSERVATIONAL_SHADOW_ONLY",
     runtimeAuthorityClaim: "NONE"
   };
 }

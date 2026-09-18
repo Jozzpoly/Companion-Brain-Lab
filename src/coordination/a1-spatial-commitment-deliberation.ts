@@ -17,9 +17,6 @@ export type A1SpatialCommitmentDeliberationReason =
   | "CURRENT_PLAYER_BODY_OVERLAP"
   | "OWNER_REQUEST_JOINT_CONTACT"
   | "OTHER_FUTURE_JOINT_CONTACT"
-  | "OWNER_FLOW_ADDED_CONTACT_VS_HOLD"
-  | "OWNER_FLOW_PROGRESS_DEFICIT_VS_HOLD"
-  | "OWNER_FLOW_LATERAL_DEVIATION_VS_HOLD"
   | "OWNER_REQUEST_ANCHOR_OVERLAP_WITHOUT_JOINT_CONTACT"
   | "SEMANTIC_ORIENTATION_REGIME_CHANGED"
   | "SEMANTIC_OBJECTIVE_CHANGED"
@@ -89,8 +86,6 @@ export interface A1SpatialCommitmentDeliberationFrame {
   runtimeAuthorityClaim: "NONE";
   sourceReview: A1SpatialCommitmentReviewEvidence;
 }
-
-const OWNER_FLOW_EPSILON = 1e-8;
 
 const SEMANTIC_BREAK_FACTS = new Set<A1SpatialCommitmentReviewFact>([
   "SEMANTIC_ORIENTATION_REGIME_CHANGED",
@@ -232,29 +227,6 @@ function rightOfWayContext(
   };
 }
 
-function ownerFlowInterferenceReasons(
-  dossier: A1SpatialCommitmentRightOfWayEvidenceDossier | null
-): A1SpatialCommitmentDeliberationReason[] {
-  if (!dossier) return [];
-  const reasons: A1SpatialCommitmentDeliberationReason[] = [];
-  if (dossier.executionOnlyContactFrameCount > 0) {
-    reasons.push("OWNER_FLOW_ADDED_CONTACT_VS_HOLD");
-  }
-  if (
-    dossier.peakPlayerProgressDeficitVsHold !== null &&
-    dossier.peakPlayerProgressDeficitVsHold > OWNER_FLOW_EPSILON
-  ) {
-    reasons.push("OWNER_FLOW_PROGRESS_DEFICIT_VS_HOLD");
-  }
-  if (
-    dossier.peakPlayerLateralDeltaMagnitudeVsHold !== null &&
-    dossier.peakPlayerLateralDeltaMagnitudeVsHold > OWNER_FLOW_EPSILON
-  ) {
-    reasons.push("OWNER_FLOW_LATERAL_DEVIATION_VS_HOLD");
-  }
-  return reasons;
-}
-
 function uncertaintyReasons(
   review: A1SpatialCommitmentReviewEvidence
 ): A1SpatialCommitmentDeliberationReason[] {
@@ -312,7 +284,6 @@ export function buildA1SpatialCommitmentDeliberationFrame(
   const h1JointContact = h1 !== null && review.jointContactFutureIds.includes(h1);
   const h1JointNoContact = h1 !== null && review.jointNoContactRehearsedFutureIds.includes(h1);
   const otherJointContact = review.jointContactFutureIds.some((id) => id !== h1);
-  const ownerFlowInterference = ownerFlowInterferenceReasons(dossier);
 
   const maintainReasons: A1SpatialCommitmentDeliberationReason[] = [];
   if (!semanticBreak && review.sourceFit.semanticStatus === "COMPARABLE") {
@@ -330,7 +301,6 @@ export function buildA1SpatialCommitmentDeliberationFrame(
   }
   if (h1JointContact) maintainCautions.push("OWNER_REQUEST_JOINT_CONTACT");
   if (otherJointContact) maintainCautions.push("OTHER_FUTURE_JOINT_CONTACT");
-  maintainCautions.push(...ownerFlowInterference);
 
   const deferReasons: A1SpatialCommitmentDeliberationReason[] = [];
   if (hasFact(review, "CURRENT_PLAYER_BODY_OVERLAP")) {
@@ -338,7 +308,6 @@ export function buildA1SpatialCommitmentDeliberationFrame(
   }
   if (h1JointContact) deferReasons.push("OWNER_REQUEST_JOINT_CONTACT");
   if (otherJointContact) deferReasons.push("OTHER_FUTURE_JOINT_CONTACT");
-  deferReasons.push(...ownerFlowInterference);
   const deferCautions = [...uncertainty];
   if (review.jointDirectCapabilityClipped === true) {
     deferCautions.push("DIRECT_REALIZATION_CAPABILITY_CLIPPED");
@@ -349,7 +318,6 @@ export function buildA1SpatialCommitmentDeliberationFrame(
   if (h1JointContact) {
     yieldReasons.push("OWNER_REQUEST_JOINT_CONTACT");
   }
-  yieldReasons.push(...ownerFlowInterference);
   if (!h1JointContact && h1AnchorOverlap && h1JointNoContact) {
     yieldCautions.push("OWNER_REQUEST_ANCHOR_OVERLAP_WITHOUT_JOINT_CONTACT");
   }
