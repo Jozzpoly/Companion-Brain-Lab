@@ -97,6 +97,16 @@ jobs:
           path: artifacts/os-prep3-ph03-sustained-slow-walk
           if-no-files-found: error
           retention-days: 7
+      - name: Capture OS-PREP-3 PH-04 head-on baseline Twins
+        run: npm run browser:audit:os-prep3-ph04
+      - name: Upload OS-PREP-3 PH-04 head-on baseline evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: os-prep3-ph04-head-on-baseline-${{ github.sha }}
+          path: artifacts/os-prep3-ph04-head-on-baseline
+          if-no-files-found: error
+          retention-days: 7
       - name: Capture live relationship semantic provenance replay
         run: |
           set -o pipefail
