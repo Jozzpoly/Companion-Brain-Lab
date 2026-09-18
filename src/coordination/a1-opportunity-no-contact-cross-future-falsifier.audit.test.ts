@@ -155,7 +155,8 @@ describe("A1 no-contact evidence remains future-scoped", () => {
       expect(dossier.ownerRequestFutureId).toBe(h1.futureId);
       expect(dossier.ownerRequestJointContactFrameCount).toBe(0);
       expect(dossier.commitmentExecutionContactFrameCount).toBe(0);
-      expect(dossier.sourceReview.jointContactFutureIds).toContain(h2.futureId);
+      expect(dossier.sourceReview.jointNoContactRehearsedFutureIds).toContain(h2.futureId);
+      expect(dossier.sourceReview.jointContactFutureIds).not.toContain(h2.futureId);
       expect(dossier.noContactSafetyClaim).toBe(
         "NONE_NO_OBSERVED_CONTACT_OR_DISTURBANCE_DOES_NOT_ESTABLISH_GENERAL_SAFETY"
       );
