@@ -3,6 +3,7 @@ import { chromium } from "playwright-chromium";
 import { preview } from "vite";
 
 const ARTIFACT_DIR = "artifacts/relationship-semantic-post-expiry-disturbance-live";
+const PARTICIPANT_SEQUENCE_DIR = `${ARTIFACT_DIR}/participant-sequence`;
 const PREFERRED_RADIUS = 1.45;
 
 function invariant(condition, message) {
@@ -101,6 +102,13 @@ async function screenshotPair(page, label) {
   return { participant: participant.length, research: research.length };
 }
 
+async function captureParticipantSequenceFrame(page, index, tick) {
+  const file = `frame-${String(index).padStart(3, "0")}-t${String(tick).padStart(3, "0")}.jpg`;
+  const bytes = await page.locator("#game-root canvas").screenshot({ type: "jpeg", quality: 78 });
+  await writeFile(`${PARTICIPANT_SEQUENCE_DIR}/${file}`, bytes);
+  return { index, tick, file, bytes: bytes.length };
+}
+
 async function assertNoFault(page, errors) {
   invariant(await page.locator("#runtime-fault-sentinel").count() === 0, "Runtime fault sentinel became visible during post-expiry disturbance replay.");
   invariant(errors.page.length === 0, `Page errors: ${errors.page.join(" | ")}`);
@@ -133,6 +141,7 @@ const server = await preview({
 let browser;
 try {
   await mkdir(ARTIFACT_DIR, { recursive: true });
+  await mkdir(PARTICIPANT_SEQUENCE_DIR, { recursive: true });
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
   const page = await context.newPage();
@@ -292,6 +301,9 @@ try {
   };
   const retainedVsRadialTargetDivergence = distance(retainedTarget, radialNearestTarget);
   const disturbanceImages = await screenshotPair(page, "post-expiry-disturbance");
+  const participantSequence = [
+    await captureParticipantSequenceFrame(page, 0, witnessA1.tick)
+  ];
 
   // Release the apparatus completely and observe what the *actual* retained
   // baseline does for four tactical intervals. This is descriptive evidence:
@@ -335,8 +347,32 @@ try {
         playerMotionProvenance: aligned.a1Frame.situation.situated.playerMotionProvenance
       });
     }
+
+    if ((index + 1) % 3 === 0) {
+      participantSequence.push(
+        await captureParticipantSequenceFrame(
+          page,
+          participantSequence.length,
+          aligned.a1Frame.tick
+        )
+      );
+    }
   }
   invariant(lastRecovery !== null, "No post-apparatus recovery frames were observed.");
+  invariant(
+    participantSequence.length === 9,
+    `Expected witness + 8 temporal participant frames, got ${participantSequence.length}.`
+  );
+  await writeFile(
+    `${PARTICIPANT_SEQUENCE_DIR}/manifest.json`,
+    JSON.stringify({
+      schema: "companion-brain-lab-ph02-post-expiry-participant-sequence-v1",
+      sourceSha: process.env.GITHUB_SHA ?? null,
+      witnessTick: witnessA1.tick,
+      cadenceWorldTicks: 3,
+      frames: participantSequence
+    }, null, 2)
+  );
   const recoveryImages = await screenshotPair(page, "post-expiry-recovery");
   await assertNoFault(page, errors);
 
@@ -399,6 +435,13 @@ try {
       a1MovementAuthorityChanged: false,
       retainedFrameBehaviorOwnerQualified: false,
       replacementPolicySelected: false
+    },
+    participantTemporalSequence: {
+      schema: "companion-brain-lab-ph02-post-expiry-participant-sequence-v1",
+      frameCount: participantSequence.length,
+      cadenceWorldTicks: 3,
+      firstTick: participantSequence[0]?.tick ?? null,
+      lastTick: participantSequence.at(-1)?.tick ?? null
     },
     imageBytes: {
       disturbance: disturbanceImages,
