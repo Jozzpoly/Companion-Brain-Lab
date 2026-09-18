@@ -67,6 +67,16 @@ jobs:
           path: artifacts/os-prep3-ph04-head-on-baseline
           if-no-files-found: error
           retention-days: 7
+      - name: Capture OS-PREP-3 PH-04 late cross-front Twins
+        run: npm run browser:audit:os-prep3-ph04-cross
+      - name: Upload OS-PREP-3 PH-04 late cross-front evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: os-prep3-ph04-late-cross-front-${{ github.sha }}
+          path: artifacts/os-prep3-ph04-late-cross-front
+          if-no-files-found: error
+          retention-days: 7
       - name: Capture OS-PREP-3 PH-01 open turn/reversal Twins
         run: npm run browser:audit:os-prep3-ph01
       - name: Upload OS-PREP-3 PH-01 open turn/reversal evidence
