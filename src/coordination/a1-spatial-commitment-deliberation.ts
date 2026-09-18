@@ -2,6 +2,7 @@ import type {
   A1SpatialCommitmentReviewEvidence,
   A1SpatialCommitmentReviewFact
 } from "./a1-spatial-commitment-review";
+import type { A1SpatialCommitmentRightOfWayEvidenceDossier } from "./a1-spatial-commitment-right-of-way-dossier";
 
 export type A1SpatialCommitmentDeliberationOption =
   | "MAINTAIN_COMMITMENT"
@@ -45,11 +46,34 @@ export interface A1SpatialCommitmentDeliberationOptionEvidence {
   openQuestions: readonly A1SpatialCommitmentDeliberationOpenQuestion[];
 }
 
+export interface A1SpatialCommitmentDeliberationRightOfWayContext {
+  status: "NOT_SUPPLIED" | "SUPPLIED_H1_OWNER_FLOW_EVIDENCE";
+  ownerRequestFutureId: string | null;
+  ownerRequestJointContactFrameCount: number | null;
+  alternateJointContactFutureIds: readonly string[];
+  alternateJointNoContactRehearsedFutureIds: readonly string[];
+  alternateJointCausalUnresolvedFutureIds: readonly string[];
+  alternateJointReferenceUnresolvedFutureIds: readonly string[];
+  executionOnlyContactFrameCount: number | null;
+  peakPlayerProgressDeficitVsHold: number | null;
+  integratedPlayerProgressDeficitSeconds: number | null;
+  peakPlayerLateralDeltaMagnitudeVsHold: number | null;
+  integratedPlayerLateralDeviationSeconds: number | null;
+  evidenceScopeClaim:
+    | "NOT_SUPPLIED"
+    | "H1_CAUSAL_OWNER_FLOW_PLUS_UNWEIGHTED_ALTERNATE_FUTURES";
+  harmClaim: "NONE";
+  rightOfWayPriorityClaim: "NONE";
+  futureWeightingClaim: "NONE";
+  runtimeAuthorityClaim: "NONE";
+}
+
 export interface A1SpatialCommitmentDeliberationFrame {
   kind: "A1_SPATIAL_COMMITMENT_DELIBERATION_FRAME";
   sourceTick: number;
   commitmentSourceTick: number;
   ownerRequestFutureId: string | null;
+  rightOfWayContext: A1SpatialCommitmentDeliberationRightOfWayContext;
   options: readonly A1SpatialCommitmentDeliberationOptionEvidence[];
   optionSetClaim: "FIXED_HYPOTHESES_FOR_RESEARCH_NOT_EXHAUSTIVE_POLICY";
   optionOrderingClaim: "NONE_ARRAY_ORDER_NOT_PREFERENCE";
@@ -110,6 +134,99 @@ function validateReview(review: A1SpatialCommitmentReviewEvidence): void {
   }
 }
 
+function validateRightOfWayDossier(
+  review: A1SpatialCommitmentReviewEvidence,
+  dossier: A1SpatialCommitmentRightOfWayEvidenceDossier | null
+): void {
+  if (!dossier) return;
+  if (
+    dossier.kind !== "A1_SPATIAL_COMMITMENT_RIGHT_OF_WAY_EVIDENCE_DOSSIER" ||
+    dossier.sourceTick !== review.sourceTick ||
+    dossier.commitmentSourceTick !== review.commitmentSourceTick
+  ) {
+    throw new Error(
+      "A1 commitment deliberation requires right-of-way dossier evidence aligned to the same review source."
+    );
+  }
+  const h1 = ownerRequestFutureId(review);
+  if (dossier.ownerRequestFutureId !== h1) {
+    throw new Error(
+      "A1 commitment deliberation refuses a right-of-way dossier from a different Owner-request future."
+    );
+  }
+  if (
+    dossier.contactToHarmClaim !== "NONE_CONTACT_IS_NOT_A_HARM_SCALAR" ||
+    dossier.noContactSafetyClaim !== "NONE_NO_OBSERVED_CONTACT_OR_DISTURBANCE_DOES_NOT_ESTABLISH_GENERAL_SAFETY" ||
+    dossier.impactToPriorityClaim !== "NONE_MEASURED_OWNER_FLOW_DIFFERENCE_IS_NOT_RIGHT_OF_WAY_PRIORITY" ||
+    dossier.futureWeightingClaim !== "NONE" ||
+    dossier.harmThresholdClaim !== "NONE" ||
+    dossier.scalarScoreClaim !== "NONE" ||
+    dossier.rightOfWayPriorityClaim !== "NONE" ||
+    dossier.yieldPolicyClaim !== "NONE" ||
+    dossier.decisionClaim !== "NONE_EVIDENCE_DOSSIER_ONLY" ||
+    dossier.selectionClaim !== "NONE" ||
+    dossier.runtimeAuthorityClaim !== "NONE"
+  ) {
+    throw new Error(
+      "A1 commitment deliberation refuses dossier input that already contains harm, priority, weighting, policy, decision, selection or runtime-authority claims."
+    );
+  }
+}
+
+function rightOfWayContext(
+  dossier: A1SpatialCommitmentRightOfWayEvidenceDossier | null
+): A1SpatialCommitmentDeliberationRightOfWayContext {
+  if (!dossier) {
+    return {
+      status: "NOT_SUPPLIED",
+      ownerRequestFutureId: null,
+      ownerRequestJointContactFrameCount: null,
+      alternateJointContactFutureIds: [],
+      alternateJointNoContactRehearsedFutureIds: [],
+      alternateJointCausalUnresolvedFutureIds: [],
+      alternateJointReferenceUnresolvedFutureIds: [],
+      executionOnlyContactFrameCount: null,
+      peakPlayerProgressDeficitVsHold: null,
+      integratedPlayerProgressDeficitSeconds: null,
+      peakPlayerLateralDeltaMagnitudeVsHold: null,
+      integratedPlayerLateralDeviationSeconds: null,
+      evidenceScopeClaim: "NOT_SUPPLIED",
+      harmClaim: "NONE",
+      rightOfWayPriorityClaim: "NONE",
+      futureWeightingClaim: "NONE",
+      runtimeAuthorityClaim: "NONE"
+    };
+  }
+  return {
+    status: "SUPPLIED_H1_OWNER_FLOW_EVIDENCE",
+    ownerRequestFutureId: dossier.ownerRequestFutureId,
+    ownerRequestJointContactFrameCount: dossier.ownerRequestJointContactFrameCount,
+    alternateJointContactFutureIds: [...dossier.alternateJointContactFutureIds],
+    alternateJointNoContactRehearsedFutureIds: [
+      ...dossier.alternateJointNoContactRehearsedFutureIds
+    ],
+    alternateJointCausalUnresolvedFutureIds: [
+      ...dossier.alternateJointCausalUnresolvedFutureIds
+    ],
+    alternateJointReferenceUnresolvedFutureIds: [
+      ...dossier.alternateJointReferenceUnresolvedFutureIds
+    ],
+    executionOnlyContactFrameCount: dossier.executionOnlyContactFrameCount,
+    peakPlayerProgressDeficitVsHold: dossier.peakPlayerProgressDeficitVsHold,
+    integratedPlayerProgressDeficitSeconds: dossier.integratedPlayerProgressDeficitSeconds,
+    peakPlayerLateralDeltaMagnitudeVsHold:
+      dossier.peakPlayerLateralDeltaMagnitudeVsHold,
+    integratedPlayerLateralDeviationSeconds:
+      dossier.integratedPlayerLateralDeviationSeconds,
+    evidenceScopeClaim:
+      "H1_CAUSAL_OWNER_FLOW_PLUS_UNWEIGHTED_ALTERNATE_FUTURES",
+    harmClaim: "NONE",
+    rightOfWayPriorityClaim: "NONE",
+    futureWeightingClaim: "NONE",
+    runtimeAuthorityClaim: "NONE"
+  };
+}
+
 function uncertaintyReasons(
   review: A1SpatialCommitmentReviewEvidence
 ): A1SpatialCommitmentDeliberationReason[] {
@@ -154,9 +271,11 @@ function fixedOption(
  * worth considering", not "this option is justified" and not "do this".
  */
 export function buildA1SpatialCommitmentDeliberationFrame(
-  review: A1SpatialCommitmentReviewEvidence
+  review: A1SpatialCommitmentReviewEvidence,
+  dossier: A1SpatialCommitmentRightOfWayEvidenceDossier | null = null
 ): A1SpatialCommitmentDeliberationFrame {
   validateReview(review);
+  validateRightOfWayDossier(review, dossier);
 
   const h1 = ownerRequestFutureId(review);
   const uncertainty = uncertaintyReasons(review);
@@ -269,6 +388,7 @@ export function buildA1SpatialCommitmentDeliberationFrame(
     sourceTick: review.sourceTick,
     commitmentSourceTick: review.commitmentSourceTick,
     ownerRequestFutureId: h1,
+    rightOfWayContext: rightOfWayContext(dossier),
     options,
     optionSetClaim: "FIXED_HYPOTHESES_FOR_RESEARCH_NOT_EXHAUSTIVE_POLICY",
     optionOrderingClaim: "NONE_ARRAY_ORDER_NOT_PREFERENCE",
