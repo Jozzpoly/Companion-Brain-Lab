@@ -7,6 +7,7 @@ import { buildA1SpatialCommitmentJointFutureSetEvidence } from "./a1-spatial-com
 import { buildA1SpatialCommitmentOwnerFlowImpactEvidence } from "./a1-spatial-commitment-owner-flow-impact";
 import { buildA1SpatialCommitmentPlayerFutureSetEvidence } from "./a1-spatial-commitment-player-future-set";
 import { buildA1SpatialCommitmentReviewEvidence } from "./a1-spatial-commitment-review";
+import { buildA1SpatialCommitmentDeliberationFrame } from "./a1-spatial-commitment-deliberation";
 import { buildA1SpatialCommitmentRightOfWayEvidenceDossier } from "./a1-spatial-commitment-right-of-way-dossier";
 import { LabWorld } from "../world/world";
 import type { MotionIntent, Vec2, WorldSnapshot } from "../world/types";
@@ -112,8 +113,26 @@ describe("A1 commitment right-of-way evidence dossier", () => {
         review,
         impact
       });
+      const deliberation = buildA1SpatialCommitmentDeliberationFrame(
+        review,
+        dossier
+      );
 
       expect(dossier.semanticStatus).toBe("COMPARABLE");
+      expect(deliberation.rightOfWayContext.status).toBe(
+        "SUPPLIED_H1_OWNER_FLOW_EVIDENCE"
+      );
+      expect(deliberation.rightOfWayContext.executionOnlyContactFrameCount)
+        .toBe(dossier.executionOnlyContactFrameCount);
+      expect(deliberation.rightOfWayContext.peakPlayerProgressDeficitVsHold)
+        .toBe(dossier.peakPlayerProgressDeficitVsHold);
+      expect(deliberation.rightOfWayContext.evidenceScopeClaim).toBe(
+        "H1_CAUSAL_OWNER_FLOW_PLUS_UNWEIGHTED_ALTERNATE_FUTURES"
+      );
+      expect(deliberation.rightOfWayContext.harmClaim).toBe("NONE");
+      expect(deliberation.rightOfWayContext.rightOfWayPriorityClaim).toBe("NONE");
+      expect(deliberation.rightOfWayContext.futureWeightingClaim).toBe("NONE");
+      expect(deliberation.rightOfWayContext.runtimeAuthorityClaim).toBe("NONE");
       expect(dossier.ownerRequestJointContactFrameCount).toBeGreaterThan(0);
       expect(dossier.executionOnlyContactFrameCount).toBeGreaterThan(0);
       expect(dossier.peakPlayerProgressDeficitVsHold).toBeGreaterThan(0.5);
@@ -230,6 +249,24 @@ describe("A1 commitment right-of-way evidence dossier", () => {
       expect(dossier.rightOfWayPriorityClaim).toBe("NONE");
       expect(dossier.yieldPolicyClaim).toBe("NONE");
 
+      const deliberation = buildA1SpatialCommitmentDeliberationFrame(
+        review,
+        dossier
+      );
+      expect(deliberation.rightOfWayContext.alternateJointContactFutureIds)
+        .toEqual(dossier.alternateJointContactFutureIds);
+      expect(deliberation.rightOfWayContext.alternateJointNoContactRehearsedFutureIds)
+        .toEqual(dossier.alternateJointNoContactRehearsedFutureIds);
+      expect(deliberation.rightOfWayContext.alternateJointCausalUnresolvedFutureIds)
+        .toEqual(dossier.alternateJointCausalUnresolvedFutureIds);
+      expect(deliberation.rightOfWayContext.alternateJointReferenceUnresolvedFutureIds)
+        .toEqual(dossier.alternateJointReferenceUnresolvedFutureIds);
+      expect(deliberation.futureProbabilityClaim).toBe("NONE");
+      expect(deliberation.rightOfWayPriorityClaim).toBe("NONE_NOT_ESTABLISHED");
+      expect(deliberation.decisionClaim).toBe("NONE_DELIBERATION_ONLY");
+      expect(deliberation.selectionClaim).toBe("NONE");
+      expect(deliberation.runtimeAuthorityClaim).toBe("NONE");
+
       console.info(`[A1_COMMITMENT_RIGHT_OF_WAY_DOSSIER_REVERSAL_FUTURES] ${JSON.stringify({
         sourceTick: dossier.sourceTick,
         horizonSeconds: dossier.horizonSeconds,
@@ -272,6 +309,22 @@ describe("A1 commitment right-of-way evidence dossier", () => {
       expect(dossier.rightOfWayPriorityClaim).toBe("NONE");
       expect(dossier.yieldPolicyClaim).toBe("NONE");
       expect(dossier.runtimeAuthorityClaim).toBe("NONE");
+
+      const deliberation = buildA1SpatialCommitmentDeliberationFrame(
+        review,
+        dossier
+      );
+      expect(deliberation.rightOfWayContext.status).toBe(
+        "SUPPLIED_H1_OWNER_FLOW_EVIDENCE"
+      );
+      expect(deliberation.rightOfWayContext.executionOnlyContactFrameCount).toBe(0);
+      expect(deliberation.rightOfWayContext.peakPlayerProgressDeficitVsHold)
+        .toBeCloseTo(0, 9);
+      expect(deliberation.rightOfWayContext.peakPlayerLateralDeltaMagnitudeVsHold)
+        .toBeCloseTo(0, 9);
+      expect(deliberation.rightOfWayContext.harmClaim).toBe("NONE");
+      expect(deliberation.rightOfWayContext.rightOfWayPriorityClaim).toBe("NONE");
+      expect(deliberation.rightOfWayContext.runtimeAuthorityClaim).toBe("NONE");
 
       console.info(`[A1_COMMITMENT_RIGHT_OF_WAY_DOSSIER_NO_CONTACT] ${JSON.stringify({
         sourceTick: dossier.sourceTick,
