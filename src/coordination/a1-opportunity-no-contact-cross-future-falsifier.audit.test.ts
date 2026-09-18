@@ -73,7 +73,7 @@ function situation(
 }
 
 describe("A1 no-contact evidence remains future-scoped", () => {
-  it("falsifies general safety when clean Owner H1 coexists with alternate-future reciprocal contact", async () => {
+  it("falsifies sampled anchor overlap as a proxy for reciprocal joint contact", async () => {
     const world = await LabWorld.create("open");
     try {
       const after = world.step([playerIntent(1, 0), companionHold()]);
@@ -130,16 +130,27 @@ describe("A1 no-contact evidence remains future-scoped", () => {
       const h2 = jointFutureSet.futures.find(
         (future) => future.futureFamily === "BODY_RESPONSE_CONTINUATION"
       );
+      const h2PlayerFuture = playerFutureSet.futures.find(
+        (future) => future.futureFamily === "BODY_RESPONSE_CONTINUATION"
+      );
 
       expect(h1?.status).toBe("REHEARSED");
       expect(h2?.status).toBe("REHEARSED");
+      expect(h2PlayerFuture?.interventionStatus).toBe("REHEARSABLE");
       if (!h1 || h1.status !== "REHEARSED") throw new Error("missing rehearsed H1");
       if (!h2 || h2.status !== "REHEARSED") throw new Error("missing rehearsed H2");
+      if (!h2PlayerFuture || h2PlayerFuture.interventionStatus !== "REHEARSABLE") {
+        throw new Error("missing rehearsable H2 player future");
+      }
 
+      expect(h2PlayerFuture.occupancy.status).toBe("SAMPLED_PLAYER_FUTURE_OVERLAP");
       expect(h1.contactFrameCount).toBe(0);
-      expect(h2.contactFrameCount).toBeGreaterThan(0);
+      expect(h2.contactFrameCount).toBe(0);
       expect(jointFutureSet.noContactRehearsedFutureIds).toContain(h1.futureId);
-      expect(jointFutureSet.contactFutureIds).toContain(h2.futureId);
+      expect(jointFutureSet.noContactRehearsedFutureIds).toContain(h2.futureId);
+      expect(jointFutureSet.contactFutureIds).not.toContain(h2.futureId);
+      expect(review.playerFutureOverlapIds).toContain(h2.futureId);
+      expect(review.jointNoContactRehearsedFutureIds).toContain(h2.futureId);
 
       expect(dossier.ownerRequestFutureId).toBe(h1.futureId);
       expect(dossier.ownerRequestJointContactFrameCount).toBe(0);
@@ -160,6 +171,7 @@ describe("A1 no-contact evidence remains future-scoped", () => {
         ownerRequestContactFrames: h1.contactFrameCount,
         alternateFutureId: h2.futureId,
         alternateFutureFamily: h2.futureFamily,
+        alternateAnchorOccupancyStatus: h2PlayerFuture.occupancy.status,
         alternateContactFrames: h2.contactFrameCount,
         jointContactFutureIds: jointFutureSet.contactFutureIds,
         jointNoContactRehearsedFutureIds: jointFutureSet.noContactRehearsedFutureIds,
@@ -169,7 +181,7 @@ describe("A1 no-contact evidence remains future-scoped", () => {
         yieldPolicyClaim: dossier.yieldPolicyClaim,
         runtimeAuthorityClaim: dossier.runtimeAuthorityClaim,
         interpretation:
-          "The same commitment is clean under the exact Owner-request future while a distinct rehearsed player future produces reciprocal contact. H1 no-contact therefore remains future-scoped evidence and cannot establish general safety, priority, yield or runtime authority."
+          "The BODY_RESPONSE future overlaps the sampled commitment anchor yet its same-physics joint rehearsal still produces zero reciprocal contact. Sampled anchor occupancy is therefore not a proxy for physical joint contact. No-contact remains future-scoped evidence and establishes no general safety, priority, yield or runtime authority."
       })}`);
     } finally {
       world.dispose();
