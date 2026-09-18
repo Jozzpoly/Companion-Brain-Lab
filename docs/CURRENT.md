@@ -127,7 +127,7 @@ Canonical map:
 
 It defines 10 player-observable dossiers, cross-cutting pathology detectors, mechanism coverage and a finite information-seeking campaign order.
 
-**OS-PREP-3 — Automated multi-beat pre-Owner campaign: ACTIVE · WAVE A**
+**OS-PREP-3 — Automated multi-beat pre-Owner campaign: ACTIVE · WAVE B**
 
 Execution plan:
 
@@ -163,13 +163,31 @@ Evidence document:
 
 - [OS_PREP_3_PH02_SEMANTIC_FRESHNESS_EVIDENCE.md](OS_PREP_3_PH02_SEMANTIC_FRESHNESS_EVIDENCE.md)
 
+Completed Wave A evidence:
+
+- **PH-03 slow pace / separation: CLOSED ENOUGH**;
+- base + sustained M1 qualified at `a45ed554...`, Validate #1326;
+- real Owner slow input is 0.2 magnitude = ~0.6 m/s;
+- participant-first M1 shows calm tracking, not catch-up/over-brake oscillation;
+- live companion asymptotically converges to ~0.598 m/s while the player stays ~0.600 m/s;
+- residual separation growth collapses to millimetres late in the run;
+- shadow PACE remains `SETTLED` with `desiredSpeed=1.65 m/s`, a **promotion hazard**, not current live authority;
+- do not tune live locomotion to match the current PACE shadow.
+
+Evidence document:
+
+- [OS_PREP_3_PH03_SLOW_PACE_EVIDENCE.md](OS_PREP_3_PH03_SLOW_PACE_EVIDENCE.md)
+
+Wave A is now closed enough for pre-Owner preparation.
+
 Current next target:
 
-- **PH-03 — pace and separation without chase pressure**;
-- first recover whether existing runtime/input can produce genuinely slow sustained player movement without a new apparatus;
-- expose slow-walk / settle / catch-up / release at the participant surface;
-- distinguish upstream desired pace from NATURAL smoothing and relationship-target churn;
-- do not tune PACE constants before the first product-facing falsifier.
+- **Wave B / PH-04 — player-flow cooperation and agency**;
+- first characterize the live head-on baseline participant-first, with no P2 intervention;
+- ask whether the player can simply continue forward or must negotiate around companion locomotion;
+- then open player-flow / joint-future causal evidence;
+- preserve right-of-way, yield and priority claims as `NONE` unless evidence earns otherwise;
+- only later use P2 as bounded A/B on an exact conflict state.
 
 Do not widen A1 authority as part of OS-PREP-3.
 

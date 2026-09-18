@@ -166,7 +166,13 @@ Do not tune constants between variants.
 
 ## 5. Wave A3 — PH-03 slow-walk/catch-up story
 
-**Status: ACTIVE**
+**Status: CLOSED ENOUGH**
+
+Qualified checkpoint: `a45ed554...` / Validate #1326.
+
+Result: live baseline converges calmly toward a 0.6 m/s player pace; no sustained chase oscillation was observed. Current shadow PACE simultaneously reports a 1.65 m/s SETTLED desired speed and therefore remains a promotion hazard, not a validated authority signal.
+
+See [OS_PREP_3_PH03_SLOW_PACE_EVIDENCE.md](OS_PREP_3_PH03_SLOW_PACE_EVIDENCE.md).
 
 PH-01 and PH-02 are closed enough to separate relationship-frame and stale-policy failures from the next pace question.
 
@@ -258,3 +264,41 @@ Wave A is closed enough when:
 - the current behavior's major open-space pathologies are named causally.
 
 Then route to Wave B or back to a local mechanism only if evidence earns the detour.
+
+
+---
+
+## 10. Wave B — player-flow cooperation
+
+**Status: ACTIVE · PH-04 BASELINE FIRST**
+
+Wave B begins only after Wave A open-space semantics, freshness and pace are causally legible.
+
+### PH-04 first story
+
+Use the existing head-on scenario with:
+
+- normal live SPATIAL companion;
+- NATURAL actuator;
+- A1 OFF in the participant Twin;
+- player holds the authored forward request;
+- no P2;
+- participant temporal capture first;
+- research Twin second with pass-through-only evidence.
+
+Primary participant question:
+
+> Can the player keep moving naturally, or does the companion force the human to stop, backtrack or steer around it despite available alternatives?
+
+Primary evidence:
+
+- player requested vs actual progress;
+- reciprocal contact duration;
+- player displacement/lateral deviation caused by the interaction;
+- companion command/outcome;
+- player-flow conflict state;
+- relationship target/route changes only where causally relevant.
+
+Do not convert contact into harm, priority, right-of-way or yield policy.
+
+P2 remains deferred until the baseline obstruction episode is understood.
