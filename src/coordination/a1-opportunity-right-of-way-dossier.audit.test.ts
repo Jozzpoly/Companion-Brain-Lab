@@ -133,6 +133,37 @@ describe("A1 commitment right-of-way evidence dossier", () => {
       expect(deliberation.rightOfWayContext.rightOfWayPriorityClaim).toBe("NONE");
       expect(deliberation.rightOfWayContext.futureWeightingClaim).toBe("NONE");
       expect(deliberation.rightOfWayContext.runtimeAuthorityClaim).toBe("NONE");
+      const headOnYield = deliberation.options.find(
+        (option) => option.option === "YIELD_TO_OWNER_FLOW"
+      );
+      const headOnDefer = deliberation.options.find(
+        (option) => option.option === "DEFER_EXECUTION"
+      );
+      const headOnMaintain = deliberation.options.find(
+        (option) => option.option === "MAINTAIN_COMMITMENT"
+      );
+      if (!headOnYield || !headOnDefer || !headOnMaintain) {
+        throw new Error("missing fixed deliberation options");
+      }
+      expect(headOnYield.reasonsForConsideration).toContain(
+        "OWNER_FLOW_ADDED_CONTACT_VS_HOLD"
+      );
+      expect(headOnYield.reasonsForConsideration).toContain(
+        "OWNER_FLOW_PROGRESS_DEFICIT_VS_HOLD"
+      );
+      expect(headOnYield.reasonsForConsideration).not.toContain(
+        "OWNER_FLOW_LATERAL_DEVIATION_VS_HOLD"
+      );
+      expect(headOnDefer.reasonsForConsideration).toContain(
+        "OWNER_FLOW_ADDED_CONTACT_VS_HOLD"
+      );
+      expect(headOnMaintain.reasonsAgainstPrematureConclusion).toContain(
+        "OWNER_FLOW_PROGRESS_DEFICIT_VS_HOLD"
+      );
+      expect(deliberation.decisionClaim).toBe("NONE_DELIBERATION_ONLY");
+      expect(deliberation.selectionClaim).toBe("NONE");
+      expect(deliberation.scalarScoreClaim).toBe("NONE");
+      expect(deliberation.runtimeAuthorityClaim).toBe("NONE");
       expect(dossier.ownerRequestJointContactFrameCount).toBeGreaterThan(0);
       expect(dossier.executionOnlyContactFrameCount).toBeGreaterThan(0);
       expect(dossier.peakPlayerProgressDeficitVsHold).toBeGreaterThan(0.5);
@@ -162,10 +193,30 @@ describe("A1 commitment right-of-way evidence dossier", () => {
         review,
         impact
       });
+      const deliberation = buildA1SpatialCommitmentDeliberationFrame(
+        review,
+        dossier
+      );
+      const obliqueYield = deliberation.options.find(
+        (option) => option.option === "YIELD_TO_OWNER_FLOW"
+      );
+      if (!obliqueYield) throw new Error("missing oblique yield option");
 
       expect(dossier.ownerRequestJointContactFrameCount).toBeGreaterThan(0);
       expect(dossier.peakPlayerProgressDeficitVsHold).toBeGreaterThan(0);
       expect(dossier.peakPlayerLateralDeltaMagnitudeVsHold).toBeGreaterThan(0.02);
+      expect(obliqueYield.reasonsForConsideration).toContain(
+        "OWNER_FLOW_ADDED_CONTACT_VS_HOLD"
+      );
+      expect(obliqueYield.reasonsForConsideration).toContain(
+        "OWNER_FLOW_PROGRESS_DEFICIT_VS_HOLD"
+      );
+      expect(obliqueYield.reasonsForConsideration).toContain(
+        "OWNER_FLOW_LATERAL_DEVIATION_VS_HOLD"
+      );
+      expect(deliberation.decisionClaim).toBe("NONE_DELIBERATION_ONLY");
+      expect(deliberation.selectionClaim).toBe("NONE");
+      expect(deliberation.runtimeAuthorityClaim).toBe("NONE");
       expect(dossier.evidenceAxisClaim).toBe(
         "SEMANTICS_CONTACT_AND_OWNER_FLOW_DIFFERENCE_REMAIN_SEPARATE"
       );
@@ -325,6 +376,26 @@ describe("A1 commitment right-of-way evidence dossier", () => {
       expect(deliberation.rightOfWayContext.harmClaim).toBe("NONE");
       expect(deliberation.rightOfWayContext.rightOfWayPriorityClaim).toBe("NONE");
       expect(deliberation.rightOfWayContext.runtimeAuthorityClaim).toBe("NONE");
+      for (const option of deliberation.options) {
+        expect(option.reasonsForConsideration).not.toContain(
+          "OWNER_FLOW_ADDED_CONTACT_VS_HOLD"
+        );
+        expect(option.reasonsForConsideration).not.toContain(
+          "OWNER_FLOW_PROGRESS_DEFICIT_VS_HOLD"
+        );
+        expect(option.reasonsForConsideration).not.toContain(
+          "OWNER_FLOW_LATERAL_DEVIATION_VS_HOLD"
+        );
+        expect(option.reasonsAgainstPrematureConclusion).not.toContain(
+          "OWNER_FLOW_ADDED_CONTACT_VS_HOLD"
+        );
+        expect(option.reasonsAgainstPrematureConclusion).not.toContain(
+          "OWNER_FLOW_PROGRESS_DEFICIT_VS_HOLD"
+        );
+        expect(option.reasonsAgainstPrematureConclusion).not.toContain(
+          "OWNER_FLOW_LATERAL_DEVIATION_VS_HOLD"
+        );
+      }
 
       console.info(`[A1_COMMITMENT_RIGHT_OF_WAY_DOSSIER_NO_CONTACT] ${JSON.stringify({
         sourceTick: dossier.sourceTick,
