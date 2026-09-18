@@ -132,4 +132,96 @@ describe("A1 fixed-command Owner-flow impact observation scan", () => {
       world.dispose();
     }
   });
+  it("reveals the first detectable nonzero signal as an onset boundary rather than a materiality threshold", async () => {
+    const world = await LabWorld.create("head-on");
+    try {
+      const snapshot = world.snapshot();
+      const situation = buildA1Situation({
+        snapshot,
+        playerIntent: playerIntent(1, 0),
+        playerCapability: world.actorMovementCapability("player"),
+        companionCapability: world.actorMovementCapability("companion"),
+        previousWorldStep: null
+      });
+      const observationHorizons = [
+        0.4,
+        25 / 60,
+        26 / 60,
+        27 / 60,
+        28 / 60,
+        29 / 60,
+        0.5
+      ];
+      const scan = buildA1SpatialCommitmentFixedCommandOwnerFlowImpactScan({
+        world,
+        fit: fit(snapshot, { x: 5.5, y: 4 }),
+        situation,
+        commandArrivalHypothesisSeconds: 0.75,
+        observationHorizons
+      });
+
+      const signal = (row: (typeof scan.rows)[number]) =>
+        row.impact.executionOnlyContactFrameCount > 0 ||
+        (row.impact.peakPlayerProgressDeficitVsHold ?? 0) > 0 ||
+        (row.impact.peakPlayerLateralDeltaMagnitudeVsHold ?? 0) > 0;
+
+      const firstSignalIndex = scan.rows.findIndex(signal);
+      expect(firstSignalIndex).toBeGreaterThan(0);
+      const beforeSignal = scan.rows[firstSignalIndex - 1]!;
+      const firstSignal = scan.rows[firstSignalIndex]!;
+      const later = scan.rows.at(-1)!;
+
+      expect(signal(beforeSignal)).toBe(false);
+      expect(signal(firstSignal)).toBe(true);
+      expect(later.impact.executionOnlyContactFrameCount).toBeGreaterThanOrEqual(
+        firstSignal.impact.executionOnlyContactFrameCount
+      );
+      expect(later.impact.peakPlayerProgressDeficitVsHold ?? 0).toBeGreaterThanOrEqual(
+        firstSignal.impact.peakPlayerProgressDeficitVsHold ?? 0
+      );
+      expect(
+        later.impact.executionOnlyContactFrameCount >
+          firstSignal.impact.executionOnlyContactFrameCount ||
+        (later.impact.peakPlayerProgressDeficitVsHold ?? 0) >
+          (firstSignal.impact.peakPlayerProgressDeficitVsHold ?? 0)
+      ).toBe(true);
+
+      for (const row of scan.rows) {
+        expect(row.fixedCompanionCommandVelocity).toEqual(
+          scan.fixedCompanionCommandVelocity
+        );
+        expect(row.impact.harmClaim).toBe("NONE_MEASURED_DIFFERENCE_ONLY");
+        expect(row.impact.rightOfWayPriorityClaim).toBe("NONE");
+        expect(row.impact.yieldPolicyClaim).toBe("NONE");
+      }
+      expect(scan.impactClaim).toBe(
+        "FRAMEWISE_MEASURED_DIFFERENCE_ONLY_NO_HARM_THRESHOLD"
+      );
+
+      console.info(`[A1_OWNER_FLOW_ONSET_CONTINUUM] ${JSON.stringify({
+        sourceTick: scan.sourceTick,
+        fixedCompanionCommandVelocity: scan.fixedCompanionCommandVelocity,
+        rows: scan.rows.map((row) => ({
+          observationHorizonSeconds: row.observationHorizonSeconds,
+          executionOnlyContactFrameCount:
+            row.impact.executionOnlyContactFrameCount,
+          peakPlayerProgressDeficitVsHold:
+            row.impact.peakPlayerProgressDeficitVsHold,
+          peakPlayerLateralDeltaMagnitudeVsHold:
+            row.impact.peakPlayerLateralDeltaMagnitudeVsHold
+        })),
+        firstSignalIndex,
+        firstSignalHorizonSeconds: firstSignal.observationHorizonSeconds,
+        impactClaim: scan.impactClaim,
+        rightOfWayPriorityClaim: scan.rightOfWayPriorityClaim,
+        yieldPolicyClaim: scan.yieldPolicyClaim,
+        interpretation:
+          "With the executable command held fixed, the measured Owner-flow signal appears at a temporal onset boundary and then accumulates. The first nonzero observation is evidence presence, not a materiality, harm, priority or yield threshold."
+      })}`);
+    } finally {
+      world.dispose();
+    }
+  });
+
+
 });
