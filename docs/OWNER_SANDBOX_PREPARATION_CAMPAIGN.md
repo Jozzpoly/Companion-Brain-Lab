@@ -221,7 +221,7 @@ Exit gate:
 
 ### OS-PREP-2 — Claim → observable phenomenon map
 
-**Status: ACTIVE**
+**Status: PASS / CLOSED ENOUGH**
 
 Canonical working map:
 
@@ -298,7 +298,11 @@ Exit gate:
 
 ### OS-PREP-3 — Automated multi-beat pre-Owner campaign
 
-**Status: PLANNED**
+**Status: ACTIVE · WAVE A**
+
+Execution plan:
+
+- [OS_PREP_3_MULTI_BEAT_CAMPAIGN_PLAN.md](OS_PREP_3_MULTI_BEAT_CAMPAIGN_PLAN.md)
 
 Purpose:
 

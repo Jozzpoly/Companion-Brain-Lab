@@ -119,17 +119,29 @@ Preserved execution/provenance plan:
 
 - [OS_PREP_1_EVIDENCE_INTEGRITY_PLAN.md](OS_PREP_1_EVIDENCE_INTEGRITY_PLAN.md)
 
-**OS-PREP-2 — Claim → observable phenomenon map: ACTIVE**
+**OS-PREP-2 — Claim → observable phenomenon map: PASS / CLOSED ENOUGH**
 
-Current target:
+Canonical map:
 
-- convert the accumulated movement/cooperation mechanisms and historical claims into a finite set of player-observable teammate phenomena;
-- give each phenomenon a blind observable, rival explanations, falsifier, minimum scenario, required causal evidence and explicit claim limit;
-- prioritize phenomena that materially affect the first Owner Sandbox: relationship coherence, stop/reversal freshness, pace/separation, player-flow cooperation, chokepoints, close-contact recovery, topology/side persistence, multi-beat continuity and bounded P2 intervention value;
-- use historical S1/CCC/A1 evidence as donors, not as automatically true product claims;
-- after the map is strong enough, route into OS-PREP-3 automated multi-beat falsification rather than more instrumentation by default.
+- [OS_PREP_2_PHENOMENON_MAP.md](OS_PREP_2_PHENOMENON_MAP.md)
 
-The campaign document defines acceptance and downstream phases.
+It defines 10 player-observable dossiers, cross-cutting pathology detectors, mechanism coverage and a finite information-seeking campaign order.
+
+**OS-PREP-3 — Automated multi-beat pre-Owner campaign: ACTIVE · WAVE A**
+
+Execution plan:
+
+- [OS_PREP_3_MULTI_BEAT_CAMPAIGN_PLAN.md](OS_PREP_3_MULTI_BEAT_CAMPAIGN_PLAN.md)
+
+Current first target:
+
+- PH-01 open-space turn/reversal story;
+- participant Twin first, research Twin second;
+- identical scripted Owner input schedule and World-outcome non-interference check;
+- expose target/frame discontinuity, fake side persistence and smooth-rendering illusions before adding topology/contact confounders;
+- then choose the smallest metamorphic perturbation that kills the strongest surviving rival explanation.
+
+Do not widen A1 authority as part of OS-PREP-3.
 
 ## 7. Owner judgement boundary
 

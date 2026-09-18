@@ -1,6 +1,6 @@
 # OS-PREP-2 — Claim → Observable Phenomenon Map
 
-Status: **ACTIVE PRODUCT-EVIDENCE MAP**
+Status: **PASS / CLOSED ENOUGH · PRODUCT-EVIDENCE MAP**
 Date: **2026-09-18**
 Parent campaign: [OWNER_SANDBOX_PREPARATION_CAMPAIGN.md](OWNER_SANDBOX_PREPARATION_CAMPAIGN.md)
 Execution entrypoint: [CURRENT.md](CURRENT.md)
@@ -843,6 +843,16 @@ Reason:
 
 11. PH-09 exact control-vs-P2 Twin;
 12. repeat only where an earlier phenomenon gives a concrete reason.
+
+### Wave E — Free-run pathology soak
+
+13. longer participant-first free movement without a scripted “correct” solution;
+14. apply CP-1 through CP-6 over the whole sequence;
+15. only after the blind behavioral read, inspect causal evidence around marked moments.
+
+Reason:
+
+> bounded scenarios can miss drift, rhythmic oscillation, sticky recovery and repeated local-good / sequence-bad behavior.
 
 Do **not** run a Cartesian product of every mode/horizon/proposal.
 
