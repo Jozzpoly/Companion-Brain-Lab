@@ -8,6 +8,15 @@ on:
       - "src/debug/relationship-commitment-shadow-browser-bridge.ts"
       - "src/coordination/a1-spatial-commitment-evidence.ts"
       - "src/coordination/a1-spatial-commitment-reference.ts"
+      - "src/coordination/a1-spatial-commitment-material.ts"
+      - "src/coordination/a1-spatial-commitment-actor-occupancy.ts"
+      - "src/coordination/a1-spatial-commitment-player-future-occupancy.ts"
+      - "src/coordination/a1-spatial-commitment-player-future-set.ts"
+      - "src/coordination/a1-spatial-commitment-review.ts"
+      - "src/coordination/a1-player-future-hypotheses.ts"
+      - "src/coordination/a1-player-future-interventions.ts"
+      - "src/coordination/a1-player-future-rehearsal.ts"
+      - "src/coordination/a1-situation.ts"
       - "src/coordination/a1-relationship-orientation.ts"
       - "src/coordination/a1-relationship-projection.ts"
       - "src/coordination/a1-relationship-utility.ts"
@@ -15,6 +24,7 @@ on:
       - "src/app/r1-lab-scene.ts"
       - "src/main.ts"
       - "scripts/a1-commitment-live-browser-specimen.mjs"
+      - "scripts/a1-commitment-future-review-live-browser-specimen.mjs"
       - ".github/workflows/a1-commitment-live.yml"
   workflow_dispatch:
 
@@ -44,5 +54,15 @@ jobs:
         with:
           name: a1-commitment-live-${{ github.sha }}
           path: artifacts/a1-commitment-live
+          if-no-files-found: error
+          retention-days: 7
+      - name: Capture live commitment future review
+        run: node scripts/a1-commitment-future-review-live-browser-specimen.mjs
+      - name: Upload live commitment future review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-commitment-future-review-live-${{ github.sha }}
+          path: artifacts/a1-commitment-future-review-live
           if-no-files-found: error
           retention-days: 7

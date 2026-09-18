@@ -1,5 +1,24 @@
 import type { RelationalDecision } from "../brain/relational-positioning";
 import { buildA1AccessibilityEvidence } from "../coordination/a1-accessibility-fragments";
+import { buildA1PlayerFutureHypotheses } from "../coordination/a1-player-future-hypotheses";
+import { buildA1PlayerFutureInterventionPlan } from "../coordination/a1-player-future-interventions";
+import { buildA1Situation } from "../coordination/a1-situation";
+import {
+  buildA1SpatialCommitmentActorOccupancyEvidence,
+  type A1SpatialCommitmentActorOccupancyEvidence
+} from "../coordination/a1-spatial-commitment-actor-occupancy";
+import {
+  buildA1SpatialCommitmentMaterialEvidence,
+  type A1SpatialCommitmentMaterialEvidence
+} from "../coordination/a1-spatial-commitment-material";
+import {
+  buildA1SpatialCommitmentPlayerFutureSetEvidence,
+  type A1SpatialCommitmentPlayerFutureSetEvidence
+} from "../coordination/a1-spatial-commitment-player-future-set";
+import {
+  buildA1SpatialCommitmentReviewEvidence,
+  type A1SpatialCommitmentReviewEvidence
+} from "../coordination/a1-spatial-commitment-review";
 import { A1AuthorityRuntime } from "../coordination/a1-authority-runtime";
 import type { A1RelationshipOrientationEvidence } from "../coordination/a1-relationship-orientation";
 import { projectA1RelationshipSemanticField } from "../coordination/a1-relationship-projection";
@@ -67,6 +86,20 @@ export interface RelationshipCommitmentShadowFrame {
   fit: A1SpatialCommitmentFitEvidence;
 }
 
+export interface RelationshipCommitmentShadowReviewEvidence {
+  requestId: number;
+  tick: number;
+  horizonSeconds: number;
+  a1Variant: ReturnType<A1AuthorityRuntime["debugState"]>["variant"];
+  baselinePlayerIntent: MotionIntent;
+  baselineCompanionIntent: MotionIntent | null;
+  material: A1SpatialCommitmentMaterialEvidence;
+  actorOccupancy: A1SpatialCommitmentActorOccupancyEvidence;
+  playerFutureSet: A1SpatialCommitmentPlayerFutureSetEvidence;
+  review: A1SpatialCommitmentReviewEvidence;
+  authority: "NONE_QUERY_ONLY_NO_INTENT_MUTATION";
+}
+
 export interface RelationshipCommitmentShadowSnapshot {
   schema: typeof SCHEMA;
   authority: "NONE_QUERY_ONLY_NO_INTENT_MUTATION";
@@ -74,6 +107,10 @@ export interface RelationshipCommitmentShadowSnapshot {
   retainedReferenceEnabled: boolean;
   source: CommitmentSource | null;
   frameCount: number;
+  pendingReviewRequestId: number | null;
+  reviewRequestCount: number;
+  completedReviewCount: number;
+  latestReview: RelationshipCommitmentShadowReviewEvidence | null;
   lastError: string | null;
   frames: RelationshipCommitmentShadowFrame[];
 }
@@ -83,6 +120,7 @@ export interface RelationshipCommitmentShadowBridge {
   readonly schema: typeof SCHEMA;
   armNextFrame(referenceFrame: A1SpatialCommitmentReferenceFrame): void;
   setRetainedReferenceEnabled(enabled: boolean): void;
+  requestReview(horizonSeconds: number): number;
   clear(): void;
   snapshot(): RelationshipCommitmentShadowSnapshot;
   latest(): RelationshipCommitmentShadowFrame | null;
@@ -188,6 +226,19 @@ function cloneFrame(value: RelationshipCommitmentShadowFrame): RelationshipCommi
   return structuredClone(value);
 }
 
+function cloneReview(
+  value: RelationshipCommitmentShadowReviewEvidence
+): RelationshipCommitmentShadowReviewEvidence {
+  return structuredClone(value);
+}
+
+function reviewHorizon(value: number): number {
+  if (!Number.isFinite(value) || value <= 0 || value > 2) {
+    throw new Error("Commitment shadow review horizon must be finite, positive and <= 2 seconds.");
+  }
+  return value;
+}
+
 export function installRelationshipCommitmentShadowBrowserBridge(
   search: string,
   scenePrototype: object
@@ -210,6 +261,11 @@ export function installRelationshipCommitmentShadowBrowserBridge(
   let lastObservedTick: number | null = null;
   let lastScenarioId: WorldSnapshot["scenarioId"] | null = null;
   let lastError: string | null = null;
+  let nextReviewRequestId = 1;
+  let pendingReview: { requestId: number; horizonSeconds: number } | null = null;
+  let reviewRequestCount = 0;
+  let completedReviewCount = 0;
+  let latestReview: RelationshipCommitmentShadowReviewEvidence | null = null;
 
   const resetCommitment = (clearFrames: boolean): void => {
     armedReferenceFrame = null;
@@ -218,6 +274,8 @@ export function installRelationshipCommitmentShadowBrowserBridge(
     lastObservedTick = null;
     lastScenarioId = null;
     lastError = null;
+    pendingReview = null;
+    latestReview = null;
     if (clearFrames) frames.splice(0, frames.length);
   };
 
@@ -308,6 +366,70 @@ export function installRelationshipCommitmentShadowBrowserBridge(
         fit: structuredClone(fit)
       });
       if (frames.length > CAPACITY) frames.splice(0, frames.length - CAPACITY);
+
+      const reviewRequest = pendingReview;
+      if (reviewRequest) {
+        pendingReview = null;
+        const playerIntent =
+          result.intents.find((intent) => intent.actorId === "player") ?? null;
+        if (!playerIntent) {
+          throw new Error("Commitment shadow review requires the live same-step player intent.");
+        }
+        const material = buildA1SpatialCommitmentMaterialEvidence({
+          fit,
+          snapshot: before,
+          occupancy: (center, radius) => world.staticCircleOccupancy(center, radius),
+          query: (from, to, radius, options) =>
+            world.staticCircleTraversal(from, to, radius, options)
+        });
+        const actorOccupancy = buildA1SpatialCommitmentActorOccupancyEvidence({
+          fit,
+          snapshot: before
+        });
+        const situation = buildA1Situation({
+          snapshot: before,
+          playerIntent,
+          playerCapability: world.actorMovementCapability("player"),
+          companionCapability: world.actorMovementCapability("companion"),
+          previousWorldStep: before.tick === 0
+            ? null
+            : world.latestAuthorityA0StepEvidence()
+        });
+        const futures = buildA1PlayerFutureHypotheses({
+          situation,
+          horizonSeconds: reviewRequest.horizonSeconds,
+          staticTraversal: (from, to, radius, options) =>
+            world.staticCircleTraversal(from, to, radius, options)
+        });
+        const plan = buildA1PlayerFutureInterventionPlan(futures);
+        const playerFutureSet = buildA1SpatialCommitmentPlayerFutureSetEvidence({
+          world,
+          fit,
+          snapshot: before,
+          plan
+        });
+        const review = buildA1SpatialCommitmentReviewEvidence(
+          fit,
+          material,
+          actorOccupancy,
+          playerFutureSet
+        );
+        latestReview = {
+          requestId: reviewRequest.requestId,
+          tick: before.tick,
+          horizonSeconds: reviewRequest.horizonSeconds,
+          a1Variant: this.a1Authority.debugState().variant,
+          baselinePlayerIntent: cloneIntent(playerIntent)!,
+          baselineCompanionIntent: cloneIntent(companionIntent),
+          material: structuredClone(material),
+          actorOccupancy: structuredClone(actorOccupancy),
+          playerFutureSet: structuredClone(playerFutureSet),
+          review: structuredClone(review),
+          authority: "NONE_QUERY_ONLY_NO_INTENT_MUTATION"
+        };
+        completedReviewCount += 1;
+      }
+
       lastError = null;
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
@@ -324,6 +446,10 @@ export function installRelationshipCommitmentShadowBrowserBridge(
     retainedReferenceEnabled: retainLastSemanticReference,
     source: cloneSource(source),
     frameCount: frames.length,
+    pendingReviewRequestId: pendingReview?.requestId ?? null,
+    reviewRequestCount,
+    completedReviewCount,
+    latestReview: latestReview ? cloneReview(latestReview) : null,
     lastError,
     frames: frames.map(cloneFrame)
   });
@@ -344,6 +470,20 @@ export function installRelationshipCommitmentShadowBrowserBridge(
     },
     setRetainedReferenceEnabled: (enabled) => {
       retainLastSemanticReference = enabled;
+    },
+    requestReview: (horizonSeconds) => {
+      if (!source) {
+        throw new Error("Commitment shadow review requires an established commitment source.");
+      }
+      if (pendingReview) return pendingReview.requestId;
+      const requestId = nextReviewRequestId;
+      nextReviewRequestId += 1;
+      pendingReview = {
+        requestId,
+        horizonSeconds: reviewHorizon(horizonSeconds)
+      };
+      reviewRequestCount += 1;
+      return requestId;
     },
     clear: () => {
       retainLastSemanticReference = false;
