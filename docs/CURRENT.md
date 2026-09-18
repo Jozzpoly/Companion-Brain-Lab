@@ -133,13 +133,25 @@ Execution plan:
 
 - [OS_PREP_3_MULTI_BEAT_CAMPAIGN_PLAN.md](OS_PREP_3_MULTI_BEAT_CAMPAIGN_PLAN.md)
 
-Current first target:
+Current evidence:
 
-- PH-01 open-space turn/reversal story;
-- participant Twin first, research Twin second;
-- identical scripted Owner input schedule and World-outcome non-interference check;
-- expose target/frame discontinuity, fake side persistence and smooth-rendering illusions before adding topology/contact confounders;
-- then choose the smallest metamorphic perturbation that kills the strongest surviving rival explanation.
+- PH-01 base story qualified at `610c0c7f...`, Validate #1310;
+- participant/research Twins are exactly non-interfering at the World outcome layer;
+- t36 90° turn: same `left` label, **2.273 m** world-target jump;
+- downstream temporal realization turns that abrupt objective change into the visually smooth broad arc seen participant-first;
+- t90 reversal: `left -> right` label change with **0 m** target displacement;
+- slot label is therefore not a valid identity for world-space intention.
+
+Evidence document:
+
+- [OS_PREP_3_PH01_OPEN_TURN_REVERSAL_EVIDENCE.md](OS_PREP_3_PH01_OPEN_TURN_REVERSAL_EVIDENCE.md)
+
+Current next target:
+
+- **PH-01 Mirror M1**: `+X -> -Y -> brief stop -> +Y -> neutral`;
+- participant-first Twin, then research Twin;
+- test whether the target jump/body arc mirrors structurally or exposes side/tie asymmetry;
+- no behavior tuning before this falsifier.
 
 Do not widen A1 authority as part of OS-PREP-3.
 
