@@ -99,6 +99,71 @@ function evidence(
 }
 
 describe("A1 commitment review keeps anchor conflict distinct from joint interference", () => {
+  it("preserves every source future explicitly when companion direct execution is statically blocked", async () => {
+    const world = await LabWorld.create("pillar");
+    try {
+      const before = world.snapshot();
+      const currentFit = fit(before, { x: 4.5, y: 4 });
+      const currentSituation = situation(world, before, playerIntent(-1, 0));
+      const { playerFutureSet, jointFutureSet } = evidence(
+        world,
+        currentFit,
+        currentSituation,
+        1
+      );
+      const review = buildA1SpatialCommitmentReviewEvidence(
+        currentFit,
+        null,
+        null,
+        playerFutureSet,
+        jointFutureSet
+      );
+
+      expect(jointFutureSet.status).toBe("COMPANION_DIRECT_STATIC_BLOCKED");
+      expect(jointFutureSet.staticQualification?.g2.status).toBe(
+        "FAIL_STATIC_HARD_LEGALITY"
+      );
+      expect(jointFutureSet.futures.map((future) => future.futureId)).toEqual(
+        playerFutureSet.futures.map((future) => future.futureId)
+      );
+
+      const sourceRehearsableIds = playerFutureSet.futures
+        .filter((future) => future.interventionStatus === "REHEARSABLE")
+        .map((future) => future.futureId);
+      expect(sourceRehearsableIds.length).toBeGreaterThan(0);
+      expect(jointFutureSet.staticBlockedFutureIds).toEqual(sourceRehearsableIds);
+      expect(review.jointStaticBlockedFutureIds).toEqual(sourceRehearsableIds);
+      expect(jointFutureSet.contactFutureIds).toEqual([]);
+      expect(jointFutureSet.noContactRehearsedFutureIds).toEqual([]);
+      for (const id of sourceRehearsableIds) {
+        const blocked = jointFutureSet.futures.find((future) => future.futureId === id);
+        expect(blocked?.status).toBe("COMPANION_DIRECT_STATIC_BLOCKED");
+      }
+      expect(review.jointNoContactSafetyClaim).toBe("NONE");
+      expect(review.jointCooperationPolicyClaim).toBe("NONE");
+      expect(review.decisionClaim).toBe("NONE_EVIDENCE_ONLY");
+      expect(review.runtimeAuthorityClaim).toBe("NONE");
+
+      console.info(`[A1_COMMITMENT_JOINT_STATIC_BLOCK_COMPLETENESS] ${JSON.stringify({
+        sourceTick: jointFutureSet.sourceTick,
+        horizonSeconds: jointFutureSet.horizonSeconds,
+        sourceFutureIds: playerFutureSet.futures.map((future) => future.futureId),
+        jointFutureStatuses: jointFutureSet.futures.map((future) => ({
+          futureId: future.futureId,
+          status: future.status
+        })),
+        staticBlockedFutureIds: jointFutureSet.staticBlockedFutureIds,
+        causalUnresolvedFutureIds: jointFutureSet.causalUnresolvedFutureIds,
+        contactFutureIds: jointFutureSet.contactFutureIds,
+        noContactRehearsedFutureIds: jointFutureSet.noContactRehearsedFutureIds,
+        g2: jointFutureSet.staticQualification?.g2 ?? null,
+        interpretation: "Static blockage of the companion direct realization no longer erases rehearsable player futures. Each remains explicit as blocked-before-joint-rehearsal and is not mislabeled as no-contact or safety evidence."
+      })}`);
+    } finally {
+      world.dispose();
+    }
+  });
+
   it("keeps H1 anchor overlap visible while preserving zero joint contact when companion cannot reach in time", async () => {
     const world = await LabWorld.create("open");
     try {

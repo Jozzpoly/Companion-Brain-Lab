@@ -50,10 +50,27 @@ export interface A1SpatialCommitmentJointFutureReferenceUnresolvedEntry {
   anchorOccupancyStatus: "REFERENCE_UNRESOLVED";
 }
 
+export interface A1SpatialCommitmentJointFutureStaticBlockedEntry {
+  futureId: string;
+  futureFamily: A1SpatialCommitmentPlayerFutureSetEntry["futureFamily"];
+  status: "COMPANION_DIRECT_STATIC_BLOCKED";
+  anchorOccupancyStatus:
+    | "SAMPLED_PLAYER_FUTURE_OVERLAP"
+    | "NO_SAMPLED_PLAYER_FUTURE_OVERLAP"
+    | "REFERENCE_UNRESOLVED";
+  staticBlockStatus: Exclude<
+    A1DirectStaticQualification["g2"]["status"],
+    "PASS_STATIC_HARD_LEGALITY"
+  >;
+  staticBlockReason: string;
+  blockerLabel: string | null;
+}
+
 export type A1SpatialCommitmentJointFutureEntry =
   | A1SpatialCommitmentJointFutureRehearsedEntry
   | A1SpatialCommitmentJointFutureCausalUnresolvedEntry
-  | A1SpatialCommitmentJointFutureReferenceUnresolvedEntry;
+  | A1SpatialCommitmentJointFutureReferenceUnresolvedEntry
+  | A1SpatialCommitmentJointFutureStaticBlockedEntry;
 
 export interface A1SpatialCommitmentJointFutureSetEvidence {
   kind: "A1_SPATIAL_COMMITMENT_JOINT_FUTURE_SET_EVIDENCE";
@@ -68,6 +85,7 @@ export interface A1SpatialCommitmentJointFutureSetEvidence {
   noContactRehearsedFutureIds: readonly string[];
   causalUnresolvedFutureIds: readonly string[];
   referenceUnresolvedFutureIds: readonly string[];
+  staticBlockedFutureIds: readonly string[];
   contactEvidenceClaim: "SAME_PHYSICS_RECIPROCAL_CONTACT_FRAMES_ONLY";
   noContactSafetyClaim: "NONE_NO_CONTACT_DOES_NOT_ESTABLISH_GENERAL_SAFETY";
   anchorOccupancyEquivalenceClaim: "NONE_ANCHOR_OVERLAP_IS_NOT_JOINT_CONTACT";
@@ -165,7 +183,8 @@ export function buildA1SpatialCommitmentJointFutureSetEvidence(input: {
       contactFutureIds: [],
       noContactRehearsedFutureIds: [],
       causalUnresolvedFutureIds: futures.filter((value) => value.status === "CAUSAL_UNRESOLVED").map((value) => value.futureId),
-      referenceUnresolvedFutureIds: futures.filter((value) => value.status === "REFERENCE_UNRESOLVED").map((value) => value.futureId)
+      referenceUnresolvedFutureIds: futures.filter((value) => value.status === "REFERENCE_UNRESOLVED").map((value) => value.futureId),
+      staticBlockedFutureIds: []
     };
   }
 
@@ -177,15 +196,26 @@ export function buildA1SpatialCommitmentJointFutureSetEvidence(input: {
   });
 
   if (qualification.g2.status !== "PASS_STATIC_HARD_LEGALITY") {
-    const futures: A1SpatialCommitmentJointFutureEntry[] = input.playerFutureSet.futures
-      .filter((future) => future.interventionStatus === "UNRESOLVED")
-      .map((future) => ({
-        futureId: future.futureId,
-        futureFamily: future.futureFamily,
-        status: "CAUSAL_UNRESOLVED" as const,
-        unresolvedReason: future.unresolvedReason,
-        anchorOccupancyStatus: null
-      }));
+    const futures: A1SpatialCommitmentJointFutureEntry[] =
+      input.playerFutureSet.futures.map((future) =>
+        future.interventionStatus === "UNRESOLVED"
+          ? {
+              futureId: future.futureId,
+              futureFamily: future.futureFamily,
+              status: "CAUSAL_UNRESOLVED" as const,
+              unresolvedReason: future.unresolvedReason,
+              anchorOccupancyStatus: null
+            }
+          : {
+              futureId: future.futureId,
+              futureFamily: future.futureFamily,
+              status: "COMPANION_DIRECT_STATIC_BLOCKED" as const,
+              anchorOccupancyStatus: future.occupancy.status,
+              staticBlockStatus: qualification.g2.status,
+              staticBlockReason: qualification.g2.reason,
+              blockerLabel: qualification.g2.blockerLabel
+            }
+      );
     return {
       ...common,
       status: "COMPANION_DIRECT_STATIC_BLOCKED",
@@ -193,8 +223,13 @@ export function buildA1SpatialCommitmentJointFutureSetEvidence(input: {
       futures,
       contactFutureIds: [],
       noContactRehearsedFutureIds: [],
-      causalUnresolvedFutureIds: futures.map((value) => value.futureId),
-      referenceUnresolvedFutureIds: []
+      causalUnresolvedFutureIds: futures
+        .filter((value) => value.status === "CAUSAL_UNRESOLVED")
+        .map((value) => value.futureId),
+      referenceUnresolvedFutureIds: [],
+      staticBlockedFutureIds: futures
+        .filter((value) => value.status === "COMPANION_DIRECT_STATIC_BLOCKED")
+        .map((value) => value.futureId)
     };
   }
 
@@ -289,5 +324,6 @@ export function buildA1SpatialCommitmentJointFutureSetEvidence(input: {
       .filter((value) => value.status === "CAUSAL_UNRESOLVED")
       .map((value) => value.futureId),
     referenceUnresolvedFutureIds: [],
+    staticBlockedFutureIds: [],
   };
 }

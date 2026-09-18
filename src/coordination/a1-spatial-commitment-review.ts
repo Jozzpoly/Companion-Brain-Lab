@@ -59,6 +59,7 @@ export interface A1SpatialCommitmentReviewEvidence {
   jointNoContactRehearsedFutureIds: readonly string[];
   jointReferenceUnresolvedFutureIds: readonly string[];
   jointCausalUnresolvedFutureIds: readonly string[];
+  jointStaticBlockedFutureIds: readonly string[];
   jointContactEvidenceClaim: "NOT_SUPPLIED" | "SAME_PHYSICS_RECIPROCAL_CONTACT_FRAMES_ONLY";
   jointNoContactSafetyClaim: "NONE";
   jointAnchorOccupancyEquivalenceClaim: "NONE";
@@ -374,6 +375,47 @@ function validateJointFutureSet(
   }
 
   if (
+    jointIds.length !== sourceIds.length ||
+    new Set(jointIds).size !== jointIds.length ||
+    sourceIds.some((id) => !jointIds.includes(id))
+  ) {
+    throw new Error(
+      "A1 commitment review requires one explicit joint-future entry for every source player future."
+    );
+  }
+
+  const expectedContactIds = joint.futures
+    .filter((value) => value.status === "REHEARSED" && value.contactFrameCount > 0)
+    .map((value) => value.futureId);
+  const expectedNoContactIds = joint.futures
+    .filter((value) => value.status === "REHEARSED" && value.contactFrameCount === 0)
+    .map((value) => value.futureId);
+  const expectedCausalUnresolvedIds = joint.futures
+    .filter((value) => value.status === "CAUSAL_UNRESOLVED")
+    .map((value) => value.futureId);
+  const expectedReferenceUnresolvedIds = joint.futures
+    .filter((value) => value.status === "REFERENCE_UNRESOLVED")
+    .map((value) => value.futureId);
+  const expectedStaticBlockedIds = joint.futures
+    .filter((value) => value.status === "COMPANION_DIRECT_STATIC_BLOCKED")
+    .map((value) => value.futureId);
+  const sameIds = (actual: readonly string[], expected: readonly string[]) =>
+    actual.length === expected.length &&
+    actual.every((id) => expected.includes(id));
+
+  if (
+    !sameIds(joint.contactFutureIds, expectedContactIds) ||
+    !sameIds(joint.noContactRehearsedFutureIds, expectedNoContactIds) ||
+    !sameIds(joint.causalUnresolvedFutureIds, expectedCausalUnresolvedIds) ||
+    !sameIds(joint.referenceUnresolvedFutureIds, expectedReferenceUnresolvedIds) ||
+    !sameIds(joint.staticBlockedFutureIds, expectedStaticBlockedIds)
+  ) {
+    throw new Error(
+      "A1 commitment review requires complete, non-ambiguous joint-future status classification."
+    );
+  }
+
+  if (
     joint.status === "REFERENCE_UNRESOLVED" &&
     fit.referenceResolutionStatus !== "UNRESOLVED"
   ) {
@@ -523,6 +565,9 @@ export function buildA1SpatialCommitmentReviewEvidence(
       : [],
     jointCausalUnresolvedFutureIds: jointFutureSet
       ? [...jointFutureSet.causalUnresolvedFutureIds]
+      : [],
+    jointStaticBlockedFutureIds: jointFutureSet
+      ? [...jointFutureSet.staticBlockedFutureIds]
       : [],
     jointContactEvidenceClaim: jointFutureSet
       ? "SAME_PHYSICS_RECIPROCAL_CONTACT_FRAMES_ONLY"
