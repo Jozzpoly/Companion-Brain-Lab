@@ -10,6 +10,27 @@ import type { LabWorld } from "../world/world";
 
 const EPSILON = 1e-9;
 
+export type A1SpatialCommitmentOwnerFlowContactRelation =
+  | "NEITHER"
+  | "BOTH"
+  | "EXECUTION_ONLY"
+  | "HOLD_ONLY";
+
+export interface A1SpatialCommitmentOwnerFlowImpactFrame {
+  sampleOrdinal: number;
+  stepIndex: number;
+  timeSeconds: number;
+  holdPlayerPosition: Vec2;
+  commitmentExecutionPlayerPosition: Vec2;
+  playerPositionDeltaVsHold: Vec2;
+  playerProgressDeltaVsHold: number | null;
+  playerProgressDeficitVsHold: number | null;
+  playerLateralDeltaMagnitudeVsHold: number | null;
+  holdReciprocalContact: boolean;
+  commitmentExecutionReciprocalContact: boolean;
+  contactRelation: A1SpatialCommitmentOwnerFlowContactRelation;
+}
+
 export interface A1SpatialCommitmentOwnerFlowImpactEvidence {
   kind: "A1_SPATIAL_COMMITMENT_OWNER_FLOW_IMPACT_EVIDENCE";
   sourceTick: number;
@@ -19,18 +40,36 @@ export interface A1SpatialCommitmentOwnerFlowImpactEvidence {
   ownerRequestVelocity: Vec2;
   companionCommitmentCommandVelocity: Vec2;
   companionCommitmentCapabilityClipped: boolean;
+  worldStepSeconds: number;
+  frames: readonly A1SpatialCommitmentOwnerFlowImpactFrame[];
   holdBaselineContactFrameCount: number;
   commitmentExecutionContactFrameCount: number;
   addedContactFrameCountVsHold: number;
+  netContactFrameCountDeltaVsHold: number;
+  executionOnlyContactFrameCount: number;
+  holdOnlyContactFrameCount: number;
+  bothContactFrameCount: number;
+  firstExecutionOnlyContactStepIndex: number | null;
+  lastExecutionOnlyContactStepIndex: number | null;
   holdBaselineFinalPlayerPosition: Vec2;
   commitmentExecutionFinalPlayerPosition: Vec2;
   playerTerminalPositionDeltaVsHold: Vec2;
   playerProgressDeltaVsHold: number | null;
   playerLateralDeltaMagnitudeVsHold: number | null;
+  peakPlayerProgressDeficitVsHold: number | null;
+  terminalPlayerProgressDeficitVsHold: number | null;
+  integratedPlayerProgressDeficitSeconds: number | null;
+  peakPlayerLateralDeltaMagnitudeVsHold: number | null;
+  terminalPlayerLateralDeltaMagnitudeVsHold: number | null;
+  integratedPlayerLateralDeviationSeconds: number | null;
   holdBaselineMeaning: "COMPANION_ZERO_VELOCITY_EACH_WORLD_STEP_NOT_YIELD_POLICY";
   comparisonClaim: "SAME_PLAYER_FUTURE_HOLD_VS_COMMITMENT_EXECUTION";
   progressMeaning: "SIGNED_ALONG_OWNER_REQUEST_FUTURE_DIRECTION_NULL_IF_STATIONARY";
   contactMeaning: "RECIPROCAL_CONTACT_FRAME_COUNT_DIFFERENCE_NOT_SEVERITY";
+  legacyAddedContactFieldClaim: "ADDED_CONTACT_FRAME_COUNT_VS_HOLD_IS_NET_COUNT_DELTA_ONLY";
+  framewiseContactClaim: "EXECUTION_ONLY_HOLD_ONLY_AND_BOTH_CONTACT_FRAMES_PRESERVED";
+  traceClaim: "SAME_STEP_HOLD_AND_EXECUTION_PLAYER_TRAJECTORIES_PRESERVED";
+  transientImpactClaim: "PEAK_AND_INTEGRATED_DEVIATIONS_ARE_MEASURED_DIFFERENCES_NOT_HARM";
   causalScopeClaim: "COUNTERFACTUAL_DIFFERENCE_UNDER_EXPLICIT_H1_AND_COMMITMENT_COMMAND";
   harmClaim: "NONE_MEASURED_DIFFERENCE_ONLY";
   rightOfWayPriorityClaim: "NONE";
@@ -48,19 +87,19 @@ function actor(
   return value;
 }
 
+function reciprocalContact(frame: { actors: readonly ActorSnapshot[] }): boolean {
+  const player = actor(frame.actors, "player");
+  const companion = actor(frame.actors, "companion");
+  return (
+    player.contacts.some((contact) => contact.with === "companion") &&
+    companion.contacts.some((contact) => contact.with === "player")
+  );
+}
+
 function contactFrameCount(
   frames: readonly { actors: readonly ActorSnapshot[] }[]
 ): number {
-  let count = 0;
-  for (const frame of frames) {
-    const player = actor(frame.actors, "player");
-    const companion = actor(frame.actors, "companion");
-    const reciprocal =
-      player.contacts.some((contact) => contact.with === "companion") &&
-      companion.contacts.some((contact) => contact.with === "player");
-    if (reciprocal) count += 1;
-  }
-  return count;
+  return frames.filter(reciprocalContact).length;
 }
 
 function ownerRequest(plan: ReturnType<typeof buildA1PlayerFutureInterventionPlan>) {
@@ -97,6 +136,28 @@ function directionalEffects(delta: Vec2, velocity: Vec2): {
     progress: delta.x * direction.x + delta.y * direction.y,
     lateralMagnitude: Math.abs(delta.x * tangent.x + delta.y * tangent.y)
   };
+}
+
+function contactRelation(
+  holdContact: boolean,
+  executionContact: boolean
+): A1SpatialCommitmentOwnerFlowContactRelation {
+  if (holdContact && executionContact) return "BOTH";
+  if (executionContact) return "EXECUTION_ONLY";
+  if (holdContact) return "HOLD_ONLY";
+  return "NEITHER";
+}
+
+function maximum(values: readonly (number | null)[]): number | null {
+  const finite = values.filter((value): value is number => value !== null && Number.isFinite(value));
+  return finite.length > 0 ? Math.max(...finite) : null;
+}
+
+function integrated(values: readonly (number | null)[], stepSeconds: number): number | null {
+  const finite = values.filter((value): value is number => value !== null && Number.isFinite(value));
+  return finite.length > 0
+    ? finite.reduce((sum, value) => sum + value, 0) * stepSeconds
+    : null;
 }
 
 /**
@@ -157,6 +218,60 @@ export function buildA1SpatialCommitmentOwnerFlowImpactEvidence(input: {
   const holdContacts = contactFrameCount(hold.physical.frames);
   const executionContacts = contactFrameCount(execution.physical.frames);
 
+  if (
+    hold.worldStepCount !== execution.worldStepCount ||
+    hold.physical.frames.length !== execution.physical.frames.length ||
+    Math.abs(hold.worldStepSeconds - execution.worldStepSeconds) > EPSILON
+  ) {
+    throw new Error("A1 owner-flow impact HOLD and commitment execution traces are not timebase-aligned.");
+  }
+
+  const frames = hold.physical.frames.map(
+    (holdFrame, index): A1SpatialCommitmentOwnerFlowImpactFrame => {
+      const executionFrame = execution.physical.frames[index];
+      if (!executionFrame || executionFrame.stepIndex !== holdFrame.stepIndex) {
+        throw new Error("A1 owner-flow impact HOLD and execution frame indices are misaligned.");
+      }
+      const holdPlayerAtStep = actor(holdFrame.actors, "player");
+      const executionPlayerAtStep = actor(executionFrame.actors, "player");
+      const stepDelta = {
+        x: executionPlayerAtStep.position.x - holdPlayerAtStep.position.x,
+        y: executionPlayerAtStep.position.y - holdPlayerAtStep.position.y
+      };
+      const stepEffects = directionalEffects(stepDelta, h1.repeatedVelocity);
+      const holdContact = reciprocalContact(holdFrame);
+      const executionContact = reciprocalContact(executionFrame);
+      return {
+        sampleOrdinal: index + 1,
+        stepIndex: holdFrame.stepIndex,
+        timeSeconds: (index + 1) * execution.worldStepSeconds,
+        holdPlayerPosition: { ...holdPlayerAtStep.position },
+        commitmentExecutionPlayerPosition: { ...executionPlayerAtStep.position },
+        playerPositionDeltaVsHold: stepDelta,
+        playerProgressDeltaVsHold: stepEffects.progress,
+        playerProgressDeficitVsHold:
+          stepEffects.progress === null ? null : Math.max(0, -stepEffects.progress),
+        playerLateralDeltaMagnitudeVsHold: stepEffects.lateralMagnitude,
+        holdReciprocalContact: holdContact,
+        commitmentExecutionReciprocalContact: executionContact,
+        contactRelation: contactRelation(holdContact, executionContact)
+      };
+    }
+  );
+
+  const executionOnlyContactFrames = frames.filter(
+    (frame) => frame.contactRelation === "EXECUTION_ONLY"
+  );
+  const holdOnlyContactFrames = frames.filter(
+    (frame) => frame.contactRelation === "HOLD_ONLY"
+  );
+  const bothContactFrames = frames.filter(
+    (frame) => frame.contactRelation === "BOTH"
+  );
+  const terminalFrame = frames.at(-1);
+  const progressDeficits = frames.map((frame) => frame.playerProgressDeficitVsHold);
+  const lateralDeltas = frames.map((frame) => frame.playerLateralDeltaMagnitudeVsHold);
+
   return {
     kind: "A1_SPATIAL_COMMITMENT_OWNER_FLOW_IMPACT_EVIDENCE",
     sourceTick: input.situation.tick,
@@ -166,18 +281,42 @@ export function buildA1SpatialCommitmentOwnerFlowImpactEvidence(input: {
     ownerRequestVelocity: { ...h1.repeatedVelocity },
     companionCommitmentCommandVelocity: { ...direct.realization.commandVelocity },
     companionCommitmentCapabilityClipped: direct.realization.capabilityClipped,
+    worldStepSeconds: execution.worldStepSeconds,
+    frames,
     holdBaselineContactFrameCount: holdContacts,
     commitmentExecutionContactFrameCount: executionContacts,
     addedContactFrameCountVsHold: executionContacts - holdContacts,
+    netContactFrameCountDeltaVsHold: executionContacts - holdContacts,
+    executionOnlyContactFrameCount: executionOnlyContactFrames.length,
+    holdOnlyContactFrameCount: holdOnlyContactFrames.length,
+    bothContactFrameCount: bothContactFrames.length,
+    firstExecutionOnlyContactStepIndex:
+      executionOnlyContactFrames[0]?.stepIndex ?? null,
+    lastExecutionOnlyContactStepIndex:
+      executionOnlyContactFrames.at(-1)?.stepIndex ?? null,
     holdBaselineFinalPlayerPosition: { ...holdPlayer.position },
     commitmentExecutionFinalPlayerPosition: { ...executionPlayer.position },
     playerTerminalPositionDeltaVsHold: delta,
     playerProgressDeltaVsHold: effects.progress,
     playerLateralDeltaMagnitudeVsHold: effects.lateralMagnitude,
+    peakPlayerProgressDeficitVsHold: maximum(progressDeficits),
+    terminalPlayerProgressDeficitVsHold:
+      terminalFrame?.playerProgressDeficitVsHold ?? null,
+    integratedPlayerProgressDeficitSeconds:
+      integrated(progressDeficits, execution.worldStepSeconds),
+    peakPlayerLateralDeltaMagnitudeVsHold: maximum(lateralDeltas),
+    terminalPlayerLateralDeltaMagnitudeVsHold:
+      terminalFrame?.playerLateralDeltaMagnitudeVsHold ?? null,
+    integratedPlayerLateralDeviationSeconds:
+      integrated(lateralDeltas, execution.worldStepSeconds),
     holdBaselineMeaning: "COMPANION_ZERO_VELOCITY_EACH_WORLD_STEP_NOT_YIELD_POLICY",
     comparisonClaim: "SAME_PLAYER_FUTURE_HOLD_VS_COMMITMENT_EXECUTION",
     progressMeaning: "SIGNED_ALONG_OWNER_REQUEST_FUTURE_DIRECTION_NULL_IF_STATIONARY",
     contactMeaning: "RECIPROCAL_CONTACT_FRAME_COUNT_DIFFERENCE_NOT_SEVERITY",
+    legacyAddedContactFieldClaim: "ADDED_CONTACT_FRAME_COUNT_VS_HOLD_IS_NET_COUNT_DELTA_ONLY",
+    framewiseContactClaim: "EXECUTION_ONLY_HOLD_ONLY_AND_BOTH_CONTACT_FRAMES_PRESERVED",
+    traceClaim: "SAME_STEP_HOLD_AND_EXECUTION_PLAYER_TRAJECTORIES_PRESERVED",
+    transientImpactClaim: "PEAK_AND_INTEGRATED_DEVIATIONS_ARE_MEASURED_DIFFERENCES_NOT_HARM",
     causalScopeClaim: "COUNTERFACTUAL_DIFFERENCE_UNDER_EXPLICIT_H1_AND_COMMITMENT_COMMAND",
     harmClaim: "NONE_MEASURED_DIFFERENCE_ONLY",
     rightOfWayPriorityClaim: "NONE",
