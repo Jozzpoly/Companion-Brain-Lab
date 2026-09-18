@@ -51,7 +51,7 @@ export function buildOwnerSandboxIncident(input: {
       available: input.p2 !== null,
       snapshot: input.p2 ? structuredClone(input.p2) : null
     },
-    frames: structuredClone(input.frames),
+    frames: input.frames.map((frame) => structuredClone(frame)),
     events: [...input.events]
   };
 }
