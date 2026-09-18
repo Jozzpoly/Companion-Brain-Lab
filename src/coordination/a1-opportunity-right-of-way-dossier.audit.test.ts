@@ -56,9 +56,10 @@ function evidence(
   world: LabWorld,
   currentFit: A1SpatialCommitmentFitEvidence,
   horizonSeconds: number,
-  playerMove: Vec2 = { x: 1, y: 0 }
+  playerMove: Vec2 = { x: 1, y: 0 },
+  snapshotOverride: WorldSnapshot | null = null
 ) {
-  const snapshot = world.snapshot();
+  const snapshot = snapshotOverride ?? world.snapshot();
   const situation = buildA1Situation({
     snapshot,
     playerIntent: playerIntent(playerMove.x, playerMove.y),
@@ -184,16 +185,17 @@ describe("A1 commitment right-of-way evidence dossier", () => {
   it("preserves alternate H2/H3 joint-future context without treating it as H1 Owner-flow impact or a vote", async () => {
     const world = await LabWorld.create("head-on");
     try {
-      world.step([
+      const after = world.step([
         playerIntent(1, 0),
         { actorId: "companion", move: { x: 0, y: 0 } }
       ]);
-      const currentFit = fit(world.snapshot(), { x: 5.5, y: 4 });
+      const currentFit = fit(after, { x: 5.5, y: 4 });
       const { review, impact } = evidence(
         world,
         currentFit,
         0.75,
-        { x: -1, y: 0 }
+        { x: -1, y: 0 },
+        after
       );
       const dossier = buildA1SpatialCommitmentRightOfWayEvidenceDossier({
         review,
