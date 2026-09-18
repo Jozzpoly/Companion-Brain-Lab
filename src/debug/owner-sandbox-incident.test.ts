@@ -68,16 +68,21 @@ function p2Snapshot(): AuthorityA12p2BrowserSnapshot {
       baselineCompanionIntent: { actorId: "companion", move: { x: -1, y: 0 } },
       selectedCompanionIntent: { actorId: "companion", move: { x: 0, y: -1 } },
       command: {
-        schema: "authority-a1-2-explicit-manual-direct-command-v1",
+        kind: "A1_EXPLICIT_MANUAL_DIRECT_COMMAND",
         sourceTick: 0,
         validForOutcomeTick: 1,
+        horizonSeconds: 1,
         proposalId: "h1:tangent:left",
+        frontierProposalIds: ["h1:tangent:left"],
         commandVelocity: { x: 0, y: -3 },
         motionIntent: { actorId: "companion", move: { x: 0, y: -1 } },
-        authorityClaim: "EXPLICIT_CALLER_ONE_STEP_DIRECT_P2"
-      } as AuthorityA12p2BrowserSnapshot["latestApplication"] extends infer T
-        ? T extends { command: infer C } ? C : never
-        : never,
+        commandRepresentationError: 0,
+        selectionSource: "EXPLICIT_CALLER_PROPOSAL_ID_P2",
+        automaticSelectionClaim: "NONE_P2",
+        horizonPolicyClaim: "EXPLICIT_CALLER_SUPPLIED_HORIZON_P2",
+        authorityScopeClaim: "SOURCE_TICK_TO_NEXT_WORLD_STEP_ONLY_P2",
+        runtimeAuthorityClaim: "EXPLICIT_CALLER_ONE_STEP_DIRECT_P2"
+      },
       a0CommandVelocity: { x: 0, y: -3 },
       a0CommandVelocityError: 0,
       status: "APPLIED_OUTCOME_CONFIRMED",
