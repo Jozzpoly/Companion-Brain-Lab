@@ -87,7 +87,8 @@ function p2Snapshot(): AuthorityA12p2BrowserSnapshot {
       a0CommandVelocityError: 0,
       status: "APPLIED_OUTCOME_CONFIRMED",
       authorityClaim: "EXPLICIT_CALLER_ONE_STEP_DIRECT_P2"
-    }
+    },
+    lastError: null
   };
 }
 
