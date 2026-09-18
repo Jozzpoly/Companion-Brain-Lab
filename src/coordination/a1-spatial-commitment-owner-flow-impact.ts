@@ -1,6 +1,10 @@
+import type { A1DirectCandidateRealization } from "./a1-companion-candidates";
 import { rehearseA1DirectJointPhysicalFuture } from "./a1-direct-joint-physical-rehearsal";
 import { buildA1PlayerFutureHypotheses } from "./a1-player-future-hypotheses";
-import { buildA1PlayerFutureInterventionPlan } from "./a1-player-future-interventions";
+import {
+  buildA1PlayerFutureInterventionPlan,
+  type A1RehearsablePlayerFutureIntervention
+} from "./a1-player-future-interventions";
 import { rehearseA1PlayerFutureIntervention } from "./a1-player-future-rehearsal";
 import type { A1Situation } from "./a1-situation";
 import type { A1SpatialCommitmentFitEvidence } from "./a1-spatial-commitment-evidence";
@@ -161,51 +165,56 @@ function integrated(values: readonly (number | null)[], stepSeconds: number): nu
 }
 
 /**
- * Compares the same Owner-request future under two query-only same-physics
- * counterfactuals: companion HOLD and direct execution of the exact commitment.
+ * Common HOLD-vs-execution measurement over one already-qualified Owner future
+ * and one already-materialized DIRECT companion command.
  *
- * HOLD is a comparator only. Neither lower progress nor added contacts are
- * promoted here into harm, right-of-way or yield policy.
+ * The HOLD branch is only a counterfactual comparator. This function publishes
+ * measured trajectory/contact differences and carries no harm, preference,
+ * right-of-way, yield, selection or runtime authority.
  */
-export function buildA1SpatialCommitmentOwnerFlowImpactEvidence(input: {
+export function buildA1SpatialCommitmentOwnerFlowImpactFromRealization(input: {
   world: LabWorld;
   fit: A1SpatialCommitmentFitEvidence;
   situation: A1Situation;
-  horizonSeconds: number;
+  ownerRequestIntervention: A1RehearsablePlayerFutureIntervention;
+  companionRealization: A1DirectCandidateRealization;
 }): A1SpatialCommitmentOwnerFlowImpactEvidence {
+  const ownerRequestIntervention = input.ownerRequestIntervention;
   if (
     input.fit.sourceTick !== input.situation.tick ||
-    input.fit.commitmentSourceTick > input.fit.sourceTick
+    input.fit.commitmentSourceTick > input.fit.sourceTick ||
+    ownerRequestIntervention.sourceTick !== input.situation.tick ||
+    input.companionRealization.sourceTick !== input.situation.tick
   ) {
-    throw new Error("A1 owner-flow impact requires aligned fit and situation evidence.");
+    throw new Error(
+      "A1 owner-flow impact realization requires same-tick fit, situation, Owner future and companion realization."
+    );
   }
-
-  const hypotheses = buildA1PlayerFutureHypotheses({
-    situation: input.situation,
-    horizonSeconds: input.horizonSeconds,
-    staticTraversal: (from, to, radius, options) =>
-      input.world.staticCircleTraversal(from, to, radius, options)
-  });
-  const plan = buildA1PlayerFutureInterventionPlan(hypotheses);
-  const h1 = ownerRequest(plan);
+  if (ownerRequestIntervention.futureFamily !== "OWNER_REQUEST_CONTINUATION") {
+    throw new Error(
+      "A1 owner-flow impact realization requires the Owner-request continuation future."
+    );
+  }
+  if (
+    Math.abs(
+      ownerRequestIntervention.horizonSeconds -
+        input.companionRealization.horizonSeconds
+    ) > EPSILON
+  ) {
+    throw new Error(
+      "A1 owner-flow impact realization requires exactly aligned Owner/companion horizons."
+    );
+  }
 
   const hold = rehearseA1PlayerFutureIntervention({
     world: input.world,
-    intervention: h1
+    intervention: ownerRequestIntervention
   });
-  const direct = buildA1SpatialCommitmentDirectRealization({
-    fit: input.fit,
-    situation: input.situation,
-    horizonSeconds: input.horizonSeconds
-  });
-  if (direct.status !== "REALIZED" || !direct.realization) {
-    throw new Error("A1 owner-flow impact requires a resolved commitment direct realization.");
-  }
   const execution = rehearseA1DirectJointPhysicalFuture({
     world: input.world,
     situation: input.situation,
-    playerIntervention: h1,
-    companionRealization: direct.realization
+    playerIntervention: ownerRequestIntervention,
+    companionRealization: input.companionRealization
   });
 
   const holdPlayer = finalPlayer(hold.physical.frames, "HOLD baseline");
@@ -214,7 +223,7 @@ export function buildA1SpatialCommitmentOwnerFlowImpactEvidence(input: {
     x: executionPlayer.position.x - holdPlayer.position.x,
     y: executionPlayer.position.y - holdPlayer.position.y
   };
-  const effects = directionalEffects(delta, h1.repeatedVelocity);
+  const effects = directionalEffects(delta, ownerRequestIntervention.repeatedVelocity);
   const holdContacts = contactFrameCount(hold.physical.frames);
   const executionContacts = contactFrameCount(execution.physical.frames);
 
@@ -238,7 +247,7 @@ export function buildA1SpatialCommitmentOwnerFlowImpactEvidence(input: {
         x: executionPlayerAtStep.position.x - holdPlayerAtStep.position.x,
         y: executionPlayerAtStep.position.y - holdPlayerAtStep.position.y
       };
-      const stepEffects = directionalEffects(stepDelta, h1.repeatedVelocity);
+      const stepEffects = directionalEffects(stepDelta, ownerRequestIntervention.repeatedVelocity);
       const holdContact = reciprocalContact(holdFrame);
       const executionContact = reciprocalContact(executionFrame);
       return {
@@ -276,11 +285,11 @@ export function buildA1SpatialCommitmentOwnerFlowImpactEvidence(input: {
     kind: "A1_SPATIAL_COMMITMENT_OWNER_FLOW_IMPACT_EVIDENCE",
     sourceTick: input.situation.tick,
     commitmentSourceTick: input.fit.commitmentSourceTick,
-    horizonSeconds: input.horizonSeconds,
-    ownerRequestFutureId: h1.futureId,
-    ownerRequestVelocity: { ...h1.repeatedVelocity },
-    companionCommitmentCommandVelocity: { ...direct.realization.commandVelocity },
-    companionCommitmentCapabilityClipped: direct.realization.capabilityClipped,
+    horizonSeconds: input.companionRealization.horizonSeconds,
+    ownerRequestFutureId: ownerRequestIntervention.futureId,
+    ownerRequestVelocity: { ...ownerRequestIntervention.repeatedVelocity },
+    companionCommitmentCommandVelocity: { ...input.companionRealization.commandVelocity },
+    companionCommitmentCapabilityClipped: input.companionRealization.capabilityClipped,
     worldStepSeconds: execution.worldStepSeconds,
     frames,
     holdBaselineContactFrameCount: holdContacts,
@@ -324,4 +333,51 @@ export function buildA1SpatialCommitmentOwnerFlowImpactEvidence(input: {
     selectionClaim: "NONE",
     runtimeAuthorityClaim: "NONE"
   };
+}
+
+
+/**
+ * Compares the same Owner-request future under two query-only same-physics
+ * counterfactuals: companion HOLD and direct execution of the exact commitment.
+ *
+ * HOLD is a comparator only. Neither lower progress nor added contacts are
+ * promoted here into harm, right-of-way or yield policy.
+ */
+export function buildA1SpatialCommitmentOwnerFlowImpactEvidence(input: {
+  world: LabWorld;
+  fit: A1SpatialCommitmentFitEvidence;
+  situation: A1Situation;
+  horizonSeconds: number;
+}): A1SpatialCommitmentOwnerFlowImpactEvidence {
+  if (
+    input.fit.sourceTick !== input.situation.tick ||
+    input.fit.commitmentSourceTick > input.fit.sourceTick
+  ) {
+    throw new Error("A1 owner-flow impact requires aligned fit and situation evidence.");
+  }
+
+  const hypotheses = buildA1PlayerFutureHypotheses({
+    situation: input.situation,
+    horizonSeconds: input.horizonSeconds,
+    staticTraversal: (from, to, radius, options) =>
+      input.world.staticCircleTraversal(from, to, radius, options)
+  });
+  const plan = buildA1PlayerFutureInterventionPlan(hypotheses);
+  const h1 = ownerRequest(plan);
+
+  const direct = buildA1SpatialCommitmentDirectRealization({
+    fit: input.fit,
+    situation: input.situation,
+    horizonSeconds: input.horizonSeconds
+  });
+  if (direct.status !== "REALIZED" || !direct.realization) {
+    throw new Error("A1 owner-flow impact requires a resolved commitment direct realization.");
+  }
+  return buildA1SpatialCommitmentOwnerFlowImpactFromRealization({
+    world: input.world,
+    fit: input.fit,
+    situation: input.situation,
+    ownerRequestIntervention: h1,
+    companionRealization: direct.realization
+  });
 }
