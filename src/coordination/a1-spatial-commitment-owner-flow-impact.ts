@@ -42,8 +42,10 @@ export interface A1SpatialCommitmentOwnerFlowImpactEvidence {
   horizonSeconds: number;
   ownerRequestFutureId: string;
   ownerRequestVelocity: Vec2;
+  commitmentAnchorWorldPosition: Vec2;
   companionCommitmentCommandVelocity: Vec2;
   companionCommitmentCapabilityClipped: boolean;
+  companionCommitmentTerminalAnchorError: number;
   worldStepSeconds: number;
   frames: readonly A1SpatialCommitmentOwnerFlowImpactFrame[];
   holdBaselineContactFrameCount: number;
@@ -180,6 +182,10 @@ export function buildA1SpatialCommitmentOwnerFlowImpactFromRealization(input: {
   companionRealization: A1DirectCandidateRealization;
 }): A1SpatialCommitmentOwnerFlowImpactEvidence {
   const ownerRequestIntervention = input.ownerRequestIntervention;
+  const anchor = input.fit.resolvedAnchorWorldPosition;
+  if (!anchor) {
+    throw new Error("A1 owner-flow impact realization requires a resolved commitment anchor.");
+  }
   if (
     input.fit.sourceTick !== input.situation.tick ||
     input.fit.commitmentSourceTick > input.fit.sourceTick ||
@@ -288,8 +294,16 @@ export function buildA1SpatialCommitmentOwnerFlowImpactFromRealization(input: {
     horizonSeconds: input.companionRealization.horizonSeconds,
     ownerRequestFutureId: ownerRequestIntervention.futureId,
     ownerRequestVelocity: { ...ownerRequestIntervention.repeatedVelocity },
+    commitmentAnchorWorldPosition: { ...anchor },
     companionCommitmentCommandVelocity: { ...input.companionRealization.commandVelocity },
     companionCommitmentCapabilityClipped: input.companionRealization.capabilityClipped,
+    companionCommitmentTerminalAnchorError: distance(
+      input.companionRealization.predictedDisplacement,
+      {
+        x: anchor.x - input.situation.situated.companionBody.position.x,
+        y: anchor.y - input.situation.situated.companionBody.position.y
+      }
+    ),
     worldStepSeconds: execution.worldStepSeconds,
     frames,
     holdBaselineContactFrameCount: holdContacts,

@@ -14,6 +14,7 @@ on:
       - "src/coordination/a1-spatial-commitment-fixed-command-observation-scan.ts"
       - "src/coordination/a1-spatial-commitment-fixed-command-owner-flow-impact-scan.ts"
       - "src/coordination/a1-spatial-commitment-owner-flow-impact.ts"
+      - "src/coordination/a1-spatial-commitment-right-of-way-dossier.ts"
       - "src/coordination/a1-spatial-commitment-material.ts"
       - "src/coordination/a1-spatial-commitment-actor-occupancy.ts"
       - "src/coordination/a1-spatial-commitment-player-future-occupancy.ts"
