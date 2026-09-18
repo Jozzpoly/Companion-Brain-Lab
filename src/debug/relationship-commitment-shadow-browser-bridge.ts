@@ -16,9 +16,25 @@ import {
   type A1SpatialCommitmentPlayerFutureSetEvidence
 } from "../coordination/a1-spatial-commitment-player-future-set";
 import {
+  buildA1SpatialCommitmentJointFutureSetEvidence,
+  type A1SpatialCommitmentJointFutureSetEvidence
+} from "../coordination/a1-spatial-commitment-joint-future";
+import {
+  buildA1SpatialCommitmentOwnerFlowImpactEvidence,
+  type A1SpatialCommitmentOwnerFlowImpactEvidence
+} from "../coordination/a1-spatial-commitment-owner-flow-impact";
+import {
   buildA1SpatialCommitmentReviewEvidence,
   type A1SpatialCommitmentReviewEvidence
 } from "../coordination/a1-spatial-commitment-review";
+import {
+  buildA1SpatialCommitmentRightOfWayEvidenceDossier,
+  type A1SpatialCommitmentRightOfWayEvidenceDossier
+} from "../coordination/a1-spatial-commitment-right-of-way-dossier";
+import {
+  buildA1SpatialCommitmentDeliberationFrame,
+  type A1SpatialCommitmentDeliberationFrame
+} from "../coordination/a1-spatial-commitment-deliberation";
 import { A1AuthorityRuntime } from "../coordination/a1-authority-runtime";
 import type { A1RelationshipOrientationEvidence } from "../coordination/a1-relationship-orientation";
 import { projectA1RelationshipSemanticField } from "../coordination/a1-relationship-projection";
@@ -96,7 +112,11 @@ export interface RelationshipCommitmentShadowReviewEvidence {
   material: A1SpatialCommitmentMaterialEvidence;
   actorOccupancy: A1SpatialCommitmentActorOccupancyEvidence;
   playerFutureSet: A1SpatialCommitmentPlayerFutureSetEvidence;
+  jointFutureSet: A1SpatialCommitmentJointFutureSetEvidence;
   review: A1SpatialCommitmentReviewEvidence;
+  ownerFlowImpact: A1SpatialCommitmentOwnerFlowImpactEvidence;
+  rightOfWayDossier: A1SpatialCommitmentRightOfWayEvidenceDossier;
+  deliberation: A1SpatialCommitmentDeliberationFrame;
   authority: "NONE_QUERY_ONLY_NO_INTENT_MUTATION";
 }
 
@@ -408,11 +428,32 @@ export function installRelationshipCommitmentShadowBrowserBridge(
           snapshot: before,
           plan
         });
+        const jointFutureSet = buildA1SpatialCommitmentJointFutureSetEvidence({
+          world,
+          fit,
+          situation,
+          playerFutureSet
+        });
         const review = buildA1SpatialCommitmentReviewEvidence(
           fit,
           material,
           actorOccupancy,
-          playerFutureSet
+          playerFutureSet,
+          jointFutureSet
+        );
+        const ownerFlowImpact = buildA1SpatialCommitmentOwnerFlowImpactEvidence({
+          world,
+          fit,
+          situation,
+          horizonSeconds: reviewRequest.horizonSeconds
+        });
+        const rightOfWayDossier = buildA1SpatialCommitmentRightOfWayEvidenceDossier({
+          review,
+          impact: ownerFlowImpact
+        });
+        const deliberation = buildA1SpatialCommitmentDeliberationFrame(
+          review,
+          rightOfWayDossier
         );
         latestReview = {
           requestId: reviewRequest.requestId,
@@ -424,7 +465,11 @@ export function installRelationshipCommitmentShadowBrowserBridge(
           material: structuredClone(material),
           actorOccupancy: structuredClone(actorOccupancy),
           playerFutureSet: structuredClone(playerFutureSet),
+          jointFutureSet: structuredClone(jointFutureSet),
           review: structuredClone(review),
+          ownerFlowImpact: structuredClone(ownerFlowImpact),
+          rightOfWayDossier: structuredClone(rightOfWayDossier),
+          deliberation: structuredClone(deliberation),
           authority: "NONE_QUERY_ONLY_NO_INTENT_MUTATION"
         };
         completedReviewCount += 1;
