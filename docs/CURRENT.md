@@ -27,31 +27,40 @@ Long-term Owner intent / north-star source:
 
 - [INITIAL_RESEARCH_SKELETON.md](INITIAL_RESEARCH_SKELETON.md)
 
-## 2. Live checkpoint at creation
+## 2. Current qualified checkpoint
 
 Branch:
 
 `experiment/a1-opportunity-persistence`
 
-Planning checkpoint:
+OS-PREP-1 qualified implementation checkpoint:
 
-`dbe6a0e836531b6cc34812c5abd8f1b3bdbf267a`
+`944a6eb3d6e7ecd56171023e08894d0ea6fff2f8`
 
-Commit:
+Exact validation:
 
-`fix: type and wire P2 Owner controls`
-
-Exact push validation at that SHA:
-
-- `validate` #1287 — **PASS**
+- `validate` #1304 / run `35349533204` — **FULL GREEN**
 - `npm run check` — **PASS**
-- full `browser:audit` — **PASS**
-- A1.2p1 embodied shadow evidence upload — **PASS**
-- A1.2p2 manual DIRECT evidence upload — **PASS**
-- relationship semantic provenance / expiry / post-expiry evidence — **PASS**
-- `a1-commitment-live` #12 — **PASS**
+- aggregate `browser:audit` — **PASS**
+- OS-PREP-1 real downloaded-incident browser specimen — **PASS**
+- OS-PREP-1 artifact upload — **PASS**
+- relationship semantic provenance / expiry / post-expiry disturbance / Twin shadow — **PASS**
+- A1.2p1 and A1.2p2 evidence upload — **PASS**
+- Z4f/Z4g evidence — **PASS**
 
-This SHA is a planning checkpoint, not a permanently frozen runtime.
+Artifact-level inspection confirmed:
+
+- incident schema `companion-brain-lab-owner-sandbox-incident-v1`;
+- embedded `sourceSha` exactly equals `944a6eb3...`;
+- build state `PINNED_SOURCE_SHA`;
+- same-step Owner control `{x:1,y:0}` retained in the `t0 -> t1` causal frame;
+- P2 preview/arm/application counts `1/1/1`;
+- exact proposal identity retained through P2 and A0;
+- P2 source/outcome closure `t0 -> t1`;
+- A0 command velocity error `0`;
+- capture did not advance frame count or mutate P2 counts / re-arm authority.
+
+This SHA is the qualified OS-PREP-1 evidence-integrity checkpoint, not a permanently frozen future runtime.
 
 **Before any exact claim or write, reacquire the live branch head and relevant CI.** If the branch moved, inspect and classify the delta before continuing.
 
@@ -102,19 +111,23 @@ Do not keep polishing instrumentation once it is strong enough to answer the nex
 
 ## 6. Active tranche
 
-**OS-PREP-1 — Evidence integrity and session identity**
+**OS-PREP-1 — Evidence integrity and session identity: PASS / CLOSED ENOUGH**
 
-Execution plan:
+Qualified at `944a6eb3...` by `validate` #1304 plus artifact-level inspection.
+
+Preserved execution/provenance plan:
 
 - [OS_PREP_1_EVIDENCE_INTEGRITY_PLAN.md](OS_PREP_1_EVIDENCE_INTEGRITY_PLAN.md)
 
-Current first targets:
+**OS-PREP-2 — Claim → observable phenomenon map: ACTIVE**
 
-- bind P2 preview / arm / application evidence into incident/session capture;
-- bind captured evidence to exact build/commit identity;
-- ensure capture itself is observational/non-interfering;
-- ensure a future Owner run cannot accidentally be attributed to the old public Foundation Pages runtime;
-- then build the claim → observable phenomenon map and multi-beat pre-Owner campaign.
+Current target:
+
+- convert the accumulated movement/cooperation mechanisms and historical claims into a finite set of player-observable teammate phenomena;
+- give each phenomenon a blind observable, rival explanations, falsifier, minimum scenario, required causal evidence and explicit claim limit;
+- prioritize phenomena that materially affect the first Owner Sandbox: relationship coherence, stop/reversal freshness, pace/separation, player-flow cooperation, chokepoints, close-contact recovery, topology/side persistence, multi-beat continuity and bounded P2 intervention value;
+- use historical S1/CCC/A1 evidence as donors, not as automatically true product claims;
+- after the map is strong enough, route into OS-PREP-3 automated multi-beat falsification rather than more instrumentation by default.
 
 The campaign document defines acceptance and downstream phases.
 
