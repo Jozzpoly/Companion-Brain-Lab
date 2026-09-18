@@ -133,14 +133,16 @@ Execution plan:
 
 - [OS_PREP_3_MULTI_BEAT_CAMPAIGN_PLAN.md](OS_PREP_3_MULTI_BEAT_CAMPAIGN_PLAN.md)
 
-Current evidence:
+Completed Wave A evidence:
 
-- PH-01 base story qualified at `610c0c7f...`, Validate #1310;
-- participant/research Twins are exactly non-interfering at the World outcome layer;
-- t36 90° turn: same `left` label, **2.273 m** world-target jump;
-- downstream temporal realization turns that abrupt objective change into the visually smooth broad arc seen participant-first;
-- t90 reversal: `left -> right` label change with **0 m** target displacement;
-- slot label is therefore not a valid identity for world-space intention.
+- **PH-01 base + M1 mirror: CLOSED ENOUGH**;
+- base qualified at `610c0c7f...`, Validate #1310;
+- mirror qualified at `bd6ec292...`, Validate #1314;
+- both participant/research Twins are exactly non-interfering at the World outcome layer;
+- both opposite 90° turns produce the same **2.273 m** target relocation to the same world point;
+- symbolic label differs (`left->left` vs `left->right`) and is not spatial-intention identity;
+- symmetric initial `left/right` score tie is resolved lexicographically to `left`, a real fake side preference;
+- temporal realization masks discrete upstream corrections as smooth participant-visible arcs.
 
 Evidence document:
 
@@ -148,10 +150,11 @@ Evidence document:
 
 Current next target:
 
-- **PH-01 Mirror M1**: `+X -> -Y -> brief stop -> +Y -> neutral`;
-- participant-first Twin, then research Twin;
-- test whether the target jump/body arc mirrors structurally or exposes side/tie asymmetry;
-- no behavior tuning before this falsifier.
+- **PH-02 — semantic freshness / stale-policy participant evidence**;
+- use the already-qualified bounded orientation memory and post-expiry disturbance apparatus as donors;
+- distinguish canonical `NONE` from legacy `RETAINED_LAST_SEMANTIC_FRAME` at the participant surface;
+- do not re-research expiry mathematics or add new memory constants;
+- build the smallest participant/research Twin that makes any post-expiry stale-policy consequence visible.
 
 Do not widen A1 authority as part of OS-PREP-3.
 

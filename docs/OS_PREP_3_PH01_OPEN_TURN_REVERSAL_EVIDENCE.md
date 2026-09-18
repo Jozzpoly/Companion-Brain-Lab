@@ -1,6 +1,6 @@
 # OS-PREP-3 PH-01 — Open Turn/Reversal Evidence
 
-Status: **MATERIAL FINDING · NEXT FALSIFIER = MIRRORED 90° TURN**
+Status: **PH-01 CLOSED ENOUGH · MATERIAL FINDING PRESERVED**
 Date: **2026-09-18**
 
 Exact candidate:
@@ -229,3 +229,151 @@ Requirements:
 - participant-first read before causal interpretation.
 
 No behavior tuning before M1.
+
+
+---
+
+# M1 addendum — mirrored 90° turn
+
+Exact candidate:
+
+`bd6ec29218659373f94fe0885de36623bfb27e7f`
+
+Validation:
+
+- `validate` #1314 / run `35359773662` — **FULL GREEN**
+- inherited `npm run check` and aggregate `browser:audit` — PASS
+- base PH-01 Twin replay — PASS
+- mirrored PH-01 Twin capture/upload — PASS
+- mirrored research lens — `PASS_THROUGH_ONLY`
+- mirrored Twin non-interference — exact (`maxPositionError=0`, `maxVelocityError=0`)
+
+Mirror story:
+
+`+X -> -Y -> brief stop -> +Y -> neutral`
+
+## M1 participant-first read
+
+Written before opening mirror incident/A1 evidence.
+
+The mirror again looked smooth and non-catastrophic, but not like a simple visual reflection of the base story.
+
+Visible signals:
+
+- the companion remained predominantly on screen-right through much of the mirrored episode;
+- the first mirrored turn created a curved/looping correction;
+- separation closed through stop/release rather than settling quickly;
+- mirrored reversal again showed delayed body-direction change;
+- the participant surface still did not uniquely communicate whether the motion was continuing intention or downstream correction.
+
+Blind classification:
+
+**AMBIGUOUS, with an apparent asymmetry that required causal explanation.**
+
+## M1 causal result
+
+### F-01F — the large turn target jump is structural across both 90° directions
+
+At t36:
+
+Base `+X -> +Y`:
+
+- target displacement: `2.2726601106 m`;
+- label: `left -> left`;
+- new target: approximately `(6.25, 4.00)`.
+
+Mirror `+X -> -Y`:
+
+- target displacement: `2.2726601106 m`;
+- label: `left -> right`;
+- new target: approximately `(6.25, 4.00)`.
+
+The two opposite 90° turns therefore produce the same large world-target relocation to the same point while the symbolic label behaves differently.
+
+This strengthens the rotated heading-relative-frame explanation and further weakens label identity as a model of spatial intention.
+
+### F-01G — the apparent M1 asymmetry is partly inherited from the initial deterministic side seed
+
+At the symmetric t0 `+X` start, legacy `left` and `right` candidates have equal score:
+
+`1.3015015367`
+
+The current selector resolves exact score ties lexicographically.
+
+That makes `left` the deterministic initial side despite no world evidence preferring it.
+
+So the two future turn stories do not start from a policy-symmetric history: both inherit the same artificial `left` seed.
+
+This is a real **fake side preference** mechanism.
+
+It is useful for deterministic research, but it must not be mistaken for companion personality or intentional side choice.
+
+### F-01H — t36 mirror label switch is travel/hysteresis behavior, not a new lexical tie
+
+At mirror t36 after the heading rotates to `-Y`:
+
+- candidate `right` maps to the world-right target near the companion;
+- score is approximately `0.383`;
+- previous `left` maps to the opposite world side;
+- score is approximately `0.948`;
+- improvement is approximately `0.565`, greater than the `0.28` hysteresis margin.
+
+So `left -> right` is causally explained by current travel cost + hysteresis.
+
+In the base +Y turn, retained `left` itself maps to the same world-right point and remains best.
+
+This distinguishes two mechanisms:
+
+1. **initial fake side seed** from exact-tie lexicographic order;
+2. **later meaningful travel/hysteresis response** inside a discrete rotating slot vocabulary.
+
+### F-01I — mirror visible loop is a real two-stage correction hidden by temporal realization
+
+After the mirror t36 target relocation:
+
+- preferred Y: negative -> positive at t39;
+- preferred Y: positive -> negative at t54;
+- commanded Y: negative -> positive at t47;
+- commanded Y: positive -> negative at t60.
+
+As the player moves upward, the world-right target itself travels upward past the companion.
+
+The spatial decision changes direction twice; temporal realization delays and smooths both changes.
+
+That is the causal source of the participant-visible curved/looping correction.
+
+Again:
+
+> smooth continuous body motion does not imply continuous upstream spatial intention.
+
+## PH-01 current conclusion
+
+PH-01 is **closed enough for pre-Owner preparation**.
+
+We now have:
+
+- participant-first ambiguity in base and mirror;
+- exact non-interfering research Twins;
+- a reproduced 2.273 m heading-frame target relocation;
+- label-continuity and label-change counterexamples;
+- a current live fake side-preference mechanism at symmetric initialization;
+- exact motor/decision timing showing how discontinuities become smooth arcs;
+- no route-change/contact confound in the open story.
+
+The remaining question is predominantly **gameplay judgement**, not another missing causal explanation:
+
+> Is the current degree of heading-relative target rotation and downstream smooth correction desirable, tolerable, or too unreadable for the intended teammate?
+
+Do not tune it before broader pre-Owner evidence unless another phenomenon shows it is actively contaminating the campaign.
+
+Carry PH-01 into Owner Sandbox provocations and later A/B work.
+
+## Next route
+
+Proceed to PH-02 semantic freshness / stale-policy behavior.
+
+The next product-level question is not whether canonical orientation memory expires — that research contract is already qualified.
+
+It is:
+
+> after canonical Owner meaning has expired, can retained legacy relationship policy still produce player-visible behavior that looks confidently based on stale intent?

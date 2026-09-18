@@ -64,6 +64,16 @@ This protects the project from replacing gameplay research with harness engineer
 
 ## 3. Wave A1 — PH-01 open turn/reversal story
 
+**Status: CLOSED ENOUGH**
+
+Qualified base: `610c0c7f...` / Validate #1310.
+
+Qualified mirror: `bd6ec292...` / Validate #1314.
+
+Material result: heading-relative legacy target relocation + temporal realization can create smooth but participant-ambiguous arcs; symmetric initialization also contains a lexicographic fake-side seed. See [OS_PREP_3_PH01_OPEN_TURN_REVERSAL_EVIDENCE.md](OS_PREP_3_PH01_OPEN_TURN_REVERSAL_EVIDENCE.md).
+
+
+
 ### Story
 
 Use the existing open scenario and current authoritative baseline behavior.
@@ -129,7 +139,13 @@ A mismatch is apparatus evidence first, not gameplay evidence.
 
 ## 4. Wave A2 — turn/reversal metamorphics
 
-Only after A1 produces a trustworthy baseline.
+**Status: MIRROR COMPLETE / FURTHER ANGLE SWEEPS DEFERRED**
+
+The first mirrored 90° falsifier was sufficient to localize the main mechanism. Do not run angle sweeps merely for completeness.
+
+Only resume PH-01 metamorphics if later product evidence requires them.
+
+
 
 Minimum perturbations:
 
