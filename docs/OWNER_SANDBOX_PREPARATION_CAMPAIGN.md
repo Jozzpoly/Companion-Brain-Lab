@@ -187,7 +187,9 @@ Re-open only if live state contradicts this boundary.
 
 ### OS-PREP-1 — Evidence integrity and Owner-session identity
 
-**Status: ACTIVE**
+**Status: PASS / CLOSED ENOUGH**
+
+Qualified checkpoint: `944a6eb3d6e7ecd56171023e08894d0ea6fff2f8`, Validate #1304 / run `35349533204`, including artifact-level inspection of the downloaded incident.
 
 Purpose:
 
@@ -219,7 +221,11 @@ Exit gate:
 
 ### OS-PREP-2 — Claim → observable phenomenon map
 
-**Status: PLANNED**
+**Status: ACTIVE**
+
+Canonical working map:
+
+- [OS_PREP_2_PHENOMENON_MAP.md](OS_PREP_2_PHENOMENON_MAP.md)
 
 Purpose:
 
