@@ -25,7 +25,8 @@ import { publishAuthorityA10BrowserDecision } from "../debug/authority-a1-browse
 import {
   CausalPanel,
   type CausalPanelAction,
-  type CausalPanelModel
+  type CausalPanelModel,
+  type CausalPanelSection
 } from "../debug/causal-panel";
 import {
   CausalFrameTrace,
@@ -981,6 +982,7 @@ export class R1LabScene extends Phaser.Scene {
     const a1 = this.a1Authority.debugState();
     const a1Active = a1.variant !== "off" && this.companionMode === "spatial";
     const a1Situation = a1.latestSituation;
+    const p2 = window.__authorityA12p2BrowserBridge?.snapshot() ?? null;
 
     const sections: CausalPanelModel["sections"] = [
       {
@@ -1048,7 +1050,7 @@ export class R1LabScene extends Phaser.Scene {
           `counts preview ${p2.previewCount} · arm ${p2.armCount} · apply ${p2.applicationCount}`,
           p2.lastError ?? "policy: explicit proposal only · one World step · auto-disarm · no automatic selector"
         ]
-      }] : []),
+      } satisfies CausalPanelSection] : []),
       {
         id: "objective",
         title: "Objective",
@@ -1224,6 +1226,9 @@ export class R1LabScene extends Phaser.Scene {
     else if (action === "cycle-a1-authority") this.cycleA1Authority();
     else if (action === "cycle-time") this.cycleTimeScale();
     else if (action === "capture-incident") this.captureIncident();
+    else if (action === "p2-preview") this.previewP2();
+    else if (action === "p2-arm-singleton") this.armP2Singleton();
+    else if (action === "p2-disarm") this.disarmP2();
     else if (action === "scenario-open") void this.loadScenario("open");
     else if (action === "scenario-pillar") void this.loadScenario("pillar");
     else if (action === "scenario-doorway") void this.loadScenario("doorway");
