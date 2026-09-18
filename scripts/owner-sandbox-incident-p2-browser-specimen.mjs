@@ -92,6 +92,9 @@ try {
     15_000,
     "paused head-on reset"
   );
+  // Make the baseline actuator explicit too. P2 remains a separate one-step DIRECT intervention.
+  await page.locator('[data-action="toggle-actuator"]').click();
+  await page.waitForTimeout(50);
   await page.locator('[data-action="cycle-a1-authority"]').click();
   await waitForPanel(
     page,
