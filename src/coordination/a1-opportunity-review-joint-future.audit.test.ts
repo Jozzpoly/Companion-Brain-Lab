@@ -6,6 +6,7 @@ import type { A1SpatialCommitmentFitEvidence } from "./a1-spatial-commitment-evi
 import { buildA1SpatialCommitmentJointFutureSetEvidence } from "./a1-spatial-commitment-joint-future";
 import { buildA1SpatialCommitmentPlayerFutureSetEvidence } from "./a1-spatial-commitment-player-future-set";
 import { buildA1SpatialCommitmentReviewEvidence } from "./a1-spatial-commitment-review";
+import { buildA1SpatialCommitmentDeliberationFrame } from "./a1-spatial-commitment-deliberation";
 import { LabWorld } from "../world/world";
 import type { MotionIntent, Vec2, WorldSnapshot } from "../world/types";
 
@@ -133,6 +134,20 @@ describe("A1 commitment review keeps anchor conflict distinct from joint interfe
       expect(sourceRehearsableIds.length).toBeGreaterThan(0);
       expect(jointFutureSet.staticBlockedFutureIds).toEqual(sourceRehearsableIds);
       expect(review.jointStaticBlockedFutureIds).toEqual(sourceRehearsableIds);
+      const deliberation = buildA1SpatialCommitmentDeliberationFrame(review);
+      expect(deliberation.rightOfWayContext.status).toBe("NOT_SUPPLIED");
+      for (const option of deliberation.options) {
+        expect(option.reasonsAgainstPrematureConclusion).toContain(
+          "JOINT_FUTURE_STATIC_BLOCKED"
+        );
+        expect(option.reasonsForConsideration).not.toContain(
+          "JOINT_FUTURE_STATIC_BLOCKED"
+        );
+      }
+      expect(deliberation.rightOfWayPriorityClaim).toBe("NONE_NOT_ESTABLISHED");
+      expect(deliberation.decisionClaim).toBe("NONE_DELIBERATION_ONLY");
+      expect(deliberation.selectionClaim).toBe("NONE");
+      expect(deliberation.runtimeAuthorityClaim).toBe("NONE");
       expect(jointFutureSet.contactFutureIds).toEqual([]);
       expect(jointFutureSet.noContactRehearsedFutureIds).toEqual([]);
       for (const id of sourceRehearsableIds) {
@@ -156,6 +171,12 @@ describe("A1 commitment review keeps anchor conflict distinct from joint interfe
         causalUnresolvedFutureIds: jointFutureSet.causalUnresolvedFutureIds,
         contactFutureIds: jointFutureSet.contactFutureIds,
         noContactRehearsedFutureIds: jointFutureSet.noContactRehearsedFutureIds,
+        deliberationStaticBlockNeutralUncertainty:
+          deliberation.options.every((option) =>
+            option.reasonsAgainstPrematureConclusion.includes(
+              "JOINT_FUTURE_STATIC_BLOCKED"
+            )
+          ),
         g2: jointFutureSet.staticQualification?.g2 ?? null,
         interpretation: "Static blockage of the companion direct realization no longer erases rehearsable player futures. Each remains explicit as blocked-before-joint-rehearsal and is not mislabeled as no-contact or safety evidence."
       })}`);

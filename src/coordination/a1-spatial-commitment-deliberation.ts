@@ -28,7 +28,8 @@ export type A1SpatialCommitmentDeliberationReason =
   | "PLAYER_FUTURE_CAUSAL_UNRESOLVED"
   | "PLAYER_FUTURE_REFERENCE_UNRESOLVED"
   | "JOINT_FUTURE_CAUSAL_UNRESOLVED"
-  | "JOINT_FUTURE_REFERENCE_UNRESOLVED";
+  | "JOINT_FUTURE_REFERENCE_UNRESOLVED"
+  | "JOINT_FUTURE_STATIC_BLOCKED";
 
 export type A1SpatialCommitmentDeliberationOpenQuestion =
   | "DOES_COMMITMENT_MEANING_STILL_APPLY"
@@ -245,6 +246,9 @@ function uncertaintyReasons(
   }
   if (review.jointReferenceUnresolvedFutureIds.length > 0) {
     reasons.push("JOINT_FUTURE_REFERENCE_UNRESOLVED");
+  }
+  if (review.jointStaticBlockedFutureIds.length > 0) {
+    reasons.push("JOINT_FUTURE_STATIC_BLOCKED");
   }
   return reasons;
 }
