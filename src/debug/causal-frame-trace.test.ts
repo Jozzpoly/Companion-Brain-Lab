@@ -8,6 +8,7 @@ function frame(sequence: number, observationTick: number, outcomeTick: number): 
       worldTick: observationTick,
       companionPosition: { x: 1, y: 2 },
       playerPosition: { x: 4, y: 5 },
+      playerControlMove: { x: 1, y: 0 },
       companionActualVelocity: { x: 0.5, y: 0 },
       companionContacts: []
     },
@@ -170,6 +171,7 @@ describe("R1 causal frame trace", () => {
     trace.record(value);
 
     value.observation.companionPosition.x = 999;
+    value.observation.playerControlMove.x = 999;
     value.decision.relationshipTarget!.x = 999;
     value.decision.shadowCoordination!.regionAnchor!.x = 999;
     value.decision.shadowCoordination!.playerCorridorEndpoint.x = 999;
@@ -183,6 +185,7 @@ describe("R1 causal frame trace", () => {
 
     const latest = trace.latest();
     expect(latest?.observation.companionPosition.x).toBe(1);
+    expect(latest?.observation.playerControlMove).toEqual({ x: 1, y: 0 });
     expect(latest?.decision.relationshipTarget?.x).toBe(3);
     expect(latest?.decision.shadowCoordination?.regionAnchor?.x).toBe(2.2);
     expect(latest?.decision.shadowCoordination?.playerCorridorEndpoint.x).toBe(4.7);
