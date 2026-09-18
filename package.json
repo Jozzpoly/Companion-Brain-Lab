@@ -18,7 +18,8 @@
     "browser:audit:os-prep1": "node scripts/owner-sandbox-incident-p2-browser-specimen.mjs",
     "browser:audit:os-prep3-ph01": "node scripts/os-prep3-ph01-open-turn-reversal-browser-specimen.mjs",
     "browser:audit:os-prep3-ph01-mirror": "node scripts/os-prep3-ph01-open-turn-reversal-mirror-browser-specimen.mjs",
-    "browser:audit:os-prep3-ph03": "node scripts/os-prep3-ph03-slow-walk-browser-specimen.mjs"
+    "browser:audit:os-prep3-ph03": "node scripts/os-prep3-ph03-slow-walk-browser-specimen.mjs",
+    "browser:audit:os-prep3-ph03-sustained": "node scripts/os-prep3-ph03-sustained-slow-walk-browser-specimen.mjs"
   },
   "dependencies": {
     "@dimforge/rapier2d-deterministic-compat": "0.20.0",
