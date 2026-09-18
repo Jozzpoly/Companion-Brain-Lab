@@ -196,6 +196,7 @@ export function buildA1SpatialCommitmentJointFutureSetEvidence(input: {
   });
 
   if (qualification.g2.status !== "PASS_STATIC_HARD_LEGALITY") {
+    const blockedG2 = qualification.g2;
     const futures: A1SpatialCommitmentJointFutureEntry[] =
       input.playerFutureSet.futures.map((future) =>
         future.interventionStatus === "UNRESOLVED"
@@ -211,9 +212,9 @@ export function buildA1SpatialCommitmentJointFutureSetEvidence(input: {
               futureFamily: future.futureFamily,
               status: "COMPANION_DIRECT_STATIC_BLOCKED" as const,
               anchorOccupancyStatus: future.occupancy.status,
-              staticBlockStatus: qualification.g2.status,
-              staticBlockReason: qualification.g2.reason,
-              blockerLabel: qualification.g2.blockerLabel
+              staticBlockStatus: blockedG2.status,
+              staticBlockReason: blockedG2.reason,
+              blockerLabel: blockedG2.blockerLabel
             }
       );
     return {
