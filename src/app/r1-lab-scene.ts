@@ -28,11 +28,13 @@ import {
   type CausalPanelModel,
   type CausalPanelSection
 } from "../debug/causal-panel";
+import { CURRENT_COMPANION_BUILD_IDENTITY } from "../debug/build-identity";
 import {
   CausalFrameTrace,
   type CausalFrame,
   type CausalPostClassification
 } from "../debug/causal-frame-trace";
+import { buildOwnerSandboxIncident } from "../debug/owner-sandbox-incident";
 import {
   S2C_ROUTE_CLEARANCE,
   planStaticShadowRoute,
@@ -1330,21 +1332,26 @@ export class R1LabScene extends Phaser.Scene {
   private captureIncident(): void {
     const snapshot = this.snapshotValue;
     if (!snapshot) return;
-    const incident = {
-      schema: "companion-brain-lab-ccc0-causal-incident-v4",
+
+    const incident = buildOwnerSandboxIncident({
+      build: CURRENT_COMPANION_BUILD_IDENTITY,
       scenario: snapshot.scenarioId,
       tick: snapshot.tick,
+      paused: this.paused,
       mode: this.companionMode,
       actuator: this.naturalActuator ? "natural" : "direct",
+      a1Variant: this.a1Authority.debugState().variant,
       timeScale: TIME_SCALES[this.timeScaleIndex] ?? 1,
+      p2: window.__authorityA12p2BrowserBridge?.snapshot() ?? null,
       frames: this.causalTrace.recent(240),
-      events: [...this.eventLog]
-    };
+      events: this.eventLog
+    });
     const blob = new Blob([JSON.stringify(incident, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
+    const sourceLabel = incident.build.sourceSha?.slice(0, 12) ?? "unbound";
     anchor.href = url;
-    anchor.download = `companion-ccc0-${snapshot.scenarioId}-tick-${snapshot.tick}.json`;
+    anchor.download = `companion-os-prep-${sourceLabel}-${snapshot.scenarioId}-tick-${snapshot.tick}.json`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
