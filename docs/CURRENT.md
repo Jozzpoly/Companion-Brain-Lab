@@ -148,13 +148,28 @@ Evidence document:
 
 - [OS_PREP_3_PH01_OPEN_TURN_REVERSAL_EVIDENCE.md](OS_PREP_3_PH01_OPEN_TURN_REVERSAL_EVIDENCE.md)
 
+Completed Wave A evidence:
+
+- **PH-02 semantic freshness / stale-policy: CLOSED ENOUGH · MATERIAL PATHOLOGY**;
+- qualified at `f21e9076...`, Validate #1318;
+- canonical semantics are true `NONE`, while legacy policy retains `+X` through `RETAINED_LAST_SEMANTIC_FRAME`;
+- participant sequence shows sustained close-contact / delayed egress;
+- live retained command keeps contact **6/6** frames in the same-state Twin shadow and displaces the player ~**7.2 cm**;
+- directionless radial and directionless A1 research branches break contact in **1/6** and **2/6** frames with **0 cm** player displacement;
+- retained command points almost exactly opposite to both directionless alternatives (`dot ≈ -0.99`);
+- no replacement policy is selected and A1 authority remains unchanged.
+
+Evidence document:
+
+- [OS_PREP_3_PH02_SEMANTIC_FRESHNESS_EVIDENCE.md](OS_PREP_3_PH02_SEMANTIC_FRESHNESS_EVIDENCE.md)
+
 Current next target:
 
-- **PH-02 — semantic freshness / stale-policy participant evidence**;
-- use the already-qualified bounded orientation memory and post-expiry disturbance apparatus as donors;
-- distinguish canonical `NONE` from legacy `RETAINED_LAST_SEMANTIC_FRAME` at the participant surface;
-- do not re-research expiry mathematics or add new memory constants;
-- build the smallest participant/research Twin that makes any post-expiry stale-policy consequence visible.
+- **PH-03 — pace and separation without chase pressure**;
+- first recover whether existing runtime/input can produce genuinely slow sustained player movement without a new apparatus;
+- expose slow-walk / settle / catch-up / release at the participant surface;
+- distinguish upstream desired pace from NATURAL smoothing and relationship-target churn;
+- do not tune PACE constants before the first product-facing falsifier.
 
 Do not widen A1 authority as part of OS-PREP-3.
 

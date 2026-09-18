@@ -166,7 +166,11 @@ Do not tune constants between variants.
 
 ## 5. Wave A3 — PH-03 slow-walk/catch-up story
 
-Proceed after PH-01/PH-02 evidence is legible enough that pace behavior will not be confused with relationship-target churn.
+**Status: ACTIVE**
+
+PH-01 and PH-02 are closed enough to separate relationship-frame and stale-policy failures from the next pace question.
+
+Proceed with a participant-first slow-walk / settle / catch-up story before tuning any PACE constant.
 
 Goal:
 
