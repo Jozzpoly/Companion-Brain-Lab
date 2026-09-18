@@ -8,7 +8,8 @@ const RESEARCH_DIR = `${ARTIFACT_DIR}/research`;
 const TOTAL_TICKS = 120;
 const STEP_SECONDS = 1 / 60;
 const PLAYER_SPEED = 3;
-const IDEAL_FORWARD_PROGRESS = TOTAL_TICKS * STEP_SECONDS * PLAYER_SPEED;
+const IDEAL_REQUEST_PROGRESS = TOTAL_TICKS * STEP_SECONDS * PLAYER_SPEED;
+const IDEAL_OBSERVATION_PROGRESS = (TOTAL_TICKS - 1) * STEP_SECONDS * PLAYER_SPEED;
 const SCREENSHOT_EVERY = 6;
 
 function invariant(condition, message) {
@@ -150,7 +151,7 @@ function summarizeBehavior(frames) {
   // Use actual observation positions for per-step progress. The final one-step estimate above
   // is not used for the primary deficit; it is retained only as a diagnostic.
   const actualForwardProgress = last.observation.playerPosition.x - start.x;
-  const forwardProgressDeficit = IDEAL_FORWARD_PROGRESS - actualForwardProgress;
+  const forwardProgressDeficit = IDEAL_OBSERVATION_PROGRESS - actualForwardProgress;
   const maxLateralDeviation = Math.max(
     ...frames.map((frame) => Math.abs(frame.observation.playerPosition.y - start.y))
   );
@@ -186,10 +187,11 @@ function summarizeBehavior(frames) {
     initialPlayerPosition: start,
     finalObservedPlayerPosition: last.observation.playerPosition,
     finalOneStepDiagnosticEstimate: end,
-    idealForwardProgress: IDEAL_FORWARD_PROGRESS,
+    idealRequestProgress: IDEAL_REQUEST_PROGRESS,
+    idealObservationProgress: IDEAL_OBSERVATION_PROGRESS,
     actualForwardProgress,
     forwardProgressDeficit,
-    forwardProgressFraction: actualForwardProgress / IDEAL_FORWARD_PROGRESS,
+    forwardProgressFraction: actualForwardProgress / IDEAL_OBSERVATION_PROGRESS,
     maxLateralDeviation,
     contactTickCount: contactTicks.length,
     firstContactTick: contactTicks[0] ?? null,
@@ -323,7 +325,8 @@ async function runTwin({ browser, research }) {
         totalTicks: TOTAL_TICKS,
         stepSeconds: STEP_SECONDS,
         playerSpeed: PLAYER_SPEED,
-        idealForwardProgress: IDEAL_FORWARD_PROGRESS,
+        idealRequestProgress: IDEAL_REQUEST_PROGRESS,
+        idealObservationProgress: IDEAL_OBSERVATION_PROGRESS,
         input: { x: 1, y: 0 }
       },
       frames: manifest
@@ -367,7 +370,8 @@ try {
       totalTicks: TOTAL_TICKS,
       stepSeconds: STEP_SECONDS,
       playerSpeed: PLAYER_SPEED,
-      idealForwardProgress: IDEAL_FORWARD_PROGRESS,
+      idealRequestProgress: IDEAL_REQUEST_PROGRESS,
+        idealObservationProgress: IDEAL_OBSERVATION_PROGRESS,
       input: { x: 1, y: 0 }
     },
     participant: {
