@@ -1,6 +1,7 @@
 import type { A1SpatialCommitmentFitEvidence } from "./a1-spatial-commitment-evidence";
 import type { A1SpatialCommitmentMaterialEvidence } from "./a1-spatial-commitment-material";
 import type { A1SpatialCommitmentActorOccupancyEvidence } from "./a1-spatial-commitment-actor-occupancy";
+import type { A1SpatialCommitmentPlayerFutureSetEvidence } from "./a1-spatial-commitment-player-future-set";
 
 const ZERO_EPSILON = 1e-9;
 
@@ -39,6 +40,15 @@ export interface A1SpatialCommitmentReviewEvidence {
   materialEvidenceScope: "NOT_SUPPLIED" | "STATIC_WORLD_ONLY_DYNAMIC_ACTORS_NOT_EVALUATED";
   actorOccupancyStatus: A1SpatialCommitmentActorOccupancyEvidence["status"] | "NOT_SUPPLIED";
   actorOccupancyEvidenceScope: "NOT_SUPPLIED" | "CURRENT_TICK_ONLY_NO_FUTURE_PREDICTION";
+  playerFutureSetStatus: "NOT_SUPPLIED" | "PRESERVED_DISTINCT_COUNTERFACTUALS";
+  playerFutureHorizonSeconds: number | null;
+  playerFutureOverlapIds: readonly string[];
+  playerFutureSampledClearIds: readonly string[];
+  playerFutureReferenceUnresolvedIds: readonly string[];
+  playerFutureCausalUnresolvedIds: readonly string[];
+  playerFutureAggregationClaim: "NONE";
+  playerFutureProbabilityClaim: "NONE";
+  playerFutureBooleanCollapseClaim: "NONE";
   evidenceScope: "SAMPLED_MESH_ONLY_CONTINUOUS_OPPORTUNITY_NOT_ESTABLISHED";
   decisionClaim: "NONE_EVIDENCE_ONLY";
   scalarScoreClaim: "NONE";
@@ -47,6 +57,7 @@ export interface A1SpatialCommitmentReviewEvidence {
   sourceFit: A1SpatialCommitmentFitEvidence;
   sourceMaterial: A1SpatialCommitmentMaterialEvidence | null;
   sourceActorOccupancy: A1SpatialCommitmentActorOccupancyEvidence | null;
+  sourcePlayerFutureSet: A1SpatialCommitmentPlayerFutureSetEvidence | null;
 }
 
 function referenceMode(
@@ -204,6 +215,93 @@ function validateActorOccupancy(
   }
 }
 
+function validatePlayerFutureSet(
+  fit: A1SpatialCommitmentFitEvidence,
+  set: A1SpatialCommitmentPlayerFutureSetEvidence
+): void {
+  if (set.kind !== "A1_SPATIAL_COMMITMENT_PLAYER_FUTURE_SET_EVIDENCE") {
+    throw new Error("A1 commitment review requires qualified player-future set evidence.");
+  }
+  if (
+    set.sourceTick !== fit.sourceTick ||
+    set.commitmentSourceTick !== fit.commitmentSourceTick
+  ) {
+    throw new Error("A1 commitment review player-future set is not tick/commitment aligned with fit evidence.");
+  }
+  if (
+    set.aggregationClaim !== "NONE_PRESERVE_DISTINCT_PLAYER_FUTURES" ||
+    set.probabilityClaim !== "NONE_COUNTERFACTUAL_SET_NOT_FORECAST_DISTRIBUTION" ||
+    set.selectionClaim !== "NONE" ||
+    set.fallbackSubstitutionClaim !== "NONE_UNRESOLVED_FUTURES_REMAIN_EXPLICIT" ||
+    set.liveWorldMutationClaim !== "NONE_QUERY_ONLY_REHEARSALS" ||
+    set.runtimeAuthorityClaim !== "NONE"
+  ) {
+    throw new Error("A1 commitment review refuses player-future evidence with aggregation, probability, substitution, mutation or authority claims.");
+  }
+  if (
+    set.futures.length !== set.futureCount ||
+    set.rehearsedCount + set.causalUnresolvedCount !== set.futureCount
+  ) {
+    throw new Error("A1 commitment review player-future counts are inconsistent.");
+  }
+
+  const ids = new Set<string>();
+  for (const future of set.futures) {
+    if (ids.has(future.futureId)) {
+      throw new Error(`A1 commitment review refuses duplicate player-future id: ${future.futureId}.`);
+    }
+    ids.add(future.futureId);
+
+    if (future.interventionStatus === "UNRESOLVED") {
+      if (future.occupancy !== null || future.unresolvedReason === null) {
+        throw new Error("A1 commitment review causal-unresolved future must preserve null occupancy and explicit reason.");
+      }
+      continue;
+    }
+
+    if (future.unresolvedReason !== null || future.occupancy === null) {
+      throw new Error("A1 commitment review rehearsed future must preserve occupancy and no causal unresolved reason.");
+    }
+    const occupancy = future.occupancy;
+    if (
+      occupancy.sourceTick !== fit.sourceTick ||
+      occupancy.commitmentSourceTick !== fit.commitmentSourceTick ||
+      occupancy.futureId !== future.futureId
+    ) {
+      throw new Error("A1 commitment review rehearsed occupancy is not aligned with its fit/future identity.");
+    }
+
+    if (fit.referenceResolutionStatus === "UNRESOLVED") {
+      if (
+        occupancy.status !== "REFERENCE_UNRESOLVED" ||
+        occupancy.anchorWorldPosition !== null
+      ) {
+        throw new Error("A1 commitment review requires reference-unresolved rehearsed futures when fit reference is unresolved.");
+      }
+      continue;
+    }
+
+    if (
+      occupancy.status === "REFERENCE_UNRESOLVED" ||
+      occupancy.anchorWorldPosition === null
+    ) {
+      throw new Error("A1 commitment review refuses reference-unresolved rehearsed future for resolved fit reference.");
+    }
+    const anchor = fit.resolvedAnchorWorldPosition;
+    if (!anchor) {
+      throw new Error("A1 commitment review resolved fit unexpectedly lacks an anchor.");
+    }
+    if (
+      Math.hypot(
+        occupancy.anchorWorldPosition.x - anchor.x,
+        occupancy.anchorWorldPosition.y - anchor.y
+      ) > ZERO_EPSILON
+    ) {
+      throw new Error("A1 commitment review player-future occupancy anchor does not match fit reference anchor.");
+    }
+  }
+}
+
 /**
  * Observational composition only. This function deliberately does not decide
  * whether the companion should keep, release, replace or execute a commitment.
@@ -213,11 +311,13 @@ function validateActorOccupancy(
 export function buildA1SpatialCommitmentReviewEvidence(
   fit: A1SpatialCommitmentFitEvidence,
   material: A1SpatialCommitmentMaterialEvidence | null = null,
-  actorOccupancy: A1SpatialCommitmentActorOccupancyEvidence | null = null
+  actorOccupancy: A1SpatialCommitmentActorOccupancyEvidence | null = null,
+  playerFutureSet: A1SpatialCommitmentPlayerFutureSetEvidence | null = null
 ): A1SpatialCommitmentReviewEvidence {
   validateFit(fit);
   if (material) validateMaterial(fit, material);
   if (actorOccupancy) validateActorOccupancy(fit, actorOccupancy);
+  if (playerFutureSet) validatePlayerFutureSet(fit, playerFutureSet);
 
   const facts: A1SpatialCommitmentReviewFact[] = [];
   const uncertainties: A1SpatialCommitmentReviewUncertainty[] = [];
@@ -271,6 +371,26 @@ export function buildA1SpatialCommitmentReviewEvidence(
     facts.push("CURRENT_PLAYER_BODY_OVERLAP");
   }
 
+  const playerFutureOverlapIds: string[] = [];
+  const playerFutureSampledClearIds: string[] = [];
+  const playerFutureReferenceUnresolvedIds: string[] = [];
+  const playerFutureCausalUnresolvedIds: string[] = [];
+  if (playerFutureSet) {
+    for (const future of playerFutureSet.futures) {
+      if (future.interventionStatus === "UNRESOLVED") {
+        playerFutureCausalUnresolvedIds.push(future.futureId);
+        continue;
+      }
+      if (future.occupancy.status === "SAMPLED_PLAYER_FUTURE_OVERLAP") {
+        playerFutureOverlapIds.push(future.futureId);
+      } else if (future.occupancy.status === "NO_SAMPLED_PLAYER_FUTURE_OVERLAP") {
+        playerFutureSampledClearIds.push(future.futureId);
+      } else {
+        playerFutureReferenceUnresolvedIds.push(future.futureId);
+      }
+    }
+  }
+
   return {
     kind: "A1_SPATIAL_COMMITMENT_REVIEW_EVIDENCE",
     sourceTick: fit.sourceTick,
@@ -289,6 +409,17 @@ export function buildA1SpatialCommitmentReviewEvidence(
     actorOccupancyEvidenceScope: actorOccupancy
       ? "CURRENT_TICK_ONLY_NO_FUTURE_PREDICTION"
       : "NOT_SUPPLIED",
+    playerFutureSetStatus: playerFutureSet
+      ? "PRESERVED_DISTINCT_COUNTERFACTUALS"
+      : "NOT_SUPPLIED",
+    playerFutureHorizonSeconds: playerFutureSet?.horizonSeconds ?? null,
+    playerFutureOverlapIds,
+    playerFutureSampledClearIds,
+    playerFutureReferenceUnresolvedIds,
+    playerFutureCausalUnresolvedIds,
+    playerFutureAggregationClaim: "NONE",
+    playerFutureProbabilityClaim: "NONE",
+    playerFutureBooleanCollapseClaim: "NONE",
     evidenceScope: "SAMPLED_MESH_ONLY_CONTINUOUS_OPPORTUNITY_NOT_ESTABLISHED",
     decisionClaim: "NONE_EVIDENCE_ONLY",
     scalarScoreClaim: "NONE",
@@ -296,6 +427,7 @@ export function buildA1SpatialCommitmentReviewEvidence(
     runtimeAuthorityClaim: "NONE",
     sourceFit: structuredClone(fit),
     sourceMaterial: material ? structuredClone(material) : null,
-    sourceActorOccupancy: actorOccupancy ? structuredClone(actorOccupancy) : null
+    sourceActorOccupancy: actorOccupancy ? structuredClone(actorOccupancy) : null,
+    sourcePlayerFutureSet: playerFutureSet ? structuredClone(playerFutureSet) : null
   };
 }
