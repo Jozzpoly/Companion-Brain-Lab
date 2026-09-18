@@ -50,6 +50,13 @@ jobs:
           echo "NPM_ARBORIST_EDGESOUT_FALLBACK_USED=1"
       - run: npm run check
       - run: npm run browser:audit
+      - name: Upload OS-PREP-1 Owner incident browser evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: os-prep1-owner-incident-${{ github.sha }}
+          path: artifacts/os-prep1-incident
+          if-no-files-found: error
+          retention-days: 7
       - name: Capture live relationship semantic provenance replay
         run: |
           set -o pipefail
