@@ -104,6 +104,10 @@ Do not keep polishing instrumentation once it is strong enough to answer the nex
 
 **OS-PREP-1 — Evidence integrity and session identity**
 
+Execution plan:
+
+- [OS_PREP_1_EVIDENCE_INTEGRITY_PLAN.md](OS_PREP_1_EVIDENCE_INTEGRITY_PLAN.md)
+
 Current first targets:
 
 - bind P2 preview / arm / application evidence into incident/session capture;
