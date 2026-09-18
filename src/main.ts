@@ -10,6 +10,7 @@ import { scheduleFoundationFaultProbe } from "./debug/foundation-fault-probe";
 import { installRelationshipCommitmentShadowBrowserBridge } from "./debug/relationship-commitment-shadow-browser-bridge";
 import { installRelationshipSemanticPerturbationBrowserBridge } from "./debug/relationship-semantic-perturbation-browser-bridge";
 import { installRelationshipSemanticPhysicsShadowBrowserBridge } from "./debug/relationship-semantic-physics-shadow-browser-bridge";
+import { installOwnerControlScaleBrowserBridge } from "./debug/owner-control-scale-browser-bridge";
 import {
   installRuntimeFaultSentinel,
   normalizeRuntimeFault
@@ -23,6 +24,7 @@ const reportRuntimeFault = installRuntimeFaultSentinel({
 });
 
 try {
+  installOwnerControlScaleBrowserBridge(window.location.search);
   installAuthorityA0BrowserBridge(window.location.search);
   installAuthorityA10BrowserBridge(window.location.search);
   installAuthorityA11fBrowserBridge(window.location.search);

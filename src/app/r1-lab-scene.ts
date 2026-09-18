@@ -35,6 +35,7 @@ import {
   type CausalPostClassification
 } from "../debug/causal-frame-trace";
 import { buildOwnerSandboxIncident } from "../debug/owner-sandbox-incident";
+import { currentOwnerControlScale, scaleOwnerControlMove } from "../debug/owner-control-scale-browser-bridge";
 import {
   S2C_ROUTE_CLEARANCE,
   planStaticShadowRoute,
@@ -292,7 +293,10 @@ export class R1LabScene extends Phaser.Scene {
 
     const playerIntent: MotionIntent = {
       actorId: "player",
-      move: normalizedMotion(axis(this.keys.a, this.keys.d), axis(this.keys.w, this.keys.s))
+      move: scaleOwnerControlMove(
+        normalizedMotion(axis(this.keys.a, this.keys.d), axis(this.keys.w, this.keys.s)),
+        currentOwnerControlScale()
+      )
     };
 
     let companionIntent: MotionIntent;
