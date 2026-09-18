@@ -416,8 +416,15 @@ describe("A1 commitment right-of-way evidence dossier", () => {
       expect(deliberation.rightOfWayContext.runtimeAuthorityClaim).toBe("NONE");
       const noContactDisposition =
         buildA1SpatialCommitmentRightOfWayShadowDisposition(deliberation);
-      expect(noContactDisposition.status).toBe("NO_CAUSAL_H1_YIELD_SIGNAL");
+      expect(noContactDisposition.status).toBe(
+        "WITHHOLD_YIELD_INFERENCE_ALTERNATE_FUTURE_CONTEXT"
+      );
       expect(noContactDisposition.causalOwnerFlowReasons).toEqual([]);
+      expect(
+        dossier.alternateJointContactFutureIds.length +
+        dossier.alternateJointCausalUnresolvedFutureIds.length +
+        dossier.alternateJointReferenceUnresolvedFutureIds.length
+      ).toBeGreaterThan(0);
       expect(noContactDisposition.finalPolicyClaim).toBe("NONE");
       expect(noContactDisposition.runtimeAuthorityClaim).toBe("NONE");
       for (const option of deliberation.options) {
@@ -455,6 +462,52 @@ describe("A1 commitment right-of-way evidence dossier", () => {
         runtimeAuthorityClaim: dossier.runtimeAuthorityClaim,
         interpretation: "This exact rehearsed execution produced no reciprocal contact and no measured Owner-flow delta relative to HOLD in the bounded horizon. That is not promoted into a general safety, priority or execution-authority claim."
       })}`);
+    } finally {
+      world.dispose();
+    }
+  });
+
+  it("returns no H1 yield signal only when zero-impact evidence also has no conflicting or unresolved alternate future", async () => {
+    const world = await LabWorld.create("open");
+    try {
+      const after = world.step([
+        playerIntent(1, 0),
+        { actorId: "companion", move: { x: 0, y: 0 } }
+      ]);
+      const currentFit = fit(after, { x: 8, y: 6 });
+      const { review, impact } = evidence(
+        world,
+        currentFit,
+        0.5,
+        { x: -1, y: 0 },
+        after
+      );
+      const dossier = buildA1SpatialCommitmentRightOfWayEvidenceDossier({
+        review,
+        impact
+      });
+      const deliberation = buildA1SpatialCommitmentDeliberationFrame(
+        review,
+        dossier
+      );
+      const disposition =
+        buildA1SpatialCommitmentRightOfWayShadowDisposition(deliberation);
+
+      expect(dossier.executionOnlyContactFrameCount).toBe(0);
+      expect(dossier.peakPlayerProgressDeficitVsHold).toBeCloseTo(0, 9);
+      expect(dossier.peakPlayerLateralDeltaMagnitudeVsHold).toBeCloseTo(0, 9);
+      expect(dossier.alternateJointContactFutureIds).toEqual([]);
+      expect(dossier.alternateJointCausalUnresolvedFutureIds).toEqual([]);
+      expect(dossier.alternateJointReferenceUnresolvedFutureIds).toEqual([]);
+      expect(dossier.alternateJointNoContactRehearsedFutureIds.length)
+        .toBeGreaterThan(0);
+      expect(disposition.status).toBe("NO_CAUSAL_H1_YIELD_SIGNAL");
+      expect(disposition.causalOwnerFlowReasons).toEqual([]);
+      expect(disposition.finalPolicyClaim).toBe("NONE");
+      expect(disposition.selectionClaim).toBe(
+        "NONE_SHADOW_DISPOSITION_ONLY"
+      );
+      expect(disposition.runtimeAuthorityClaim).toBe("NONE");
     } finally {
       world.dispose();
     }
