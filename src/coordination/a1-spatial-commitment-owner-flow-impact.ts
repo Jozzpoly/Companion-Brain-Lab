@@ -128,6 +128,10 @@ function finalPlayer(frames: readonly { actors: readonly ActorSnapshot[] }[], la
   return actor(final.actors, "player");
 }
 
+function distance(a: Vec2, b: Vec2): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
 function directionalEffects(delta: Vec2, velocity: Vec2): {
   progress: number | null;
   lateralMagnitude: number | null;
