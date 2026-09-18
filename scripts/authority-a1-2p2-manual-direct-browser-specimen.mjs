@@ -103,10 +103,13 @@ try {
   await page.keyboard.down("d");
   await page.waitForTimeout(50);
 
-  const previewEvidence = await page.evaluate(
-    (horizonSeconds) => window.__authorityA12p2BrowserBridge.preview(horizonSeconds),
-    HORIZON_SECONDS
+  await page.locator('[data-action="p2-preview"]').click();
+  await page.waitForFunction(
+    () => window.__authorityA12p2BrowserBridge?.snapshot().latestPreview?.sourceTick === 0,
+    null,
+    { timeout: 15_000 }
   );
+  const previewEvidence = (await p2(page)).latestPreview;
   invariant(previewEvidence.sourceTick === 0, `P2 preview expected tick 0, got ${previewEvidence.sourceTick}.`);
   invariant(previewEvidence.playerMove.x === 1 && previewEvidence.playerMove.y === 0, "P2 preview did not capture Owner +X.");
   invariant(previewEvidence.authorityClaim === "NONE_PREVIEW_ONLY_P2", "P2 preview claimed authority.");
@@ -120,10 +123,13 @@ try {
   const previewImage = await page.locator("#game-root canvas").screenshot({ type: "jpeg", quality: 75 });
   await writeFile(`${ARTIFACT_DIR}/tick-0-preview.jpg`, previewImage);
 
-  const armed = await page.evaluate(
-    (proposalId) => window.__authorityA12p2BrowserBridge.arm(proposalId),
-    candidate.proposalId
+  await page.locator('[data-action="p2-arm-singleton"]').click();
+  await page.waitForFunction(
+    (proposalId) => window.__authorityA12p2BrowserBridge?.snapshot().armed?.proposalId === proposalId,
+    candidate.proposalId,
+    { timeout: 15_000 }
   );
+  const armed = (await p2(page)).armed;
   invariant(armed.sourceTick === 0, "P2 arm changed source tick.");
   invariant(armed.proposalId === candidate.proposalId, "P2 arm changed explicit proposal id.");
   invariant(
