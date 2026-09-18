@@ -1027,6 +1027,28 @@ export class R1LabScene extends Phaser.Scene {
                   "A1.0 still has no new movement policy authority"
                 ]
       },
+      ...(p2 ? [{
+        id: "p2",
+        title: "Authority-A1.2p2 · explicit one-step DIRECT",
+        tone: p2.lastError ? "warning" : p2.armed ? "success" : "normal",
+        lines: [
+          p2.latestPreview
+            ? `preview t${p2.latestPreview.sourceTick} · h=${compact(p2.latestPreview.horizonSeconds)}s · ${p2.latestPreview.projection.frontierState} · candidates ${p2.latestPreview.projection.frontierProposalIds.length}`
+            : "preview none · press P2 Preview while PAUSED, SPATIAL, A1 DIRECT and holding Owner movement input",
+          p2.armed
+            ? `ARMED one step · t${p2.armed.sourceTick} · proposal ${p2.armed.proposalId}`
+            : "armed none · no A1 P2 movement authority pending",
+          p2.latestApplication
+            ? `last apply t${p2.latestApplication.sourceTick}->${p2.latestApplication.outcomeTick ?? "?"} · ${p2.latestApplication.status} · proposal ${p2.latestApplication.proposalId}`
+            : "last apply none",
+          p2.latestApplication?.a0CommandVelocityError !== null &&
+          p2.latestApplication?.a0CommandVelocityError !== undefined
+            ? `A0 command error ${p2.latestApplication.a0CommandVelocityError.toExponential(2)}`
+            : "A0 command confirmation none",
+          `counts preview ${p2.previewCount} · arm ${p2.armCount} · apply ${p2.applicationCount}`,
+          p2.lastError ?? "policy: explicit proposal only · one World step · auto-disarm · no automatic selector"
+        ]
+      }] : []),
       {
         id: "objective",
         title: "Objective",
@@ -1206,6 +1228,51 @@ export class R1LabScene extends Phaser.Scene {
     else if (action === "scenario-pillar") void this.loadScenario("pillar");
     else if (action === "scenario-doorway") void this.loadScenario("doorway");
     else if (action === "scenario-head-on") void this.loadScenario("head-on");
+  }
+
+  private previewP2(): void {
+    const bridge = window.__authorityA12p2BrowserBridge;
+    if (!bridge) {
+      this.logEvent("P2 unavailable · open the workbench with ?a1debug=1&a1p2=1");
+      return;
+    }
+    try {
+      const preview = bridge.preview(1);
+      this.logEvent(
+        `P2 preview t${preview.sourceTick} · ${preview.projection.frontierState} · candidates ${preview.projection.frontierProposalIds.length}`
+      );
+    } catch (error) {
+      this.logEvent(`P2 preview refused · ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private armP2Singleton(): void {
+    const bridge = window.__authorityA12p2BrowserBridge;
+    if (!bridge) {
+      this.logEvent("P2 unavailable · open the workbench with ?a1debug=1&a1p2=1");
+      return;
+    }
+    try {
+      const snapshot = bridge.snapshot();
+      const ids = snapshot.latestPreview?.projection.frontierProposalIds ?? [];
+      if (ids.length !== 1) {
+        throw new Error(`explicit singleton arm requires exactly one preview candidate; got ${ids.length}`);
+      }
+      const armed = bridge.arm(ids[0]!);
+      this.logEvent(`P2 armed explicitly · t${armed.sourceTick} · ${armed.proposalId}`);
+    } catch (error) {
+      this.logEvent(`P2 arm refused · ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private disarmP2(): void {
+    const bridge = window.__authorityA12p2BrowserBridge;
+    if (!bridge) {
+      this.logEvent("P2 unavailable · open the workbench with ?a1debug=1&a1p2=1");
+      return;
+    }
+    bridge.disarm();
+    this.logEvent("P2 disarmed explicitly");
   }
 
   private togglePause(): void {

@@ -53,7 +53,7 @@ const DEFAULT_LAYERS: Readonly<Record<WorldDebugLayer, boolean>> = {
   contacts: true
 };
 
-const DEFAULT_OPEN_SECTION_IDS = new Set(["run", "recovery", "route", "motion", "a1"]);
+const DEFAULT_OPEN_SECTION_IDS = new Set(["run", "recovery", "route", "motion", "a1", "p2"]);
 
 export class CausalPanelDisclosureState {
   private readonly remembered = new Map<string, boolean>();
@@ -155,6 +155,16 @@ export class CausalPanel {
       button("Time scale", "cycle-time"),
       button("Capture incident", "capture-incident")
     );
+    if (
+      (window as Window & { __authorityA12p2BrowserBridge?: { enabled: true } })
+        .__authorityA12p2BrowserBridge?.enabled
+    ) {
+      controlGrid.append(
+        button("P2 Preview", "p2-preview"),
+        button("P2 Arm singleton", "p2-arm-singleton"),
+        button("P2 Disarm", "p2-disarm")
+      );
+    }
     const scenarioGrid = document.createElement("div");
     scenarioGrid.className = "debug-button-grid debug-scenario-grid";
     scenarioGrid.append(
