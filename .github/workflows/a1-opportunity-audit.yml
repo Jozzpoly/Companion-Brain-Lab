@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - experiment/a1-opportunity-persistence
+      - experiment/a1-no-contact-cross-future-falsifier
     paths:
       - "src/coordination/a1-opportunity-*.audit.test.ts"
       - "src/coordination/a1-spatial-commitment-evidence.ts"
