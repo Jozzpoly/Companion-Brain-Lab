@@ -168,12 +168,14 @@ export function buildA1SpatialCommitmentRightOfWayEvidenceDossier(input: {
 
   const jointHasContact = jointFuture.contactFrameCount > 0;
   const impactHasContact = impact.commitmentExecutionContactFrameCount > 0;
+  const impactFirstContactStepIndex =
+    impact.frames.find(
+      (frame) => frame.commitmentExecutionReciprocalContact
+    )?.stepIndex ?? null;
   if (
     jointHasContact !== impactHasContact ||
     jointFuture.contactFrameCount !== impact.commitmentExecutionContactFrameCount ||
-    jointFuture.firstContactStepIndex !== impact.frames.find(
-      (frame) => frame.commitmentExecutionReciprocalContact
-    )?.stepIndex ?? null
+    jointFuture.firstContactStepIndex !== impactFirstContactStepIndex
   ) {
     throw new Error(
       "A1 right-of-way dossier joint-contact trace disagrees with Owner-flow impact execution trace."
