@@ -2,6 +2,7 @@ import type { A1SpatialCommitmentFitEvidence } from "./a1-spatial-commitment-evi
 import type { A1SpatialCommitmentMaterialEvidence } from "./a1-spatial-commitment-material";
 import type { A1SpatialCommitmentActorOccupancyEvidence } from "./a1-spatial-commitment-actor-occupancy";
 import type { A1SpatialCommitmentPlayerFutureSetEvidence } from "./a1-spatial-commitment-player-future-set";
+import type { A1SpatialCommitmentJointFutureSetEvidence } from "./a1-spatial-commitment-joint-future";
 
 const ZERO_EPSILON = 1e-9;
 
@@ -49,6 +50,20 @@ export interface A1SpatialCommitmentReviewEvidence {
   playerFutureAggregationClaim: "NONE";
   playerFutureProbabilityClaim: "NONE";
   playerFutureBooleanCollapseClaim: "NONE";
+  jointFutureSetStatus: A1SpatialCommitmentJointFutureSetEvidence["status"] | "NOT_SUPPLIED";
+  jointHorizonSeconds: number | null;
+  jointDirectRealizationStatus: A1SpatialCommitmentJointFutureSetEvidence["directRealization"]["status"] | "NOT_SUPPLIED";
+  jointDirectCapabilityClipped: boolean | null;
+  jointDirectTerminalAnchorError: number | null;
+  jointContactFutureIds: readonly string[];
+  jointNoContactRehearsedFutureIds: readonly string[];
+  jointReferenceUnresolvedFutureIds: readonly string[];
+  jointCausalUnresolvedFutureIds: readonly string[];
+  jointContactEvidenceClaim: "NOT_SUPPLIED" | "SAME_PHYSICS_RECIPROCAL_CONTACT_FRAMES_ONLY";
+  jointNoContactSafetyClaim: "NONE";
+  jointAnchorOccupancyEquivalenceClaim: "NONE";
+  jointCooperationPolicyClaim: "NONE";
+  jointBooleanCollapseClaim: "NONE";
   evidenceScope: "SAMPLED_MESH_ONLY_CONTINUOUS_OPPORTUNITY_NOT_ESTABLISHED";
   decisionClaim: "NONE_EVIDENCE_ONLY";
   scalarScoreClaim: "NONE";
@@ -58,6 +73,7 @@ export interface A1SpatialCommitmentReviewEvidence {
   sourceMaterial: A1SpatialCommitmentMaterialEvidence | null;
   sourceActorOccupancy: A1SpatialCommitmentActorOccupancyEvidence | null;
   sourcePlayerFutureSet: A1SpatialCommitmentPlayerFutureSetEvidence | null;
+  sourceJointFutureSet: A1SpatialCommitmentJointFutureSetEvidence | null;
 }
 
 function referenceMode(
@@ -302,6 +318,75 @@ function validatePlayerFutureSet(
   }
 }
 
+function validateJointFutureSet(
+  fit: A1SpatialCommitmentFitEvidence,
+  playerFutureSet: A1SpatialCommitmentPlayerFutureSetEvidence | null,
+  joint: A1SpatialCommitmentJointFutureSetEvidence
+): void {
+  if (joint.kind !== "A1_SPATIAL_COMMITMENT_JOINT_FUTURE_SET_EVIDENCE") {
+    throw new Error("A1 commitment review requires qualified joint-future evidence.");
+  }
+  if (
+    joint.sourceTick !== fit.sourceTick ||
+    joint.commitmentSourceTick !== fit.commitmentSourceTick
+  ) {
+    throw new Error("A1 commitment review joint-future set is not tick/commitment aligned with fit evidence.");
+  }
+  if (
+    joint.contactEvidenceClaim !== "SAME_PHYSICS_RECIPROCAL_CONTACT_FRAMES_ONLY" ||
+    joint.noContactSafetyClaim !== "NONE_NO_CONTACT_DOES_NOT_ESTABLISH_GENERAL_SAFETY" ||
+    joint.anchorOccupancyEquivalenceClaim !== "NONE_ANCHOR_OVERLAP_IS_NOT_JOINT_CONTACT" ||
+    joint.cooperationPolicyClaim !== "NONE_EVIDENCE_ONLY" ||
+    joint.selectionClaim !== "NONE" ||
+    joint.runtimeAuthorityClaim !== "NONE"
+  ) {
+    throw new Error("A1 commitment review refuses joint evidence with stronger contact, safety, equivalence, policy, selection or authority claims.");
+  }
+  if (!playerFutureSet) {
+    throw new Error("A1 commitment review requires the source player-future set whenever joint-future evidence is supplied.");
+  }
+  if (
+    Math.abs(joint.horizonSeconds - playerFutureSet.horizonSeconds) > ZERO_EPSILON ||
+    joint.sourceTick !== playerFutureSet.sourceTick ||
+    joint.commitmentSourceTick !== playerFutureSet.commitmentSourceTick
+  ) {
+    throw new Error("A1 commitment review joint-future evidence does not align with its player-future set.");
+  }
+
+  const sourceIds = playerFutureSet.futures.map((value) => value.futureId);
+  const jointIds = joint.futures.map((value) => value.futureId);
+  for (const id of jointIds) {
+    if (!sourceIds.includes(id)) {
+      throw new Error(`A1 commitment review joint future ${id} is not present in the source player-future set.`);
+    }
+  }
+  for (const id of joint.contactFutureIds) {
+    const entry = joint.futures.find((value) => value.futureId === id);
+    if (!entry || entry.status !== "REHEARSED" || entry.contactFrameCount <= 0) {
+      throw new Error(`A1 commitment review joint contact id ${id} lacks positive rehearsed contact evidence.`);
+    }
+  }
+  for (const id of joint.noContactRehearsedFutureIds) {
+    const entry = joint.futures.find((value) => value.futureId === id);
+    if (!entry || entry.status !== "REHEARSED" || entry.contactFrameCount !== 0) {
+      throw new Error(`A1 commitment review joint no-contact id ${id} lacks zero-contact rehearsed evidence.`);
+    }
+  }
+
+  if (
+    joint.status === "REFERENCE_UNRESOLVED" &&
+    fit.referenceResolutionStatus !== "UNRESOLVED"
+  ) {
+    throw new Error("A1 commitment review refuses reference-unresolved joint evidence for a resolved commitment reference.");
+  }
+  if (
+    joint.status !== "REFERENCE_UNRESOLVED" &&
+    fit.referenceResolutionStatus === "UNRESOLVED"
+  ) {
+    throw new Error("A1 commitment review requires reference-unresolved joint evidence when commitment reference is unresolved.");
+  }
+}
+
 /**
  * Observational composition only. This function deliberately does not decide
  * whether the companion should keep, release, replace or execute a commitment.
@@ -312,12 +397,14 @@ export function buildA1SpatialCommitmentReviewEvidence(
   fit: A1SpatialCommitmentFitEvidence,
   material: A1SpatialCommitmentMaterialEvidence | null = null,
   actorOccupancy: A1SpatialCommitmentActorOccupancyEvidence | null = null,
-  playerFutureSet: A1SpatialCommitmentPlayerFutureSetEvidence | null = null
+  playerFutureSet: A1SpatialCommitmentPlayerFutureSetEvidence | null = null,
+  jointFutureSet: A1SpatialCommitmentJointFutureSetEvidence | null = null
 ): A1SpatialCommitmentReviewEvidence {
   validateFit(fit);
   if (material) validateMaterial(fit, material);
   if (actorOccupancy) validateActorOccupancy(fit, actorOccupancy);
   if (playerFutureSet) validatePlayerFutureSet(fit, playerFutureSet);
+  if (jointFutureSet) validateJointFutureSet(fit, playerFutureSet, jointFutureSet);
 
   const facts: A1SpatialCommitmentReviewFact[] = [];
   const uncertainties: A1SpatialCommitmentReviewUncertainty[] = [];
@@ -420,6 +507,30 @@ export function buildA1SpatialCommitmentReviewEvidence(
     playerFutureAggregationClaim: "NONE",
     playerFutureProbabilityClaim: "NONE",
     playerFutureBooleanCollapseClaim: "NONE",
+    jointFutureSetStatus: jointFutureSet?.status ?? "NOT_SUPPLIED",
+    jointHorizonSeconds: jointFutureSet?.horizonSeconds ?? null,
+    jointDirectRealizationStatus: jointFutureSet?.directRealization.status ?? "NOT_SUPPLIED",
+    jointDirectCapabilityClipped:
+      jointFutureSet?.directRealization.realization?.capabilityClipped ?? null,
+    jointDirectTerminalAnchorError:
+      jointFutureSet?.directRealization.terminalAnchorError ?? null,
+    jointContactFutureIds: jointFutureSet ? [...jointFutureSet.contactFutureIds] : [],
+    jointNoContactRehearsedFutureIds: jointFutureSet
+      ? [...jointFutureSet.noContactRehearsedFutureIds]
+      : [],
+    jointReferenceUnresolvedFutureIds: jointFutureSet
+      ? [...jointFutureSet.referenceUnresolvedFutureIds]
+      : [],
+    jointCausalUnresolvedFutureIds: jointFutureSet
+      ? [...jointFutureSet.causalUnresolvedFutureIds]
+      : [],
+    jointContactEvidenceClaim: jointFutureSet
+      ? "SAME_PHYSICS_RECIPROCAL_CONTACT_FRAMES_ONLY"
+      : "NOT_SUPPLIED",
+    jointNoContactSafetyClaim: "NONE",
+    jointAnchorOccupancyEquivalenceClaim: "NONE",
+    jointCooperationPolicyClaim: "NONE",
+    jointBooleanCollapseClaim: "NONE",
     evidenceScope: "SAMPLED_MESH_ONLY_CONTINUOUS_OPPORTUNITY_NOT_ESTABLISHED",
     decisionClaim: "NONE_EVIDENCE_ONLY",
     scalarScoreClaim: "NONE",
@@ -428,6 +539,7 @@ export function buildA1SpatialCommitmentReviewEvidence(
     sourceFit: structuredClone(fit),
     sourceMaterial: material ? structuredClone(material) : null,
     sourceActorOccupancy: actorOccupancy ? structuredClone(actorOccupancy) : null,
-    sourcePlayerFutureSet: playerFutureSet ? structuredClone(playerFutureSet) : null
+    sourcePlayerFutureSet: playerFutureSet ? structuredClone(playerFutureSet) : null,
+    sourceJointFutureSet: jointFutureSet ? structuredClone(jointFutureSet) : null
   };
 }
