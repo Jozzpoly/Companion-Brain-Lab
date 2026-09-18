@@ -3,7 +3,7 @@ import { chromium } from "playwright-chromium";
 import { preview } from "vite";
 
 const ARTIFACT_DIR = "artifacts/a1-commitment-future-review-live";
-const SCHEMA = "companion-brain-lab-a1-commitment-future-review-live-v1";
+const SCHEMA = "companion-brain-lab-a1-commitment-future-review-live-v2";
 
 function invariant(condition, message) {
   if (!condition) throw new Error(message);
@@ -148,6 +148,45 @@ try {
   invariant(review.review.decisionClaim === "NONE_EVIDENCE_ONLY", "Review emitted a commitment decision.");
   invariant(review.review.selectionClaim === "NONE", "Review selected a player future.");
   invariant(review.review.runtimeAuthorityClaim === "NONE", "Review gained runtime authority.");
+
+  invariant(review.jointFutureSet?.kind === "A1_SPATIAL_COMMITMENT_JOINT_FUTURE_SET_EVIDENCE", "Live review did not publish joint-future evidence.");
+  invariant(review.jointFutureSet.sourceTick === review.tick, "Joint-future source tick is not aligned with live review.");
+  invariant(review.jointFutureSet.runtimeAuthorityClaim === "NONE", "Joint-future evidence gained runtime authority.");
+  invariant(review.ownerFlowImpact?.kind === "A1_SPATIAL_COMMITMENT_OWNER_FLOW_IMPACT_EVIDENCE", "Live review did not publish Owner-flow impact.");
+  invariant(review.ownerFlowImpact.sourceTick === review.tick, "Owner-flow impact source tick is not aligned with live review.");
+  invariant(review.ownerFlowImpact.horizonSeconds === review.horizonSeconds, "Owner-flow impact horizon is not aligned with live review.");
+  invariant(review.rightOfWayDossier?.kind === "A1_SPATIAL_COMMITMENT_RIGHT_OF_WAY_EVIDENCE_DOSSIER", "Live review did not publish right-of-way dossier.");
+  invariant(review.rightOfWayDossier.sourceTick === review.tick, "Right-of-way dossier source tick is not aligned with live review.");
+  invariant(review.rightOfWayDossier.decisionClaim === "NONE_EVIDENCE_DOSSIER_ONLY", "Live right-of-way dossier emitted a decision.");
+  invariant(review.rightOfWayDossier.futureWeightingClaim === "NONE", "Live right-of-way dossier weighted alternate futures.");
+  invariant(review.rightOfWayDossier.rightOfWayPriorityClaim === "NONE", "Live right-of-way dossier assigned priority.");
+  invariant(review.rightOfWayDossier.yieldPolicyClaim === "NONE", "Live right-of-way dossier assigned yield policy.");
+  invariant(review.rightOfWayDossier.selectionClaim === "NONE", "Live right-of-way dossier selected an action.");
+  invariant(review.rightOfWayDossier.runtimeAuthorityClaim === "NONE", "Live right-of-way dossier gained runtime authority.");
+
+  invariant(review.deliberation?.kind === "A1_SPATIAL_COMMITMENT_DELIBERATION_FRAME", "Live review did not publish shadow deliberation.");
+  invariant(review.deliberation.sourceTick === review.tick, "Deliberation source tick is not aligned with live review.");
+  invariant(review.deliberation.rightOfWayContext.status === "SUPPLIED_H1_OWNER_FLOW_EVIDENCE", "Deliberation did not receive live right-of-way context.");
+  invariant(
+    review.deliberation.rightOfWayContext.executionOnlyContactFrameCount ===
+      review.rightOfWayDossier.executionOnlyContactFrameCount,
+    "Deliberation changed dossier contact evidence."
+  );
+  invariant(
+    review.deliberation.rightOfWayContext.peakPlayerProgressDeficitVsHold ===
+      review.rightOfWayDossier.peakPlayerProgressDeficitVsHold,
+    "Deliberation changed dossier Owner-flow progress evidence."
+  );
+  invariant(review.deliberation.rightOfWayContext.harmClaim === "NONE", "Deliberation promoted evidence into harm.");
+  invariant(review.deliberation.rightOfWayContext.futureWeightingClaim === "NONE", "Deliberation weighted alternate futures.");
+  invariant(review.deliberation.rightOfWayContext.rightOfWayPriorityClaim === "NONE", "Deliberation assigned right-of-way priority.");
+  invariant(review.deliberation.futureProbabilityClaim === "NONE", "Deliberation assigned future probability.");
+  invariant(review.deliberation.rightOfWayPriorityClaim === "NONE_NOT_ESTABLISHED", "Deliberation established right-of-way priority.");
+  invariant(review.deliberation.decisionClaim === "NONE_DELIBERATION_ONLY", "Deliberation emitted a decision.");
+  invariant(review.deliberation.selectionClaim === "NONE", "Deliberation selected an action.");
+  invariant(review.deliberation.scalarScoreClaim === "NONE", "Deliberation scalarized the evidence.");
+  invariant(review.deliberation.runtimeAuthorityClaim === "NONE", "Deliberation gained runtime authority.");
+
   invariant(reviewedSnapshot.lastError === null, `Commitment bridge recorded error: ${reviewedSnapshot.lastError}`);
   invariant(reviewedSnapshot.completedReviewCount === 1, `Expected one completed review, got ${reviewedSnapshot.completedReviewCount}.`);
 
@@ -170,7 +209,7 @@ try {
     established,
     reversalFrame,
     review,
-    interpretation: "A live A1-OFF one-shot review preserves the same exact commitment anchor across a diagonal reversal and evaluates the complete same-physics player-future set without mutating intents. The fresh Owner-request future crosses the anchor while the prior owner-directed body-response and transition-hold futures remain sampled-clear; no probability, aggregate future-conflict boolean, selection, score or movement authority is introduced."
+    interpretation: "A live A1-OFF one-shot review now carries player futures through same-physics joint rehearsal, causal Owner-flow comparison, a right-of-way evidence dossier and cognition-facing deliberation without mutating intents. The chain preserves H1/H2/H3 evidence and measured disturbance while introducing no harm threshold, future weighting, priority, yield policy, score, selection or movement authority."
   };
   await writeFile(`${ARTIFACT_DIR}/summary.json`, JSON.stringify(summary, null, 2));
   console.info(`[A1_COMMITMENT_FUTURE_REVIEW_LIVE] ${JSON.stringify(summary)}`);
