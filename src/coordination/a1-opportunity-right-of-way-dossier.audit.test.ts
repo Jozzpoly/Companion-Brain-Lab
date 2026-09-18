@@ -52,11 +52,16 @@ function fit(snapshot: WorldSnapshot, anchor: Vec2): A1SpatialCommitmentFitEvide
   };
 }
 
-function evidence(world: LabWorld, currentFit: A1SpatialCommitmentFitEvidence, horizonSeconds: number) {
+function evidence(
+  world: LabWorld,
+  currentFit: A1SpatialCommitmentFitEvidence,
+  horizonSeconds: number,
+  playerMove: Vec2 = { x: 1, y: 0 }
+) {
   const snapshot = world.snapshot();
   const situation = buildA1Situation({
     snapshot,
-    playerIntent: playerIntent(1, 0),
+    playerIntent: playerIntent(playerMove.x, playerMove.y),
     playerCapability: world.actorMovementCapability("player"),
     companionCapability: world.actorMovementCapability("companion"),
     previousWorldStep: snapshot.tick === 0 ? null : world.latestAuthorityA0StepEvidence()
@@ -170,6 +175,74 @@ describe("A1 commitment right-of-way evidence dossier", () => {
         decisionClaim: dossier.decisionClaim,
         runtimeAuthorityClaim: dossier.runtimeAuthorityClaim,
         interpretation: "The dossier binds one exact semantic commitment and one exact H1 execution counterfactual to same-physics contact and HOLD-relative Owner-flow effects while keeping longitudinal and lateral disturbance separate. It establishes no harm threshold, scalar score, priority or yield policy."
+      })}`);
+    } finally {
+      world.dispose();
+    }
+  });
+
+  it("preserves alternate H2/H3 joint-future context without treating it as H1 Owner-flow impact or a vote", async () => {
+    const world = await LabWorld.create("head-on");
+    try {
+      world.step([
+        playerIntent(1, 0),
+        { actorId: "companion", move: { x: 0, y: 0 } }
+      ]);
+      const currentFit = fit(world.snapshot(), { x: 5.5, y: 4 });
+      const { review, impact } = evidence(
+        world,
+        currentFit,
+        0.75,
+        { x: -1, y: 0 }
+      );
+      const dossier = buildA1SpatialCommitmentRightOfWayEvidenceDossier({
+        review,
+        impact
+      });
+
+      expect(dossier.ownerFlowImpactScopeClaim).toBe("H1_OWNER_REQUEST_ONLY");
+      expect(dossier.alternateFutureContextClaim).toBe(
+        "H2_H3_PRESERVED_UNWEIGHTED_NOT_REHEARSED_AS_OWNER_FLOW_IMPACT"
+      );
+      expect(dossier.alternateJointContactFutureIds).toEqual(
+        review.jointContactFutureIds.filter(
+          (id) => id !== dossier.ownerRequestFutureId
+        )
+      );
+      expect(dossier.alternateJointNoContactRehearsedFutureIds).toEqual(
+        review.jointNoContactRehearsedFutureIds.filter(
+          (id) => id !== dossier.ownerRequestFutureId
+        )
+      );
+      expect(dossier.alternateJointCausalUnresolvedFutureIds).toEqual(
+        review.jointCausalUnresolvedFutureIds.filter(
+          (id) => id !== dossier.ownerRequestFutureId
+        )
+      );
+      expect(dossier.alternateJointReferenceUnresolvedFutureIds).toEqual(
+        review.jointReferenceUnresolvedFutureIds.filter(
+          (id) => id !== dossier.ownerRequestFutureId
+        )
+      );
+      expect(dossier.futureWeightingClaim).toBe("NONE");
+      expect(dossier.rightOfWayPriorityClaim).toBe("NONE");
+      expect(dossier.yieldPolicyClaim).toBe("NONE");
+
+      console.info(`[A1_COMMITMENT_RIGHT_OF_WAY_DOSSIER_REVERSAL_FUTURES] ${JSON.stringify({
+        sourceTick: dossier.sourceTick,
+        horizonSeconds: dossier.horizonSeconds,
+        ownerRequestFutureId: dossier.ownerRequestFutureId,
+        ownerRequestJointContactFrameCount: dossier.ownerRequestJointContactFrameCount,
+        alternateJointContactFutureIds: dossier.alternateJointContactFutureIds,
+        alternateJointNoContactRehearsedFutureIds: dossier.alternateJointNoContactRehearsedFutureIds,
+        alternateJointCausalUnresolvedFutureIds: dossier.alternateJointCausalUnresolvedFutureIds,
+        alternateJointReferenceUnresolvedFutureIds: dossier.alternateJointReferenceUnresolvedFutureIds,
+        ownerFlowImpactScopeClaim: dossier.ownerFlowImpactScopeClaim,
+        alternateFutureContextClaim: dossier.alternateFutureContextClaim,
+        futureWeightingClaim: dossier.futureWeightingClaim,
+        rightOfWayPriorityClaim: dossier.rightOfWayPriorityClaim,
+        yieldPolicyClaim: dossier.yieldPolicyClaim,
+        interpretation: "The causal HOLD-relative impact measurement belongs only to H1 Owner-request continuation. H2/H3 joint outcomes remain visible as distinct unweighted context and cannot silently vote, veto or inherit the H1 impact measurement."
       })}`);
     } finally {
       world.dispose();

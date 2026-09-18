@@ -23,6 +23,10 @@ export interface A1SpatialCommitmentRightOfWayEvidenceDossier {
     | "NO_SAMPLED_PLAYER_FUTURE_OVERLAP";
   ownerRequestJointContactFrameCount: number;
   ownerRequestFirstJointContactStepIndex: number | null;
+  alternateJointContactFutureIds: readonly string[];
+  alternateJointNoContactRehearsedFutureIds: readonly string[];
+  alternateJointCausalUnresolvedFutureIds: readonly string[];
+  alternateJointReferenceUnresolvedFutureIds: readonly string[];
   holdBaselineContactFrameCount: number;
   commitmentExecutionContactFrameCount: number;
   executionOnlyContactFrameCount: number;
@@ -35,6 +39,8 @@ export interface A1SpatialCommitmentRightOfWayEvidenceDossier {
   terminalPlayerLateralDeltaMagnitudeVsHold: number | null;
   integratedPlayerLateralDeviationSeconds: number | null;
   sourceAlignmentClaim: "EXACT_SAME_COMMITMENT_H1_HORIZON_DIRECT_COMMAND_AND_JOINT_CONTACT_TRACE";
+  ownerFlowImpactScopeClaim: "H1_OWNER_REQUEST_ONLY";
+  alternateFutureContextClaim: "H2_H3_PRESERVED_UNWEIGHTED_NOT_REHEARSED_AS_OWNER_FLOW_IMPACT";
   evidenceAxisClaim: "SEMANTICS_CONTACT_AND_OWNER_FLOW_DIFFERENCE_REMAIN_SEPARATE";
   holdComparatorClaim: "COUNTERFACTUAL_ONLY_NOT_PREFERRED_BEHAVIOR";
   contactToHarmClaim: "NONE_CONTACT_IS_NOT_A_HARM_SCALAR";
@@ -209,6 +215,21 @@ export function buildA1SpatialCommitmentRightOfWayEvidenceDossier(input: {
     ownerRequestAnchorOccupancyStatus: jointFuture.anchorOccupancyStatus,
     ownerRequestJointContactFrameCount: jointFuture.contactFrameCount,
     ownerRequestFirstJointContactStepIndex: jointFuture.firstContactStepIndex,
+    alternateJointContactFutureIds: review.jointContactFutureIds.filter(
+      (id) => id !== jointFuture.futureId
+    ),
+    alternateJointNoContactRehearsedFutureIds:
+      review.jointNoContactRehearsedFutureIds.filter(
+        (id) => id !== jointFuture.futureId
+      ),
+    alternateJointCausalUnresolvedFutureIds:
+      review.jointCausalUnresolvedFutureIds.filter(
+        (id) => id !== jointFuture.futureId
+      ),
+    alternateJointReferenceUnresolvedFutureIds:
+      review.jointReferenceUnresolvedFutureIds.filter(
+        (id) => id !== jointFuture.futureId
+      ),
     holdBaselineContactFrameCount: impact.holdBaselineContactFrameCount,
     commitmentExecutionContactFrameCount: impact.commitmentExecutionContactFrameCount,
     executionOnlyContactFrameCount: impact.executionOnlyContactFrameCount,
@@ -221,6 +242,8 @@ export function buildA1SpatialCommitmentRightOfWayEvidenceDossier(input: {
     terminalPlayerLateralDeltaMagnitudeVsHold: impact.terminalPlayerLateralDeltaMagnitudeVsHold,
     integratedPlayerLateralDeviationSeconds: impact.integratedPlayerLateralDeviationSeconds,
     sourceAlignmentClaim: "EXACT_SAME_COMMITMENT_H1_HORIZON_DIRECT_COMMAND_AND_JOINT_CONTACT_TRACE",
+    ownerFlowImpactScopeClaim: "H1_OWNER_REQUEST_ONLY",
+    alternateFutureContextClaim: "H2_H3_PRESERVED_UNWEIGHTED_NOT_REHEARSED_AS_OWNER_FLOW_IMPACT",
     evidenceAxisClaim: "SEMANTICS_CONTACT_AND_OWNER_FLOW_DIFFERENCE_REMAIN_SEPARATE",
     holdComparatorClaim: "COUNTERFACTUAL_ONLY_NOT_PREFERRED_BEHAVIOR",
     contactToHarmClaim: "NONE_CONTACT_IS_NOT_A_HARM_SCALAR",
