@@ -38,6 +38,7 @@ export interface A1SpatialCommitmentRightOfWayEvidenceDossier {
   evidenceAxisClaim: "SEMANTICS_CONTACT_AND_OWNER_FLOW_DIFFERENCE_REMAIN_SEPARATE";
   holdComparatorClaim: "COUNTERFACTUAL_ONLY_NOT_PREFERRED_BEHAVIOR";
   contactToHarmClaim: "NONE_CONTACT_IS_NOT_A_HARM_SCALAR";
+  noContactSafetyClaim: "NONE_NO_OBSERVED_CONTACT_OR_DISTURBANCE_DOES_NOT_ESTABLISH_GENERAL_SAFETY";
   impactToPriorityClaim: "NONE_MEASURED_OWNER_FLOW_DIFFERENCE_IS_NOT_RIGHT_OF_WAY_PRIORITY";
   futureWeightingClaim: "NONE";
   harmThresholdClaim: "NONE";
@@ -223,6 +224,7 @@ export function buildA1SpatialCommitmentRightOfWayEvidenceDossier(input: {
     evidenceAxisClaim: "SEMANTICS_CONTACT_AND_OWNER_FLOW_DIFFERENCE_REMAIN_SEPARATE",
     holdComparatorClaim: "COUNTERFACTUAL_ONLY_NOT_PREFERRED_BEHAVIOR",
     contactToHarmClaim: "NONE_CONTACT_IS_NOT_A_HARM_SCALAR",
+    noContactSafetyClaim: "NONE_NO_OBSERVED_CONTACT_OR_DISTURBANCE_DOES_NOT_ESTABLISH_GENERAL_SAFETY",
     impactToPriorityClaim: "NONE_MEASURED_OWNER_FLOW_DIFFERENCE_IS_NOT_RIGHT_OF_WAY_PRIORITY",
     futureWeightingClaim: "NONE",
     harmThresholdClaim: "NONE",

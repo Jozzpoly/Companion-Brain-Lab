@@ -176,6 +176,47 @@ describe("A1 commitment right-of-way evidence dossier", () => {
     }
   });
 
+  it("keeps no-contact / zero-impact evidence explicitly non-authoritative about general safety", async () => {
+    const world = await LabWorld.create("open");
+    try {
+      const currentFit = fit(world.snapshot(), { x: 8, y: 6 });
+      const { review, impact } = evidence(world, currentFit, 0.5);
+      const dossier = buildA1SpatialCommitmentRightOfWayEvidenceDossier({
+        review,
+        impact
+      });
+
+      expect(dossier.ownerRequestJointContactFrameCount).toBe(0);
+      expect(dossier.commitmentExecutionContactFrameCount).toBe(0);
+      expect(dossier.executionOnlyContactFrameCount).toBe(0);
+      expect(dossier.peakPlayerProgressDeficitVsHold).toBeCloseTo(0, 9);
+      expect(dossier.peakPlayerLateralDeltaMagnitudeVsHold).toBeCloseTo(0, 9);
+      expect(dossier.noContactSafetyClaim).toBe(
+        "NONE_NO_OBSERVED_CONTACT_OR_DISTURBANCE_DOES_NOT_ESTABLISH_GENERAL_SAFETY"
+      );
+      expect(dossier.rightOfWayPriorityClaim).toBe("NONE");
+      expect(dossier.yieldPolicyClaim).toBe("NONE");
+      expect(dossier.runtimeAuthorityClaim).toBe("NONE");
+
+      console.info(`[A1_COMMITMENT_RIGHT_OF_WAY_DOSSIER_NO_CONTACT] ${JSON.stringify({
+        sourceTick: dossier.sourceTick,
+        horizonSeconds: dossier.horizonSeconds,
+        commitmentAnchorWorldPosition: dossier.commitmentAnchorWorldPosition,
+        ownerRequestJointContactFrameCount: dossier.ownerRequestJointContactFrameCount,
+        executionOnlyContactFrameCount: dossier.executionOnlyContactFrameCount,
+        peakPlayerProgressDeficitVsHold: dossier.peakPlayerProgressDeficitVsHold,
+        peakPlayerLateralDeltaMagnitudeVsHold: dossier.peakPlayerLateralDeltaMagnitudeVsHold,
+        noContactSafetyClaim: dossier.noContactSafetyClaim,
+        rightOfWayPriorityClaim: dossier.rightOfWayPriorityClaim,
+        yieldPolicyClaim: dossier.yieldPolicyClaim,
+        runtimeAuthorityClaim: dossier.runtimeAuthorityClaim,
+        interpretation: "This exact rehearsed execution produced no reciprocal contact and no measured Owner-flow delta relative to HOLD in the bounded horizon. That is not promoted into a general safety, priority or execution-authority claim."
+      })}`);
+    } finally {
+      world.dispose();
+    }
+  });
+
   it("rejects review/impact evidence from different commitment anchors instead of silently composing them", async () => {
     const world = await LabWorld.create("head-on");
     try {
