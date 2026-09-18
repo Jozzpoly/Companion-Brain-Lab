@@ -11,6 +11,7 @@ on:
       - "src/coordination/a1-spatial-commitment-review.ts"
       - "src/coordination/a1-spatial-commitment-deliberation.ts"
       - "src/coordination/a1-spatial-commitment-deliberation-horizon-scan.ts"
+      - "src/coordination/a1-spatial-commitment-fixed-command-observation-scan.ts"
       - "src/coordination/a1-spatial-commitment-material.ts"
       - "src/coordination/a1-spatial-commitment-actor-occupancy.ts"
       - "src/coordination/a1-spatial-commitment-player-future-occupancy.ts"
