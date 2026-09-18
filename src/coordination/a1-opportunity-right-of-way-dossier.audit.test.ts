@@ -9,6 +9,7 @@ import { buildA1SpatialCommitmentPlayerFutureSetEvidence } from "./a1-spatial-co
 import { buildA1SpatialCommitmentReviewEvidence } from "./a1-spatial-commitment-review";
 import { buildA1SpatialCommitmentDeliberationFrame } from "./a1-spatial-commitment-deliberation";
 import { buildA1SpatialCommitmentRightOfWayEvidenceDossier } from "./a1-spatial-commitment-right-of-way-dossier";
+import { buildA1SpatialCommitmentRightOfWayShadowDisposition } from "./a1-spatial-commitment-right-of-way-shadow-disposition";
 import { LabWorld } from "../world/world";
 import type { MotionIntent, Vec2, WorldSnapshot } from "../world/types";
 
@@ -164,6 +165,20 @@ describe("A1 commitment right-of-way evidence dossier", () => {
       expect(deliberation.selectionClaim).toBe("NONE");
       expect(deliberation.scalarScoreClaim).toBe("NONE");
       expect(deliberation.runtimeAuthorityClaim).toBe("NONE");
+      const headOnDisposition =
+        buildA1SpatialCommitmentRightOfWayShadowDisposition(deliberation);
+      expect(headOnDisposition.status).toBe("CONSIDER_YIELD_TO_OWNER_FLOW");
+      expect(headOnDisposition.causalOwnerFlowReasons).toContain(
+        "OWNER_FLOW_ADDED_CONTACT_VS_HOLD"
+      );
+      expect(headOnDisposition.causalOwnerFlowReasons).toContain(
+        "OWNER_FLOW_PROGRESS_DEFICIT_VS_HOLD"
+      );
+      expect(headOnDisposition.finalPolicyClaim).toBe("NONE");
+      expect(headOnDisposition.selectionClaim).toBe(
+        "NONE_SHADOW_DISPOSITION_ONLY"
+      );
+      expect(headOnDisposition.runtimeAuthorityClaim).toBe("NONE");
       expect(dossier.ownerRequestJointContactFrameCount).toBeGreaterThan(0);
       expect(dossier.executionOnlyContactFrameCount).toBeGreaterThan(0);
       expect(dossier.peakPlayerProgressDeficitVsHold).toBeGreaterThan(0.5);
@@ -217,6 +232,18 @@ describe("A1 commitment right-of-way evidence dossier", () => {
       expect(deliberation.decisionClaim).toBe("NONE_DELIBERATION_ONLY");
       expect(deliberation.selectionClaim).toBe("NONE");
       expect(deliberation.runtimeAuthorityClaim).toBe("NONE");
+      const obliqueDisposition =
+        buildA1SpatialCommitmentRightOfWayShadowDisposition(deliberation);
+      expect(obliqueDisposition.status).toBe("CONSIDER_YIELD_TO_OWNER_FLOW");
+      expect(obliqueDisposition.causalOwnerFlowReasons).toEqual(
+        expect.arrayContaining([
+          "OWNER_FLOW_ADDED_CONTACT_VS_HOLD",
+          "OWNER_FLOW_PROGRESS_DEFICIT_VS_HOLD",
+          "OWNER_FLOW_LATERAL_DEVIATION_VS_HOLD"
+        ])
+      );
+      expect(obliqueDisposition.finalPolicyClaim).toBe("NONE");
+      expect(obliqueDisposition.runtimeAuthorityClaim).toBe("NONE");
       expect(dossier.evidenceAxisClaim).toBe(
         "SEMANTICS_CONTACT_AND_OWNER_FLOW_DIFFERENCE_REMAIN_SEPARATE"
       );
@@ -317,6 +344,17 @@ describe("A1 commitment right-of-way evidence dossier", () => {
       expect(deliberation.decisionClaim).toBe("NONE_DELIBERATION_ONLY");
       expect(deliberation.selectionClaim).toBe("NONE");
       expect(deliberation.runtimeAuthorityClaim).toBe("NONE");
+      const reversalDisposition =
+        buildA1SpatialCommitmentRightOfWayShadowDisposition(deliberation);
+      expect(reversalDisposition.status).toBe(
+        "WITHHOLD_YIELD_INFERENCE_ALTERNATE_FUTURE_CONTEXT"
+      );
+      expect(reversalDisposition.causalOwnerFlowReasons).toEqual([]);
+      expect(reversalDisposition.alternateJointContactFutureIds).toEqual(
+        dossier.alternateJointContactFutureIds
+      );
+      expect(reversalDisposition.finalPolicyClaim).toBe("NONE");
+      expect(reversalDisposition.runtimeAuthorityClaim).toBe("NONE");
 
       console.info(`[A1_COMMITMENT_RIGHT_OF_WAY_DOSSIER_REVERSAL_FUTURES] ${JSON.stringify({
         sourceTick: dossier.sourceTick,
@@ -376,6 +414,12 @@ describe("A1 commitment right-of-way evidence dossier", () => {
       expect(deliberation.rightOfWayContext.harmClaim).toBe("NONE");
       expect(deliberation.rightOfWayContext.rightOfWayPriorityClaim).toBe("NONE");
       expect(deliberation.rightOfWayContext.runtimeAuthorityClaim).toBe("NONE");
+      const noContactDisposition =
+        buildA1SpatialCommitmentRightOfWayShadowDisposition(deliberation);
+      expect(noContactDisposition.status).toBe("NO_CAUSAL_H1_YIELD_SIGNAL");
+      expect(noContactDisposition.causalOwnerFlowReasons).toEqual([]);
+      expect(noContactDisposition.finalPolicyClaim).toBe("NONE");
+      expect(noContactDisposition.runtimeAuthorityClaim).toBe("NONE");
       for (const option of deliberation.options) {
         expect(option.reasonsForConsideration).not.toContain(
           "OWNER_FLOW_ADDED_CONTACT_VS_HOLD"
