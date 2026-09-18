@@ -545,6 +545,10 @@ export class R1LabScene extends Phaser.Scene {
       actorId: "companion" as const,
       move: { x: 0, y: 0 }
     };
+    const playerIntent = evidence.intents.find((intent) => intent.actorId === "player") ?? {
+      actorId: "player" as const,
+      move: { x: 0, y: 0 }
+    };
     const target = evidence.target;
     const displacement = distance(beforeCompanion.position, afterCompanion.position);
     const post = this.classifyPost(target, companionIntent.move, displacement);
@@ -566,6 +570,7 @@ export class R1LabScene extends Phaser.Scene {
         worldTick: evidence.before.tick,
         companionPosition: { ...beforeCompanion.position },
         playerPosition: { ...beforePlayer.position },
+        playerControlMove: { ...playerIntent.move },
         companionActualVelocity: { ...beforeCompanion.actualVelocity },
         companionContacts: beforeCompanion.contacts.map((contact) => contact.with)
       },

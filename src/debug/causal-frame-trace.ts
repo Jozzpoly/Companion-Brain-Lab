@@ -4,6 +4,8 @@ export interface CausalObservationPhase {
   worldTick: number;
   companionPosition: Vec2;
   playerPosition: Vec2;
+  /** Same-step player MotionIntent control submitted for this World step; not inferred body motion. */
+  playerControlMove: Vec2;
   companionActualVelocity: Vec2;
   companionContacts: readonly string[];
 }
@@ -139,6 +141,7 @@ function cloneFrame(frame: CausalFrame): CausalFrame {
       ...frame.observation,
       companionPosition: { ...frame.observation.companionPosition },
       playerPosition: { ...frame.observation.playerPosition },
+      playerControlMove: { ...frame.observation.playerControlMove },
       companionActualVelocity: { ...frame.observation.companionActualVelocity },
       companionContacts: [...frame.observation.companionContacts]
     },
