@@ -20,7 +20,26 @@ Shared principles currently defended here include:
 - debugging exposes observable inputs, decisions, authority and causal outcomes;
 - donor reuse is selective and evidence/provenance-aware.
 
-## Live project state
+## Current active campaign — Owner Sandbox preparation
+
+The active research frontier is now **OS-PREP: Owner Sandbox Preparation**.
+
+Current planning checkpoint on `experiment/a1-opportunity-persistence`:
+
+`dbe6a0e836531b6cc34812c5abd8f1b3bdbf267a`
+
+At that checkpoint, `validate` #1287 and the full browser audit pass. A1.2p2 provides an explicitly armed, **one-World-step DIRECT intervention seam** for an exact current H1 frontier proposal. It does not provide an automatic selector or general movement policy.
+
+The near-term goal is to make the first serious Owner Sandbox campaign trustworthy and high-value: exact build/session provenance, participant-first behavioral evidence, multi-beat agent-side falsification, controlled P2 A/B interventions and causal reconstruction after interesting moments.
+
+Start current work from:
+
+- [`docs/CURRENT.md`](docs/CURRENT.md)
+- [`docs/OWNER_SANDBOX_PREPARATION_CAMPAIGN.md`](docs/OWNER_SANDBOX_PREPARATION_CAMPAIGN.md)
+
+The public Pages runtime described below remains the **qualified Foundation baseline**, not the current Owner Sandbox candidate.
+
+## Foundation/public baseline
 
 **FOUNDATION PASS · REWORK-READY**
 
