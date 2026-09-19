@@ -7,24 +7,34 @@ Read this first when resuming the active Companion work. This file is intentiona
 
 Historical plans and qualification documents remain valuable evidence, but they do not outrank this file, current Owner intent, or live repository state.
 
-## 0. Current Owner override — retrospective before OS-PREP-5
+## 0. Current Owner override — retrospective complete
 
-The active execution task is **not OS-PREP-5 implementation/deployment**.
+The pre-Owner-Sandbox retrospective is **complete**.
 
-Before any real Owner Sandbox preparation continues, perform the dedicated retrospective:
+Canonical decision dossier:
 
-- [PRE_OWNER_SANDBOX_RETROSPECTIVE_CAMPAIGN.md](PRE_OWNER_SANDBOX_RETROSPECTIVE_CAMPAIGN.md)
+- [RETROSPECTIVE_T7_DECISION_DOSSIER.md](RETROSPECTIVE_T7_DECISION_DOSSIER.md)
 
-The retrospective must recover and challenge the full Companion history, distinguish live teammate capability from research apparatus, reconcile claims against evidence classes, and decide whether the current organism is actually the right next Owner stimulus.
+The old broad OS-PREP-5 framing is rejected.
 
-Frozen provisional artifacts:
+The next active stage is:
 
-- `437cd11727eba327b99d8d70c80ce031c003a040` — provisional OS-PREP-5 packaging candidate;
-- `ops/os-prep5-owner-pages` — provisional Pages work.
+> **REVISED OS-PREP-5 PREPARATION**
 
-These artifacts may be inspected but must not be promoted, deployed or treated as roadmap authority during the review.
+Its purpose is to prepare a narrow Owner experiment answering:
 
-When the Owner says `kontynuuj`, continue the retrospective campaign until its decision dossier is complete or a genuine Owner judgement boundary is reached.
+> Is the current embodied movement/relationship substrate good enough — and sufficiently worth preserving — that Companion Brain Lab should stop treating locomotion as its main research frontier and begin the first true minimum-useful-partner experiment?
+
+Important boundaries:
+
+- do not deploy the provisional `/owner/` surface yet;
+- do not merge or promote `437cd11727eba327b99d8d70c80ce031c003a040` merely because Validate #1358 is FULL GREEN;
+- do not add combat, commands, threats, multiple companions or new movement architecture during preparation;
+- do not resume A1 selector/frontier work;
+- do not pre-fix PH-02/PH-07 unless they become mechanical blockers;
+- the provisional package is a technically qualified **stimulus container**, not product readiness evidence.
+
+When the Owner says `kontynuuj`, begin/revise preparation for this narrow Owner movement-substrate review. Do not silently return to the old broad teammate-Sandbox question.
 
 ## 1. Active mission
 
