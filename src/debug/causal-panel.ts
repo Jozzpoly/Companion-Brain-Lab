@@ -91,6 +91,7 @@ function layerLabel(layer: WorldDebugLayer): string {
 
 export class CausalPanel {
   private readonly root: HTMLElement;
+  private readonly ownerSandboxSurface: boolean;
   private readonly content: HTMLElement;
   private readonly title: HTMLElement;
   private readonly subtitle: HTMLElement;
@@ -106,6 +107,12 @@ export class CausalPanel {
     if (!root) throw new Error("R1 CausalPanel requires #debug-panel.");
     this.root = root;
     this.root.replaceChildren();
+    this.ownerSandboxSurface = new URLSearchParams(window.location.search).get("owner") === "1";
+    if (this.ownerSandboxSurface) {
+      this.collapsed = true;
+      this.root.classList.add("is-owner-sandbox", "is-collapsed");
+      document.title = "Companion Brain Lab — Owner Sandbox";
+    }
 
     for (const [layer, visible] of Object.entries(DEFAULT_LAYERS) as Array<[WorldDebugLayer, boolean]>) {
       this.layerValues.set(layer, visible);
@@ -128,16 +135,22 @@ export class CausalPanel {
     const collapse = document.createElement("button");
     collapse.type = "button";
     collapse.className = "debug-collapse";
-    collapse.textContent = "‹";
-    collapse.title = "Collapse debug panel";
+    collapse.textContent = this.collapsed ? "›" : "‹";
+    collapse.title = this.collapsed ? "Expand research panel" : "Collapse debug panel";
     collapse.addEventListener("click", () => {
       this.collapsed = !this.collapsed;
       this.root.classList.toggle("is-collapsed", this.collapsed);
       collapse.textContent = this.collapsed ? "›" : "‹";
-      collapse.title = this.collapsed ? "Expand debug panel" : "Collapse debug panel";
+      collapse.title = this.collapsed ? "Expand research panel" : "Collapse debug panel";
     });
 
-    header.append(heading, this.badge, collapse);
+    const ownerCapture = button("Save", "capture-incident");
+    ownerCapture.classList.add("owner-capture");
+    ownerCapture.title = "Capture this moment (keyboard: I)";
+    ownerCapture.setAttribute("aria-label", "Capture this moment");
+    ownerCapture.addEventListener("click", () => onAction("capture-incident"));
+
+    header.append(heading, this.badge, ownerCapture, collapse);
 
     this.content = document.createElement("div");
     this.content.className = "debug-panel-content";
@@ -217,6 +230,7 @@ export class CausalPanel {
   }
 
   layerVisible(layer: WorldDebugLayer): boolean {
+    if (this.ownerSandboxSurface) return false;
     return this.layerValues.get(layer) ?? false;
   }
 
