@@ -124,7 +124,7 @@ function mirrorCompare(topFrames,bottomFrames){
     maxActualVelocityError=Math.max(maxActualVelocityError,actualErr);
     if(targetErr!==null) maxTargetError=Math.max(maxTargetError,targetErr);
     if(firstPhysicalDivergence===null&&(companionErr>1e-5||commandErr>1e-5||actualErr>1e-5)){
-      firstPhysicalDivergence={tick:t.observationTick,companionPositionError:companionErr,commandError,actualVelocityError:actualErr};
+      firstPhysicalDivergence={tick:t.observationTick,companionPositionError:companionErr,commandError:commandErr,actualVelocityError:actualErr};
     }
     const decisionMismatch =
       t.routeStatus!==b.routeStatus ||
