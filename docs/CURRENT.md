@@ -209,14 +209,27 @@ Evidence document:
 
 - [OS_PREP_3_PH05_DOORWAY_COOPERATION_EVIDENCE.md](OS_PREP_3_PH05_DOORWAY_COOPERATION_EVIDENCE.md)
 
+Wave C evidence:
+
+- **PH-08 multi-beat continuity: CLOSED ENOUGH** using the existing PH-05 M1 artifact;
+- t186: relationship target jumps ~**0.840 m**, preferred velocity changes ~**1.547 m/s**, while same-tick final command changes only ~**0.044 m/s** and converges over ~**117 ms**;
+- t210: target jumps ~**1.033 m**, preferred velocity changes ~**0.684 m/s**, same-tick final command again changes only ~**0.044 m/s**, converging over ~**67 ms**;
+- participant continuity is therefore partly NATURAL temporal realization over discrete upstream revisions;
+- after Owner stop, canonical orientation expires to `NONE` at t272 while legacy baseline continues useful reacquisition toward the prior `back` objective;
+- do not equate useful-looking continuity with epistemically current intent, and do not naively delete continuity either.
+
+Evidence document:
+
+- [OS_PREP_3_PH08_MULTI_BEAT_CONTINUITY_EVIDENCE.md](OS_PREP_3_PH08_MULTI_BEAT_CONTINUITY_EVIDENCE.md)
+
 Current next target:
 
-- **PH-08 — multi-beat continuity vs smooth-rendering illusion, using the existing PH-05 M1 artifact first**;
-- map material relationship/objective revisions in t120..t359;
-- compare target/decision discontinuities with command/body continuity;
-- determine whether the participant-visible coherent doorway episode reflects coherent upstream intent or NATURAL smoothing over discrete revisions;
-- do not build a new PH-08 scenario unless the existing evidence is insufficient;
-- PH-06 generic close-contact sweep is deferred because PH-02 already provides stronger causal pathology evidence.
+- **PH-07 — pillar mirror / deterministic fake preference under topology**;
+- use the existing symmetric central pillar;
+- create mirrored small `+Y/-Y` Owner pre-nudges, then identical forward traversal;
+- compare participant paths and first divergence under geometric mirroring;
+- determine whether the known lexical/fake side seed leaks into a material route/topology choice;
+- no new world-edit bridge and no P2.
 
 Do not widen A1 authority as part of OS-PREP-3.
 

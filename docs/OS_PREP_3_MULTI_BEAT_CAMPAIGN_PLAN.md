@@ -361,3 +361,30 @@ Reuse PH-05 M1 for PH-08 first.
 The same participant sequence reads coherently, while causal evidence contains discrete relationship revisions. Test whether downstream NATURAL realization is again counterfeiting continuity before adding another world story.
 
 PH-06 generic contact sweep remains deferred unless a new question survives the already-qualified PH-02 stale-policy/contact evidence.
+
+
+---
+
+## 13. Wave C PH-08 — continuity reuse
+
+**Status: CLOSED ENOUGH**
+
+No new experiment was required.
+
+The qualified PH-05 M1 artifact shows two large relationship-target discontinuities (~0.84 m and ~1.03 m) whose preferred-motion changes are spread across several World ticks by NATURAL realization.
+
+The participant surface remains coherent, but that coherence is not proof of a continuous upstream intention.
+
+After Owner release, canonical orientation also expires to NONE while legacy baseline behavior continues the useful reacquisition episode.
+
+See [OS_PREP_3_PH08_MULTI_BEAT_CONTINUITY_EVIDENCE.md](OS_PREP_3_PH08_MULTI_BEAT_CONTINUITY_EVIDENCE.md).
+
+### Route
+
+Proceed to PH-07 pillar mirror.
+
+Known fake side/tie bias from PH-01 is only a product risk if it leaks into meaningful world/topology behavior.
+
+Use symmetric Owner pre-nudges around the existing central pillar and locate the first non-mirroring divergence.
+
+No P2 and no new scenario editor unless the existing pillar scenario proves insufficient.
