@@ -1,6 +1,6 @@
 # Pre-Owner-Sandbox Retrospective Campaign
 
-Status: **ACTIVE PREPARATORY REVIEW · OS-PREP-5 PROMOTION FROZEN**
+Status: **RETROSPECTIVE COMPLETE · OS-PREP-5 PROMOTION STILL FROZEN PENDING REVISED PREPARATION**
 Date: **2026-09-20**
 
 Canonical review branch:
@@ -480,3 +480,20 @@ The retrospective should end with a compact decision dossier containing:
 No OS-PREP-5 implementation or deployment is authorized by this document.
 
 The next action is continued retrospective evidence recovery and falsification.
+
+
+---
+
+## 9. Completion
+
+The seven review tracks are now materialized in:
+
+- [RETROSPECTIVE_T1_T2_TRUE_RUNTIME_ANATOMY.md](RETROSPECTIVE_T1_T2_TRUE_RUNTIME_ANATOMY.md)
+- [RETROSPECTIVE_T3_EVIDENCE_CLAIM_LEDGER.md](RETROSPECTIVE_T3_EVIDENCE_CLAIM_LEDGER.md)
+- [RETROSPECTIVE_T4_T5_MECHANISM_AND_MISSING_BRAIN_AUDIT.md](RETROSPECTIVE_T4_T5_MECHANISM_AND_MISSING_BRAIN_AUDIT.md)
+- [RETROSPECTIVE_T6_RESEARCH_APPARATUS_COST_AUDIT.md](RETROSPECTIVE_T6_RESEARCH_APPARATUS_COST_AUDIT.md)
+- [RETROSPECTIVE_T7_DECISION_DOSSIER.md](RETROSPECTIVE_T7_DECISION_DOSSIER.md)
+
+The old broad OS-PREP-5 framing is rejected.
+
+The next stage is **revised OS-PREP-5 preparation** for a narrow Owner movement-substrate closure question. No public deployment is authorized merely by retrospective completion.
