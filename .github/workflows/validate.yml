@@ -57,6 +57,16 @@ jobs:
           path: artifacts/os-prep1-incident
           if-no-files-found: error
           retention-days: 7
+      - name: Capture OS-PREP-5 Owner Sandbox candidate
+        run: npm run browser:audit:os-prep5-owner
+      - name: Upload OS-PREP-5 Owner Sandbox candidate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: os-prep5-owner-sandbox-${{ github.sha }}
+          path: artifacts/os-prep5-owner-sandbox-candidate
+          if-no-files-found: error
+          retention-days: 7
       - name: Capture OS-PREP-3 PH-07 pillar mirror
         run: npm run browser:audit:os-prep3-ph07
       - name: Upload OS-PREP-3 PH-07 pillar mirror evidence
