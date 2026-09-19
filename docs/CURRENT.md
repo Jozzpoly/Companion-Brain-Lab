@@ -195,15 +195,28 @@ Evidence document:
 
 - [OS_PREP_3_PH04_PLAYER_FLOW_AGENCY_EVIDENCE.md](OS_PREP_3_PH04_PLAYER_FLOW_AGENCY_EVIDENCE.md)
 
+Wave C evidence:
+
+- **PH-05 doorway/chokepoint: CLOSED ENOUGH · BOUNDED SUCCESS**;
+- reversal + settle M1 qualified at `68265f8f...`, Validate #1341;
+- player preserves ~**99.9985%** requested progress, with **0 contact**, **0 backward**, **0 stalled** ticks;
+- companion tolerates temporary separation on reversal, then autonomously returns through the doorway at ~t287 and settles by ~t338;
+- return + settle use direct routing and **no recovery action**;
+- no dedicated yield/right-of-way mechanism is implicated;
+- do not overclaim general doorway/navigation competence.
+
+Evidence document:
+
+- [OS_PREP_3_PH05_DOORWAY_COOPERATION_EVIDENCE.md](OS_PREP_3_PH05_DOORWAY_COOPERATION_EVIDENCE.md)
+
 Current next target:
 
-- **PH-05 — doorway/chokepoint cooperation**;
-- use existing World geometry to create shared-space pressure naturally;
-- baseline participant story first, no P2;
-- test passage + immediate reversal/second attempt;
-- inspect route, contact and recovery only after participant read;
-- distinguish successful traversal from genuine cooperation;
-- keep right-of-way/yield/priority claims at `NONE` unless a later experiment earns them.
+- **PH-08 — multi-beat continuity vs smooth-rendering illusion, using the existing PH-05 M1 artifact first**;
+- map material relationship/objective revisions in t120..t359;
+- compare target/decision discontinuities with command/body continuity;
+- determine whether the participant-visible coherent doorway episode reflects coherent upstream intent or NATURAL smoothing over discrete revisions;
+- do not build a new PH-08 scenario unless the existing evidence is insufficient;
+- PH-06 generic close-contact sweep is deferred because PH-02 already provides stronger causal pathology evidence.
 
 Do not widen A1 authority as part of OS-PREP-3.
 

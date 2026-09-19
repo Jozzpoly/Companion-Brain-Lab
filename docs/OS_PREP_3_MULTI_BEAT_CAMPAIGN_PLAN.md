@@ -336,3 +336,28 @@ First story:
 Use baseline SPATIAL/NATURAL and A1 OFF participant-first.
 
 No P2 until a real bounded conflict state is observed and causally understood.
+
+
+---
+
+## 12. Wave C PH-05 — doorway/reacquisition
+
+**Status: CLOSED ENOUGH · BOUNDED SUCCESS**
+
+Qualified checkpoint: `68265f8f...` / Validate #1341.
+
+The player crosses outbound and immediate-return doorway beats with essentially full requested progress and no contact/stall/backtracking.
+
+When the player then stops on the original side, the companion autonomously crosses back at ~t287 and settles by ~t338, using direct routing and no recovery action.
+
+See [OS_PREP_3_PH05_DOORWAY_COOPERATION_EVIDENCE.md](OS_PREP_3_PH05_DOORWAY_COOPERATION_EVIDENCE.md).
+
+### Critical routing
+
+Do not multiply doorway variants yet.
+
+Reuse PH-05 M1 for PH-08 first.
+
+The same participant sequence reads coherently, while causal evidence contains discrete relationship revisions. Test whether downstream NATURAL realization is again counterfeiting continuity before adding another world story.
+
+PH-06 generic contact sweep remains deferred unless a new question survives the already-qualified PH-02 stale-policy/contact evidence.
