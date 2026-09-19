@@ -302,3 +302,37 @@ Primary evidence:
 Do not convert contact into harm, priority, right-of-way or yield policy.
 
 P2 remains deferred until the baseline obstruction episode is understood.
+
+
+---
+
+## 11. Wave B PH-04 — open-space player-flow baseline
+
+**Status: CLOSED ENOUGH FOR OPEN-SPACE BASELINE**
+
+Qualified:
+
+- B0 head-on: `9ab5026d...` / Validate #1332;
+- B1 late cross-front: `a73dc962...` / Validate #1334.
+
+Both preserve essentially all requested Owner progress without contact or stalls.
+
+B1 still remains player-flow `CLEAR`; therefore it is not a true-conflict qualification.
+
+Do not keep escalating open-field scripts merely to force a conflict.
+
+See [OS_PREP_3_PH04_PLAYER_FLOW_AGENCY_EVIDENCE.md](OS_PREP_3_PH04_PLAYER_FLOW_AGENCY_EVIDENCE.md).
+
+### Route
+
+Proceed to PH-05 doorway/chokepoint baseline.
+
+Let constrained World geometry create the pressure naturally.
+
+First story:
+
+`approach through doorway -> complete passage -> immediate reversal -> second passage attempt`
+
+Use baseline SPATIAL/NATURAL and A1 OFF participant-first.
+
+No P2 until a real bounded conflict state is observed and causally understood.

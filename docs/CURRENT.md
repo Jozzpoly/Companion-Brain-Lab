@@ -180,14 +180,30 @@ Evidence document:
 
 Wave A is now closed enough for pre-Owner preparation.
 
+Wave B evidence:
+
+- **PH-04 open-space player-flow / agency: CLOSED ENOUGH FOR OPEN-SPACE BASELINE**;
+- B0 qualified at `9ab5026d...`, Validate #1332;
+- B1 qualified at `a73dc962...`, Validate #1334;
+- both stories preserve ~**99.999%** of Owner requested progress;
+- both have **0 contact**, **0 backward**, **0 stalled** ticks;
+- B1 tightens the crossing but same-tick player-flow remains `CLEAR` throughout;
+- therefore no true-conflict/yield/right-of-way claim is made;
+- do not manufacture a harsher open-field conflict merely to satisfy the dossier.
+
+Evidence document:
+
+- [OS_PREP_3_PH04_PLAYER_FLOW_AGENCY_EVIDENCE.md](OS_PREP_3_PH04_PLAYER_FLOW_AGENCY_EVIDENCE.md)
+
 Current next target:
 
-- **Wave B / PH-04 — player-flow cooperation and agency**;
-- first characterize the live head-on baseline participant-first, with no P2 intervention;
-- ask whether the player can simply continue forward or must negotiate around companion locomotion;
-- then open player-flow / joint-future causal evidence;
-- preserve right-of-way, yield and priority claims as `NONE` unless evidence earns otherwise;
-- only later use P2 as bounded A/B on an exact conflict state.
+- **PH-05 — doorway/chokepoint cooperation**;
+- use existing World geometry to create shared-space pressure naturally;
+- baseline participant story first, no P2;
+- test passage + immediate reversal/second attempt;
+- inspect route, contact and recovery only after participant read;
+- distinguish successful traversal from genuine cooperation;
+- keep right-of-way/yield/priority claims at `NONE` unless a later experiment earns them.
 
 Do not widen A1 authority as part of OS-PREP-3.
 
