@@ -1,11 +1,30 @@
 # Companion Brain Lab — CURRENT
 
-Status: **CURRENT EXECUTION ENTRYPOINT**
-Date: **2026-09-18**
+Status: **CURRENT EXECUTION ENTRYPOINT · PRE-OWNER-SANDBOX RETROSPECTIVE**
+Date: **2026-09-20**
 
 Read this first when resuming the active Companion work. This file is intentionally small. It points to the current campaign and defines how short continuation prompts should be interpreted.
 
 Historical plans and qualification documents remain valuable evidence, but they do not outrank this file, current Owner intent, or live repository state.
+
+## 0. Current Owner override — retrospective before OS-PREP-5
+
+The active execution task is **not OS-PREP-5 implementation/deployment**.
+
+Before any real Owner Sandbox preparation continues, perform the dedicated retrospective:
+
+- [PRE_OWNER_SANDBOX_RETROSPECTIVE_CAMPAIGN.md](PRE_OWNER_SANDBOX_RETROSPECTIVE_CAMPAIGN.md)
+
+The retrospective must recover and challenge the full Companion history, distinguish live teammate capability from research apparatus, reconcile claims against evidence classes, and decide whether the current organism is actually the right next Owner stimulus.
+
+Frozen provisional artifacts:
+
+- `437cd11727eba327b99d8d70c80ce031c003a040` — provisional OS-PREP-5 packaging candidate;
+- `ops/os-prep5-owner-pages` — provisional Pages work.
+
+These artifacts may be inspected but must not be promoted, deployed or treated as roadmap authority during the review.
+
+When the Owner says `kontynuuj`, continue the retrospective campaign until its decision dossier is complete or a genuine Owner judgement boundary is reached.
 
 ## 1. Active mission
 
