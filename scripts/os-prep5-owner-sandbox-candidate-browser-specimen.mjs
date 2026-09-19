@@ -87,12 +87,15 @@ try {
 
   const ownerControls = page.locator(".owner-review-controls");
   invariant(await ownerControls.isVisible(), "Participant controls are not visible.");
-  for (const label of ["Open", "Pillar", "Door", "Head-on", "Reset", "Save"]) {
+  for (const label of ["Open", "Pillar", "Door", "Head-on", "Reset"]) {
     invariant(
       await ownerControls.getByRole("button", { name: label, exact: true }).isVisible(),
       `Owner movement-review control missing: ${label}`
     );
   }
+  const saveControl = ownerControls.locator(".owner-capture");
+  invariant(await saveControl.isVisible(), "Owner movement-review Save control is not visible.");
+  invariant((await saveControl.textContent())?.trim() === "Save", "Owner movement-review Save label changed unexpectedly.");
 
   invariant(
     !(await page.locator(".debug-collapse").isVisible()),
@@ -147,7 +150,7 @@ try {
   invariant(isImmutableBaseline(beforeCapture), "Baseline changed before incident capture.");
 
   const downloadPromise = page.waitForEvent("download", { timeout: 15_000 });
-  await ownerControls.getByRole("button", { name: "Save", exact: true }).click();
+  await saveControl.click();
   const download = await downloadPromise;
   const downloadedPath = await download.path();
   invariant(downloadedPath, "Owner movement-review Save produced no download path.");
