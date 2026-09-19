@@ -52,6 +52,7 @@ import type {
   WorldSnapshot
 } from "../world/types";
 import { LabWorld } from "../world/world";
+import { isOwnerReviewSearch, ownerReviewAllowsPanelAction } from "./owner-review-mode";
 import { bindWorldStaticTraversalQuery } from "./static-traversal-query-adapter";
 
 const VIEW_WIDTH = 1200;
@@ -161,6 +162,7 @@ export class R1LabScene extends Phaser.Scene {
   private companionMode: CompanionMode = "spatial";
   private naturalActuator = true;
   private timeScaleIndex = 2;
+  private ownerReviewSurface = false;
 
   private readonly relationalBrain = new RelationalPositioningBrain();
   private readonly relationshipOrientation = new RelationshipOrientationTracker();
@@ -200,6 +202,16 @@ export class R1LabScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.ownerReviewSurface = isOwnerReviewSearch(window.location.search);
+    if (this.ownerReviewSurface) {
+      // The Owner movement review is one immutable participant stimulus.
+      // Research controls remain available only through the ordinary workbench entrypoint.
+      this.companionMode = "spatial";
+      this.naturalActuator = true;
+      this.timeScaleIndex = 2;
+      this.a1Authority.setVariant("off");
+    }
+
     this.graphics = this.add.graphics();
     this.panel = new CausalPanel((action) => this.handlePanelAction(action));
 
@@ -1216,19 +1228,27 @@ export class R1LabScene extends Phaser.Scene {
 
   private handleKeyboard(): void {
     if (Phaser.Input.Keyboard.JustDown(this.keys.reset)) void this.loadScenario(this.scenarioId);
-    if (Phaser.Input.Keyboard.JustDown(this.keys.pause)) this.togglePause();
-    if (Phaser.Input.Keyboard.JustDown(this.keys.step)) this.queueSingleStep();
-    if (Phaser.Input.Keyboard.JustDown(this.keys.mode)) this.cycleCompanionMode();
-    if (Phaser.Input.Keyboard.JustDown(this.keys.natural)) this.toggleActuator();
-    if (Phaser.Input.Keyboard.JustDown(this.keys.time)) this.cycleTimeScale();
     if (Phaser.Input.Keyboard.JustDown(this.keys.incident)) this.captureIncident();
     if (Phaser.Input.Keyboard.JustDown(this.keys.one)) void this.loadScenario("open");
     if (Phaser.Input.Keyboard.JustDown(this.keys.two)) void this.loadScenario("pillar");
     if (Phaser.Input.Keyboard.JustDown(this.keys.three)) void this.loadScenario("doorway");
     if (Phaser.Input.Keyboard.JustDown(this.keys.four)) void this.loadScenario("head-on");
+
+    if (this.ownerReviewSurface) return;
+
+    if (Phaser.Input.Keyboard.JustDown(this.keys.pause)) this.togglePause();
+    if (Phaser.Input.Keyboard.JustDown(this.keys.step)) this.queueSingleStep();
+    if (Phaser.Input.Keyboard.JustDown(this.keys.mode)) this.cycleCompanionMode();
+    if (Phaser.Input.Keyboard.JustDown(this.keys.natural)) this.toggleActuator();
+    if (Phaser.Input.Keyboard.JustDown(this.keys.time)) this.cycleTimeScale();
   }
 
   private handlePanelAction(action: CausalPanelAction): void {
+    if (this.ownerReviewSurface && !ownerReviewAllowsPanelAction(action)) {
+      this.logEvent(`Owner review ignored research action ${action}`);
+      return;
+    }
+
     if (action === "toggle-pause") this.togglePause();
     else if (action === "single-step") this.queueSingleStep();
     else if (action === "reset") void this.loadScenario(this.scenarioId);
