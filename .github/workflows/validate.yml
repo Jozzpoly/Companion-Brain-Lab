@@ -57,6 +57,16 @@ jobs:
           path: artifacts/os-prep1-incident
           if-no-files-found: error
           retention-days: 7
+      - name: Capture OS-PREP-3 PH-05 doorway reversal Twins
+        run: npm run browser:audit:os-prep3-ph05
+      - name: Upload OS-PREP-3 PH-05 doorway reversal evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: os-prep3-ph05-doorway-reversal-${{ github.sha }}
+          path: artifacts/os-prep3-ph05-doorway-reversal
+          if-no-files-found: error
+          retention-days: 7
       - name: Capture OS-PREP-3 PH-04 head-on baseline Twins
         run: npm run browser:audit:os-prep3-ph04
       - name: Upload OS-PREP-3 PH-04 head-on baseline evidence
