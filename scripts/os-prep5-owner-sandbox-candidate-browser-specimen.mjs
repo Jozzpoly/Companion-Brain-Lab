@@ -14,7 +14,7 @@ function panelTick(text) {
 }
 
 async function panelText(page) {
-  return page.locator("#debug-panel").innerText();
+  return (await page.locator("#debug-panel").textContent()) ?? "";
 }
 
 async function waitForPanel(page, predicate, timeout = 15_000, label = "panel condition") {
