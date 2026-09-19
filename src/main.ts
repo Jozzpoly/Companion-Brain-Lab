@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { R1LabScene } from "./app/r1-lab-scene";
+import { participantSafeSearch } from "./app/owner-review-mode";
 import { installAuthorityA0BrowserBridge } from "./debug/authority-a0-browser-bridge";
 import { installAuthorityA11fBrowserBridge } from "./debug/authority-a1-1f-browser-bridge";
 import { installAuthorityA12p1BrowserBridge } from "./debug/authority-a1-2p1-browser-bridge";
@@ -24,23 +25,25 @@ const reportRuntimeFault = installRuntimeFaultSentinel({
 });
 
 try {
-  installOwnerControlScaleBrowserBridge(window.location.search);
-  installAuthorityA0BrowserBridge(window.location.search);
-  installAuthorityA10BrowserBridge(window.location.search);
-  installAuthorityA11fBrowserBridge(window.location.search);
-  installAuthorityA12z4cBrowserBridge(window.location.search, R1LabScene.prototype);
-  installAuthorityA12p1BrowserBridge(window.location.search, R1LabScene.prototype);
+  const runtimeSearch = participantSafeSearch(window.location.search);
+
+  installOwnerControlScaleBrowserBridge(runtimeSearch);
+  installAuthorityA0BrowserBridge(runtimeSearch);
+  installAuthorityA10BrowserBridge(runtimeSearch);
+  installAuthorityA11fBrowserBridge(runtimeSearch);
+  installAuthorityA12z4cBrowserBridge(runtimeSearch, R1LabScene.prototype);
+  installAuthorityA12p1BrowserBridge(runtimeSearch, R1LabScene.prototype);
   // The query-only semantic physics shadow must wrap the unperturbed R1 output.
   // The physical perturbation apparatus is installed outside it afterwards.
-  installRelationshipSemanticPhysicsShadowBrowserBridge(window.location.search, R1LabScene.prototype);
+  installRelationshipSemanticPhysicsShadowBrowserBridge(runtimeSearch, R1LabScene.prototype);
   // Query-only commitment observation wraps the unperturbed R1 result and never
   // changes intents. The perturbation apparatus remains the outermost wrapper.
-  installRelationshipCommitmentShadowBrowserBridge(window.location.search, R1LabScene.prototype);
-  installRelationshipSemanticPerturbationBrowserBridge(window.location.search, R1LabScene.prototype);
+  installRelationshipCommitmentShadowBrowserBridge(runtimeSearch, R1LabScene.prototype);
+  installRelationshipSemanticPerturbationBrowserBridge(runtimeSearch, R1LabScene.prototype);
   // P2 is intentionally outermost: existing research/shadow apparatus observes
   // the unpromoted path first, then an explicit one-step authorization may replace
   // only the final companion intent. semanticpush is rejected by the P2 bridge.
-  installAuthorityA12p2BrowserBridge(window.location.search, R1LabScene.prototype);
+  installAuthorityA12p2BrowserBridge(runtimeSearch, R1LabScene.prototype);
 
   game = new Phaser.Game({
     type: Phaser.AUTO,
@@ -55,7 +58,7 @@ try {
     scene: [R1LabScene]
   });
 
-  scheduleFoundationFaultProbe(window.location.search);
+  scheduleFoundationFaultProbe(runtimeSearch);
 } catch (error) {
   reportRuntimeFault(normalizeRuntimeFault({
     source: "manual",
