@@ -132,6 +132,18 @@ try {
   invariant(incident.capture?.paused === true, "Owner Sandbox test capture should remain paused.");
   invariant(incident.p2?.available === false, "Owner Sandbox ordinary entrypoint unexpectedly exposed P2.");
 
+  await page.keyboard.press("3");
+  await waitForPanel(
+    page,
+    (text) => text.includes("scenario Narrow doorway") && text.includes("PAUSED") && panelTick(text) === 0,
+    15_000,
+    "Owner Sandbox doorway scenario switch"
+  );
+  invariant(
+    await panel.evaluate((node) => node.classList.contains("is-collapsed")),
+    "Scenario switching exposed the research panel."
+  );
+
   const causalFrame = incident.frames?.find(
     (frame) => frame.observation?.worldTick === 0 && frame.outcome?.worldTick === 1
   );
@@ -170,6 +182,11 @@ try {
       tick: incident.capture.tick,
       worldAdvancedByCapture: afterTick !== beforeTick,
       capturedOwnerMove: causalFrame.observation.playerControlMove
+    },
+    scenarioSwitch: {
+      keyboard: "3",
+      result: "doorway",
+      participantSurfaceRemainedCollapsed: true
     },
     errors
   };
