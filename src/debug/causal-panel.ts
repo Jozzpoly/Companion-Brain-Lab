@@ -144,8 +144,10 @@ export class CausalPanel {
       collapse.title = this.collapsed ? "Expand research panel" : "Collapse debug panel";
     });
 
-    const ownerCapture = button("Save", "capture-incident");
-    ownerCapture.classList.add("owner-capture");
+    const ownerCapture = document.createElement("button");
+    ownerCapture.type = "button";
+    ownerCapture.className = "debug-button owner-capture";
+    ownerCapture.textContent = "Save";
     ownerCapture.title = "Capture this moment (keyboard: I)";
     ownerCapture.setAttribute("aria-label", "Capture this moment");
     ownerCapture.addEventListener("click", () => onAction("capture-incident"));
