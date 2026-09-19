@@ -22,7 +22,8 @@
     "browser:audit:os-prep3-ph03-sustained": "node scripts/os-prep3-ph03-sustained-slow-walk-browser-specimen.mjs",
     "browser:audit:os-prep3-ph04": "node scripts/os-prep3-ph04-head-on-baseline-browser-specimen.mjs",
     "browser:audit:os-prep3-ph04-cross": "node scripts/os-prep3-ph04-late-cross-front-browser-specimen.mjs",
-    "browser:audit:os-prep3-ph05": "node scripts/os-prep3-ph05-doorway-reversal-browser-specimen.mjs"
+    "browser:audit:os-prep3-ph05": "node scripts/os-prep3-ph05-doorway-reversal-browser-specimen.mjs",
+    "browser:audit:os-prep3-ph05-settle": "node scripts/os-prep3-ph05-doorway-settle-browser-specimen.mjs"
   },
   "dependencies": {
     "@dimforge/rapier2d-deterministic-compat": "0.20.0",

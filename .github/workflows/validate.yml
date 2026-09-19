@@ -67,6 +67,16 @@ jobs:
           path: artifacts/os-prep3-ph05-doorway-reversal
           if-no-files-found: error
           retention-days: 7
+      - name: Capture OS-PREP-3 PH-05 doorway settle M1 Twins
+        run: npm run browser:audit:os-prep3-ph05-settle
+      - name: Upload OS-PREP-3 PH-05 doorway settle M1 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: os-prep3-ph05-doorway-settle-${{ github.sha }}
+          path: artifacts/os-prep3-ph05-doorway-settle
+          if-no-files-found: error
+          retention-days: 7
       - name: Capture OS-PREP-3 PH-04 head-on baseline Twins
         run: npm run browser:audit:os-prep3-ph04
       - name: Upload OS-PREP-3 PH-04 head-on baseline evidence
