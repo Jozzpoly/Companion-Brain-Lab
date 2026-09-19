@@ -48,6 +48,7 @@
       .debug-badge[data-tone="warning"] { border-color: #9e6a03; color: #e3b341; background: rgba(187,128,9,.12); }
       .debug-badge[data-tone="danger"] { border-color: #da3633; color: #ff7b72; background: rgba(248,81,73,.12); }
       .debug-collapse { width: 30px; height: 32px; border: 1px solid #30363d; border-radius: 6px; background: #21262d; color: #c9d1d9; cursor: pointer; }
+      .owner-capture { display: none; min-width: 42px; height: 32px; padding: 0 7px; }
       .debug-collapse:hover, .debug-button:hover { background: #30363d; }
       .debug-panel-content { height: calc(100vh - 58px); overflow-y: auto; overscroll-behavior: contain; padding: 10px; }
       .debug-section { border: 1px solid #21262d; border-radius: 8px; margin-bottom: 9px; background: #11161d; }
@@ -72,6 +73,20 @@
       #debug-panel.is-collapsed .debug-panel-content { display: none; }
       #debug-panel.is-collapsed .debug-panel-header { grid-template-columns: 1fr; padding: 9px 6px; }
       #debug-panel.is-collapsed .debug-collapse { width: 30px; justify-self: center; }
+      #debug-panel.is-owner-sandbox.is-collapsed { flex-basis: 92px; width: 92px; }
+      #debug-panel.is-owner-sandbox.is-collapsed .debug-panel-header {
+        grid-template-columns: 1fr 34px;
+        gap: 4px;
+        padding: 9px 6px;
+      }
+      #debug-panel.is-owner-sandbox.is-collapsed .owner-capture {
+        display: block;
+        width: 42px;
+        min-width: 42px;
+        justify-self: center;
+        padding: 0 5px;
+        font-size: 10px;
+      }
 
       @media (max-width: 980px) {
         #debug-panel { flex-basis: min(46vw, 460px); width: min(46vw, 460px); }
