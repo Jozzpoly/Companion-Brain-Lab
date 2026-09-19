@@ -706,3 +706,106 @@ It does change the question we must answer first:
 That decision belongs after T3–T6.
 
 Until then OS-PREP-5 remains frozen.
+
+
+---
+
+## 11. Historical semantic fork — S5 was paused, not falsified
+
+The current eight-slot relationship authority has an important lineage caveat.
+
+Immediately after S4, branch `experiment/s5-continuous-relationship-field` built a shadow-only continuous relationship field:
+
+- 32 directions × 3 radii;
+- explicit local utility decomposition;
+- route-qualified shortlist;
+- coherent connected good region;
+- weighted representative used only as a downstream adapter;
+- no movement authority.
+
+S5-A mechanically qualified at `aeeb4628...`.
+
+Its first implementation also produced a useful falsification:
+
+> globally averaging spatially separate near-best samples collapsed the representative target to ~0.28 m from the player.
+
+S5 repaired this by treating a useful region as a connected field component rather than a bag of good points.
+
+Crucially, the Owner did **not** reject S5.
+
+Conversation history shows that S5 was paused when S4/runtime testing exposed random shutdown / `UNREACHABLE → HOLD → STOP` behavior and the project correctly redirected into R1/Foundation robustness.
+
+Therefore:
+
+> S5 lost execution priority because the substrate became unsafe to extend, not because continuous relationship space lost the comparison against eight slots.
+
+The later Foundation explicitly left relationship semantics open for aggressive redesign.
+
+---
+
+## 12. The same upstream replacement was rediscovered twice
+
+CCC-0 later rebuilt a shadow continuous relationship region.
+
+A1.1 then critically reviewed that donor and went further:
+
+- relative semantic state separated from world projection;
+- semantic utility separated from route/travel/comfort;
+- multiple reachable fragments preserved;
+- partial route coverage kept honest;
+- external body motion forbidden from becoming Owner semantic orientation;
+- representatives explicitly denied semantic authority.
+
+The A1.1 plan states directly:
+
+> the legacy relational brain is an **anti-donor for semantics**; its eight named slots, point target, velocity-derived direction and target-chasing contract are not A1.1 architecture.
+
+A1.1 qualified this player-relative objective-space substrate in live passive observation while preserving exact baseline movement.
+
+Yet ordinary authority remained the legacy eight-slot brain.
+
+This yields a major retrospective pattern:
+
+```text
+S1 eight slots recognized as temporary
+        ↓
+S5 builds continuous region — shadow only
+        ↓
+S4 failure redirects into R1/Foundation
+        ↓
+CCC rebuilds richer region — shadow only
+        ↓
+A1.1 builds cleaner relative objective-space semantics — zero authority
+        ↓
+A1.2 expands downstream decision research massively
+        ↓
+ordinary live runtime still uses S1 eight slots
+```
+
+This is stronger than generic technical debt.
+
+It suggests:
+
+> the project repeatedly invested in better upstream semantics, but each time deferred the authority decision while downstream research continued to grow around the known-temporary baseline.
+
+No conclusion follows yet that S5 or A1.1 should be promoted.
+
+Both remain unproven as Owner-facing behavior.
+
+But future planning must not treat the eight-slot baseline as the only available semantic starting point or as a current-best winner.
+
+---
+
+## 13. Revised north-star continuity interpretation
+
+The project did not simply “forget” relationship semantics.
+
+It repeatedly discovered that point-target semantics were too weak and generated richer alternatives.
+
+The unresolved problem is therefore not lack of ideas.
+
+It is an **authority/embodiment gap**:
+
+> richer semantic representations were researched, but never allowed to confront the real live movement organism in a bounded Owner-facing A/B.
+
+This gap is likely more important than adding another layer of downstream candidate analysis.
