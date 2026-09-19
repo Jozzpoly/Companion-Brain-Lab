@@ -111,7 +111,8 @@ export class CausalPanel {
     if (this.ownerSandboxSurface) {
       this.collapsed = true;
       this.root.classList.add("is-owner-sandbox", "is-collapsed");
-      document.title = "Companion Brain Lab — Owner Sandbox";
+      this.root.setAttribute("aria-label", "Owner movement review controls");
+      document.title = "Companion Brain Lab — Movement Review";
     }
 
     for (const [layer, visible] of Object.entries(DEFAULT_LAYERS) as Array<[WorldDebugLayer, boolean]>) {
@@ -144,15 +145,8 @@ export class CausalPanel {
       collapse.title = this.collapsed ? "Expand research panel" : "Collapse debug panel";
     });
 
-    const ownerCapture = document.createElement("button");
-    ownerCapture.type = "button";
-    ownerCapture.className = "debug-button owner-capture";
-    ownerCapture.textContent = "Save";
-    ownerCapture.title = "Capture this moment (keyboard: I)";
-    ownerCapture.setAttribute("aria-label", "Capture this moment");
-    ownerCapture.addEventListener("click", () => onAction("capture-incident"));
-
-    header.append(heading, this.badge, ownerCapture, collapse);
+    collapse.hidden = this.ownerSandboxSurface;
+    header.append(heading, this.badge, collapse);
 
     this.content = document.createElement("div");
     this.content.className = "debug-panel-content";
@@ -228,6 +222,47 @@ export class CausalPanel {
     hint.textContent = "Keyboard remains available: WASD · M mode · N actuator · T time · P pause · O step · I incident · R reset.";
 
     this.content.append(controls, layers, this.sectionsRoot, hint);
+
+    if (this.ownerSandboxSurface) {
+      const ownerControls = document.createElement("section");
+      ownerControls.className = "owner-review-controls";
+
+      const ownerTitle = document.createElement("strong");
+      ownerTitle.className = "owner-review-title";
+      ownerTitle.textContent = "Movement review";
+
+      const ownerHint = document.createElement("span");
+      ownerHint.className = "owner-review-hint";
+      ownerHint.textContent = "WASD to move";
+
+      const scenarios = document.createElement("div");
+      scenarios.className = "owner-review-scenarios";
+      scenarios.append(
+        button("Open", "scenario-open"),
+        button("Pillar", "scenario-pillar"),
+        button("Door", "scenario-doorway"),
+        button("Head-on", "scenario-head-on")
+      );
+
+      const actions = document.createElement("div");
+      actions.className = "owner-review-actions";
+      const reset = button("Reset", "reset");
+      const save = button("Save", "capture-incident");
+      save.classList.add("owner-capture");
+      save.title = "Capture this moment (keyboard: I)";
+      save.setAttribute("aria-label", "Capture this moment");
+      actions.append(reset, save);
+
+      ownerControls.append(ownerTitle, ownerHint, scenarios, actions);
+      ownerControls.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLButtonElement)) return;
+        const action = target.dataset.action as CausalPanelAction | undefined;
+        if (action) onAction(action);
+      });
+      this.root.append(ownerControls);
+    }
+
     this.root.append(header, this.content);
   }
 
