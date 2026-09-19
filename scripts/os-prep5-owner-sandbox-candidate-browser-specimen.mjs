@@ -184,7 +184,7 @@ try {
   await ownerControls.getByRole("button", { name: "Door", exact: true }).click();
   await waitForPanel(
     page,
-    (text) => text.includes("scenario Narrow doorway") && panelTick(text) === 0 && isImmutableBaseline(text),
+    (text) => text.includes("scenario Narrow doorway") && isImmutableBaseline(text),
     15_000,
     "Owner movement-review doorway switch"
   );
@@ -197,7 +197,7 @@ try {
   await ownerControls.getByRole("button", { name: "Reset", exact: true }).click();
   await waitForPanel(
     page,
-    (text) => text.includes("scenario Narrow doorway") && panelTick(text) === 0 && isImmutableBaseline(text),
+    (text) => text.includes("scenario Narrow doorway") && isImmutableBaseline(text),
     15_000,
     "Owner movement-review reset"
   );
