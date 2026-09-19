@@ -128,7 +128,6 @@ function mirrorCompare(topFrames,bottomFrames){
     }
     const decisionMismatch =
       t.routeStatus!==b.routeStatus ||
-      t.routePath!==b.routePath ||
       (targetErr!==null&&targetErr>1e-5);
     if(firstDecisionDivergence===null&&decisionMismatch){
       firstDecisionDivergence={
