@@ -6,6 +6,7 @@ const ROOT = "artifacts/os-prep3-ph07-pillar-mirror";
 const WORLD_HEIGHT = 8;
 const TOTAL_TICKS = 216;
 const SCREENSHOT_EVERY = 12;
+const MIRROR_EPSILON = 1e-4;
 const STORIES = {
   top: [
     { id: "top-pre-nudge", keys: ["w"], steps: 48 },
@@ -25,6 +26,21 @@ function invariant(condition, message) {
 function distance(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
 function mirrorPoint(v){ return {x:v.x,y:WORLD_HEIGHT-v.y}; }
 function mirrorVector(v){ return {x:v.x,y:-v.y}; }
+function mirrorRoutePath(path){
+  if(typeof path!=="string") return path;
+  return path.split(">").map((node)=>{
+    if(node.endsWith(".ne")) return node.slice(0,-3)+".se";
+    if(node.endsWith(".se")) return node.slice(0,-3)+".ne";
+    if(node.endsWith(".nw")) return node.slice(0,-3)+".sw";
+    if(node.endsWith(".sw")) return node.slice(0,-3)+".nw";
+    return node;
+  }).join(">");
+}
+function mirrorRelationshipLabel(label){
+  if(label==="left") return "right";
+  if(label==="right") return "left";
+  return label;
+}
 function panelTick(text){ const m=text.match(/tick\s+(\d+)/); return m?Number(m[1]):null; }
 async function panelText(page){ return page.locator("#debug-panel").innerText(); }
 async function waitForPanel(page,predicate,timeout=15000,label="panel condition"){
@@ -123,18 +139,24 @@ function mirrorCompare(topFrames,bottomFrames){
     maxCommandError=Math.max(maxCommandError,commandErr);
     maxActualVelocityError=Math.max(maxActualVelocityError,actualErr);
     if(targetErr!==null) maxTargetError=Math.max(maxTargetError,targetErr);
-    if(firstPhysicalDivergence===null&&(companionErr>1e-5||commandErr>1e-5||actualErr>1e-5)){
+    if(firstPhysicalDivergence===null&&(companionErr>MIRROR_EPSILON||commandErr>MIRROR_EPSILON||actualErr>MIRROR_EPSILON)){
       firstPhysicalDivergence={tick:t.observationTick,companionPositionError:companionErr,commandError:commandErr,actualVelocityError:actualErr};
     }
+    const mirroredBottomRoutePath=mirrorRoutePath(b.routePath);
+    const mirroredBottomRelationshipLabel=mirrorRelationshipLabel(b.relationshipLabel);
     const decisionMismatch =
       t.routeStatus!==b.routeStatus ||
-      (targetErr!==null&&targetErr>1e-5);
+      t.routePath!==mirroredBottomRoutePath ||
+      t.relationshipLabel!==mirroredBottomRelationshipLabel ||
+      (targetErr!==null&&targetErr>MIRROR_EPSILON);
     if(firstDecisionDivergence===null&&decisionMismatch){
       firstDecisionDivergence={
         tick:t.observationTick,
         topRouteStatus:t.routeStatus,bottomRouteStatus:b.routeStatus,
         topRoutePath:t.routePath,bottomRoutePath:b.routePath,
+        mirroredBottomRoutePath,
         topRelationshipLabel:t.relationshipLabel,bottomRelationshipLabel:b.relationshipLabel,
+        mirroredBottomRelationshipLabel,
         mirroredTargetError:targetErr
       };
     }
@@ -142,7 +164,7 @@ function mirrorCompare(topFrames,bottomFrames){
       tick:t.observationTick,
       playerPositionError:playerErr,
       companionPositionError:companionErr,
-      commandError,
+      commandError:commandErr,
       actualVelocityError:actualErr,
       mirroredTargetError:targetErr,
       topRouteStatus:t.routeStatus,
