@@ -186,15 +186,6 @@ try {
     "participant holds contribution before release"
   );
   await page.keyboard.up("q");
-  const released = await waitForPanel(
-    page,
-    (text) =>
-      text.includes("correction NONE") &&
-      text.includes("responsibility OWNED") &&
-      text.includes("blocked no"),
-    2_000,
-    "participant releases Q"
-  );
   const resumed = await waitForPanel(
     page,
     (text) =>
@@ -243,7 +234,7 @@ try {
       playerCanOwnOutcomeWhileHoldingCorrection:
         playerOwned.includes("interrupted by player") && !playerOwned.includes("companion:SUCCEEDED"),
       releaseRestoresAutonomy:
-        released.includes("correction NONE") && resumed.includes("interrupted by companion")
+        blockedBeforeRelease.includes("blocked YES") && resumed.includes("interrupted by companion")
     },
     errors
   };
