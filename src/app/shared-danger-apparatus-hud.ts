@@ -88,14 +88,14 @@ export class SharedDangerApparatusHud {
       ? "Teammate specimen"
       : "S1 manual controls";
     this.hint.textContent = value.teammateSpecimen
-      ? "WASD move · E intervene · hold Q to withhold companion"
+      ? "WASD move · E intervene · hold Q to withhold intervention"
       : "WASD player · arrows companion";
     this.companionButton.hidden = value.teammateSpecimen;
     this.actions.classList.toggle("is-teammate", value.teammateSpecimen);
     this.state.hidden = !value.teammateSpecimen;
     this.state.textContent = value.teammateSpecimen
       ? value.withholdActive
-        ? "Q HELD · companion contribution withheld"
+        ? "Q HELD · companion intervention withheld"
         : value.autonomyEnabled
           ? "Companion autonomy active"
           : "Companion autonomy inactive"
