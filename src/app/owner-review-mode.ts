@@ -5,7 +5,7 @@ export const OWNER_REVIEW_QUERY_VALUE = "1";
 export const TEAMMATE_REVIEW_QUERY_KEY = "teammate";
 export const TEAMMATE_REVIEW_QUERY_VALUE = "1";
 
-export type ParticipantReviewKind = "owner" | null;
+export type ParticipantReviewKind = "owner" | "teammate" | null;
 
 const OWNER_REVIEW_PANEL_ACTIONS = new Set<CausalPanelAction>([
   "reset",
@@ -18,16 +18,18 @@ const OWNER_REVIEW_PANEL_ACTIONS = new Set<CausalPanelAction>([
 
 export function participantReviewKind(search: string): ParticipantReviewKind {
   const params = new URLSearchParams(search);
-  return params.get(OWNER_REVIEW_QUERY_KEY) === OWNER_REVIEW_QUERY_VALUE ? "owner" : null;
+  if (params.get(OWNER_REVIEW_QUERY_KEY) === OWNER_REVIEW_QUERY_VALUE) return "owner";
+  if (params.get(TEAMMATE_REVIEW_QUERY_KEY) === TEAMMATE_REVIEW_QUERY_VALUE) return "teammate";
+  return null;
 }
 
 export function isOwnerReviewSearch(search: string): boolean {
   return participantReviewKind(search) === "owner";
 }
 
-/** Historical compatibility marker only; moving main no longer hides the workbench for teammate=1. */
-export function isTeammateReviewSearch(_search: string): boolean {
-  return false;
+/** Current teammate specimen uses the ordinary runtime and keeps the full workbench available. */
+export function isTeammateReviewSearch(search: string): boolean {
+  return participantReviewKind(search) === "teammate";
 }
 
 /** Only the frozen historical owner=1 movement-review identity strips research flags. */
