@@ -38,7 +38,8 @@ function apparatusBaseline(text) {
 }
 
 async function resetDanger(page) {
-  await page.getByRole("button", { name: "Danger", exact: true }).click();
+  const dangerControl = page.locator('[data-action="scenario-shared-danger"]');
+  await dangerControl.evaluate((button) => button.click());
   return waitForPanel(
     page,
     (text) =>
