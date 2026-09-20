@@ -199,7 +199,10 @@ try {
     "Existing S3 material contribution did not resume after readiness/correction handoff."
   );
   // E — readiness must remain player-local under live Owner movement.
-  await tapKey(page, "r");
+  // Start a genuinely fresh specimen; reset-key behavior is not part of this gate.
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.locator("#game-root canvas").waitFor({ state: "visible", timeout: 15_000 });
+  await page.locator('[data-shared-danger-hud="true"]').waitFor({ state: "visible", timeout: 10_000 });
   const anchorBeforeText = await waitForPanel(
     page,
     (text) =>
