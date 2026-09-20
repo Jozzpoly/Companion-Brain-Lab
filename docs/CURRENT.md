@@ -543,45 +543,70 @@ Historical branch recovery index:
 Do **not** spend the next tranche:
 
 - polishing the rejected movement or Stage B Owner stimuli;
-- building from the assumption that the post-FAIL F1/F2/F3 spike is the chosen command system;
-- hardening the current autonomy radii into design constants;
-- implementing a hostile/combat exchange merely because the previous assistant named it next;
+- hardening the post-FAIL F1/F2/F3 spike into the command system;
+- treating the S1 hostile/action fiction as final combat architecture;
 - reopening Foundation movement without a richer-gameplay falsifier;
-- resuming CCC/A1 because historical research exists;
-- adding LLM cognition, multi-companion architecture or a broad combat framework;
+- resuming CCC/A1 merely because historical research exists;
+- adding HP/inventory/factions/multi-enemy architecture, LLM cognition or few-companion scope;
 - creating branch-per-experiment infrastructure.
 
-Current live repository truth:
+### Live truth after S1 qualification
 
-- canonical branch: `main` only;
-- current HEAD after the post-FAIL exploratory spike: `fb81148f8bc39d796fc487bfa206d5464265fbdd`;
-- validate and command-autonomy browser gates are green;
-- those green gates prove the spike's mechanics, **not its product direction**;
-- Stage B remains an Owner-rejected product stimulus;
-- the full causal workbench remains mandatory research apparatus;
-- Foundation remains `PASS · REWORK-READY`.
+Canonical branch remains `main` only.
 
-### Immediate work
+Current qualified head:
 
-Execution is governed by [COMPANION_EXECUTION_CONTROLLER.md](COMPANION_EXECUTION_CONTROLLER.md).
+`ae7d6bc5394194840dbb9a0b29a4924be406eaeb`
 
-Gate S0 is now **closed enough** for one bounded promotion. The selected first situation hypothesis is documented in [FIRST_TEAMMATE_SITUATION_PLAN.md](FIRST_TEAMMATE_SITUATION_PLAN.md):
+Fresh S1 browser evidence:
 
-> a compact shared-danger encounter with a meaningful pre-contact window.
+- workflow `s1-shared-danger-browser` run **#7** completed successfully on that exact SHA;
+- ordinary runtime build passed;
+- the browser specimen exercised invalid-phase rejection, unopposed `PLAYER_HIT`, player interruption, companion out-of-range failure, manual companion interruption, player movement producing `ATTACK_MISSED`, one-shot completion, reset and collapsed-workbench operation;
+- no autonomous companion brain is active in the S1 scenario.
 
-Authority granted is deliberately narrow: **build/qualify the situation apparatus before adding new autonomous teammate cognition.**
+### S1 promotion
 
-Next authorized tranche = **S1-A → S1-C**:
+S1 is now:
 
-1. design the smallest embodied problem-source + explicit action-attempt + World-outcome contract;
-2. make within-tick movement/action/hostile-resolution ordering explicit and testable;
-3. implement one deterministic world problem in the same authoritative World progression;
-4. let player and manual/trivial companion materially intervene under the same rules;
-5. qualify success, failure and participant-first readability;
-6. only after that evidence, re-plan S2: situated attention/responsibility.
+> **MACHINE-QUALIFIED APPARATUS · NOT OWNER/PRODUCT QUALIFIED**
 
-Do **not** treat this as permission to build combat AI, HP/stats, final enemy architecture or final commands.
+Claim earned:
 
-The controlling question remains:
+> the lab can host one authoritative shared situation in which an external World body progresses in the same World tick, player and manually controlled companion can submit explicit material action attempts, and World-owned spatial/state rules determine factual outcomes.
 
-> **Can we first build a situation that is genuinely worth cooperating in, before asking the AI to cooperate intelligently?**
+This is enough to stop spending time proving the basic `movement ≠ action attempt ≠ World outcome` seam.
+
+Claim limits remain important:
+
+- the hostile is currently a deliberately non-solid Rapier sensor driven directly toward the player in an open-field fixture;
+- that does **not** prove solid body interaction, obstacle navigation, enemy architecture, combat feel or final hostile representation;
+- the visible telegraph is deliberately abstract;
+- participant-first artifact review found that the companion-success frame can visually occlude the yellow companion under the hostile, so action provenance/readability is not product-grade;
+- S1 contains no threat cognition, responsibility decision, useful autonomy, command system or teammate-feel claim.
+
+These are constraints on reuse, not reasons to turn S1 into a polishing campaign. Reopen apparatus representation only if S2/S3 needs one of the unproven properties.
+
+### Next authorized tranche — S2 situated attention / public responsibility
+
+S2 is authorized **only as a bounded zero-action-authority cognition spike**.
+
+Question:
+
+> **Can the local brain form an inspectable, causally grounded judgement that an external shared-world problem deserves attention and that some responsibility for it belongs to the companion, while the player remains a first-class situated reference?**
+
+S2 must:
+
+1. expose explicit public focus/responsibility identity and reason-for-change;
+2. use authoritative situation facts, not a side-loop marker or debugger-only label;
+3. distinguish observation from responsibility — noticing a problem must not automatically mean owning it;
+4. include spatial/relational counterfactuals so the result is not merely `WINDUP → HELP`;
+5. keep movement/action authority at **zero** during this gate;
+6. preserve the S1 apparatus and full causal workbench as fixture/evidence, not architecture authority;
+7. remain small enough that a successful S2 can move immediately to S3 material contribution instead of becoming another long shadow-research campaign.
+
+Do **not** reintroduce command grammar during S2. Corrigibility becomes meaningful only after S3 creates autonomous behavior worth correcting.
+
+The controlling question is now:
+
+> **Can the companion first form a bounded, legible responsibility about a real shared situation before we let that judgement control anything?**
