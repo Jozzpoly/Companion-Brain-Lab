@@ -1,97 +1,72 @@
 # Companion Brain Lab — CURRENT
 
-Status: **CURRENT EXECUTION ENTRYPOINT · PRE-OWNER-SANDBOX RETROSPECTIVE**
+Status: **CURRENT EXECUTION ENTRYPOINT · REVISED OS-PREP-5 QUALIFIED · PRE-DEPLOYMENT BOUNDARY**
 Date: **2026-09-20**
 
 Read this first when resuming the active Companion work. This file is intentionally small. It points to the current campaign and defines how short continuation prompts should be interpreted.
 
 Historical plans and qualification documents remain valuable evidence, but they do not outrank this file, current Owner intent, or live repository state.
 
-## 0. Current Owner override — retrospective complete
+## 0. Current stage — revised movement-review candidate qualified
 
-The pre-Owner-Sandbox retrospective is **complete**.
+The pre-Owner-Sandbox retrospective is complete.
 
 Canonical decision dossier:
 
 - [RETROSPECTIVE_T7_DECISION_DOSSIER.md](RETROSPECTIVE_T7_DECISION_DOSSIER.md)
 
-The old broad OS-PREP-5 framing is rejected.
+Canonical qualification:
 
-The next active stage is:
+- [OS_PREP_5_REVISED_MOVEMENT_REVIEW_QUALIFICATION.md](OS_PREP_5_REVISED_MOVEMENT_REVIEW_QUALIFICATION.md)
 
-> **REVISED OS-PREP-5 PREPARATION**
+Exact qualified Owner movement-review stimulus:
 
-Its purpose is to prepare a narrow Owner experiment answering:
+`510405960acf3cfce0a6985fe6f9da88ec95d0c2`
 
-> Is the current embodied movement/relationship substrate good enough — and sufficiently worth preserving — that Companion Brain Lab should stop treating locomotion as its main research frontier and begin the first true minimum-useful-partner experiment?
+Source branch:
 
-Important boundaries:
+`experiment/os-prep5-movement-substrate-owner-review`
 
-- do not deploy the provisional `/owner/` surface yet;
-- do not merge or promote `437cd11727eba327b99d8d70c80ce031c003a040` merely because Validate #1358 is FULL GREEN;
-- do not add combat, commands, threats, multiple companions or new movement architecture during preparation;
-- do not resume A1 selector/frontier work;
-- do not pre-fix PH-02/PH-07 unless they become mechanical blockers;
-- the provisional package is a technically qualified **stimulus container**, not product readiness evidence.
+Validation:
 
-When the Owner says `kontynuuj`, begin/revise preparation for this narrow Owner movement-substrate review. Do not silently return to the old broad teammate-Sandbox question.
+- Validate #1370 / run `35476301593` — **FULL GREEN**;
+- candidate-specific adversarial participant specimen — **PASS**;
+- full inherited movement/semantic/A1 evidence tail — **PASS**;
+- artifact-level provenance + participant screenshot inspection — **PASS**.
 
-## 1. Active mission
+The candidate is immutable for the next operational step. Do not add documentation or fixes to its branch merely to record qualification.
 
-The active mission is **Owner Sandbox Preparation (OS-PREP)**.
+## 1. Active product question
 
-We are no longer trying to prove that increasingly elaborate shadow analyses can exist. We are preparing the first serious campaign in which the accumulated movement/cooperation research is confronted with the question that matters:
+The old broad Owner-Sandbox question is rejected.
 
-> Does any of this produce a companion that the Owner can actually experience as a competent, readable teammate in a causal world?
+The current Owner experiment asks only:
 
-Movement remains the first language of cooperation, not the product goal.
+> **Is the current embodied movement/relationship substrate good enough — and sufficiently worth preserving — that Companion Brain Lab should stop treating locomotion as its main research frontier and begin the first true minimum-useful-partner experiment?**
 
-The immediate task is therefore not to widen automatic authority. It is to make the transition from research evidence to real embodied Owner evidence **safe, inspectable, falsifiable and worth the Owner's time**.
+This is a movement-foundation closure question, not a broad teammate-quality test.
 
-Canonical campaign document:
+## 2. Current operational boundary
 
-- [OWNER_SANDBOX_PREPARATION_CAMPAIGN.md](OWNER_SANDBOX_PREPARATION_CAMPAIGN.md)
+Public deployment has **not** occurred.
 
-Long-term Owner intent / north-star source:
+The next safe technical step is:
 
-- [INITIAL_RESEARCH_SKELETON.md](INITIAL_RESEARCH_SKELETON.md)
+> update the existing provisional Pages operations rehearsal to pin exact `510405...` and run a non-public Pages-like `/owner/` dry-run against the revised participant contract.
 
-## 2. Current qualified checkpoint
+The dry-run must prove:
 
-Branch:
+- exact checkout and `VITE_SOURCE_SHA` pinning to `510405...`;
+- real `/owner/?owner=1` subpath behavior;
+- participant-only controls;
+- research/P2/fault query contamination blocked;
+- historical M/N/T/P/O mutation attempts blocked;
+- Save incident exact provenance;
+- no browser/runtime/request failures.
 
-`experiment/a1-opportunity-persistence`
+Do **not** repoint real GitHub Pages automatically.
 
-OS-PREP-1 qualified implementation checkpoint:
-
-`944a6eb3d6e7ecd56171023e08894d0ea6fff2f8`
-
-Exact validation:
-
-- `validate` #1304 / run `35349533204` — **FULL GREEN**
-- `npm run check` — **PASS**
-- aggregate `browser:audit` — **PASS**
-- OS-PREP-1 real downloaded-incident browser specimen — **PASS**
-- OS-PREP-1 artifact upload — **PASS**
-- relationship semantic provenance / expiry / post-expiry disturbance / Twin shadow — **PASS**
-- A1.2p1 and A1.2p2 evidence upload — **PASS**
-- Z4f/Z4g evidence — **PASS**
-
-Artifact-level inspection confirmed:
-
-- incident schema `companion-brain-lab-owner-sandbox-incident-v1`;
-- embedded `sourceSha` exactly equals `944a6eb3...`;
-- build state `PINNED_SOURCE_SHA`;
-- same-step Owner control `{x:1,y:0}` retained in the `t0 -> t1` causal frame;
-- P2 preview/arm/application counts `1/1/1`;
-- exact proposal identity retained through P2 and A0;
-- P2 source/outcome closure `t0 -> t1`;
-- A0 command velocity error `0`;
-- capture did not advance frame count or mutate P2 counts / re-arm authority.
-
-This SHA is the qualified OS-PREP-1 evidence-integrity checkpoint, not a permanently frozen future runtime.
-
-**Before any exact claim or write, reacquire the live branch head and relevant CI.** If the branch moved, inspect and classify the delta before continuing.
+When the Owner says `kontynuuj`, continue from this operational pre-deployment boundary unless live repository state changed.
 
 ## 3. Current authority truth
 
