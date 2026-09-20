@@ -4,7 +4,8 @@ name: deploy-pinned-research-preview
 # Root preserves the exact historical Foundation Owner-qualified runtime.
 # /ccc0/ preserves the exact ZERO-authority CCC-0 shadow checkpoint.
 # /owner/ publishes the separately qualified revised OS-PREP-5 movement-review stimulus.
-# /teammate/ publishes the exact Stage B Slice 1 participant candidate, entered with teammate=1.
+# /teammate/ preserves the exact rejected Stage B Slice 1 participant candidate, entered with teammate=1.
+# /teammate-readiness/ publishes the current machine-qualified readiness/corrigibility Owner candidate.
 # Each participant surface is built from an immutable source SHA and embeds that exact SHA
 # into downloadable incident provenance.
 on:
@@ -19,6 +20,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  statuses: write
 
 concurrency:
   group: pages-research-preview
@@ -51,6 +53,12 @@ jobs:
         with:
           ref: 295452947e5936b79a7e3c40a79f6fdb3f239836
           path: teammate
+
+      - name: Checkout exact machine-qualified teammate readiness candidate
+        uses: actions/checkout@v5
+        with:
+          ref: 1a15d3dbdd24f2215e7094519109d676747ee117
+          path: teammate-readiness
 
       - name: Setup Node
         uses: actions/setup-node@v5
@@ -153,13 +161,43 @@ jobs:
           VITE_SOURCE_SHA: 295452947e5936b79a7e3c40a79f6fdb3f239836
         run: npm run check
 
+      - name: Install teammate readiness dependencies
+        working-directory: teammate-readiness
+        run: |
+          if npm install; then
+            echo "Dependency install completed through normal npm peer resolution."
+            exit 0
+          fi
+
+          latest_log="$(ls -t "$HOME"/.npm/_logs/*-debug-0.log 2>/dev/null | head -n 1 || true)"
+          if [ -z "$latest_log" ] || ! grep -Fq "Cannot read properties of null (reading 'edgesOut')" "$latest_log"; then
+            echo "npm failed for an unrecognized reason; refusing fallback."
+            if [ -n "$latest_log" ]; then cat "$latest_log"; fi
+            exit 1
+          fi
+
+          echo "Known npm Arborist edgesOut crash detected; retrying with peer auto-resolution disabled."
+          rm -rf node_modules
+          npm install --legacy-peer-deps
+
+      - name: Validate exact teammate readiness candidate and re-run qualified browser gates
+        working-directory: teammate-readiness
+        env:
+          VITE_SOURCE_SHA: 1a15d3dbdd24f2215e7094519109d676747ee117
+          GITHUB_SHA: 1a15d3dbdd24f2215e7094519109d676747ee117
+        run: |
+          npm run check
+          npm run browser:readiness
+          npm run browser:teammate-participant
+
       - name: Assemble composite Pages artifact
         run: |
-          mkdir -p site/ccc0 site/owner site/teammate
+          mkdir -p site/ccc0 site/owner site/teammate site/teammate-readiness
           cp -R foundation/dist/. site/
           cp -R ccc0/dist/. site/ccc0/
           cp -R owner/dist/. site/owner/
           cp -R teammate/dist/. site/teammate/
+          cp -R teammate-readiness/dist/. site/teammate-readiness/
 
       - name: Configure Pages
         uses: actions/configure-pages@v6
@@ -178,7 +216,7 @@ jobs:
     outputs:
       page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy pinned Foundation + CCC-0 + Owner Movement Review + Stage B teammate surfaces
+      - name: Deploy pinned historical surfaces + current teammate readiness candidate
         id: deployment
         uses: actions/deploy-pages@v5
 
@@ -188,6 +226,7 @@ jobs:
     env:
       EXPECTED_OWNER_SHA: 510405960acf3cfce0a6985fe6f9da88ec95d0c2
       EXPECTED_TEAMMATE_SHA: 295452947e5936b79a7e3c40a79f6fdb3f239836
+      EXPECTED_READINESS_SHA: 1a15d3dbdd24f2215e7094519109d676747ee117
       PAGE_URL: ${{ needs.deploy.outputs.page_url }}
     steps:
       - name: Checkout exact Owner Movement Review candidate for smoke tooling
@@ -513,3 +552,194 @@ jobs:
           }
           if (lastError) throw lastError;
           NODE
+      - name: Verify public teammate readiness candidate
+        working-directory: owner-smoke
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          import { chromium } from "playwright-chromium";
+
+          const expected = process.env.EXPECTED_READINESS_SHA;
+          const pageUrl = process.env.PAGE_URL;
+          if (!expected || !pageUrl) throw new Error("Missing teammate-readiness public smoke provenance inputs.");
+
+          const candidateUrl =
+            `${pageUrl.replace(/\/$/, "")}/teammate-readiness/?teammate=1`;
+
+          const browser = await chromium.launch({ headless: true });
+          let lastError = null;
+          try {
+            for (let attempt = 1; attempt <= 12; attempt += 1) {
+              const context = await browser.newContext({
+                viewport: { width: 1600, height: 1000 },
+                acceptDownloads: true
+              });
+              const page = await context.newPage();
+              try {
+                const response = await page.goto(candidateUrl, {
+                  waitUntil: "domcontentloaded",
+                  timeout: 30_000
+                });
+                if (!response?.ok()) throw new Error(`HTTP ${response?.status() ?? "no-response"}`);
+
+                await page.locator("#game-root canvas").waitFor({ state: "visible", timeout: 15_000 });
+                const panel = page.locator("#debug-panel");
+                await panel.waitFor({ state: "attached", timeout: 15_000 });
+                await page.locator('[data-shared-danger-hud="true"]').waitFor({
+                  state: "visible",
+                  timeout: 10_000
+                });
+
+                if ((await page.title()) !== "Companion Brain Lab — Teammate Specimen") {
+                  throw new Error(`Unexpected public teammate-readiness title: ${await page.title()}`);
+                }
+                if (!(await panel.evaluate((node) => node.classList.contains("is-collapsed")))) {
+                  throw new Error("Public teammate-readiness workbench is not participant-first/collapsed.");
+                }
+                if (await panel.evaluate((node) => node.classList.contains("is-owner-sandbox"))) {
+                  throw new Error("Public teammate-readiness candidate reused the stripped historical owner sandbox.");
+                }
+                if (!(await page.locator(".debug-collapse").isVisible())) {
+                  throw new Error("Public teammate-readiness candidate cannot reopen its causal workbench.");
+                }
+                if (!(await page.getByText("WASD move · E intervene · hold Q to withhold intervention").isVisible())) {
+                  throw new Error("Public teammate-readiness participant controls are missing.");
+                }
+                if (!(await page.locator('[data-shared-danger-hud="true"]')
+                  .getByRole("button", { name: "Companion intervene", includeHidden: true }).isHidden())) {
+                  throw new Error("Public participant surface exposes manual companion intervention.");
+                }
+
+                await page.waitForFunction(() => {
+                  const text = document.querySelector("#debug-panel")?.textContent ?? "";
+                  return (
+                    text.includes("scenario Shared danger apparatus") &&
+                    text.includes("authority ON") &&
+                    text.includes("phase APPROACHING") &&
+                    text.includes("attention TRACKING") &&
+                    text.includes("responsibility NONE") &&
+                    (text.includes("state GUARDING") || text.includes("state HOLDING_READY")) &&
+                    text.includes("latest attempts none")
+                  );
+                }, undefined, { timeout: 10_000 });
+
+                await page.keyboard.down("q");
+                await page.waitForFunction(() => {
+                  const text = document.querySelector("#debug-panel")?.textContent ?? "";
+                  return (
+                    text.includes("phase WINDUP") &&
+                    text.includes("responsibility OWNED") &&
+                    text.includes("correction WITHHOLD_CURRENT_CONTRIBUTION") &&
+                    text.includes("blocked YES") &&
+                    text.includes("effective world action none") &&
+                    text.includes("latest attempts none")
+                  );
+                }, undefined, { timeout: 10_000 });
+
+                await page.keyboard.down("e");
+                await page.waitForTimeout(55);
+                await page.keyboard.up("e");
+                await page.waitForFunction(() => {
+                  const text = document.querySelector("#debug-panel")?.textContent ?? "";
+                  return (
+                    text.includes("last world outcome INTERRUPTED") &&
+                    text.includes("interrupted by player") &&
+                    text.includes("latest attempts player:SUCCEEDED")
+                  );
+                }, undefined, { timeout: 5_000 });
+                await page.keyboard.up("q");
+
+                // Provenance comes from the same full workbench; it is not a separate debug build.
+                await page.locator(".debug-collapse").click();
+                if (await panel.evaluate((node) => node.classList.contains("is-collapsed"))) {
+                  throw new Error("Public teammate-readiness causal workbench did not expand.");
+                }
+                const capture = page.locator('button[data-action="capture-incident"]').first();
+                if (!(await capture.isVisible())) throw new Error("Public incident capture is unavailable.");
+
+                const wait = page.waitForEvent("download", { timeout: 15_000 });
+                await capture.click();
+                const download = await wait;
+                const downloadedPath = await download.path();
+                if (!downloadedPath) throw new Error("Public teammate-readiness capture produced no download path.");
+                const incident = JSON.parse(await readFile(downloadedPath, "utf8"));
+
+                if (incident?.build?.sourceSha !== expected) {
+                  throw new Error(
+                    `Public teammate-readiness SHA mismatch: expected ${expected}, got ${incident?.build?.sourceSha ?? "missing"}`
+                  );
+                }
+                if (incident?.build?.state !== "PINNED_SOURCE_SHA") {
+                  throw new Error(`Public teammate-readiness build state is ${incident?.build?.state ?? "missing"}.`);
+                }
+                if (
+                  incident?.capture?.scenario !== "shared-danger" ||
+                  incident?.capture?.mode !== "manual" ||
+                  incident?.capture?.a1Variant !== "off" ||
+                  incident?.capture?.timeScale !== 1 ||
+                  incident?.capture?.paused !== false ||
+                  incident?.p2?.available !== false
+                ) {
+                  throw new Error("Public teammate-readiness stimulus mutated outside its qualified boundary.");
+                }
+
+                console.log(JSON.stringify({
+                  status: "PASS",
+                  candidateUrl,
+                  sourceSha: incident.build.sourceSha,
+                  buildState: incident.build.state,
+                  participant: {
+                    scenario: incident.capture.scenario,
+                    mode: incident.capture.mode,
+                    a1Variant: incident.capture.a1Variant,
+                    timeScale: incident.capture.timeScale,
+                    paused: incident.capture.paused,
+                    p2Available: incident.p2.available
+                  },
+                  readinessVisibleBeforeCommitment: true,
+                  playerCorrectionBlockedCompanion: true,
+                  playerOwnedInterruptedOutcome: true,
+                  workbenchAvailableSameRuntime: true,
+                  attempt
+                }));
+                await context.close();
+                lastError = null;
+                break;
+              } catch (error) {
+                lastError = error;
+                await context.close();
+                if (attempt < 12) await new Promise((resolve) => setTimeout(resolve, 5_000));
+              }
+            }
+          } finally {
+            await browser.close();
+          }
+          if (lastError) throw lastError;
+          NODE
+
+  report:
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - build
+      - deploy
+      - smoke
+    steps:
+      - name: Publish composite Pages readiness deployment status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          SMOKE_RESULT: ${{ needs.smoke.result }}
+        run: |
+          state="success"
+          if [ "$BUILD_RESULT" != "success" ] || [ "$DEPLOY_RESULT" != "success" ] || [ "$SMOKE_RESULT" != "success" ]; then
+            state="failure"
+          fi
+          curl -sS -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            -d '{"state":"'"$state"'","context":"pages-teammate-readiness","description":"pinned teammate readiness Pages '"$state"'","target_url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}'
+
