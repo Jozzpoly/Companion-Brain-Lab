@@ -20,6 +20,10 @@ import {
   type S4CorrectionDecision
 } from "../brain/s4-correction";
 import {
+  evaluateSharedDangerReadiness,
+  type SharedDangerReadinessDecision
+} from "../brain/shared-danger-readiness";
+import {
   PlayerDirectiveRuntime,
   arbitrateCompanionAction,
   type CompanionArbitrationDecision,
@@ -227,6 +231,7 @@ export class R1LabScene extends Phaser.Scene {
   private s3Contribution: S3MaterialContributionProposal | null = null;
   private s4WithholdEnabled = false;
   private s4CorrectionDecision: S4CorrectionDecision | null = null;
+  private sharedDangerReadiness: SharedDangerReadinessDecision | null = null;
   private pendingActionAttempts: WorldActionAttempt[] = [];
   private lastActionOutcomes: readonly WorldActionOutcome[] = [];
   private lastSharedDangerEpisodeOutcome: SharedDangerEpisodeOutcome = "NONE";
@@ -414,6 +419,7 @@ export class R1LabScene extends Phaser.Scene {
     this.arbitrationDecision = null;
     this.s3Contribution = null;
     this.s4CorrectionDecision = null;
+    this.sharedDangerReadiness = null;
 
     const relationshipSemantic = (
       this.companionMode === "relational" || this.companionMode === "spatial"
@@ -445,17 +451,33 @@ export class R1LabScene extends Phaser.Scene {
         correction: this.s4WithholdEnabled ? "WITHHOLD_CURRENT_CONTRIBUTION" : "NONE"
       });
       this.s4CorrectionDecision = correction;
-      companionIntent = correction.effectiveMotionIntent;
-      if (
-        correction.effectiveActionAttempt &&
-        !this.pendingActionAttempts.some((attempt) => attempt.actorId === "companion")
-      ) {
-        this.pendingActionAttempts.push(correction.effectiveActionAttempt);
-        this.logEvent("S3 autonomous companion INTERVENE queued after S4 correction gate");
-      }
-      if (proposal.focusId === "hostile") {
-        target = { ...actor(before, "hostile").position };
-        objectiveKey = `s3:${proposal.kind.toLowerCase()}:hostile`;
+
+      const readiness = evaluateSharedDangerReadiness({
+        snapshot: before,
+        danger: this.sharedDanger,
+        responsibility: this.situatedResponsibility
+      });
+      this.sharedDangerReadiness = readiness;
+
+      if (proposal.kind === "NONE" && readiness.state !== "NONE") {
+        companionIntent = readiness.motionIntent;
+        if (readiness.target) {
+          target = { ...readiness.target };
+          objectiveKey = "shared-danger:readiness:guard-player";
+        }
+      } else {
+        companionIntent = correction.effectiveMotionIntent;
+        if (
+          correction.effectiveActionAttempt &&
+          !this.pendingActionAttempts.some((attempt) => attempt.actorId === "companion")
+        ) {
+          this.pendingActionAttempts.push(correction.effectiveActionAttempt);
+          this.logEvent("S3 autonomous companion INTERVENE queued after S4 correction gate");
+        }
+        if (proposal.focusId === "hostile") {
+          target = { ...actor(before, "hostile").position };
+          objectiveKey = `s3:${proposal.kind.toLowerCase()}:hostile`;
+        }
       }
     } else if (this.companionMode === "manual") {
       this.relationalDecision = null;
@@ -1005,6 +1027,9 @@ export class R1LabScene extends Phaser.Scene {
       if (value.id === "hostile") {
         this.drawSharedDangerBody(value, snapshot, sx, sy, scale);
       }
+      if (value.id === "companion") {
+        this.drawSharedDangerReadinessGlyph(value, snapshot, sx, sy, scale);
+      }
       if (value.id === "companion" && this.panel.layerVisible("route")) {
         const comfortViolated = this.spatialRepairDecision?.comfortStartViolated ?? false;
         this.graphics.lineStyle(2, comfortViolated ? 0xe3b341 : 0xf2c15c, comfortViolated ? 0.8 : 0.25);
@@ -1072,6 +1097,21 @@ export class R1LabScene extends Phaser.Scene {
     const x = sx(hostile.position.x);
     const y = sy(hostile.position.y);
 
+    const spikeInner = hostile.radius * scale * 1.12;
+    const spikeOuter = hostile.radius * scale * 1.48;
+    this.graphics.lineStyle(3, danger.phase === "WINDUP" ? 0xff5d66 : 0xff9b5e, 0.9);
+    for (let index = 0; index < 8; index += 1) {
+      const angle = (Math.PI * 2 * index) / 8;
+      const dx = Math.cos(angle);
+      const dy = Math.sin(angle);
+      this.graphics.lineBetween(
+        x + dx * spikeInner,
+        y + dy * spikeInner,
+        x + dx * spikeOuter,
+        y + dy * spikeOuter
+      );
+    }
+
     if (danger.phase === "WINDUP") {
       const player = actor(snapshot, "player");
       this.graphics.lineStyle(3, 0xff7b72, 0.7);
@@ -1087,6 +1127,15 @@ export class R1LabScene extends Phaser.Scene {
       this.graphics.lineStyle(4, 0x7ee787, 0.95);
       this.graphics.lineBetween(x - r, y - r, x + r, y + r);
       this.graphics.lineBetween(x - r, y + r, x + r, y - r);
+      for (const interrupterId of danger.interruptedBy) {
+        const interrupter = actor(snapshot, interrupterId);
+        const ix = sx(interrupter.position.x);
+        const iy = sy(interrupter.position.y);
+        const ir = interrupter.radius * scale * 1.4;
+        this.graphics.lineStyle(3, 0x7ee787, 0.9);
+        this.graphics.strokeCircle(ix, iy, ir);
+        this.graphics.lineBetween(ix, iy, x, y);
+      }
     }
 
     if (danger.lastOutcome === "PLAYER_HIT") {
@@ -1102,6 +1151,49 @@ export class R1LabScene extends Phaser.Scene {
       this.graphics.lineStyle(3, 0xe3b341, 0.85);
       this.graphics.strokeCircle(x, y, hostile.radius * scale * 2.2);
     }
+  }
+
+  private drawSharedDangerReadinessGlyph(
+    companion: ActorSnapshot,
+    snapshot: WorldSnapshot,
+    sx: (x: number) => number,
+    sy: (y: number) => number,
+    scale: number
+  ): void {
+    const readiness = this.sharedDangerReadiness;
+    if (!readiness || readiness.state === "NONE" || this.sharedDanger?.phase !== "APPROACHING") return;
+
+    const hostile = actor(snapshot, "hostile");
+    const dx = hostile.position.x - companion.position.x;
+    const dy = hostile.position.y - companion.position.y;
+    const length = Math.hypot(dx, dy);
+    if (length <= 1e-9) return;
+
+    const ux = dx / length;
+    const uy = dy / length;
+    const px = -uy;
+    const py = ux;
+    const cx = sx(companion.position.x);
+    const cy = sy(companion.position.y);
+    const bodyR = companion.radius * scale;
+    const base = bodyR * 1.05;
+    const tip = bodyR * 1.8;
+    const wing = bodyR * 0.72;
+    const color = readiness.state === "GUARDING" ? 0xf2c15c : 0xe3b341;
+
+    this.graphics.lineStyle(4, color, 0.95);
+    this.graphics.lineBetween(
+      cx + ux * base + px * wing,
+      cy + uy * base + py * wing,
+      cx + ux * tip,
+      cy + uy * tip
+    );
+    this.graphics.lineBetween(
+      cx + ux * base - px * wing,
+      cy + uy * base - py * wing,
+      cx + ux * tip,
+      cy + uy * tip
+    );
   }
 
   private drawTrails(sx: (x: number) => number, sy: (y: number) => number): void {
@@ -1388,6 +1480,24 @@ export class R1LabScene extends Phaser.Scene {
           `basis ${this.situatedResponsibility.reasonCode}`,
           this.situatedResponsibility.reason,
           "S2 ZERO AUTHORITY · the judgement itself cannot emit movement or action"
+        ]
+      }] : []),
+      ...(apparatusActive && this.sharedDangerReadiness ? [{
+        id: "readiness",
+        title: "Pre-contact readiness · player-local guard",
+        tone: this.sharedDangerReadiness.state === "GUARDING"
+          ? "success" as const
+          : this.sharedDangerReadiness.state === "HOLDING_READY"
+            ? "warning" as const
+            : "normal" as const,
+        lines: [
+          `state ${this.sharedDangerReadiness.state} · basis ${this.sharedDangerReadiness.reasonCode}`,
+          this.sharedDangerReadiness.target
+            ? `guard target ${compact(this.sharedDangerReadiness.target.x)}, ${compact(this.sharedDangerReadiness.target.y)} · companion gap ${compactNullable(this.sharedDangerReadiness.companionToTargetDistance)}m`
+            : "guard target none",
+          `player↔hostile ${compactNullable(this.sharedDangerReadiness.playerToHostileDistance)}m`,
+          this.sharedDangerReadiness.reason,
+          "READINESS MOVEMENT ONLY · no World action attempt"
         ]
       }] : []),
       ...(apparatusActive ? [{
@@ -1997,6 +2107,7 @@ export class R1LabScene extends Phaser.Scene {
       this.s3Contribution = null;
       this.s4WithholdEnabled = false;
       this.s4CorrectionDecision = null;
+      this.sharedDangerReadiness = null;
       this.playerTrail.length = 0;
       this.companionTrail.length = 0;
       this.causalTrace.reset();
