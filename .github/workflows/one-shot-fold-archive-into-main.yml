@@ -1,0 +1,37 @@
+name: one-shot-fold-archive-into-main
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  delete-archive-ref:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Verify archive is already an ancestor of main, then delete only the archive branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="archive/pre-cleanup-2026-09-20"
+          git fetch origin "$archive"
+          archive_sha="$(git rev-parse FETCH_HEAD)"
+          main_sha="$(git rev-parse HEAD)"
+          if ! git merge-base --is-ancestor "$archive_sha" "$main_sha"; then
+            echo "::error::Archive $archive_sha is not an ancestor of main $main_sha; refusing deletion."
+            exit 1
+          fi
+          git push origin --delete "$archive"
+          mapfile -t remaining < <(git ls-remote --heads origin | awk '{sub("refs/heads/","",$2); print $2}' | sort)
+          printf 'Remaining branches:\n'
+          printf ' - %s\n' "${remaining[@]}"
+          if (( ${#remaining[@]} != 1 )) || [[ "${remaining[0]}" != "main" ]]; then
+            echo "::error::Expected main to be the only remaining branch."
+            exit 1
+          fi
