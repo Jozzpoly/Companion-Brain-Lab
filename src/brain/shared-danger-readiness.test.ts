@@ -165,11 +165,14 @@ describe("shared-danger pre-contact readiness", () => {
         hostileY: 0
       }),
       danger: danger("APPROACHING"),
-      responsibility: trackedNone()
+      responsibility: trackedNone(),
+      previousSide: before.side
     });
 
     expect(before.target).not.toBeNull();
     expect(after.target).not.toBeNull();
+    expect(before.side).not.toBeNull();
+    expect(after.side).toBe(before.side);
     expect(Math.hypot(
       (after.target?.x ?? 0) - (before.target?.x ?? 0),
       (after.target?.y ?? 0) - (before.target?.y ?? 0)
