@@ -1,6 +1,6 @@
 # First Teammate Situation — S0/S1 Plan
 
-Status: **S1 MACHINE-QUALIFIED APPARATUS · S2 SITUATED-RESPONSIBILITY DESIGN AUTHORIZED · NO AUTONOMOUS ACTION AUTHORITY**
+Status: **S1/S2/S3 MACHINE-QUALIFIED BOUNDED STACK · S4 CORRIGIBILITY GATE ACTIVE · NO OWNER/COMBAT-AI CLAIM**
 Date: **2026-09-20**
 
 Parent authority:
@@ -455,3 +455,117 @@ The companion must be able to notice without owning, own without immediately act
 At least one counterfactual must hold where hostile phase is the same but responsibility differs because relevant spatial/relational facts differ. Otherwise S2 is only a renamed phase table and should be rejected.
 
 No command grammar or autonomous intervention is authorized until S2 earns this bounded claim.
+
+
+---
+
+## 15. S2 qualification result — 2026-09-20
+
+Qualified code/evidence path:
+
+- `situated-responsibility.ts`;
+- counterfactual unit tests;
+- `s2-situated-responsibility-browser #1 · SUCCESS`.
+
+### Claim earned
+
+For the one known shared-danger problem, the local brain can keep **attention** separate from **responsibility**.
+
+The same hostile `WINDUP` does not imply the same judgement:
+
+- player at material risk + companion can reach intervention range before consequence → `OWNED`;
+- player at material risk + companion cannot get there in time → `NONE`;
+- player already outside attack range → `NONE`.
+
+`APPROACHING` is monitored without premature ownership; `RECOVERING` remains relevant while active responsibility is withdrawn.
+
+S2 has zero movement/action authority.
+
+### Claim not earned
+
+- general attention selection;
+- multiple-problem prioritization;
+- path-aware tactical reachability;
+- threat understanding beyond this bounded apparatus;
+- broad cognition or teammate quality.
+
+The straight-line reach estimate is an explicit open-field fixture approximation.
+
+---
+
+## 16. S3 qualification result — 2026-09-20
+
+Qualified head:
+
+`9aec423bbadf2aa7bb6794d5a7c6d970fe17b958`
+
+Browser gate:
+
+`s3-material-contribution-browser #1 · SUCCESS`
+
+Supporting regressions on the shared code state `2a46a03…`:
+
+- `s1-shared-danger-browser #12 · SUCCESS`;
+- `s2-situated-responsibility-browser #3 · SUCCESS`;
+- `command-autonomy-browser #12 · SUCCESS`.
+
+### Claim earned
+
+An explicitly enabled, fixture-local S3 authority can consume S2's **earned responsibility** and produce one material contribution:
+
+- while `OWNED` and out of range, companion uses a provisional open-field approach;
+- once in authoritative intervention range, it submits the same companion `INTERVENE` World attempt used by S1;
+- World, not cognition, declares `INTERRUPTED`.
+
+The inverse cases were also demonstrated:
+
+- unearned/unreachable responsibility → S3 proposal `NONE`, no action, possible `PLAYER_HIT`;
+- player leaves attack range → S2 responsibility is withdrawn → S3 becomes `NONE` → World can resolve `ATTACK_MISSED` with no companion interruption.
+
+This is the first bounded machine evidence that local situated judgement can cause a useful material change in the same situation without necessarily stealing the player's outcome.
+
+### Claim not earned
+
+- teammate feel;
+- combat AI;
+- final approach/movement policy;
+- general engagement/disengagement;
+- final hostile/action fiction;
+- trust, initiative quality or Owner acceptance.
+
+S3 remains apparatus-scale autonomy.
+
+### Evidence caveat
+
+The artifact frame named `01-owned-before-contribution` advanced past the intended temporal point before screenshot capture. It must not be used as image proof that the frame is pre-action. The browser assertion and later World-outcome evidence remain valid.
+
+---
+
+## 17. S4 authorization — corrigibility without puppeteering
+
+S4 is now authorized because there is finally autonomous behavior worth correcting.
+
+Do not begin with a full command system.
+
+First research question:
+
+> **Can the player withhold the current autonomous companion contribution while the companion's own situated judgement and raw proposal remain intact?**
+
+Use one bounded correction control:
+
+`WITHHOLD THIS COMPANION INTERVENTION`
+
+Desired causal separation:
+
+`S2 responsibility → S3 raw proposal → S4 correction/arbitration → effective contribution → World outcome`
+
+Required counterfactuals:
+
+1. **No correction:** S3 can autonomously help.
+2. **Correction active:** S2 may still be `OWNED`, raw S3 may still propose help, but effective companion movement/action is suppressed.
+3. **Player acts while correction holds:** player can resolve the same problem; companion must not steal the result.
+4. **Correction released before consequence:** if S2 still owns responsibility, the autonomous contribution can resume without a second player instruction.
+
+This control is research apparatus, not final command vocabulary or UX.
+
+Do not promote the old F1/F2/F3 / `AT_WILL / FOLLOW_ME / HOLD_HERE` spike until richer player-direction questions actually require it.
