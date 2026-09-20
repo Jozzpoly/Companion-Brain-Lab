@@ -1,6 +1,6 @@
 # First Teammate Situation — S0/S1 Plan
 
-Status: **S1/S2/S3 MACHINE-QUALIFIED BOUNDED STACK · S4 CORRIGIBILITY GATE ACTIVE · NO OWNER/COMBAT-AI CLAIM**
+Status: **S1–S4 MACHINE-QUALIFIED BOUNDED STACK · PARTICIPANT PATH MACHINE PASS / PRE-OWNER FAIL · READINESS GATE ACTIVE**
 Date: **2026-09-20**
 
 Parent authority:
@@ -569,3 +569,80 @@ Required counterfactuals:
 This control is research apparatus, not final command vocabulary or UX.
 
 Do not promote the old F1/F2/F3 / `AT_WILL / FOLLOW_ME / HOLD_HERE` spike until richer player-direction questions actually require it.
+
+
+---
+
+## 18. S4 qualification result — 2026-09-20
+
+Browser gate:
+
+`s4-corrigibility-browser #1 · SUCCESS`
+
+### Claim earned
+
+Player correction can sit after situated judgement/raw autonomous proposal and before execution.
+
+The machine-qualified causal chain is now:
+
+`S2 responsibility → S3 raw proposal → S4 correction constraint → effective movement/action → World outcome`.
+
+A correction can block effective companion execution while:
+
+- S2 remains `OWNED`;
+- raw S3 contribution remains inspectable;
+- player still acts through the same World contract;
+- release restores still-valid autonomy.
+
+This is a corrigibility seam, not a final command system.
+
+---
+
+## 19. Integrated participant path result — 2026-09-20
+
+Route:
+
+`?teammate=1`
+
+Qualified run:
+
+`teammate-participant-browser #4 · SUCCESS`
+
+Machine evidence proves:
+
+- specimen starts directly in the shared situation;
+- bounded autonomy is active without debug toggling;
+- manual participant control of the companion is removed from the normal surface;
+- hold-`Q` temporarily constrains contribution;
+- player can own the outcome while correction holds;
+- release restores autonomy;
+- the full workbench remains expandable in the same runtime.
+
+### Pre-Owner verdict
+
+**FAIL / NOT READY FOR OWNER GATE.**
+
+Participant artifact review shows that the experience still presents mostly as three colored circles on an empty field. This would repeat the failure mode already rejected by the Owner: a materially richer hidden mechanism whose visible product delta is too weak.
+
+Do not route this build to the Owner merely because the participant browser gate is green.
+
+---
+
+## 20. Readiness authorization — make awareness visible before commitment
+
+Next question:
+
+> **Can the companion visibly prepare for an approaching shared problem before it owns an intervention, while staying player-local and without turning preparation into premature combat?**
+
+Bounded candidate:
+
+- `APPROACHING`;
+- S2 `TRACKING`;
+- S2 responsibility `NONE`;
+- one player-anchored hostile-facing guard position;
+- movement/preparation only;
+- no `INTERVENE` attempt;
+- stop/hold if spacing is too compressed;
+- `WINDUP` remains the transition into the existing S2→S3 contribution path.
+
+This tranche also authorizes only the minimal semantic world rendering needed to make readiness and action provenance participant-readable. It does not authorize a general art pipeline or cosmetic milestone.
