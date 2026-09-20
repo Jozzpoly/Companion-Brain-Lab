@@ -1,0 +1,61 @@
+name: s1-shared-danger-browser
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/app/r1-lab-scene.ts"
+      - "src/app/shared-danger-apparatus-hud.ts"
+      - "src/debug/causal-panel.ts"
+      - "src/world/shared-danger-contract.ts"
+      - "src/world/world.ts"
+      - "src/world/types.ts"
+      - "src/world/scenarios.ts"
+      - "src/physics/rapier-physical-world.ts"
+      - "index.html"
+      - "scripts/s1-shared-danger-browser-smoke.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/s1-shared-danger-browser.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: s1-shared-danger-browser-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SOURCE_SHA: ${{ github.sha }}
+      GITHUB_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: |
+          if npm install; then
+            exit 0
+          fi
+          latest_log="$(ls -t "$HOME"/.npm/_logs/*-debug-0.log 2>/dev/null | head -n 1 || true)"
+          if [ -z "$latest_log" ] || ! grep -Fq "Cannot read properties of null (reading 'edgesOut')" "$latest_log"; then
+            if [ -n "$latest_log" ]; then cat "$latest_log"; fi
+            exit 1
+          fi
+          rm -rf node_modules
+          npm install --legacy-peer-deps
+      - name: Build ordinary runtime
+        run: npm run build
+      - name: S1 shared-danger browser gate
+        run: npm run browser:s1-apparatus
+      - name: Upload S1 participant-first evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s1-shared-danger-browser-${{ github.sha }}
+          path: artifacts/s1-shared-danger-browser/
+          if-no-files-found: warn
+          retention-days: 14
