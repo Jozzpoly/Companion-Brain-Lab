@@ -84,8 +84,9 @@ try {
     !(await page.locator("#debug-panel").evaluate((node) => node.classList.contains("is-owner-sandbox"))),
     "Teammate specimen must not reuse the stripped historical owner sandbox."
   );
+  await shot(page, "00-participant-bootstrap.png");
   invariant(
-    await page.getByRole("button", { name: "Companion intervene" }).isHidden(),
+    await page.getByRole("button", { name: "Companion intervene", includeHidden: true }).isHidden(),
     "Manual companion intervention must be hidden in teammate specimen."
   );
   invariant(
