@@ -83,7 +83,7 @@ import type {
   WorldBodyId
 } from "../world/types";
 import { LabWorld, S1_SHARED_DANGER_RULES } from "../world/world";
-import { isOwnerReviewSearch, ownerReviewAllowsPanelAction } from "./owner-review-mode";
+import { isOwnerReviewSearch, isTeammateReviewSearch, ownerReviewAllowsPanelAction } from "./owner-review-mode";
 import { PlayerCommandHud } from "./player-command-hud";
 import { SharedDangerApparatusHud } from "./shared-danger-apparatus-hud";
 import { bindWorldStaticTraversalQuery } from "./static-traversal-query-adapter";
@@ -200,6 +200,7 @@ export class R1LabScene extends Phaser.Scene {
   private naturalActuator = true;
   private timeScaleIndex = 2;
   private ownerReviewSurface = false;
+  private teammateSpecimenSurface = false;
   private commandHud!: PlayerCommandHud;
   private apparatusHud!: SharedDangerApparatusHud;
 
@@ -246,7 +247,7 @@ export class R1LabScene extends Phaser.Scene {
     "w" | "a" | "s" | "d" | "up" | "down" | "left" | "right" |
     "reset" | "pause" | "step" | "mode" | "incident" | "natural" | "time" |
     "one" | "two" | "three" | "four" | "five" | "f1" | "f2" | "f3" |
-    "playerAction" | "companionAction",
+    "playerAction" | "companionAction" | "withhold",
     Phaser.Input.Keyboard.Key
   >;
 
@@ -256,11 +257,16 @@ export class R1LabScene extends Phaser.Scene {
 
   create(): void {
     this.ownerReviewSurface = isOwnerReviewSearch(window.location.search);
+    this.teammateSpecimenSurface = isTeammateReviewSearch(window.location.search);
     if (this.ownerReviewSurface) {
       // Historical movement-review identity remains frozen for comparison only.
       this.companionMode = "spatial";
       this.naturalActuator = true;
       this.timeScaleIndex = 2;
+      this.a1Authority.setVariant("off");
+    } else if (this.teammateSpecimenSurface) {
+      this.scenarioId = "shared-danger";
+      this.companionMode = "manual";
       this.a1Authority.setVariant("off");
     }
 
@@ -296,7 +302,8 @@ export class R1LabScene extends Phaser.Scene {
       f2: Phaser.Input.Keyboard.KeyCodes.F2,
       f3: Phaser.Input.Keyboard.KeyCodes.F3,
       playerAction: Phaser.Input.Keyboard.KeyCodes.E,
-      companionAction: Phaser.Input.Keyboard.KeyCodes.ENTER
+      companionAction: Phaser.Input.Keyboard.KeyCodes.ENTER,
+      withhold: Phaser.Input.Keyboard.KeyCodes.Q
     }) as typeof this.keys;
 
     void this.loadScenario(this.scenarioId);
@@ -1339,7 +1346,10 @@ export class R1LabScene extends Phaser.Scene {
       active: apparatusActive,
       danger: this.sharedDanger,
       lastEpisodeOutcome: this.lastSharedDangerEpisodeOutcome,
-      lastActionOutcomes: this.lastActionOutcomes
+      lastActionOutcomes: this.lastActionOutcomes,
+      teammateSpecimen: this.teammateSpecimenSurface && apparatusActive,
+      autonomyEnabled: this.s3AuthorityEnabled,
+      withholdActive: this.s4WithholdEnabled
     });
 
     const sections: CausalPanelModel["sections"] = [
@@ -1695,11 +1705,21 @@ export class R1LabScene extends Phaser.Scene {
 
     if (this.ownerReviewSurface) return;
 
+    if (this.teammateSpecimenSurface && this.scenarioId === "shared-danger") {
+      const nextWithhold = this.keys.withhold.isDown;
+      if (nextWithhold !== this.s4WithholdEnabled) {
+        this.s4WithholdEnabled = nextWithhold;
+        this.logEvent(`teammate specimen correction ${nextWithhold ? "WITHHOLD_CURRENT_CONTRIBUTION" : "NONE"}`);
+      }
+    }
+
     if (Phaser.Input.Keyboard.JustDown(this.keys.five)) void this.loadScenario("shared-danger");
 
     if (this.scenarioId === "shared-danger") {
       if (Phaser.Input.Keyboard.JustDown(this.keys.playerAction)) this.queueWorldAction("player");
-      if (Phaser.Input.Keyboard.JustDown(this.keys.companionAction)) this.queueWorldAction("companion");
+      if (!this.teammateSpecimenSurface && Phaser.Input.Keyboard.JustDown(this.keys.companionAction)) {
+        this.queueWorldAction("companion");
+      }
       if (Phaser.Input.Keyboard.JustDown(this.keys.pause)) this.togglePause();
       if (Phaser.Input.Keyboard.JustDown(this.keys.step)) this.queueSingleStep();
       if (Phaser.Input.Keyboard.JustDown(this.keys.time)) this.cycleTimeScale();
@@ -1761,6 +1781,10 @@ export class R1LabScene extends Phaser.Scene {
   }
 
   private toggleS4Withhold(): void {
+    if (this.teammateSpecimenSurface) {
+      this.logEvent("S4 debug toggle ignored in teammate specimen; hold Q for the participant correction");
+      return;
+    }
     if (this.scenarioId !== "shared-danger" || !this.s3AuthorityEnabled) {
       this.logEvent("S4 withhold ignored unless shared-danger S3 authority is enabled");
       return;
@@ -1969,7 +1993,7 @@ export class R1LabScene extends Phaser.Scene {
       this.pendingActionAttempts.length = 0;
       this.lastActionOutcomes = [];
       this.lastSharedDangerEpisodeOutcome = "NONE";
-      this.s3AuthorityEnabled = false;
+      this.s3AuthorityEnabled = this.teammateSpecimenSurface && id === "shared-danger";
       this.s3Contribution = null;
       this.s4WithholdEnabled = false;
       this.s4CorrectionDecision = null;
@@ -1985,6 +2009,9 @@ export class R1LabScene extends Phaser.Scene {
       this.recordTrail(this.snapshotValue);
       this.updatePostEvidence(this.snapshotValue);
       this.logEvent(`scenario ${id} loaded`);
+      if (this.teammateSpecimenSurface && id === "shared-danger") {
+        this.logEvent("teammate specimen armed · S3 autonomy ON · hold Q to withhold execution");
+      }
       this.drawWorld(this.snapshotValue);
       this.updatePanel(this.snapshotValue);
     } finally {
