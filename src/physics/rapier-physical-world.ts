@@ -32,6 +32,13 @@ function normalized(input: Vec2): Vec2 {
   return { x: input.x / magnitude, y: input.y / magnitude };
 }
 
+function finiteVelocity(input: Vec2, label: string): Vec2 {
+  if (!Number.isFinite(input.x) || !Number.isFinite(input.y)) {
+    throw new Error(`${label} requires finite x/y components.`);
+  }
+  return { x: input.x, y: input.y };
+}
+
 function unit(input: Vec2): Vec2 {
   const magnitude = Math.hypot(input.x, input.y);
   return magnitude > TRAVERSAL_EPSILON
@@ -55,6 +62,26 @@ interface PhysicalActor {
   body: RAPIER.RigidBody;
   collider: RAPIER.Collider;
   requestedVelocity: Vec2;
+}
+
+export interface PhysicalRehearsalVelocityInput {
+  actorId: ActorId;
+  velocity: Vec2;
+}
+
+export interface PhysicalRehearsalFrame {
+  stepIndex: number;
+  actors: readonly ActorSnapshot[];
+}
+
+export interface PhysicalRehearsalResult {
+  kind: "RAPIER_SNAPSHOT_REHEARSAL";
+  frames: readonly PhysicalRehearsalFrame[];
+  physicsProvenance: "LIVE_RAPIER_WORLD_SNAPSHOT_RESTORE";
+  inputSemantics: "RAW_WORLD_UNIT_VELOCITY_NO_ADMISSIBILITY";
+  liveWorldMutationClaim: "NONE_QUERY_ONLY_CLONE";
+  commandAdmissibilityClaim: "NONE_A1_2G_SUBSTRATE_ONLY";
+  runtimeAuthorityClaim: "NONE_A1_2G_SUBSTRATE_ONLY";
 }
 
 export class RapierPhysicalWorld {
@@ -258,7 +285,113 @@ export class RapierPhysicalWorld {
 
     this.world.step();
 
+    return this.actorSnapshotsAfterStep(this.world, this.actors, before);
+  }
+
+  /**
+   * Query-only A1.2g research substrate.
+   *
+   * Rehearsal restores a byte snapshot of the current Rapier world and advances
+   * only that cloned world. Inputs are raw world-unit velocities on purpose:
+   * G1 command admissibility and later semantic policy remain outside this
+   * physical substrate, and player body-response hypotheses may legitimately
+   * exceed nominal command capability.
+   */
+  rehearseVelocitySequence(
+    sequence: readonly (readonly PhysicalRehearsalVelocityInput[])[]
+  ): PhysicalRehearsalResult {
+    if (sequence.length === 0) {
+      throw new Error("Physical rehearsal requires at least one future step.");
+    }
+
+    const rehearsalWorld = RAPIER.World.restoreSnapshot(this.world.takeSnapshot());
+    try {
+      const rehearsalActors = new Map<ActorId, PhysicalActor>();
+      for (const liveActor of this.actors.values()) {
+        const body = rehearsalWorld.getRigidBody(liveActor.body.handle);
+        const collider = rehearsalWorld.getCollider(liveActor.collider.handle);
+        if (!body || !collider) {
+          throw new Error(`Physical rehearsal could not recover snapshot identity for ${liveActor.id}.`);
+        }
+        rehearsalActors.set(liveActor.id, {
+          id: liveActor.id,
+          radius: liveActor.radius,
+          speed: liveActor.speed,
+          body,
+          collider,
+          requestedVelocity: { ...liveActor.requestedVelocity }
+        });
+      }
+
+      const frames: PhysicalRehearsalFrame[] = [];
+      for (let stepIndex = 0; stepIndex < sequence.length; stepIndex += 1) {
+        const inputs = sequence[stepIndex]!;
+        const byActor = new Map<ActorId, Vec2>();
+        for (const input of inputs) {
+          if (!rehearsalActors.has(input.actorId)) {
+            throw new Error(`Physical rehearsal input references unknown actor: ${input.actorId}`);
+          }
+          if (byActor.has(input.actorId)) {
+            throw new Error(`Duplicate physical rehearsal velocity: ${input.actorId}`);
+          }
+          byActor.set(
+            input.actorId,
+            finiteVelocity(input.velocity, `Physical rehearsal velocity for ${input.actorId}`)
+          );
+        }
+
+        const before = new Map<ActorId, Vec2>();
+        for (const actor of rehearsalActors.values()) {
+          const position = actor.body.translation();
+          before.set(actor.id, { x: position.x, y: position.y });
+          actor.requestedVelocity = byActor.get(actor.id) ?? { x: 0, y: 0 };
+          actor.body.setLinvel(actor.requestedVelocity, true);
+        }
+
+        rehearsalWorld.step();
+        frames.push({
+          stepIndex,
+          actors: this.actorSnapshotsAfterStep(rehearsalWorld, rehearsalActors, before)
+        });
+      }
+
+      return {
+        kind: "RAPIER_SNAPSHOT_REHEARSAL",
+        frames,
+        physicsProvenance: "LIVE_RAPIER_WORLD_SNAPSHOT_RESTORE",
+        inputSemantics: "RAW_WORLD_UNIT_VELOCITY_NO_ADMISSIBILITY",
+        liveWorldMutationClaim: "NONE_QUERY_ONLY_CLONE",
+        commandAdmissibilityClaim: "NONE_A1_2G_SUBSTRATE_ONLY",
+        runtimeAuthorityClaim: "NONE_A1_2G_SUBSTRATE_ONLY"
+      };
+    } finally {
+      rehearsalWorld.free();
+    }
+  }
+
+  snapshot(): ActorSnapshot[] {
     return [...this.actors.values()]
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((actor) => {
+        const position = actor.body.translation();
+        return {
+          id: actor.id,
+          position: { x: position.x, y: position.y },
+          radius: actor.radius,
+          requestedVelocity: { x: 0, y: 0 },
+          actualVelocity: { x: 0, y: 0 },
+          motionError: 0,
+          contacts: this.contactsForInWorld(this.world, actor)
+        };
+      });
+  }
+
+  private actorSnapshotsAfterStep(
+    world: RAPIER.World,
+    actors: ReadonlyMap<ActorId, PhysicalActor>,
+    before: ReadonlyMap<ActorId, Vec2>
+  ): ActorSnapshot[] {
+    return [...actors.values()]
       .sort((a, b) => a.id.localeCompare(b.id))
       .map((actor) => {
         const start = before.get(actor.id);
@@ -278,24 +411,7 @@ export class RapierPhysicalWorld {
             actualVelocity.x - actor.requestedVelocity.x,
             actualVelocity.y - actor.requestedVelocity.y
           ),
-          contacts: this.contactsFor(actor)
-        };
-      });
-  }
-
-  snapshot(): ActorSnapshot[] {
-    return [...this.actors.values()]
-      .sort((a, b) => a.id.localeCompare(b.id))
-      .map((actor) => {
-        const position = actor.body.translation();
-        return {
-          id: actor.id,
-          position: { x: position.x, y: position.y },
-          radius: actor.radius,
-          requestedVelocity: { x: 0, y: 0 },
-          actualVelocity: { x: 0, y: 0 },
-          motionError: 0,
-          contacts: this.contactsFor(actor)
+          contacts: this.contactsForInWorld(world, actor)
         };
       });
   }
@@ -305,11 +421,11 @@ export class RapierPhysicalWorld {
     return label !== "player" && label !== "companion";
   }
 
-  private contactsFor(actor: PhysicalActor): ContactRecord[] {
+  private contactsForInWorld(world: RAPIER.World, actor: PhysicalActor): ContactRecord[] {
     const records = new Map<string, number>();
-    this.world.contactPairsWith(actor.collider, (other) => {
+    world.contactPairsWith(actor.collider, (other) => {
       const label = this.colliderLabels.get(other.handle) ?? `collider:${other.handle}`;
-      this.world.contactPair(actor.collider, other, (manifold) => {
+      world.contactPair(actor.collider, other, (manifold) => {
         const count = manifold.numContacts();
         if (count > 0) records.set(label, (records.get(label) ?? 0) + count);
       });

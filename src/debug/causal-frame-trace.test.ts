@@ -8,6 +8,7 @@ function frame(sequence: number, observationTick: number, outcomeTick: number): 
       worldTick: observationTick,
       companionPosition: { x: 1, y: 2 },
       playerPosition: { x: 4, y: 5 },
+      playerControlMove: { x: 1, y: 0 },
       companionActualVelocity: { x: 0.5, y: 0 },
       companionContacts: []
     },
@@ -26,7 +27,41 @@ function frame(sequence: number, observationTick: number, outcomeTick: number): 
       comfortStartViolated: true,
       comfortStartBlockers: ["door.wall.top"],
       rehabilitatedCandidateCount: 2,
-      comfortExitCandidateCount: 1
+      comfortExitCandidateCount: 1,
+      shadowCoordination: {
+        kind: "CCC0_SHADOW_COORDINATION",
+        shadowTick: observationTick,
+        ageTicks: 0,
+        regionState: "REGION",
+        regionAnchor: { x: 2.2, y: 3.1 },
+        regionBestSampleId: "r1.d12",
+        regionCoherentSampleCount: 7,
+        regionRouteEvaluatedCount: 12,
+        regionStaticTraversalQueryCount: 184,
+        regionTopologyKeyChanged: false,
+        regionCoherentOverlapRatio: 0.75,
+        regionAnchorDisplacement: 0.08,
+        paceLabel: "FOLLOWING",
+        paceUrgency: 0.42,
+        desiredSpeed: 2.1,
+        playerCorridorState: "MOVING",
+        playerCorridorConfidence: 0.86,
+        playerCorridorEndpoint: { x: 4.7, y: 5 },
+        preferredFlowConflictState: "CLEAR",
+        preferredFlowClosestApproachTime: 0.18,
+        preferredFlowPhysicalClearance: 0.28,
+        preferredFlowComfortClearance: 0.10,
+        preferredFlowCompanionClosest: { x: 2.5, y: 2.5 },
+        preferredFlowPlayerClosest: { x: 3.3, y: 2.5 },
+        authoritativeFlowConflictState: "COMFORT_CONFLICT",
+        authoritativeFlowClosestApproachTime: 0.22,
+        authoritativeFlowPhysicalClearance: 0.08,
+        authoritativeFlowComfortClearance: -0.10,
+        authoritativeFlowCompanionClosest: { x: 2.55, y: 2.5 },
+        authoritativeFlowPlayerClosest: { x: 3.20, y: 2.5 },
+        legacyTargetToShadowAnchorDistance: 1.12,
+        error: null
+      }
     },
     command: {
       actuator: "natural",
@@ -95,6 +130,28 @@ describe("R1 causal frame trace", () => {
     expect(latest?.post.cumulativeLocalRetriesSinceReset).toBe(9);
   });
 
+  it("preserves preferred-vs-final CCC-0 conflict evidence with cognition, cost and continuity provenance", () => {
+    const trace = new CausalFrameTrace();
+    trace.record(frame(trace.nextSequence(), 12, 13));
+
+    const latest = trace.latest();
+    const shadow = latest?.decision.shadowCoordination;
+    expect(shadow?.kind).toBe("CCC0_SHADOW_COORDINATION");
+    expect(shadow?.shadowTick).toBe(12);
+    expect(shadow?.ageTicks).toBe(0);
+    expect(shadow?.regionState).toBe("REGION");
+    expect(shadow?.regionRouteEvaluatedCount).toBe(12);
+    expect(shadow?.regionStaticTraversalQueryCount).toBe(184);
+    expect(shadow?.regionTopologyKeyChanged).toBe(false);
+    expect(shadow?.regionCoherentOverlapRatio).toBe(0.75);
+    expect(shadow?.regionAnchorDisplacement).toBe(0.08);
+    expect(shadow?.paceUrgency).toBe(0.42);
+    expect(shadow?.playerCorridorConfidence).toBe(0.86);
+    expect(shadow?.preferredFlowConflictState).toBe("CLEAR");
+    expect(shadow?.authoritativeFlowConflictState).toBe("COMFORT_CONFLICT");
+    expect(latest?.command.commandedMove).toEqual({ x: 0.5, y: 0.2 });
+  });
+
   it("adds self-describing recovery aliases to legacy incident-v2 frames", () => {
     const trace = new CausalFrameTrace();
     trace.record(frame(trace.nextSequence(), 20, 21));
@@ -114,14 +171,28 @@ describe("R1 causal frame trace", () => {
     trace.record(value);
 
     value.observation.companionPosition.x = 999;
+    value.observation.playerControlMove.x = 999;
     value.decision.relationshipTarget!.x = 999;
+    value.decision.shadowCoordination!.regionAnchor!.x = 999;
+    value.decision.shadowCoordination!.playerCorridorEndpoint.x = 999;
+    value.decision.shadowCoordination!.preferredFlowCompanionClosest!.x = 999;
+    value.decision.shadowCoordination!.preferredFlowPlayerClosest!.x = 999;
+    value.decision.shadowCoordination!.authoritativeFlowCompanionClosest!.x = 999;
+    value.decision.shadowCoordination!.authoritativeFlowPlayerClosest!.x = 999;
     value.command.commandedMove.x = 999;
     sourceContacts.push("wall");
     sourceComfortBlockers.push("door.wall.bottom");
 
     const latest = trace.latest();
     expect(latest?.observation.companionPosition.x).toBe(1);
+    expect(latest?.observation.playerControlMove).toEqual({ x: 1, y: 0 });
     expect(latest?.decision.relationshipTarget?.x).toBe(3);
+    expect(latest?.decision.shadowCoordination?.regionAnchor?.x).toBe(2.2);
+    expect(latest?.decision.shadowCoordination?.playerCorridorEndpoint.x).toBe(4.7);
+    expect(latest?.decision.shadowCoordination?.preferredFlowCompanionClosest?.x).toBe(2.5);
+    expect(latest?.decision.shadowCoordination?.preferredFlowPlayerClosest?.x).toBe(3.3);
+    expect(latest?.decision.shadowCoordination?.authoritativeFlowCompanionClosest?.x).toBe(2.55);
+    expect(latest?.decision.shadowCoordination?.authoritativeFlowPlayerClosest?.x).toBe(3.20);
     expect(latest?.command.commandedMove.x).toBe(0.5);
     expect(latest?.outcome.companionContacts).toEqual(["player"]);
     expect(latest?.decision.comfortStartBlockers).toEqual(["door.wall.top"]);

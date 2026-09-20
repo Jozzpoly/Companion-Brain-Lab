@@ -4,8 +4,47 @@ export interface CausalObservationPhase {
   worldTick: number;
   companionPosition: Vec2;
   playerPosition: Vec2;
+  /** Same-step player MotionIntent control submitted for this World step; not inferred body motion. */
+  playerControlMove: Vec2;
   companionActualVelocity: Vec2;
   companionContacts: readonly string[];
+}
+
+export interface CausalShadowCoordinationEvidence {
+  kind: "CCC0_SHADOW_COORDINATION";
+  /** Tactical cognition tick that produced this evidence. */
+  shadowTick: number;
+  /** Observation tick minus shadowTick. Zero means true same-observation comparison. */
+  ageTicks: number;
+  regionState: string;
+  regionAnchor: Vec2 | null;
+  regionBestSampleId: string | null;
+  regionCoherentSampleCount: number;
+  regionRouteEvaluatedCount: number;
+  regionStaticTraversalQueryCount: number;
+  regionTopologyKeyChanged: boolean | null;
+  regionCoherentOverlapRatio: number | null;
+  regionAnchorDisplacement: number | null;
+  paceLabel: string;
+  paceUrgency: number;
+  desiredSpeed: number;
+  playerCorridorState: string;
+  playerCorridorConfidence: number;
+  playerCorridorEndpoint: Vec2;
+  preferredFlowConflictState: string;
+  preferredFlowClosestApproachTime: number | null;
+  preferredFlowPhysicalClearance: number | null;
+  preferredFlowComfortClearance: number | null;
+  preferredFlowCompanionClosest: Vec2 | null;
+  preferredFlowPlayerClosest: Vec2 | null;
+  authoritativeFlowConflictState: string;
+  authoritativeFlowClosestApproachTime: number | null;
+  authoritativeFlowPhysicalClearance: number | null;
+  authoritativeFlowComfortClearance: number | null;
+  authoritativeFlowCompanionClosest: Vec2 | null;
+  authoritativeFlowPlayerClosest: Vec2 | null;
+  legacyTargetToShadowAnchorDistance: number | null;
+  error: string | null;
 }
 
 export interface CausalDecisionPhase {
@@ -25,6 +64,8 @@ export interface CausalDecisionPhase {
   comfortStartBlockers?: readonly string[];
   rehabilitatedCandidateCount?: number | null;
   comfortExitCandidateCount?: number | null;
+  /** Explicitly non-authoritative CCC-0 research evidence; ageTicks exposes cached multi-rate evidence. */
+  shadowCoordination?: CausalShadowCoordinationEvidence | null;
 }
 
 export interface CausalCommandPhase {
@@ -73,8 +114,24 @@ export interface CausalFrame {
   post: CausalPostClassification;
 }
 
-function cloneVec(value: Vec2 | null): Vec2 | null {
+function cloneVec(value: Vec2 | null | undefined): Vec2 | null {
   return value ? { ...value } : null;
+}
+
+function cloneShadow(
+  value: CausalShadowCoordinationEvidence | null | undefined
+): CausalShadowCoordinationEvidence | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  return {
+    ...value,
+    regionAnchor: cloneVec(value.regionAnchor),
+    playerCorridorEndpoint: { ...value.playerCorridorEndpoint },
+    preferredFlowCompanionClosest: cloneVec(value.preferredFlowCompanionClosest),
+    preferredFlowPlayerClosest: cloneVec(value.preferredFlowPlayerClosest),
+    authoritativeFlowCompanionClosest: cloneVec(value.authoritativeFlowCompanionClosest),
+    authoritativeFlowPlayerClosest: cloneVec(value.authoritativeFlowPlayerClosest)
+  };
 }
 
 function cloneFrame(frame: CausalFrame): CausalFrame {
@@ -84,6 +141,7 @@ function cloneFrame(frame: CausalFrame): CausalFrame {
       ...frame.observation,
       companionPosition: { ...frame.observation.companionPosition },
       playerPosition: { ...frame.observation.playerPosition },
+      playerControlMove: { ...frame.observation.playerControlMove },
       companionActualVelocity: { ...frame.observation.companionActualVelocity },
       companionContacts: [...frame.observation.companionContacts]
     },
@@ -94,7 +152,8 @@ function cloneFrame(frame: CausalFrame): CausalFrame {
       refinedVelocity: cloneVec(frame.decision.refinedVelocity),
       comfortStartBlockers: frame.decision.comfortStartBlockers
         ? [...frame.decision.comfortStartBlockers]
-        : undefined
+        : undefined,
+      shadowCoordination: cloneShadow(frame.decision.shadowCoordination)
     },
     command: {
       ...frame.command,

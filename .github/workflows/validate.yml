@@ -4,14 +4,17 @@ on:
   push:
     branches:
       - main
-      - planning/initial-research-skeleton
-      - "experiment/**"
-      - "foundation/**"
   pull_request:
+
+concurrency:
+  group: validate-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      VITE_SOURCE_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -34,4 +37,5 @@ jobs:
           echo "Known npm Arborist edgesOut crash detected; retrying with peer auto-resolution disabled."
           rm -rf node_modules
           npm install --legacy-peer-deps
-      - run: npm run check
+      - name: Fast repository gate
+        run: npm run check

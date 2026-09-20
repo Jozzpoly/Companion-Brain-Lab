@@ -16,16 +16,26 @@ import {
   type R1WorkbenchSpatialDebug
 } from "../brain/r1-workbench-spatial-stack";
 import type { SpatialLocomotionDecision } from "../brain/spatial-locomotion";
+import { A1AuthorityRuntime } from "../coordination/a1-authority-runtime";
+import { buildA1Situation } from "../coordination/a1-situation";
+import { RelationshipOrientationTracker } from "../coordination/relationship-orientation-tracker";
+import type { ShadowCoordinationFrame } from "../coordination/shadow-coordination-frame";
+import { publishAuthorityA11fBrowserObservation } from "../debug/authority-a1-1f-browser-bridge";
+import { publishAuthorityA10BrowserDecision } from "../debug/authority-a1-browser-bridge";
 import {
   CausalPanel,
   type CausalPanelAction,
-  type CausalPanelModel
+  type CausalPanelModel,
+  type CausalPanelSection
 } from "../debug/causal-panel";
+import { CURRENT_COMPANION_BUILD_IDENTITY } from "../debug/build-identity";
 import {
   CausalFrameTrace,
   type CausalFrame,
   type CausalPostClassification
 } from "../debug/causal-frame-trace";
+import { buildOwnerSandboxIncident } from "../debug/owner-sandbox-incident";
+import { currentOwnerControlScale, scaleOwnerControlMove } from "../debug/owner-control-scale-browser-bridge";
 import {
   S2C_ROUTE_CLEARANCE,
   planStaticShadowRoute,
@@ -42,6 +52,7 @@ import type {
   WorldSnapshot
 } from "../world/types";
 import { LabWorld } from "../world/world";
+import { isOwnerReviewSearch, ownerReviewAllowsPanelAction } from "./owner-review-mode";
 import { bindWorldStaticTraversalQuery } from "./static-traversal-query-adapter";
 
 const VIEW_WIDTH = 1200;
@@ -80,6 +91,10 @@ function scaled(value: Vec2, scale: number): Vec2 {
 
 function compact(value: number): string {
   return Number.isFinite(value) ? value.toFixed(3) : "n/a";
+}
+
+function compactNullable(value: number | null): string {
+  return value === null ? "n/a" : compact(value);
 }
 
 function probeLabel(probe: StaticCircleTraversalResult | null): "clear" | "blocked-zero" | "blocked" | "unknown" {
@@ -130,6 +145,8 @@ interface StepDecisionEvidence {
   refinement: PreferredVelocityRefinement | null;
   continuity: MotionContinuityStepResult | null;
   finalConstraint: FinalCommandConstraintResult | null;
+  shadowCoordination: ShadowCoordinationFrame | null;
+  shadowCoordinationError: string | null;
 }
 
 export class R1LabScene extends Phaser.Scene {
@@ -145,9 +162,12 @@ export class R1LabScene extends Phaser.Scene {
   private companionMode: CompanionMode = "spatial";
   private naturalActuator = true;
   private timeScaleIndex = 2;
+  private ownerReviewSurface = false;
 
   private readonly relationalBrain = new RelationalPositioningBrain();
+  private readonly relationshipOrientation = new RelationshipOrientationTracker();
   private readonly spatialStack = new R1WorkbenchSpatialStack();
+  private readonly a1Authority = new A1AuthorityRuntime();
   private relationalDecision: RelationalDecision | null = null;
   private spatialDecision: SpatialLocomotionDecision | null = null;
   private spatialRepairDecision: R1SpatialRepairEvidence | null = null;
@@ -155,6 +175,8 @@ export class R1LabScene extends Phaser.Scene {
   private continuityDecision: MotionContinuityStepResult | null = null;
   private finalConstraintDecision: FinalCommandConstraintResult | null = null;
   private progressDecision: ProgressRecoveryDecision | null = null;
+  private shadowCoordination: ShadowCoordinationFrame | null = null;
+  private shadowCoordinationError: string | null = null;
   private appliedLocalRetries = 0;
   private decisionRoutePlan: StaticRoutePlan | null = null;
   private postRoutePlan: StaticRoutePlan | null = null;
@@ -180,6 +202,16 @@ export class R1LabScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.ownerReviewSurface = isOwnerReviewSearch(window.location.search);
+    if (this.ownerReviewSurface) {
+      // The Owner movement review is one immutable participant stimulus.
+      // Research controls remain available only through the ordinary workbench entrypoint.
+      this.companionMode = "spatial";
+      this.naturalActuator = true;
+      this.timeScaleIndex = 2;
+      this.a1Authority.setVariant("off");
+    }
+
     this.graphics = this.add.graphics();
     this.panel = new CausalPanel((action) => this.handlePanelAction(action));
 
@@ -273,7 +305,10 @@ export class R1LabScene extends Phaser.Scene {
 
     const playerIntent: MotionIntent = {
       actorId: "player",
-      move: normalizedMotion(axis(this.keys.a, this.keys.d), axis(this.keys.w, this.keys.s))
+      move: scaleOwnerControlMove(
+        normalizedMotion(axis(this.keys.a, this.keys.d), axis(this.keys.w, this.keys.s)),
+        currentOwnerControlScale()
+      )
     };
 
     let companionIntent: MotionIntent;
@@ -284,7 +319,25 @@ export class R1LabScene extends Phaser.Scene {
     this.continuityDecision = null;
     this.finalConstraintDecision = null;
     this.spatialRepairDecision = null;
+    this.shadowCoordination = null;
+    this.shadowCoordinationError = null;
     this.decisionRoutePlan = null;
+
+    const relationshipSemantic = (
+      this.companionMode === "relational" || this.companionMode === "spatial"
+    ) ? (() => {
+      const situation = buildA1Situation({
+        snapshot: before,
+        playerIntent,
+        playerCapability: this.world!.actorMovementCapability("player"),
+        companionCapability: this.world!.actorMovementCapability("companion"),
+        previousWorldStep: this.world!.latestAuthorityA0StepEvidence()
+      });
+      return {
+        situation,
+        orientation: this.relationshipOrientation.observe(situation)
+      };
+    })() : null;
 
     if (this.companionMode === "manual") {
       this.relationalDecision = null;
@@ -299,12 +352,14 @@ export class R1LabScene extends Phaser.Scene {
       target = { ...actor(before, "player").position };
       companionIntent = chaseIntent(before);
     } else if (this.companionMode === "relational") {
-      companionIntent = this.relationalBrain.intent(before);
+      if (!relationshipSemantic) throw new Error("RELATIONAL mode requires canonical semantic orientation.");
+      companionIntent = this.relationalBrain.intentWithSemanticOrientation(before, relationshipSemantic.orientation);
       this.relationalDecision = this.relationalBrain.debugState();
       target = this.relationalDecision ? { ...this.relationalDecision.target } : null;
       this.spatialDecision = null;
     } else {
-      const relationship = this.relationalBrain.decision(before);
+      if (!relationshipSemantic) throw new Error("SPATIAL mode requires canonical semantic orientation.");
+      const relationship = this.relationalBrain.decisionWithSemanticOrientation(before, relationshipSemantic.orientation);
       this.relationalDecision = relationship;
       target = { ...relationship.target };
       objectiveKey = `spatial-slot:${relationship.selectedSlot}`;
@@ -325,6 +380,38 @@ export class R1LabScene extends Phaser.Scene {
       this.captureSpatialDebug(debug);
     }
 
+    if (this.companionMode === "spatial" && this.a1Authority.enabled()) {
+      if (!relationshipSemantic) throw new Error("Active A1 SPATIAL mode requires canonical relationship semantics.");
+      const baselineCompanionIntent: MotionIntent = {
+        actorId: "companion",
+        move: { ...companionIntent.move }
+      };
+      const situation = relationshipSemantic.situation;
+      this.a1Authority.observeRelationship({
+        situation,
+        orientation: relationshipSemantic.orientation,
+        snapshot: before,
+        query: bindWorldStaticTraversalQuery(this.world)
+      });
+      companionIntent = this.a1Authority.resolveCompanionIntent({
+        baselineIntent: baselineCompanionIntent,
+        situation
+      });
+      const a1Runtime = this.a1Authority.debugState();
+      publishAuthorityA10BrowserDecision({
+        runtime: a1Runtime,
+        situation,
+        baselineCompanionIntent,
+        selectedCompanionIntent: companionIntent
+      });
+      publishAuthorityA11fBrowserObservation({
+        runtime: a1Runtime,
+        situation,
+        baselineCompanionIntent,
+        selectedCompanionIntent: companionIntent
+      });
+    }
+
     return {
       before,
       intents: [playerIntent, companionIntent],
@@ -337,7 +424,9 @@ export class R1LabScene extends Phaser.Scene {
       repair: this.spatialRepairDecision,
       refinement: this.refinementDecision,
       continuity: this.continuityDecision,
-      finalConstraint: this.finalConstraintDecision
+      finalConstraint: this.finalConstraintDecision,
+      shadowCoordination: this.shadowCoordination,
+      shadowCoordinationError: this.shadowCoordinationError
     };
   }
 
@@ -349,6 +438,8 @@ export class R1LabScene extends Phaser.Scene {
     this.finalConstraintDecision = debug.finalConstraint;
     this.progressDecision = debug.progress;
     this.appliedLocalRetries = debug.appliedLocalRetries;
+    this.shadowCoordination = debug.shadowCoordination;
+    this.shadowCoordinationError = debug.shadowCoordinationError;
   }
 
   private navigationTarget(snapshot: WorldSnapshot): Vec2 | null {
@@ -472,6 +563,10 @@ export class R1LabScene extends Phaser.Scene {
       actorId: "companion" as const,
       move: { x: 0, y: 0 }
     };
+    const playerIntent = evidence.intents.find((intent) => intent.actorId === "player") ?? {
+      actorId: "player" as const,
+      move: { x: 0, y: 0 }
+    };
     const target = evidence.target;
     const displacement = distance(beforeCompanion.position, afterCompanion.position);
     const post = this.classifyPost(target, companionIntent.move, displacement);
@@ -485,6 +580,7 @@ export class R1LabScene extends Phaser.Scene {
         : this.companionMode === "relational"
           ? "relational"
           : evidence.actuator ?? (this.naturalActuator ? "natural" : "direct");
+    const shadow = evidence.shadowCoordination;
 
     const frame: CausalFrame = {
       sequence: this.causalTrace.nextSequence(),
@@ -492,6 +588,7 @@ export class R1LabScene extends Phaser.Scene {
         worldTick: evidence.before.tick,
         companionPosition: { ...beforeCompanion.position },
         playerPosition: { ...beforePlayer.position },
+        playerControlMove: { ...playerIntent.move },
         companionActualVelocity: { ...beforeCompanion.actualVelocity },
         companionContacts: beforeCompanion.contacts.map((contact) => contact.with)
       },
@@ -511,7 +608,86 @@ export class R1LabScene extends Phaser.Scene {
         comfortStartViolated: evidence.repair?.comfortStartViolated ?? null,
         comfortStartBlockers: evidence.repair ? [...evidence.repair.comfortStartBlockers] : [],
         rehabilitatedCandidateCount: evidence.repair?.rehabilitatedCandidateIds.length ?? null,
-        comfortExitCandidateCount: evidence.repair?.comfortExitCandidateIds.length ?? null
+        comfortExitCandidateCount: evidence.repair?.comfortExitCandidateIds.length ?? null,
+        shadowCoordination: shadow
+          ? {
+              kind: shadow.kind,
+              shadowTick: shadow.tick,
+              ageTicks: Math.max(0, evidence.before.tick - shadow.tick),
+              regionState: shadow.region.state,
+              regionAnchor: shadow.region.representativeAnchor ? { ...shadow.region.representativeAnchor } : null,
+              regionBestSampleId: shadow.region.bestSampleId,
+              regionCoherentSampleCount: shadow.region.coherentSampleIds.length,
+              regionRouteEvaluatedCount: shadow.region.routeEvaluatedCount,
+              regionStaticTraversalQueryCount: shadow.region.staticTraversalQueryCount,
+              regionTopologyKeyChanged: shadow.regionContinuity.topologyKeyChanged,
+              regionCoherentOverlapRatio: shadow.regionContinuity.coherentSampleOverlapRatio,
+              regionAnchorDisplacement: shadow.regionContinuity.anchorDisplacement,
+              paceLabel: shadow.pace.label,
+              paceUrgency: shadow.pace.urgency,
+              desiredSpeed: shadow.pace.desiredSpeed,
+              playerCorridorState: shadow.playerCorridor.state,
+              playerCorridorConfidence: shadow.playerCorridor.confidence,
+              playerCorridorEndpoint: { ...shadow.playerCorridor.endpoint },
+              preferredFlowConflictState: shadow.preferredPlayerFlowConflict.state,
+              preferredFlowClosestApproachTime: shadow.preferredPlayerFlowConflict.closestApproachTime,
+              preferredFlowPhysicalClearance: shadow.preferredPlayerFlowConflict.physicalClearance,
+              preferredFlowComfortClearance: shadow.preferredPlayerFlowConflict.comfortClearance,
+              preferredFlowCompanionClosest: shadow.preferredPlayerFlowConflict.companionAtClosestApproach
+                ? { ...shadow.preferredPlayerFlowConflict.companionAtClosestApproach }
+                : null,
+              preferredFlowPlayerClosest: shadow.preferredPlayerFlowConflict.playerAtClosestApproach
+                ? { ...shadow.preferredPlayerFlowConflict.playerAtClosestApproach }
+                : null,
+              authoritativeFlowConflictState: shadow.authoritativePlayerFlowConflict.state,
+              authoritativeFlowClosestApproachTime: shadow.authoritativePlayerFlowConflict.closestApproachTime,
+              authoritativeFlowPhysicalClearance: shadow.authoritativePlayerFlowConflict.physicalClearance,
+              authoritativeFlowComfortClearance: shadow.authoritativePlayerFlowConflict.comfortClearance,
+              authoritativeFlowCompanionClosest: shadow.authoritativePlayerFlowConflict.companionAtClosestApproach
+                ? { ...shadow.authoritativePlayerFlowConflict.companionAtClosestApproach }
+                : null,
+              authoritativeFlowPlayerClosest: shadow.authoritativePlayerFlowConflict.playerAtClosestApproach
+                ? { ...shadow.authoritativePlayerFlowConflict.playerAtClosestApproach }
+                : null,
+              legacyTargetToShadowAnchorDistance: shadow.legacy.targetToShadowAnchorDistance,
+              error: evidence.shadowCoordinationError
+            }
+          : evidence.shadowCoordinationError
+            ? {
+                kind: "CCC0_SHADOW_COORDINATION",
+                shadowTick: evidence.before.tick,
+                ageTicks: 0,
+                regionState: "ERROR",
+                regionAnchor: null,
+                regionBestSampleId: null,
+                regionCoherentSampleCount: 0,
+                regionRouteEvaluatedCount: 0,
+                regionStaticTraversalQueryCount: 0,
+                regionTopologyKeyChanged: null,
+                regionCoherentOverlapRatio: null,
+                regionAnchorDisplacement: null,
+                paceLabel: "ERROR",
+                paceUrgency: 0,
+                desiredSpeed: 0,
+                playerCorridorState: "ERROR",
+                playerCorridorConfidence: 0,
+                playerCorridorEndpoint: { ...beforePlayer.position },
+                preferredFlowConflictState: "ERROR",
+                preferredFlowClosestApproachTime: null,
+                preferredFlowPhysicalClearance: null,
+                preferredFlowComfortClearance: null,
+                preferredFlowCompanionClosest: null,
+                preferredFlowPlayerClosest: null,
+                authoritativeFlowConflictState: "ERROR",
+                authoritativeFlowClosestApproachTime: null,
+                authoritativeFlowPhysicalClearance: null,
+                authoritativeFlowComfortClearance: null,
+                authoritativeFlowCompanionClosest: null,
+                authoritativeFlowPlayerClosest: null,
+                legacyTargetToShadowAnchorDistance: null,
+                error: evidence.shadowCoordinationError
+              }
+            : null
       },
       command: {
         actuator,
@@ -577,6 +753,7 @@ export class R1LabScene extends Phaser.Scene {
 
     if (this.panel.layerVisible("trails")) this.drawTrails(sx, sy);
     if (this.panel.layerVisible("relationship")) this.drawRelationship(sx, sy);
+    if (this.panel.layerVisible("coordination")) this.drawCoordination(sx, sy, scale);
     if (this.panel.layerVisible("route")) this.drawRoute(sx, sy);
     if (this.panel.layerVisible("spatial")) this.drawSpatial(sx, sy);
 
@@ -619,6 +796,99 @@ export class R1LabScene extends Phaser.Scene {
       const selected = candidate.slot === decision.selectedSlot;
       this.graphics.lineStyle(selected ? 3 : 1, candidate.valid ? 0x9da7b3 : 0xff5d66, selected ? 1 : 0.45);
       this.graphics.strokeCircle(sx(candidate.position.x), sy(candidate.position.y), selected ? 8 : 4);
+    }
+  }
+
+  private drawCoordination(
+    sx: (x: number) => number,
+    sy: (y: number) => number,
+    scale: number
+  ): void {
+    const shadow = this.shadowCoordination;
+    if (!shadow) return;
+    const coherent = new Set(shadow.region.coherentSampleIds);
+
+    for (const sample of shadow.region.samples) {
+      let color = 0x6e7681;
+      let alpha = 0.18;
+      let radius = 2;
+      if (!sample.hardValid) {
+        color = 0xff5d66;
+        alpha = 0.22;
+      } else if (sample.routeEvaluated && !sample.reachable) {
+        color = 0xe3b341;
+        alpha = 0.34;
+        radius = 2.5;
+      } else if (coherent.has(sample.id)) {
+        color = 0x7ee787;
+        alpha = 0.9;
+        radius = 4;
+      } else if (sample.routeEvaluated && sample.reachable) {
+        color = 0x58a6ff;
+        alpha = 0.48;
+        radius = 3;
+      }
+      this.graphics.fillStyle(color, alpha);
+      this.graphics.fillCircle(sx(sample.position.x), sy(sample.position.y), radius);
+    }
+
+    const anchor = shadow.region.representativeAnchor;
+    if (anchor) {
+      this.graphics.lineStyle(3, 0x7ee787, 0.95);
+      this.graphics.strokeCircle(sx(anchor.x), sy(anchor.y), 9);
+      if (this.relationalDecision) {
+        this.graphics.lineStyle(2, 0xd2a8ff, 0.55);
+        this.graphics.lineBetween(
+          sx(this.relationalDecision.target.x),
+          sy(this.relationalDecision.target.y),
+          sx(anchor.x),
+          sy(anchor.y)
+        );
+      }
+    }
+
+    const corridor = shadow.playerCorridor;
+    const corridorAlpha = corridor.state === "STATIONARY" ? 0.2 : 0.72 * Math.max(0.2, corridor.confidence);
+    this.graphics.lineStyle(4, 0x63a8ff, corridorAlpha);
+    this.graphics.lineBetween(
+      sx(corridor.origin.x),
+      sy(corridor.origin.y),
+      sx(corridor.endpoint.x),
+      sy(corridor.endpoint.y)
+    );
+    this.graphics.lineStyle(1, 0x63a8ff, Math.max(0.18, corridorAlpha * 0.7));
+    this.graphics.strokeCircle(
+      sx(corridor.endpoint.x),
+      sy(corridor.endpoint.y),
+      corridor.comfortRadius * scale
+    );
+    this.graphics.lineStyle(2, 0x63a8ff, Math.max(0.25, corridorAlpha));
+    this.graphics.strokeCircle(
+      sx(corridor.endpoint.x),
+      sy(corridor.endpoint.y),
+      corridor.physicalRadius * scale
+    );
+
+    const finalConflict = shadow.authoritativePlayerFlowConflict;
+    const companionClosest = finalConflict.companionAtClosestApproach;
+    const playerClosest = finalConflict.playerAtClosestApproach;
+    if (finalConflict.state !== "UNAVAILABLE" && companionClosest && playerClosest) {
+      const color = finalConflict.state === "PHYSICAL_CONFLICT"
+        ? 0xff5d66
+        : finalConflict.state === "COMFORT_CONFLICT"
+          ? 0xe3b341
+          : 0x8b949e;
+      const alpha = finalConflict.state === "CLEAR" ? 0.28 : 0.9;
+      this.graphics.lineStyle(finalConflict.state === "CLEAR" ? 1 : 3, color, alpha);
+      this.graphics.lineBetween(
+        sx(companionClosest.x),
+        sy(companionClosest.y),
+        sx(playerClosest.x),
+        sy(playerClosest.y)
+      );
+      this.graphics.fillStyle(color, alpha);
+      this.graphics.fillCircle(sx(companionClosest.x), sy(companionClosest.y), 4);
+      this.graphics.fillCircle(sx(playerClosest.x), sy(playerClosest.y), 4);
     }
   }
 
@@ -728,6 +998,14 @@ export class R1LabScene extends Phaser.Scene {
     const repair = this.spatialRepairDecision;
     const constraint = this.finalConstraintDecision;
     const companion = actor(snapshot, "companion");
+    const shadow = this.shadowCoordination;
+    const preferredConflict = shadow?.preferredPlayerFlowConflict ?? null;
+    const finalConflict = shadow?.authoritativePlayerFlowConflict ?? null;
+    const shadowAge = shadow ? Math.max(0, snapshot.tick - shadow.tick) : null;
+    const a1 = this.a1Authority.debugState();
+    const a1Active = a1.variant !== "off" && this.companionMode === "spatial";
+    const a1Situation = a1.latestSituation;
+    const p2 = window.__authorityA12p2BrowserBridge?.snapshot() ?? null;
 
     const sections: CausalPanelModel["sections"] = [
       {
@@ -737,9 +1015,65 @@ export class R1LabScene extends Phaser.Scene {
           `scenario ${SCENARIOS[snapshot.scenarioId].label}`,
           `tick ${snapshot.tick} · ${this.paused ? "PAUSED" : "RUNNING"} · ${timeScale}x`,
           `mode ${this.companionMode.toUpperCase()} · actuator ${this.naturalActuator ? "NATURAL" : "DIRECT"}`,
+          `A1 ${a1.variant.toUpperCase()}${a1.variant !== "off" && this.companionMode !== "spatial" ? " · selected but inactive outside SPATIAL" : ""}`,
           `causal frames ${this.causalTrace.size()}${this.incidentNotice ? ` · ${this.incidentNotice}` : ""}`
         ]
       },
+      {
+        id: "a1",
+        title: "Authority-A1.0 · decision-time seam",
+        tone: a1Active ? "success" : "normal",
+        lines: a1.variant === "off"
+          ? [
+              "OFF · baseline companion authority is untouched",
+              "selector is orthogonal to Brain mode and Direct/Natural"
+            ]
+          : !a1Active
+            ? [
+                `${a1.variant.toUpperCase()} selected · inactive outside SPATIAL`,
+                `epoch ${a1.epoch} · A1-owned state is isolated from baseline modes`,
+                "A1.0 still has no new movement policy authority"
+              ]
+            : a1Situation
+              ? [
+                  `${a1.variant.toUpperCase()} · PASS-THROUGH ONLY · no new movement policy authority`,
+                  `epoch ${a1.epoch} · pass-through steps ${a1.passThroughSteps}`,
+                  `decision t${a1Situation.tick} · Owner move ${compact(a1Situation.situated.playerControl.move.x)}, ${compact(a1Situation.situated.playerControl.move.y)}`,
+                  `same-step requested ${compact(a1Situation.playerRequestedVelocity.velocity.x)}, ${compact(a1Situation.playerRequestedVelocity.velocity.y)} · speed ${compact(a1Situation.playerRequestedVelocity.speed)}`,
+                  `pre-step body requested ${compact(a1Situation.situated.playerBody.requestedVelocity.x)}, ${compact(a1Situation.situated.playerBody.requestedVelocity.y)} · actual ${compact(a1Situation.situated.playerBody.actualVelocity.x)}, ${compact(a1Situation.situated.playerBody.actualVelocity.y)}`,
+                  `pre-step provenance ${a1Situation.situated.playerMotionProvenance.state}`,
+                  a1Situation.previousOutcome
+                    ? `previous World t${a1Situation.previousOutcome.observationTick}->${a1Situation.previousOutcome.outcomeTick} · player ${a1Situation.previousOutcome.playerMotionProvenance.state} · companion ${a1Situation.previousOutcome.companionOutcomeAttribution.state}`
+                    : "previous World outcome none · initial decision tick"
+                ]
+              : [
+                  `${a1.variant.toUpperCase()} active · waiting for first SPATIAL decision`,
+                  `epoch ${a1.epoch}`,
+                  "A1.0 still has no new movement policy authority"
+                ]
+      },
+      ...(p2 ? [{
+        id: "p2",
+        title: "Authority-A1.2p2 · explicit one-step DIRECT",
+        tone: p2.lastError ? "warning" : p2.armed ? "success" : "normal",
+        lines: [
+          p2.latestPreview
+            ? `preview t${p2.latestPreview.sourceTick} · h=${compact(p2.latestPreview.horizonSeconds)}s · ${p2.latestPreview.projection.frontierState} · candidates ${p2.latestPreview.projection.frontierProposalIds.length}`
+            : "preview none · press P2 Preview while PAUSED, SPATIAL, A1 DIRECT and holding Owner movement input",
+          p2.armed
+            ? `ARMED one step · t${p2.armed.sourceTick} · proposal ${p2.armed.proposalId}`
+            : "armed none · no A1 P2 movement authority pending",
+          p2.latestApplication
+            ? `last apply t${p2.latestApplication.sourceTick}->${p2.latestApplication.outcomeTick ?? "?"} · ${p2.latestApplication.status} · proposal ${p2.latestApplication.proposalId}`
+            : "last apply none",
+          p2.latestApplication?.a0CommandVelocityError !== null &&
+          p2.latestApplication?.a0CommandVelocityError !== undefined
+            ? `A0 command error ${p2.latestApplication.a0CommandVelocityError.toExponential(2)}`
+            : "A0 command confirmation none",
+          `counts preview ${p2.previewCount} · arm ${p2.armCount} · apply ${p2.applicationCount}`,
+          p2.lastError ?? "policy: explicit proposal only · one World step · auto-disarm · no automatic selector"
+        ]
+      } satisfies CausalPanelSection] : []),
       {
         id: "objective",
         title: "Objective",
@@ -753,6 +1087,62 @@ export class R1LabScene extends Phaser.Scene {
               this.relationalDecision.reason
             ]
           : [`${this.companionMode} baseline has no supervised relational objective`]
+      },
+      {
+        id: "ccc-where",
+        title: "CCC-0 shadow · WHERE",
+        tone: this.shadowCoordinationError || shadow?.region.state === "NO_REACHABLE_REGION" ? "warning" : "normal",
+        lines: this.shadowCoordinationError
+          ? [`SHADOW ERROR · ${this.shadowCoordinationError}`, "authoritative movement remains unchanged"]
+          : shadow
+            ? [
+                `sample t${shadow.tick} · age ${shadowAge ?? 0}t · state ${shadow.region.state} · heading ${shadow.region.playerHeadingSource}`,
+                `best ${shadow.region.bestSampleId ?? "none"} · coherent ${shadow.region.coherentSampleIds.length} · route candidates ${shadow.region.routeEvaluatedCount} · static traversals ${shadow.region.staticTraversalQueryCount}`,
+                `continuity topology ${shadow.regionContinuity.topologyKeyChanged === null ? "n/a" : shadow.regionContinuity.topologyKeyChanged ? "CHANGED" : "same"} · overlap ${compactNullable(shadow.regionContinuity.coherentSampleOverlapRatio)} · anchor Δ ${compactNullable(shadow.regionContinuity.anchorDisplacement)}`,
+                shadow.region.representativeAnchor
+                  ? `anchor ${compact(shadow.region.representativeAnchor.x)}, ${compact(shadow.region.representativeAnchor.y)} · ${shadow.region.representativeSource}`
+                  : "anchor none",
+                `legacy target Δ ${shadow.legacy.targetToShadowAnchorDistance === null ? "n/a" : compact(shadow.legacy.targetToShadowAnchorDistance)}`,
+                shadow.region.reason
+              ]
+            : ["shadow coordination inactive outside SPATIAL mode"]
+      },
+      {
+        id: "ccc-pace",
+        title: "CCC-0 shadow · PACE",
+        lines: shadow
+          ? [
+              `${shadow.pace.label} · urgency ${compact(shadow.pace.urgency)} · desired speed ${compact(shadow.pace.desiredSpeed)}`,
+              `distance to region ${shadow.pace.distanceToRegion === null ? "n/a" : compact(shadow.pace.distanceToRegion)} · route ${shadow.pace.routeDistanceToRegion === null ? "n/a" : compact(shadow.pace.routeDistanceToRegion)}`,
+              `separation ${shadow.pace.separationTrend} · opening ${shadow.pace.relativeOpeningSpeed === null ? "n/a" : compact(shadow.pace.relativeOpeningSpeed)}`,
+              `outside ${shadow.pace.outsideRegionTicks} world ticks · capability ${compact(shadow.pace.physicalSpeedCapability)}`,
+              shadow.pace.reason
+            ]
+          : ["shadow pace evidence unavailable"]
+      },
+      {
+        id: "ccc-player",
+        title: "CCC-0 shadow · PLAYER FLOW",
+        tone: finalConflict?.state === "PHYSICAL_CONFLICT"
+          ? "danger"
+          : finalConflict?.state === "COMFORT_CONFLICT" ||
+              preferredConflict?.state === "PHYSICAL_CONFLICT" ||
+              shadow?.playerCorridor.state === "REVERSAL_UNCERTAIN"
+            ? "warning"
+            : "normal",
+        lines: shadow && preferredConflict && finalConflict
+          ? [
+              `${shadow.playerCorridor.state} · source ${shadow.playerCorridor.velocitySource} · confidence ${compact(shadow.playerCorridor.confidence)} · horizon ${compact(shadow.playerCorridor.horizon)}s`,
+              `endpoint ${compact(shadow.playerCorridor.endpoint.x)}, ${compact(shadow.playerCorridor.endpoint.y)} · physical r ${compact(shadow.playerCorridor.physicalRadius)} · comfort r ${compact(shadow.playerCorridor.comfortRadius)}`,
+              `preferred ${preferredConflict.state} · t* ${compactNullable(preferredConflict.closestApproachTime)}s · hard ${compactNullable(preferredConflict.physicalClearance)} · comfort ${compactNullable(preferredConflict.comfortClearance)}`,
+              `final ${finalConflict.state} · t* ${compactNullable(finalConflict.closestApproachTime)}s · hard ${compactNullable(finalConflict.physicalClearance)} · comfort ${compactNullable(finalConflict.comfortClearance)}`,
+              preferredConflict.state !== finalConflict.state
+                ? `diagnostic split ${preferredConflict.state} → ${finalConflict.state}`
+                : `preferred/final agree: ${finalConflict.state}`,
+              `sample t${shadow.tick} · cached age ${shadowAge ?? 0}t`,
+              finalConflict.reason
+            ]
+          : ["shadow player-flow evidence unavailable"]
       },
       {
         id: "route",
@@ -828,7 +1218,7 @@ export class R1LabScene extends Phaser.Scene {
     ];
 
     this.panel.update({
-      title: "R1 Robustness Workbench",
+      title: "R1 Robustness Workbench · CCC-0 shadow",
       subtitle: `frame ${latest?.sequence ?? "-"} · observation t${latest?.observation.worldTick ?? "-"} → outcome t${latest?.outcome.worldTick ?? "-"}`,
       badge: post ? post.state.toUpperCase() : "LOADING",
       badgeTone,
@@ -838,30 +1228,87 @@ export class R1LabScene extends Phaser.Scene {
 
   private handleKeyboard(): void {
     if (Phaser.Input.Keyboard.JustDown(this.keys.reset)) void this.loadScenario(this.scenarioId);
-    if (Phaser.Input.Keyboard.JustDown(this.keys.pause)) this.togglePause();
-    if (Phaser.Input.Keyboard.JustDown(this.keys.step)) this.queueSingleStep();
-    if (Phaser.Input.Keyboard.JustDown(this.keys.mode)) this.cycleCompanionMode();
-    if (Phaser.Input.Keyboard.JustDown(this.keys.natural)) this.toggleActuator();
-    if (Phaser.Input.Keyboard.JustDown(this.keys.time)) this.cycleTimeScale();
     if (Phaser.Input.Keyboard.JustDown(this.keys.incident)) this.captureIncident();
     if (Phaser.Input.Keyboard.JustDown(this.keys.one)) void this.loadScenario("open");
     if (Phaser.Input.Keyboard.JustDown(this.keys.two)) void this.loadScenario("pillar");
     if (Phaser.Input.Keyboard.JustDown(this.keys.three)) void this.loadScenario("doorway");
     if (Phaser.Input.Keyboard.JustDown(this.keys.four)) void this.loadScenario("head-on");
+
+    if (this.ownerReviewSurface) return;
+
+    if (Phaser.Input.Keyboard.JustDown(this.keys.pause)) this.togglePause();
+    if (Phaser.Input.Keyboard.JustDown(this.keys.step)) this.queueSingleStep();
+    if (Phaser.Input.Keyboard.JustDown(this.keys.mode)) this.cycleCompanionMode();
+    if (Phaser.Input.Keyboard.JustDown(this.keys.natural)) this.toggleActuator();
+    if (Phaser.Input.Keyboard.JustDown(this.keys.time)) this.cycleTimeScale();
   }
 
   private handlePanelAction(action: CausalPanelAction): void {
+    if (this.ownerReviewSurface && !ownerReviewAllowsPanelAction(action)) {
+      this.logEvent(`Owner review ignored research action ${action}`);
+      return;
+    }
+
     if (action === "toggle-pause") this.togglePause();
     else if (action === "single-step") this.queueSingleStep();
     else if (action === "reset") void this.loadScenario(this.scenarioId);
     else if (action === "cycle-mode") this.cycleCompanionMode();
     else if (action === "toggle-actuator") this.toggleActuator();
+    else if (action === "cycle-a1-authority") this.cycleA1Authority();
     else if (action === "cycle-time") this.cycleTimeScale();
     else if (action === "capture-incident") this.captureIncident();
+    else if (action === "p2-preview") this.previewP2();
+    else if (action === "p2-arm-singleton") this.armP2Singleton();
+    else if (action === "p2-disarm") this.disarmP2();
     else if (action === "scenario-open") void this.loadScenario("open");
     else if (action === "scenario-pillar") void this.loadScenario("pillar");
     else if (action === "scenario-doorway") void this.loadScenario("doorway");
     else if (action === "scenario-head-on") void this.loadScenario("head-on");
+  }
+
+  private previewP2(): void {
+    const bridge = window.__authorityA12p2BrowserBridge;
+    if (!bridge) {
+      this.logEvent("P2 unavailable · open the workbench with ?a1debug=1&a1p2=1");
+      return;
+    }
+    try {
+      const preview = bridge.preview(1);
+      this.logEvent(
+        `P2 preview t${preview.sourceTick} · ${preview.projection.frontierState} · candidates ${preview.projection.frontierProposalIds.length}`
+      );
+    } catch (error) {
+      this.logEvent(`P2 preview refused · ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private armP2Singleton(): void {
+    const bridge = window.__authorityA12p2BrowserBridge;
+    if (!bridge) {
+      this.logEvent("P2 unavailable · open the workbench with ?a1debug=1&a1p2=1");
+      return;
+    }
+    try {
+      const snapshot = bridge.snapshot();
+      const ids = snapshot.latestPreview?.projection.frontierProposalIds ?? [];
+      if (ids.length !== 1) {
+        throw new Error(`explicit singleton arm requires exactly one preview candidate; got ${ids.length}`);
+      }
+      const armed = bridge.arm(ids[0]!);
+      this.logEvent(`P2 armed explicitly · t${armed.sourceTick} · ${armed.proposalId}`);
+    } catch (error) {
+      this.logEvent(`P2 arm refused · ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private disarmP2(): void {
+    const bridge = window.__authorityA12p2BrowserBridge;
+    if (!bridge) {
+      this.logEvent("P2 unavailable · open the workbench with ?a1debug=1&a1p2=1");
+      return;
+    }
+    bridge.disarm();
+    this.logEvent("P2 disarmed explicitly");
   }
 
   private togglePause(): void {
@@ -882,6 +1329,7 @@ export class R1LabScene extends Phaser.Scene {
     const previous = this.companionMode;
     this.companionMode = next;
     this.resetBrains();
+    if (this.a1Authority.enabled()) this.a1Authority.resetOwnedState();
     this.logEvent(`control mode ${previous} -> ${next}`);
   }
 
@@ -889,7 +1337,15 @@ export class R1LabScene extends Phaser.Scene {
     this.naturalActuator = !this.naturalActuator;
     this.spatialStack.reset();
     this.clearSpatialDebug();
+    if (this.a1Authority.enabled()) this.a1Authority.resetOwnedState();
     this.logEvent(`control actuator ${this.naturalActuator ? "NATURAL" : "DIRECT"} (shared R1 movement/recovery state reset)`);
+  }
+
+  private cycleA1Authority(): void {
+    const transition = this.a1Authority.cycleVariant();
+    this.logEvent(
+      `control A1 ${transition.previous.toUpperCase()} -> ${transition.next.toUpperCase()} (A1-owned state reset only)`
+    );
   }
 
   private cycleTimeScale(): void {
@@ -900,21 +1356,26 @@ export class R1LabScene extends Phaser.Scene {
   private captureIncident(): void {
     const snapshot = this.snapshotValue;
     if (!snapshot) return;
-    const incident = {
-      schema: "companion-brain-lab-r1-causal-incident-v2",
+
+    const incident = buildOwnerSandboxIncident({
+      build: CURRENT_COMPANION_BUILD_IDENTITY,
       scenario: snapshot.scenarioId,
       tick: snapshot.tick,
+      paused: this.paused,
       mode: this.companionMode,
       actuator: this.naturalActuator ? "natural" : "direct",
+      a1Variant: this.a1Authority.debugState().variant,
       timeScale: TIME_SCALES[this.timeScaleIndex] ?? 1,
+      p2: window.__authorityA12p2BrowserBridge?.snapshot() ?? null,
       frames: this.causalTrace.recent(240),
-      events: [...this.eventLog]
-    };
+      events: this.eventLog
+    });
     const blob = new Blob([JSON.stringify(incident, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
+    const sourceLabel = incident.build.sourceSha?.slice(0, 12) ?? "unbound";
     anchor.href = url;
-    anchor.download = `companion-r1-${snapshot.scenarioId}-tick-${snapshot.tick}.json`;
+    anchor.download = `companion-os-prep-${sourceLabel}-${snapshot.scenarioId}-tick-${snapshot.tick}.json`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
@@ -930,11 +1391,14 @@ export class R1LabScene extends Phaser.Scene {
     this.continuityDecision = null;
     this.finalConstraintDecision = null;
     this.progressDecision = null;
+    this.shadowCoordination = null;
+    this.shadowCoordinationError = null;
     this.appliedLocalRetries = 0;
   }
 
   private resetBrains(): void {
     this.relationalBrain.reset();
+    this.relationshipOrientation.reset();
     this.spatialStack.reset();
     this.relationalDecision = null;
     this.clearSpatialDebug();
@@ -964,6 +1428,7 @@ export class R1LabScene extends Phaser.Scene {
       this.incidentNotice = "";
       this.lastPostSignature = "";
       this.resetBrains();
+      if (this.a1Authority.enabled()) this.a1Authority.resetOwnedState();
       this.recordTrail(this.snapshotValue);
       this.updatePostEvidence(this.snapshotValue);
       this.logEvent(`scenario ${id} loaded`);

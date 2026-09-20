@@ -4,8 +4,12 @@ export type CausalPanelAction =
   | "reset"
   | "cycle-mode"
   | "toggle-actuator"
+  | "cycle-a1-authority"
   | "cycle-time"
   | "capture-incident"
+  | "p2-preview"
+  | "p2-arm-singleton"
+  | "p2-disarm"
   | "scenario-open"
   | "scenario-pillar"
   | "scenario-doorway"
@@ -13,6 +17,7 @@ export type CausalPanelAction =
 
 export type WorldDebugLayer =
   | "relationship"
+  | "coordination"
   | "route"
   | "spatial"
   | "motion"
@@ -34,14 +39,36 @@ export interface CausalPanelModel {
   sections: readonly CausalPanelSection[];
 }
 
+interface RenderedCausalPanelSection {
+  node: HTMLElement;
+  details: HTMLDetailsElement;
+  summary: HTMLElement;
+  body: HTMLElement;
+}
+
 const DEFAULT_LAYERS: Readonly<Record<WorldDebugLayer, boolean>> = {
   relationship: false,
+  coordination: false,
   route: true,
   spatial: true,
   motion: true,
   trails: true,
   contacts: true
 };
+
+const DEFAULT_OPEN_SECTION_IDS = new Set(["run", "recovery", "route", "motion", "a1", "p2"]);
+
+export class CausalPanelDisclosureState {
+  private readonly remembered = new Map<string, boolean>();
+
+  isOpen(sectionId: string): boolean {
+    return this.remembered.get(sectionId) ?? DEFAULT_OPEN_SECTION_IDS.has(sectionId);
+  }
+
+  remember(sectionId: string, open: boolean): void {
+    this.remembered.set(sectionId, open);
+  }
+}
 
 function button(label: string, action: CausalPanelAction): HTMLButtonElement {
   const element = document.createElement("button");
@@ -54,6 +81,7 @@ function button(label: string, action: CausalPanelAction): HTMLButtonElement {
 
 function layerLabel(layer: WorldDebugLayer): string {
   if (layer === "relationship") return "Relationship";
+  if (layer === "coordination") return "Coordination";
   if (layer === "route") return "Route";
   if (layer === "spatial") return "Spatial";
   if (layer === "motion") return "Motion";
@@ -63,12 +91,15 @@ function layerLabel(layer: WorldDebugLayer): string {
 
 export class CausalPanel {
   private readonly root: HTMLElement;
+  private readonly ownerSandboxSurface: boolean;
   private readonly content: HTMLElement;
   private readonly title: HTMLElement;
   private readonly subtitle: HTMLElement;
   private readonly badge: HTMLElement;
   private readonly sectionsRoot: HTMLElement;
   private readonly layerValues = new Map<WorldDebugLayer, boolean>();
+  private readonly disclosureState = new CausalPanelDisclosureState();
+  private readonly renderedSections = new Map<string, RenderedCausalPanelSection>();
   private collapsed = false;
 
   constructor(onAction: (action: CausalPanelAction) => void) {
@@ -76,6 +107,13 @@ export class CausalPanel {
     if (!root) throw new Error("R1 CausalPanel requires #debug-panel.");
     this.root = root;
     this.root.replaceChildren();
+    this.ownerSandboxSurface = new URLSearchParams(window.location.search).get("owner") === "1";
+    if (this.ownerSandboxSurface) {
+      this.collapsed = true;
+      this.root.classList.add("is-owner-sandbox", "is-collapsed");
+      this.root.setAttribute("aria-label", "Owner movement review controls");
+      document.title = "Companion Brain Lab — Movement Review";
+    }
 
     for (const [layer, visible] of Object.entries(DEFAULT_LAYERS) as Array<[WorldDebugLayer, boolean]>) {
       this.layerValues.set(layer, visible);
@@ -98,15 +136,16 @@ export class CausalPanel {
     const collapse = document.createElement("button");
     collapse.type = "button";
     collapse.className = "debug-collapse";
-    collapse.textContent = "‹";
-    collapse.title = "Collapse debug panel";
+    collapse.textContent = this.collapsed ? "›" : "‹";
+    collapse.title = this.collapsed ? "Expand research panel" : "Collapse debug panel";
     collapse.addEventListener("click", () => {
       this.collapsed = !this.collapsed;
       this.root.classList.toggle("is-collapsed", this.collapsed);
       collapse.textContent = this.collapsed ? "›" : "‹";
-      collapse.title = this.collapsed ? "Expand debug panel" : "Collapse debug panel";
+      collapse.title = this.collapsed ? "Expand research panel" : "Collapse debug panel";
     });
 
+    collapse.hidden = this.ownerSandboxSurface;
     header.append(heading, this.badge, collapse);
 
     this.content = document.createElement("div");
@@ -124,9 +163,20 @@ export class CausalPanel {
       button("Reset", "reset"),
       button("Brain mode", "cycle-mode"),
       button("Direct / Natural", "toggle-actuator"),
+      button("A1 authority", "cycle-a1-authority"),
       button("Time scale", "cycle-time"),
       button("Capture incident", "capture-incident")
     );
+    if (
+      (window as Window & { __authorityA12p2BrowserBridge?: { enabled: true } })
+        .__authorityA12p2BrowserBridge?.enabled
+    ) {
+      controlGrid.append(
+        button("P2 Preview", "p2-preview"),
+        button("P2 Arm singleton", "p2-arm-singleton"),
+        button("P2 Disarm", "p2-disarm")
+      );
+    }
     const scenarioGrid = document.createElement("div");
     scenarioGrid.className = "debug-button-grid debug-scenario-grid";
     scenarioGrid.append(
@@ -172,11 +222,73 @@ export class CausalPanel {
     hint.textContent = "Keyboard remains available: WASD · M mode · N actuator · T time · P pause · O step · I incident · R reset.";
 
     this.content.append(controls, layers, this.sectionsRoot, hint);
+
+    if (this.ownerSandboxSurface) {
+      const ownerControls = document.createElement("section");
+      ownerControls.className = "owner-review-controls";
+
+      const ownerTitle = document.createElement("strong");
+      ownerTitle.className = "owner-review-title";
+      ownerTitle.textContent = "Movement review";
+
+      const ownerHint = document.createElement("span");
+      ownerHint.className = "owner-review-hint";
+      ownerHint.textContent = "WASD to move";
+
+      const scenarios = document.createElement("div");
+      scenarios.className = "owner-review-scenarios";
+      scenarios.append(
+        button("Open", "scenario-open"),
+        button("Pillar", "scenario-pillar"),
+        button("Door", "scenario-doorway"),
+        button("Head-on", "scenario-head-on")
+      );
+
+      const actions = document.createElement("div");
+      actions.className = "owner-review-actions";
+      const reset = button("Reset", "reset");
+      const save = button("Save", "capture-incident");
+      save.classList.add("owner-capture");
+      save.title = "Capture this moment (keyboard: I)";
+      save.setAttribute("aria-label", "Capture this moment");
+      actions.append(reset, save);
+
+      ownerControls.append(ownerTitle, ownerHint, scenarios, actions);
+      ownerControls.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLButtonElement)) return;
+        const action = target.dataset.action as CausalPanelAction | undefined;
+        if (action) onAction(action);
+      });
+      this.root.append(ownerControls);
+    }
+
     this.root.append(header, this.content);
   }
 
   layerVisible(layer: WorldDebugLayer): boolean {
+    if (this.ownerSandboxSurface) return false;
     return this.layerValues.get(layer) ?? false;
+  }
+
+  private createRenderedSection(sectionId: string): RenderedCausalPanelSection {
+    const node = document.createElement("section");
+    node.className = "debug-section debug-dynamic-section";
+
+    const details = document.createElement("details");
+    details.dataset.sectionId = sectionId;
+    details.open = this.disclosureState.isOpen(sectionId);
+    details.addEventListener("toggle", () => this.disclosureState.remember(sectionId, details.open));
+
+    const summary = document.createElement("summary");
+    const body = document.createElement("div");
+    body.className = "debug-lines";
+    details.append(summary, body);
+    node.append(details);
+
+    const rendered = { node, details, summary, body };
+    this.renderedSections.set(sectionId, rendered);
+    return rendered;
   }
 
   update(model: CausalPanelModel): void {
@@ -185,25 +297,35 @@ export class CausalPanel {
     this.badge.textContent = model.badge;
     this.badge.dataset.tone = model.badgeTone;
 
-    this.sectionsRoot.replaceChildren();
+    const seen = new Set<string>();
+    const desiredNodes: HTMLElement[] = [];
+
     for (const section of model.sections) {
-      const node = document.createElement("section");
-      node.className = "debug-section debug-dynamic-section";
-      node.dataset.tone = section.tone ?? "normal";
-      const details = document.createElement("details");
-      details.open = section.id === "run" || section.id === "recovery" || section.id === "route" || section.id === "motion";
-      const summary = document.createElement("summary");
-      summary.textContent = section.title;
-      const body = document.createElement("div");
-      body.className = "debug-lines";
+      seen.add(section.id);
+      const rendered = this.renderedSections.get(section.id) ?? this.createRenderedSection(section.id);
+      rendered.node.dataset.tone = section.tone ?? "normal";
+      rendered.summary.textContent = section.title;
+      rendered.body.replaceChildren();
       for (const line of section.lines) {
         const row = document.createElement("div");
         row.textContent = line;
-        body.append(row);
+        rendered.body.append(row);
       }
-      details.append(summary, body);
-      node.append(details);
-      this.sectionsRoot.append(node);
+      desiredNodes.push(rendered.node);
+    }
+
+    for (const [sectionId, rendered] of this.renderedSections) {
+      if (seen.has(sectionId)) continue;
+      this.disclosureState.remember(sectionId, rendered.details.open);
+      rendered.node.remove();
+      this.renderedSections.delete(sectionId);
+    }
+
+    for (let index = 0; index < desiredNodes.length; index += 1) {
+      const desired = desiredNodes[index];
+      if (!desired) continue;
+      const current = this.sectionsRoot.children.item(index);
+      if (current !== desired) this.sectionsRoot.insertBefore(desired, current);
     }
   }
 }

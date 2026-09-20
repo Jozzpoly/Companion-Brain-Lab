@@ -83,6 +83,9 @@ describe("R1-4 workbench DIRECT/NATURAL A/B contract", () => {
     expect(result.debug.refinement).toBeNull();
     expect(result.debug.continuity).toBeNull();
     expect(result.debug.finalConstraint).toBeNull();
+    expect(result.debug.shadowCoordinationError).toBeNull();
+    expect(result.debug.shadowCoordination).not.toBeNull();
+    expect(result.debug.shadowCoordination?.kind).toBe("CCC0_SHADOW_COORDINATION");
   });
 
   it("runs NATURAL through the same repaired R1 spatial and recovery contract with temporal actuator evidence", async () => {
@@ -97,5 +100,8 @@ describe("R1-4 workbench DIRECT/NATURAL A/B contract", () => {
     expect(result.debug.refinement).not.toBeNull();
     expect(result.debug.continuity).not.toBeNull();
     expect(result.debug.finalConstraint).not.toBeNull();
+    expect(result.debug.shadowCoordinationError).toBeNull();
+    expect(result.debug.shadowCoordination).not.toBeNull();
+    expect(result.debug.shadowCoordination?.kind).toBe("CCC0_SHADOW_COORDINATION");
   });
 });

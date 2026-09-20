@@ -7,13 +7,32 @@
     "dev": "vite",
     "build": "vite build",
     "test": "vitest run",
-    "check": "tsc -p tsconfig.json --noEmit && vitest run && vite build"
+    "check": "tsc -p tsconfig.json --noEmit && vitest run && vite build",
+    "browser:audit:a1-2z3": "node scripts/authority-a1-2z3-head-on-browser-specimen.mjs",
+    "browser:audit:a1-2z4b": "node scripts/authority-a1-2z4b-head-on-tangent-class-browser-specimen.mjs",
+    "browser:audit:a1-2z4c": "node scripts/authority-a1-2z4c-live-state-shadow-browser-specimen.mjs",
+    "browser:audit:a1-2z4d": "node scripts/authority-a1-2z4d-class-support-browser-trace.mjs",
+    "browser:audit:a1-2p1": "node scripts/authority-a1-2p1-embodied-shadow-browser-specimen.mjs",
+    "browser:audit": "node scripts/ccc0-browser-audit.mjs && node scripts/authority-a0-browser-audit.mjs && node scripts/authority-a1-0-browser-audit.mjs && node scripts/authority-a1-1f-browser-audit.mjs && npm run browser:audit:a1-2z3 && npm run browser:audit:a1-2z4b && npm run browser:audit:a1-2z4c && npm run browser:audit:a1-2z4d && npm run browser:audit:a1-2p1 && npm run browser:audit:a1-2p2 && npm run browser:audit:os-prep1",
+    "browser:audit:a1-2p2": "node scripts/authority-a1-2p2-manual-direct-browser-specimen.mjs",
+    "browser:audit:os-prep1": "node scripts/owner-sandbox-incident-p2-browser-specimen.mjs",
+    "browser:audit:os-prep3-ph01": "node scripts/os-prep3-ph01-open-turn-reversal-browser-specimen.mjs",
+    "browser:audit:os-prep3-ph01-mirror": "node scripts/os-prep3-ph01-open-turn-reversal-mirror-browser-specimen.mjs",
+    "browser:audit:os-prep3-ph03": "node scripts/os-prep3-ph03-slow-walk-browser-specimen.mjs",
+    "browser:audit:os-prep3-ph03-sustained": "node scripts/os-prep3-ph03-sustained-slow-walk-browser-specimen.mjs",
+    "browser:audit:os-prep3-ph04": "node scripts/os-prep3-ph04-head-on-baseline-browser-specimen.mjs",
+    "browser:audit:os-prep3-ph04-cross": "node scripts/os-prep3-ph04-late-cross-front-browser-specimen.mjs",
+    "browser:audit:os-prep3-ph05": "node scripts/os-prep3-ph05-doorway-reversal-browser-specimen.mjs",
+    "browser:audit:os-prep3-ph05-settle": "node scripts/os-prep3-ph05-doorway-settle-browser-specimen.mjs",
+    "browser:audit:os-prep3-ph07": "node scripts/os-prep3-ph07-pillar-mirror-browser-specimen.mjs",
+    "browser:audit:os-prep5-owner": "node scripts/os-prep5-owner-sandbox-candidate-browser-specimen.mjs"
   },
   "dependencies": {
     "@dimforge/rapier2d-deterministic-compat": "0.20.0",
     "phaser": "4.2.1"
   },
   "devDependencies": {
+    "playwright-chromium": "1.63.0",
     "typescript": "7.0.2",
     "vite": "8.2.2",
     "vitest": "5.0.0"

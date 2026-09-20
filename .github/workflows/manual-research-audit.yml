@@ -1,0 +1,25 @@
+name: manual-research-audit
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: manual-research-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SOURCE_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+      - name: Mechanical gate
+        run: npm run check
+      - name: Core browser research audit
+        run: npm run browser:audit
