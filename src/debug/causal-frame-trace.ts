@@ -75,6 +75,9 @@ export interface CausalDecisionPhase {
   partnerAction?: string | null;
   partnerActionReason?: string | null;
   arbitrationSource?: string | null;
+  arbitrationCompatibility?: string | null;
+  arbitrationConstraintDistance?: number | null;
+  arbitrationConstraintLimit?: number | null;
   arbitrationReason?: string | null;
   liveObjectiveKey?: string | null;
   liveObjectiveTarget?: Vec2 | null;

@@ -397,7 +397,8 @@ export class R1LabScene extends Phaser.Scene {
       const arbitration = arbitrateCompanionAction({
         directive: this.playerDirective.snapshot(),
         autonomousProposal,
-        relationshipTarget: relationship.target
+        relationshipTarget: relationship.target,
+        playerPosition: actor(before, "player").position
       });
       this.arbitrationDecision = arbitration;
       const liveTarget = arbitration.target;
@@ -652,6 +653,9 @@ export class R1LabScene extends Phaser.Scene {
         partnerAction: evidence.arbitration?.selectedKind ?? null,
         partnerActionReason: evidence.arbitration?.reason ?? null,
         arbitrationSource: evidence.arbitration?.source ?? null,
+        arbitrationCompatibility: evidence.arbitration?.compatibility ?? null,
+        arbitrationConstraintDistance: evidence.arbitration?.constraintDistance ?? null,
+        arbitrationConstraintLimit: evidence.arbitration?.constraintLimit ?? null,
         arbitrationReason: evidence.arbitration?.reason ?? null,
         liveObjectiveKey: evidence.objectiveKey,
         liveObjectiveTarget: target ? { ...target } : null,
@@ -1153,6 +1157,9 @@ export class R1LabScene extends Phaser.Scene {
           arbitration
             ? `selected ${arbitration.selectedKind} · source ${arbitration.source} · target ${compact(arbitration.target.x)}, ${compact(arbitration.target.y)}`
             : "arbitration waiting for first SPATIAL decision",
+          arbitration
+            ? `constraint ${arbitration.compatibility}${arbitration.constraintDistance !== null ? ` · distance ${compact(arbitration.constraintDistance)}m` : ""}${arbitration.constraintLimit !== null ? ` / limit ${compact(arbitration.constraintLimit)}m` : ""}`
+            : "constraint not evaluated",
           arbitration?.reason ?? "no arbitration result yet"
         ]
       },
