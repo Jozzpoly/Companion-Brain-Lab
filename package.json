@@ -29,7 +29,8 @@
     "browser:command-autonomy": "node scripts/command-autonomy-browser-smoke.mjs",
     "browser:s1-apparatus": "node scripts/s1-shared-danger-browser-smoke.mjs",
     "browser:s2-responsibility": "node scripts/s2-situated-responsibility-browser-smoke.mjs",
-    "browser:s3-contribution": "node scripts/s3-material-contribution-browser-smoke.mjs"
+    "browser:s3-contribution": "node scripts/s3-material-contribution-browser-smoke.mjs",
+    "browser:s4-corrigibility": "node scripts/s4-corrigibility-browser-smoke.mjs"
   },
   "dependencies": {
     "@dimforge/rapier2d-deterministic-compat": "0.20.0",
