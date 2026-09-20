@@ -53,6 +53,10 @@ export class PlayerCommandHud {
     gamePane.append(this.root);
   }
 
+  setVisible(visible: boolean): void {
+    this.root.hidden = !visible;
+  }
+
   update(state: PlayerCommandHudState): void {
     for (const [kind, button] of this.buttons) {
       const active = kind === state.directive.kind;

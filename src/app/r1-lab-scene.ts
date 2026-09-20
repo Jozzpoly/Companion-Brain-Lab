@@ -56,16 +56,24 @@ import { S0_STEP_SECONDS } from "../physics/rapier-physical-world";
 import { SCENARIOS } from "../world/scenarios";
 import type { SharedPressureSnapshot } from "../world/shared-pressure";
 import type {
+  SharedDangerEpisodeOutcome,
+  SharedDangerSnapshot,
+  WorldActionAttempt,
+  WorldActionOutcome
+} from "../world/shared-danger-contract";
+import type {
   ActorSnapshot,
   MotionIntent,
   ScenarioId,
   StaticCircleTraversalResult,
   Vec2,
-  WorldSnapshot
+  WorldSnapshot,
+  WorldBodyId
 } from "../world/types";
 import { LabWorld } from "../world/world";
 import { isOwnerReviewSearch, ownerReviewAllowsPanelAction } from "./owner-review-mode";
 import { PlayerCommandHud } from "./player-command-hud";
+import { SharedDangerApparatusHud } from "./shared-danger-apparatus-hud";
 import { bindWorldStaticTraversalQuery } from "./static-traversal-query-adapter";
 
 const VIEW_WIDTH = 1200;
@@ -92,7 +100,7 @@ function distance(a: Vec2, b: Vec2): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-function actor(snapshot: WorldSnapshot, id: "player" | "companion"): ActorSnapshot {
+function actor(snapshot: WorldSnapshot, id: WorldBodyId): ActorSnapshot {
   const value = snapshot.actors.find((entry) => entry.id === id);
   if (!value) throw new Error(`R1 scene missing ${id}.`);
   return value;
@@ -181,6 +189,7 @@ export class R1LabScene extends Phaser.Scene {
   private timeScaleIndex = 2;
   private ownerReviewSurface = false;
   private commandHud!: PlayerCommandHud;
+  private apparatusHud!: SharedDangerApparatusHud;
 
   private readonly relationalBrain = new RelationalPositioningBrain();
   private readonly relationshipOrientation = new RelationshipOrientationTracker();
@@ -199,6 +208,10 @@ export class R1LabScene extends Phaser.Scene {
   private autonomousProposalDecision: StageBPartnerAction | null = null;
   private arbitrationDecision: CompanionArbitrationDecision | null = null;
   private sharedPressure: SharedPressureSnapshot | null = null;
+  private sharedDanger: SharedDangerSnapshot | null = null;
+  private pendingActionAttempts: WorldActionAttempt[] = [];
+  private lastActionOutcomes: readonly WorldActionOutcome[] = [];
+  private lastSharedDangerEpisodeOutcome: SharedDangerEpisodeOutcome = "NONE";
   private appliedLocalRetries = 0;
   private decisionRoutePlan: StaticRoutePlan | null = null;
   private postRoutePlan: StaticRoutePlan | null = null;
@@ -215,7 +228,8 @@ export class R1LabScene extends Phaser.Scene {
   private keys!: Record<
     "w" | "a" | "s" | "d" | "up" | "down" | "left" | "right" |
     "reset" | "pause" | "step" | "mode" | "incident" | "natural" | "time" |
-    "one" | "two" | "three" | "four" | "f1" | "f2" | "f3",
+    "one" | "two" | "three" | "four" | "five" | "f1" | "f2" | "f3" |
+    "playerAction" | "companionAction",
     Phaser.Input.Keyboard.Key
   >;
 
@@ -236,6 +250,7 @@ export class R1LabScene extends Phaser.Scene {
     this.graphics = this.add.graphics();
     this.panel = new CausalPanel((action) => this.handlePanelAction(action));
     this.commandHud = new PlayerCommandHud((kind) => this.issuePlayerDirective(kind));
+    this.apparatusHud = new SharedDangerApparatusHud((actorId) => this.queueWorldAction(actorId));
 
     const keyboard = this.input.keyboard;
     if (!keyboard) throw new Error("Keyboard input is required for R1 workbench.");
@@ -259,9 +274,12 @@ export class R1LabScene extends Phaser.Scene {
       two: Phaser.Input.Keyboard.KeyCodes.TWO,
       three: Phaser.Input.Keyboard.KeyCodes.THREE,
       four: Phaser.Input.Keyboard.KeyCodes.FOUR,
+      five: Phaser.Input.Keyboard.KeyCodes.FIVE,
       f1: Phaser.Input.Keyboard.KeyCodes.F1,
       f2: Phaser.Input.Keyboard.KeyCodes.F2,
-      f3: Phaser.Input.Keyboard.KeyCodes.F3
+      f3: Phaser.Input.Keyboard.KeyCodes.F3,
+      playerAction: Phaser.Input.Keyboard.KeyCodes.E,
+      companionAction: Phaser.Input.Keyboard.KeyCodes.ENTER
     }) as typeof this.keys;
 
     void this.loadScenario(this.scenarioId);
@@ -291,10 +309,22 @@ export class R1LabScene extends Phaser.Scene {
   private stepWorld(): void {
     if (!this.world || !this.snapshotValue) return;
     const evidence = this.computeIntents(this.snapshotValue);
-    const after = this.world.step(evidence.intents);
+    const beforeDanger = this.world.sharedDanger();
+    const actionAttempts = this.scenarioId === "shared-danger"
+      ? this.pendingActionAttempts.splice(0)
+      : [];
+    const worldResult = this.world.stepSituation({
+      motionIntents: evidence.intents,
+      actionAttempts
+    });
+    const after = worldResult.snapshot;
     this.snapshotValue = after;
     this.sharedPressure = this.world.sharedPressure();
+    this.sharedDanger = worldResult.sharedDanger;
+    this.lastActionOutcomes = worldResult.actionOutcomes;
+    this.lastSharedDangerEpisodeOutcome = worldResult.episodeOutcome;
     this.logSharedPressureTransition(evidence.pressureBefore, this.sharedPressure);
+    this.logSharedDangerTransition(beforeDanger, this.sharedDanger, worldResult.actionOutcomes, worldResult.episodeOutcome);
     this.updatePostEvidence(after, evidence.target);
 
     if (
@@ -821,6 +851,28 @@ export class R1LabScene extends Phaser.Scene {
     }
   }
 
+  private logSharedDangerTransition(
+    before: SharedDangerSnapshot | null,
+    after: SharedDangerSnapshot | null,
+    actionOutcomes: readonly WorldActionOutcome[],
+    episodeOutcome: SharedDangerEpisodeOutcome
+  ): void {
+    if (!after) return;
+    if (!before || before.phase !== after.phase || before.lastOutcome !== after.lastOutcome) {
+      this.logEvent(
+        `S1 danger ${before?.phase ?? "NONE"} -> ${after.phase} · outcome ${after.lastOutcome}`
+      );
+    }
+    for (const outcome of actionOutcomes) {
+      this.logEvent(
+        `S1 ${outcome.actorId} ${outcome.kind} -> ${outcome.status} · ${compact(outcome.distance)}m · ${outcome.phaseObserved}`
+      );
+    }
+    if (episodeOutcome !== "NONE") {
+      this.logEvent(`S1 episode outcome ${episodeOutcome}`);
+    }
+  }
+
   private drawWorld(snapshot: WorldSnapshot): void {
     const scale = Math.min(VIEW_WIDTH / snapshot.width, VIEW_HEIGHT / snapshot.height);
     const offsetX = (VIEW_WIDTH - snapshot.width * scale) / 2;
@@ -846,10 +898,24 @@ export class R1LabScene extends Phaser.Scene {
 
     for (const value of snapshot.actors) {
       const contact = value.contacts.length > 0;
-      this.graphics.fillStyle(value.id === "player" ? 0x63a8ff : 0xf2c15c, 1);
+      const fillColor = value.id === "player"
+        ? 0x63a8ff
+        : value.id === "companion"
+          ? 0xf2c15c
+          : this.sharedDanger?.phase === "WINDUP"
+            ? 0xff5d66
+            : this.sharedDanger?.phase === "RECOVERING"
+              ? 0x8b949e
+              : this.sharedDanger?.phase === "COMPLETE"
+                ? 0x484f58
+                : 0xff9b5e;
+      this.graphics.fillStyle(fillColor, 1);
       this.graphics.fillCircle(sx(value.position.x), sy(value.position.y), value.radius * scale);
       this.graphics.lineStyle(3, contact && this.panel.layerVisible("contacts") ? 0xff5d66 : 0xe7e9ee, 0.95);
       this.graphics.strokeCircle(sx(value.position.x), sy(value.position.y), value.radius * scale);
+      if (value.id === "hostile") {
+        this.drawSharedDangerBody(value, snapshot, sx, sy, scale);
+      }
       if (value.id === "companion" && this.panel.layerVisible("route")) {
         const comfortViolated = this.spatialRepairDecision?.comfortStartViolated ?? false;
         this.graphics.lineStyle(2, comfortViolated ? 0xe3b341 : 0xf2c15c, comfortViolated ? 0.8 : 0.25);
@@ -902,6 +968,50 @@ export class R1LabScene extends Phaser.Scene {
         x + dx * spikeOuter,
         y + dy * spikeOuter
       );
+    }
+  }
+
+  private drawSharedDangerBody(
+    hostile: ActorSnapshot,
+    snapshot: WorldSnapshot,
+    sx: (x: number) => number,
+    sy: (y: number) => number,
+    scale: number
+  ): void {
+    const danger = this.sharedDanger;
+    if (!danger) return;
+    const x = sx(hostile.position.x);
+    const y = sy(hostile.position.y);
+
+    if (danger.phase === "WINDUP") {
+      const player = actor(snapshot, "player");
+      this.graphics.lineStyle(3, 0xff7b72, 0.7);
+      this.graphics.lineBetween(x, y, sx(player.position.x), sy(player.position.y));
+      for (const factor of [1.7, 2.3, 2.9]) {
+        this.graphics.lineStyle(2, 0xff5d66, 0.55);
+        this.graphics.strokeCircle(x, y, hostile.radius * scale * factor);
+      }
+    }
+
+    if (danger.phase === "RECOVERING" && danger.lastOutcome === "INTERRUPTED") {
+      const r = hostile.radius * scale * 1.55;
+      this.graphics.lineStyle(4, 0x7ee787, 0.95);
+      this.graphics.lineBetween(x - r, y - r, x + r, y + r);
+      this.graphics.lineBetween(x - r, y + r, x + r, y - r);
+    }
+
+    if (danger.lastOutcome === "PLAYER_HIT") {
+      const player = actor(snapshot, "player");
+      const px = sx(player.position.x);
+      const py = sy(player.position.y);
+      const r = player.radius * scale * 2.1;
+      this.graphics.lineStyle(5, 0xff5d66, 0.95);
+      this.graphics.strokeCircle(px, py, r);
+      this.graphics.lineBetween(px - r, py, px + r, py);
+      this.graphics.lineBetween(px, py - r, px, py + r);
+    } else if (danger.lastOutcome === "ATTACK_MISSED") {
+      this.graphics.lineStyle(3, 0xe3b341, 0.85);
+      this.graphics.strokeCircle(x, y, hostile.radius * scale * 2.2);
     }
   }
 
@@ -1140,9 +1250,37 @@ export class R1LabScene extends Phaser.Scene {
     const autonomousProposal = this.autonomousProposalDecision;
     const arbitration = this.arbitrationDecision;
 
+    const apparatusActive = snapshot.scenarioId === "shared-danger";
+    this.commandHud.setVisible(!apparatusActive);
     this.commandHud.update({ directive });
+    this.apparatusHud.update({
+      active: apparatusActive,
+      danger: this.sharedDanger,
+      lastEpisodeOutcome: this.lastSharedDangerEpisodeOutcome,
+      lastActionOutcomes: this.lastActionOutcomes
+    });
 
     const sections: CausalPanelModel["sections"] = [
+      ...(apparatusActive ? [{
+        id: "s1-apparatus",
+        title: "S1 apparatus · shared danger",
+        tone: this.sharedDanger?.phase === "WINDUP"
+          ? "danger" as const
+          : this.sharedDanger?.lastOutcome === "INTERRUPTED"
+            ? "success" as const
+            : this.sharedDanger?.lastOutcome === "PLAYER_HIT"
+              ? "danger" as const
+              : "normal" as const,
+        lines: [
+          `phase ${this.sharedDanger?.phase ?? "UNAVAILABLE"} · remaining ${this.sharedDanger?.phaseTicksRemaining ?? 0}t`,
+          `last world outcome ${this.sharedDanger?.lastOutcome ?? "NONE"} · outcome tick ${this.sharedDanger?.lastOutcomeTick ?? "none"}`,
+          `interrupted by ${this.sharedDanger?.interruptedBy.join(", ") || "none"}`,
+          this.lastActionOutcomes.length > 0
+            ? `latest attempts ${this.lastActionOutcomes.map((outcome) => `${outcome.actorId}:${outcome.status}@${compact(outcome.distance)}m`).join(" · ")}`
+            : "latest attempts none",
+          "S1 apparatus only · companion authority locked to MANUAL"
+        ]
+      }] : []),
       {
         id: "direction",
         title: "Player direction ↔ local autonomy",
@@ -1425,6 +1563,17 @@ export class R1LabScene extends Phaser.Scene {
 
     if (this.ownerReviewSurface) return;
 
+    if (Phaser.Input.Keyboard.JustDown(this.keys.five)) void this.loadScenario("shared-danger");
+
+    if (this.scenarioId === "shared-danger") {
+      if (Phaser.Input.Keyboard.JustDown(this.keys.playerAction)) this.queueWorldAction("player");
+      if (Phaser.Input.Keyboard.JustDown(this.keys.companionAction)) this.queueWorldAction("companion");
+      if (Phaser.Input.Keyboard.JustDown(this.keys.pause)) this.togglePause();
+      if (Phaser.Input.Keyboard.JustDown(this.keys.step)) this.queueSingleStep();
+      if (Phaser.Input.Keyboard.JustDown(this.keys.time)) this.cycleTimeScale();
+      return;
+    }
+
     if (Phaser.Input.Keyboard.JustDown(this.keys.f1)) this.issuePlayerDirective("AT_WILL");
     if (Phaser.Input.Keyboard.JustDown(this.keys.f2)) this.issuePlayerDirective("FOLLOW_ME");
     if (Phaser.Input.Keyboard.JustDown(this.keys.f3)) this.issuePlayerDirective("HOLD_HERE");
@@ -1459,6 +1608,22 @@ export class R1LabScene extends Phaser.Scene {
     else if (action === "scenario-pillar") void this.loadScenario("pillar");
     else if (action === "scenario-doorway") void this.loadScenario("doorway");
     else if (action === "scenario-head-on") void this.loadScenario("head-on");
+    else if (action === "scenario-shared-danger") void this.loadScenario("shared-danger");
+    else if (action === "s1-player-intervene") this.queueWorldAction("player");
+    else if (action === "s1-companion-intervene") this.queueWorldAction("companion");
+  }
+
+  private queueWorldAction(actorId: "player" | "companion"): void {
+    if (this.scenarioId !== "shared-danger") {
+      this.logEvent(`S1 action ignored outside shared-danger · ${actorId}`);
+      return;
+    }
+    if (this.pendingActionAttempts.some((attempt) => attempt.actorId === actorId)) {
+      this.logEvent(`S1 action already queued this frame · ${actorId}`);
+      return;
+    }
+    this.pendingActionAttempts.push({ actorId, kind: "INTERVENE", targetId: "hostile" });
+    this.logEvent(`S1 INTERVENE queued · ${actorId}`);
   }
 
   private issuePlayerDirective(kind: PlayerDirectiveKind): void {
@@ -1529,6 +1694,10 @@ export class R1LabScene extends Phaser.Scene {
   }
 
   private cycleCompanionMode(): void {
+    if (this.scenarioId === "shared-danger") {
+      this.logEvent("S1 apparatus keeps companion authority MANUAL");
+      return;
+    }
     const index = COMPANION_MODES.indexOf(this.companionMode);
     const next = COMPANION_MODES[(index + 1) % COMPANION_MODES.length];
     if (!next) return;
@@ -1628,11 +1797,21 @@ export class R1LabScene extends Phaser.Scene {
       this.scenarioId = id;
       this.snapshotValue = next.snapshot();
       this.sharedPressure = next.sharedPressure();
+      this.sharedDanger = next.sharedDanger();
+      if (id === "shared-danger") {
+        this.companionMode = "manual";
+        this.a1Authority.setVariant("off");
+      }
+      this.commandHud.setVisible(id !== "shared-danger");
+      this.apparatusHud.setVisible(id === "shared-danger");
       this.autonomousProposalDecision = null;
       this.arbitrationDecision = null;
       this.playerDirective.reset(this.snapshotValue.tick);
       this.accumulator = 0;
       this.singleStepQueued = false;
+      this.pendingActionAttempts.length = 0;
+      this.lastActionOutcomes = [];
+      this.lastSharedDangerEpisodeOutcome = "NONE";
       this.playerTrail.length = 0;
       this.companionTrail.length = 0;
       this.causalTrace.reset();

@@ -16,7 +16,10 @@ export type CausalPanelAction =
   | "scenario-open"
   | "scenario-pillar"
   | "scenario-doorway"
-  | "scenario-head-on";
+  | "scenario-head-on"
+  | "scenario-shared-danger"
+  | "s1-player-intervene"
+  | "s1-companion-intervene";
 
 export type WorldDebugLayer =
   | "relationship"
@@ -59,7 +62,7 @@ const DEFAULT_LAYERS: Readonly<Record<WorldDebugLayer, boolean>> = {
   contacts: true
 };
 
-const DEFAULT_OPEN_SECTION_IDS = new Set(["direction", "run", "stage-b", "recovery", "route", "motion", "a1", "p2"]);
+const DEFAULT_OPEN_SECTION_IDS = new Set(["s1-apparatus", "direction", "run", "stage-b", "recovery", "route", "motion", "a1", "p2"]);
 
 export class CausalPanelDisclosureState {
   private readonly remembered = new Map<string, boolean>();
@@ -195,11 +198,29 @@ export class CausalPanel {
       button("Open", "scenario-open"),
       button("Pillar", "scenario-pillar"),
       button("Doorway", "scenario-doorway"),
-      button("Head-on", "scenario-head-on")
+      button("Head-on", "scenario-head-on"),
+      button("Danger", "scenario-shared-danger")
+    );
+
+    const apparatusGrid = document.createElement("div");
+    apparatusGrid.className = "debug-button-grid debug-apparatus-grid";
+    apparatusGrid.append(
+      button("Player intervene", "s1-player-intervene"),
+      button("Companion intervene", "s1-companion-intervene")
     );
     const directiveTitle = document.createElement("h2");
     directiveTitle.textContent = "Player direction";
-    controls.append(controlTitle, controlGrid, directiveTitle, directiveGrid, scenarioGrid);
+    const apparatusTitle = document.createElement("h2");
+    apparatusTitle.textContent = "S1 apparatus";
+    controls.append(
+      controlTitle,
+      controlGrid,
+      directiveTitle,
+      directiveGrid,
+      scenarioGrid,
+      apparatusTitle,
+      apparatusGrid
+    );
 
     controls.addEventListener("click", (event) => {
       const target = event.target;
@@ -233,7 +254,7 @@ export class CausalPanel {
 
     const hint = document.createElement("section");
     hint.className = "debug-section debug-hint";
-    hint.textContent = "Keyboard: WASD move · F1 At will · F2 Follow me · F3 Hold here · M mode · N actuator · T time · P pause · O step · I incident · R reset.";
+    hint.textContent = "Keyboard: WASD player · arrows manual companion · 5 Danger · E player intervene · Enter companion intervene · F1/F2/F3 experimental commands · M mode · N actuator · T time · P pause · O step · I incident · R reset.";
 
     this.content.append(controls, layers, this.sectionsRoot, hint);
 

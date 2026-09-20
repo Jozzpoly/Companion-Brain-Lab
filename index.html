@@ -58,6 +58,16 @@
       .player-command-button.is-active { border-color:#58a6ff; color:#e7e9ee; background:rgba(56,139,253,.14); }
       .player-command-button kbd { min-width:24px; padding:3px 4px; border:1px solid #484f58; border-radius:4px; background:#0d1117; color:#c9d1d9; font:700 9px/1 ui-monospace,monospace; text-align:center; }
       .player-command-status { color:#8b949e; font:10px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+      .shared-danger-hud { position:absolute; left:14px; bottom:14px; z-index:9; display:grid; gap:7px; min-width:360px; padding:10px; border:1px solid rgba(255,123,114,.5); border-radius:9px; background:rgba(13,17,23,.9); box-shadow:0 8px 24px rgba(0,0,0,.3); backdrop-filter:blur(5px); pointer-events:auto; }
+      .shared-danger-hud[hidden] { display:none; }
+      .shared-danger-heading { color:#e7e9ee; font:700 11px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; letter-spacing:.04em; text-transform:uppercase; }
+      .shared-danger-hint,.shared-danger-state { color:#8b949e; font:10px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+      .shared-danger-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+      .shared-danger-action { display:grid; grid-template-columns:auto 1fr; align-items:center; gap:6px; min-height:34px; padding:5px 7px; border:1px solid #484f58; border-radius:6px; background:#161b22; color:#c9d1d9; cursor:pointer; font-size:10px; text-align:left; }
+      .shared-danger-action:hover { background:#21262d; }
+      .shared-danger-action:disabled { opacity:.45; cursor:not-allowed; }
+      .shared-danger-action kbd { min-width:38px; padding:3px 4px; border:1px solid #484f58; border-radius:4px; background:#0d1117; color:#c9d1d9; font:700 9px/1 ui-monospace,monospace; text-align:center; }
+      .debug-apparatus-grid { margin-top:6px; }
       .debug-collapse:hover, .debug-button:hover { background: #30363d; }
       .debug-panel-content { height: calc(100vh - 58px); overflow-y: auto; overscroll-behavior: contain; padding: 10px; }
       .debug-section { border: 1px solid #21262d; border-radius: 8px; margin-bottom: 9px; background: #11161d; }
