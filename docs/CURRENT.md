@@ -563,12 +563,20 @@ Current live repository truth:
 
 ### Immediate work
 
-The next implementation step is **not chosen yet**.
+Execution is now governed by [COMPANION_EXECUTION_CONTROLLER.md](COMPANION_EXECUTION_CONTROLLER.md).
 
-First close C0/C1:
+The next authorized tranche is **S0/S1 design, not autonomous gameplay implementation**:
 
-> **What is the smallest coherent teammate situation that would make useful initiative, quick correction, shared responsibility and causal failure meaningfully observable — and which current mechanisms are actually necessary to build it?**
+1. finish selection of the first teammate situation against its strongest rival;
+2. define the minimum player/manual-companion affordances and World consequences that make the situation genuinely shared;
+3. design the smallest authoritative attempt→outcome seam;
+4. qualify the situation with a manual/trivial baseline before adding a new local-brain mechanism;
+5. only then re-plan the first autonomous responsibility/action experiment from the resulting evidence.
 
-Answer that from the recovered Owner intent, existing evidence and live repo. Then implement only the bounded specimen required by that answer.
+Current leading hypothesis remains a compact shared-danger encounter with a meaningful pre-contact window, but it is not promoted to permanent architecture.
 
-This explicit uncertainty is intentional. It protects the project from turning the assistant's freshest implementation idea into roadmap authority.
+The controlling question is:
+
+> **Can we first build a situation that is genuinely worth cooperating in, before asking the AI to cooperate intelligently?**
+
+This prevents the assistant's freshest mechanism from becoming the problem definition.
