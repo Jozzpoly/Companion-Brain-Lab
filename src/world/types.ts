@@ -1,5 +1,6 @@
 export type ActorId = "player" | "companion";
-export type ScenarioId = "open" | "pillar" | "doorway" | "head-on";
+export type WorldBodyId = ActorId | "hostile";
+export type ScenarioId = "open" | "pillar" | "doorway" | "head-on" | "shared-danger";
 
 export interface Vec2 {
   x: number;
@@ -14,11 +15,18 @@ export interface ObstacleSpec {
   height: number;
 }
 
+export type BodyCollisionMode = "solid" | "sensor";
+
 export interface ActorSpec {
-  id: ActorId;
+  /**
+   * Historical name retained for compatibility. S1 extends authored physical
+   * bodies beyond externally controlled player/companion actors.
+   */
+  id: WorldBodyId;
   position: Vec2;
   radius: number;
   speed: number;
+  collisionMode?: BodyCollisionMode;
 }
 
 export interface ScenarioSpec {
@@ -41,7 +49,7 @@ export interface ContactRecord {
 }
 
 export interface ActorSnapshot {
-  id: ActorId;
+  id: WorldBodyId;
   position: Vec2;
   radius: number;
   requestedVelocity: Vec2;

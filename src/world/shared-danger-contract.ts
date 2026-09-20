@@ -130,7 +130,7 @@ function cloneSnapshot(value: SharedDangerSnapshot): SharedDangerSnapshot {
   };
 }
 
-function stableUniqueAttempts(attempts: readonly WorldActionAttempt[]): WorldActionAttempt[] {
+export function validateWorldActionAttempts(attempts: readonly WorldActionAttempt[]): WorldActionAttempt[] {
   const byActor = new Map<ActorId, WorldActionAttempt>();
   for (const attempt of attempts) {
     if (attempt.kind !== "INTERVENE") {
@@ -229,7 +229,7 @@ export function resolveSharedDangerAfterPhysics(
   validateRules(input.rules);
   validateSnapshot(input.before);
 
-  const attempts = stableUniqueAttempts(input.attempts);
+  const attempts = validateWorldActionAttempts(input.attempts);
   const actionOutcomes = validateAttemptsAgainstSameFrame(input, attempts);
   const successfulActors = actionOutcomes
     .filter((outcome) => outcome.status === "SUCCEEDED")

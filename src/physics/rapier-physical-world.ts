@@ -9,7 +9,8 @@ import type {
   StaticCircleOccupancyResult,
   StaticCircleTraversalResult,
   StaticTraversalOptions,
-  Vec2
+  Vec2,
+  WorldBodyId
 } from "../world/types";
 
 const STEP_SECONDS = 1 / 60;
@@ -56,7 +57,7 @@ function validateCircle(center: Vec2, radius: number, label: string): void {
 }
 
 interface PhysicalActor {
-  id: ActorId;
+  id: WorldBodyId;
   radius: number;
   speed: number;
   body: RAPIER.RigidBody;
@@ -67,6 +68,11 @@ interface PhysicalActor {
 export interface PhysicalRehearsalVelocityInput {
   actorId: ActorId;
   velocity: Vec2;
+}
+
+export interface PhysicalWorldBodyMotionIntent {
+  bodyId: WorldBodyId;
+  move: Vec2;
 }
 
 export interface PhysicalRehearsalFrame {
@@ -86,7 +92,7 @@ export interface PhysicalRehearsalResult {
 
 export class RapierPhysicalWorld {
   private readonly world: RAPIER.World;
-  private readonly actors = new Map<ActorId, PhysicalActor>();
+  private readonly actors = new Map<WorldBodyId, PhysicalActor>();
   private readonly colliderLabels = new Map<number, string>();
 
   private constructor(private readonly spec: ScenarioSpec) {
@@ -110,13 +116,12 @@ export class RapierPhysicalWorld {
           .setCanSleep(false)
           .setCcdEnabled(true)
       );
-      const collider = this.world.createCollider(
-        RAPIER.ColliderDesc.ball(actor.radius)
-          .setFriction(0)
-          .setRestitution(0)
-          .setDensity(1),
-        body
-      );
+      const colliderDesc = RAPIER.ColliderDesc.ball(actor.radius)
+        .setFriction(0)
+        .setRestitution(0)
+        .setDensity(1);
+      if (actor.collisionMode === "sensor") colliderDesc.setSensor(true);
+      const collider = this.world.createCollider(colliderDesc, body);
       this.colliderLabels.set(collider.handle, actor.id);
       this.actors.set(actor.id, {
         id: actor.id,
@@ -267,14 +272,26 @@ export class RapierPhysicalWorld {
     };
   }
 
-  step(intents: readonly MotionIntent[]): ActorSnapshot[] {
-    const byActor = new Map<ActorId, Vec2>();
+  step(
+    intents: readonly MotionIntent[],
+    worldDrivenIntents: readonly PhysicalWorldBodyMotionIntent[] = []
+  ): ActorSnapshot[] {
+    const byActor = new Map<WorldBodyId, Vec2>();
     for (const intent of intents) {
       if (byActor.has(intent.actorId)) throw new Error(`Duplicate motion intent: ${intent.actorId}`);
       byActor.set(intent.actorId, normalized(intent.move));
     }
+    for (const intent of worldDrivenIntents) {
+      if (!this.actors.has(intent.bodyId)) {
+        throw new Error(`World-driven motion references unknown body: ${intent.bodyId}`);
+      }
+      if (byActor.has(intent.bodyId)) {
+        throw new Error(`Duplicate physical motion authority: ${intent.bodyId}`);
+      }
+      byActor.set(intent.bodyId, normalized(intent.move));
+    }
 
-    const before = new Map<ActorId, Vec2>();
+    const before = new Map<WorldBodyId, Vec2>();
     for (const actor of this.actors.values()) {
       const position = actor.body.translation();
       before.set(actor.id, { x: position.x, y: position.y });
@@ -306,7 +323,7 @@ export class RapierPhysicalWorld {
 
     const rehearsalWorld = RAPIER.World.restoreSnapshot(this.world.takeSnapshot());
     try {
-      const rehearsalActors = new Map<ActorId, PhysicalActor>();
+      const rehearsalActors = new Map<WorldBodyId, PhysicalActor>();
       for (const liveActor of this.actors.values()) {
         const body = rehearsalWorld.getRigidBody(liveActor.body.handle);
         const collider = rehearsalWorld.getCollider(liveActor.collider.handle);
@@ -326,7 +343,7 @@ export class RapierPhysicalWorld {
       const frames: PhysicalRehearsalFrame[] = [];
       for (let stepIndex = 0; stepIndex < sequence.length; stepIndex += 1) {
         const inputs = sequence[stepIndex]!;
-        const byActor = new Map<ActorId, Vec2>();
+        const byActor = new Map<WorldBodyId, Vec2>();
         for (const input of inputs) {
           if (!rehearsalActors.has(input.actorId)) {
             throw new Error(`Physical rehearsal input references unknown actor: ${input.actorId}`);
@@ -340,7 +357,7 @@ export class RapierPhysicalWorld {
           );
         }
 
-        const before = new Map<ActorId, Vec2>();
+        const before = new Map<WorldBodyId, Vec2>();
         for (const actor of rehearsalActors.values()) {
           const position = actor.body.translation();
           before.set(actor.id, { x: position.x, y: position.y });
@@ -388,8 +405,8 @@ export class RapierPhysicalWorld {
 
   private actorSnapshotsAfterStep(
     world: RAPIER.World,
-    actors: ReadonlyMap<ActorId, PhysicalActor>,
-    before: ReadonlyMap<ActorId, Vec2>
+    actors: ReadonlyMap<WorldBodyId, PhysicalActor>,
+    before: ReadonlyMap<WorldBodyId, Vec2>
   ): ActorSnapshot[] {
     return [...actors.values()]
       .sort((a, b) => a.id.localeCompare(b.id))
@@ -418,7 +435,8 @@ export class RapierPhysicalWorld {
 
   private isStaticCollider(collider: RAPIER.Collider): boolean {
     const label = this.colliderLabels.get(collider.handle);
-    return label !== "player" && label !== "companion";
+    if (!label) return true;
+    return !this.actors.has(label as WorldBodyId);
   }
 
   private contactsForInWorld(world: RAPIER.World, actor: PhysicalActor): ContactRecord[] {

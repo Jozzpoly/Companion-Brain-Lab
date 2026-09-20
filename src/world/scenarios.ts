@@ -5,8 +5,19 @@ const HEIGHT = 8;
 const RADIUS = 0.3;
 const SPEED = 3;
 
-function actor(id: ActorSpec["id"], x: number, y: number): ActorSpec {
-  return { id, position: { x, y }, radius: RADIUS, speed: SPEED };
+function actor(
+  id: ActorSpec["id"],
+  x: number,
+  y: number,
+  options: Partial<Pick<ActorSpec, "radius" | "speed" | "collisionMode">> = {}
+): ActorSpec {
+  return {
+    id,
+    position: { x, y },
+    radius: options.radius ?? RADIUS,
+    speed: options.speed ?? SPEED,
+    collisionMode: options.collisionMode
+  };
 }
 
 const doorwayWalls: readonly ObstacleSpec[] = [
@@ -45,6 +56,18 @@ export const SCENARIOS: Readonly<Record<ScenarioId, ScenarioSpec>> = {
     width: WIDTH,
     height: HEIGHT,
     actors: [actor("player", 4.5, 4), actor("companion", 7.5, 4)],
+    obstacles: []
+  },
+  "shared-danger": {
+    id: "shared-danger",
+    label: "Shared danger apparatus",
+    width: WIDTH,
+    height: HEIGHT,
+    actors: [
+      actor("player", 3, 4),
+      actor("companion", 5.2, 4),
+      actor("hostile", 8.5, 4, { radius: 0.32, speed: 1.4, collisionMode: "sensor" })
+    ],
     obstacles: []
   }
 };
