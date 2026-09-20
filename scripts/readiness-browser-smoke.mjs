@@ -30,7 +30,7 @@ async function waitForPanel(page, predicate, timeout = 15_000, label = "panel co
 }
 
 function interceptTarget(text) {
-  const match = text.match(/intercept target (-?\\d+\\.\\d+), (-?\\d+\\.\\d+)/);
+  const match = text.match(/intercept target (-?\d+\.\d+), (-?\d+\.\d+)/);
   return match ? { x: Number(match[1]), y: Number(match[2]) } : null;
 }
 
@@ -68,7 +68,7 @@ try {
   await page.locator("#game-root canvas").waitFor({ state: "visible", timeout: 15_000 });
   await page.locator('[data-shared-danger-hud="true"]').waitFor({ state: "visible", timeout: 10_000 });
 
-  // A — awareness must become embodied preparation before material responsibility exists.
+  // A — awareness becomes embodied preparation before responsibility exists.
   const guarding = await waitForPanel(
     page,
     (text) =>
@@ -77,7 +77,7 @@ try {
       text.includes("responsibility NONE") &&
       text.includes("state GUARDING") &&
       text.includes("basis INTERCEPT_FLANK_AVAILABLE") &&
-      text.includes("intercept target") &&
+      interceptTarget(text) !== null &&
       text.includes("READINESS MOVEMENT ONLY") &&
       text.includes("latest attempts none"),
     8_000,
@@ -89,139 +89,30 @@ try {
   );
   await shot(page, "01-readiness-guarding-participant.png");
 
-  // Freeze the exact preparation state and prove the full causal microscope remains in the same runtime.
-  await tapKey(page, "p");
-  await page.locator(".debug-collapse").click();
-  const expanded = await panelText(page);
-  invariant(
-    expanded.includes("Pre-contact readiness · player-local intercept flank") &&
-      expanded.includes("state GUARDING") &&
-      expanded.includes("S2 zero authority") &&
-      expanded.includes("S3 bounded material contribution") &&
-      expanded.includes("S4 corrigibility"),
-    "Expanded workbench does not expose the readiness -> responsibility -> contribution -> correction chain."
-  );
-  await shot(page, "02-readiness-workbench-expanded.png");
-  await page.locator(".debug-collapse").click();
-  await tapKey(page, "p");
-
-  // Q is intentionally narrower than readiness: it withholds intervention, not preparatory movement.
-  await page.keyboard.down("q");
-  const qDuringApproach = await waitForPanel(
+  // B — reach and hold the first player-local flank without material action.
+  const holdingBeforeMove = await waitForPanel(
     page,
     (text) =>
       text.includes("phase APPROACHING") &&
-      text.includes("correction WITHHOLD_CURRENT_CONTRIBUTION") &&
-      (text.includes("state GUARDING") || text.includes("state HOLDING_READY")) &&
-      text.includes("latest attempts none"),
-    3_000,
-    "Q does not erase pre-contact readiness"
-  );
-  invariant(
-    await page.getByText("Q HELD · companion intervention withheld").isVisible(),
-    "Participant surface does not acknowledge the intervention-only correction."
-  );
-
-  // B — preparation must settle once the player-local intercept flank is reached.
-  const holding = await waitForPanel(
-    page,
-    (text) =>
-      text.includes("phase APPROACHING") &&
-      text.includes("attention TRACKING") &&
       text.includes("responsibility NONE") &&
       text.includes("state HOLDING_READY") &&
       text.includes("basis INTERCEPT_FLANK_REACHED") &&
-      text.includes("latest attempts none"),
-    8_000,
-    "reached pre-contact intercept flank"
-  );
-  invariant(
-    holding.includes("READINESS MOVEMENT ONLY"),
-    "Reached readiness flank lost its movement-only contract."
-  );
-  await shot(page, "03-readiness-holds-before-commitment.png");
-
-  // C — once commitment occurs, readiness must yield to existing S2/S3/S4 authority.
-  const committedBlocked = await waitForPanel(
-    page,
-    (text) =>
-      text.includes("phase WINDUP") &&
-      text.includes("state NONE") &&
-      text.includes("responsibility OWNED") &&
-      text.includes("correction WITHHOLD_CURRENT_CONTRIBUTION") &&
-      (text.includes("raw S3 APPROACH_INTERVENTION") || text.includes("raw S3 INTERVENE")) &&
-      text.includes("blocked YES") &&
-      text.includes("effective world action none") &&
-      text.includes("latest attempts none"),
-    6_000,
-    "readiness yields at hostile commitment"
-  );
-  await shot(page, "04-windup-handed-to-s3-but-withheld.png");
-
-  // D — release the correction; the existing material autonomy must finish the handoff.
-  await page.keyboard.up("q");
-  const interrupted = await waitForPanel(
-    page,
-    (text) =>
-      text.includes("last world outcome INTERRUPTED") &&
-      text.includes("interrupted by companion") &&
-      text.includes("latest attempts companion:SUCCEEDED"),
-    5_000,
-    "post-readiness material companion intervention"
-  );
-  await shot(page, "05-readiness-to-material-interrupt.png");
-
-  invariant(
-    guarding.includes("responsibility NONE") &&
-      guarding.includes("state GUARDING") &&
-      guarding.includes("latest attempts none"),
-    "Readiness did not remain pre-responsibility and action-free."
-  );
-  invariant(
-    qDuringApproach.includes("phase APPROACHING") &&
-      (qDuringApproach.includes("state GUARDING") || qDuringApproach.includes("state HOLDING_READY")),
-    "Q incorrectly acted as a global companion freeze instead of an intervention correction."
-  );
-  invariant(
-    holding.includes("state HOLDING_READY") &&
-      holding.includes("responsibility NONE") &&
-      holding.includes("latest attempts none"),
-    "Readiness failed to settle at the intercept flank before commitment."
-  );
-  invariant(
-    committedBlocked.includes("state NONE") &&
-      committedBlocked.includes("responsibility OWNED") &&
-      committedBlocked.includes("blocked YES"),
-    "Authority did not hand off cleanly from readiness to situated material contribution."
-  );
-  invariant(
-    interrupted.includes("interrupted by companion"),
-    "Existing S3 material contribution did not resume after readiness/correction handoff."
-  );
-  // E — readiness must remain player-local under live Owner movement.
-  // Start a genuinely fresh specimen; reset-key behavior is not part of this gate.
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await page.locator("#game-root canvas").waitFor({ state: "visible", timeout: 15_000 });
-  await page.locator('[data-shared-danger-hud="true"]').waitFor({ state: "visible", timeout: 10_000 });
-  const anchorBeforeText = await waitForPanel(
-    page,
-    (text) =>
-      text.includes("phase APPROACHING") &&
-      text.includes("state HOLDING_READY") &&
-      text.includes("responsibility NONE") &&
       text.includes("latest attempts none") &&
       interceptTarget(text) !== null,
-    6_000,
+    5_000,
     "initial player-local intercept flank"
   );
-  const anchorBefore = interceptTarget(anchorBeforeText);
+  const anchorBefore = interceptTarget(holdingBeforeMove);
   invariant(anchorBefore !== null, "Initial readiness intercept target is unavailable.");
+  await shot(page, "02-readiness-holds-initial-flank.png");
 
+  // C — Owner motion must move the relational target; the companion must re-anchor
+  // on the same flank side and remain action-free throughout preparation.
   await page.keyboard.down("w");
   await page.waitForTimeout(350);
   await page.keyboard.up("w");
 
-  const anchorAfterText = await waitForPanel(
+  const reanchored = await waitForPanel(
     page,
     (text) => {
       const target = interceptTarget(text);
@@ -237,15 +128,103 @@ try {
     5_000,
     "readiness re-anchors after player movement"
   );
-  const anchorAfter = interceptTarget(anchorAfterText);
+  const anchorAfter = interceptTarget(reanchored);
   invariant(anchorAfter !== null, "Moved readiness intercept target is unavailable.");
+  const anchorShift = Math.hypot(anchorAfter.x - anchorBefore.x, anchorAfter.y - anchorBefore.y);
+  invariant(anchorShift > 0.35, "Readiness target did not materially move with the player.");
+  await shot(page, "03-readiness-reanchors-after-player-movement.png");
+
+  // Freeze the re-anchored preparation state and prove the full microscope remains available.
+  await tapKey(page, "p");
+  await page.locator(".debug-collapse").click();
+  const expanded = await panelText(page);
   invariant(
-    Math.hypot(anchorAfter.x - anchorBefore.x, anchorAfter.y - anchorBefore.y) > 0.35,
-    "Readiness target did not materially move with the player."
+    expanded.includes("Pre-contact readiness · player-local intercept flank") &&
+      expanded.includes("state HOLDING_READY") &&
+      expanded.includes("S2 zero authority") &&
+      expanded.includes("S3 bounded material contribution") &&
+      expanded.includes("S4 corrigibility"),
+    "Expanded workbench does not expose the readiness -> responsibility -> contribution -> correction chain."
   );
-  await shot(page, "06-readiness-reanchors-after-player-movement.png");
+  await shot(page, "04-reanchored-workbench-expanded.png");
+  await page.locator(".debug-collapse").click();
   await tapKey(page, "p");
 
+  // D — Q constrains intervention only. It must not erase readiness during APPROACHING.
+  await page.keyboard.down("q");
+  const qDuringApproach = await waitForPanel(
+    page,
+    (text) =>
+      text.includes("phase APPROACHING") &&
+      text.includes("correction WITHHOLD_CURRENT_CONTRIBUTION") &&
+      (text.includes("state GUARDING") || text.includes("state HOLDING_READY")) &&
+      text.includes("responsibility NONE") &&
+      text.includes("latest attempts none"),
+    3_000,
+    "Q does not erase pre-contact readiness"
+  );
+  invariant(
+    await page.getByText("Q HELD · companion intervention withheld").isVisible(),
+    "Participant surface does not acknowledge the intervention-only correction."
+  );
+
+  // E — hostile commitment must terminate readiness and hand authority to S2/S3/S4.
+  const committedBlocked = await waitForPanel(
+    page,
+    (text) =>
+      text.includes("phase WINDUP") &&
+      text.includes("state NONE") &&
+      text.includes("responsibility OWNED") &&
+      text.includes("correction WITHHOLD_CURRENT_CONTRIBUTION") &&
+      (text.includes("raw S3 APPROACH_INTERVENTION") || text.includes("raw S3 INTERVENE")) &&
+      text.includes("blocked YES") &&
+      text.includes("effective world action none") &&
+      text.includes("latest attempts none"),
+    7_000,
+    "readiness yields at hostile commitment"
+  );
+
+  // F — release correction immediately; still-valid situated autonomy must resolve materially.
+  await page.keyboard.up("q");
+  const interrupted = await waitForPanel(
+    page,
+    (text) =>
+      text.includes("last world outcome INTERRUPTED") &&
+      text.includes("interrupted by companion") &&
+      text.includes("latest attempts companion:SUCCEEDED"),
+    5_000,
+    "post-readiness material companion intervention"
+  );
+  await shot(page, "05-readiness-to-material-interrupt.png");
+
+  invariant(
+    holdingBeforeMove.includes("state HOLDING_READY") &&
+      holdingBeforeMove.includes("responsibility NONE") &&
+      holdingBeforeMove.includes("latest attempts none"),
+    "Initial readiness flank did not remain pre-responsibility and action-free."
+  );
+  invariant(
+    reanchored.includes("state HOLDING_READY") &&
+      reanchored.includes("responsibility NONE") &&
+      reanchored.includes("latest attempts none") &&
+      anchorShift > 0.35,
+    "Readiness did not preserve player-local preparation through live Owner movement."
+  );
+  invariant(
+    qDuringApproach.includes("phase APPROACHING") &&
+      !qDuringApproach.includes("state NONE"),
+    "Q incorrectly acted as a global companion freeze instead of an intervention correction."
+  );
+  invariant(
+    committedBlocked.includes("state NONE") &&
+      committedBlocked.includes("responsibility OWNED") &&
+      committedBlocked.includes("blocked YES"),
+    "Authority did not hand off cleanly from readiness to situated material contribution."
+  );
+  invariant(
+    interrupted.includes("interrupted by companion"),
+    "Existing S3 material contribution did not resume after readiness/correction handoff."
+  );
   invariant(
     await page.locator("#runtime-fault-sentinel").count() === 0,
     "Readiness runtime fault sentinel is visible."
@@ -255,27 +234,27 @@ try {
   invariant(errors.requests.length === 0, `Failed requests: ${errors.requests.join(" | ")}`);
 
   const summary = {
-    schema: "companion-brain-lab-readiness-browser-v1",
+    schema: "companion-brain-lab-readiness-browser-v2",
     sourceSha: process.env.GITHUB_SHA ?? process.env.VITE_SOURCE_SHA ?? null,
     outcomes: {
       trackingBecomesGuardingBeforeResponsibility:
         guarding.includes("state GUARDING") && guarding.includes("responsibility NONE"),
-      readinessProducesNoPrematureWorldAction: guarding.includes("latest attempts none"),
+      initialFlankIsActionFree:
+        holdingBeforeMove.includes("state HOLDING_READY") && holdingBeforeMove.includes("latest attempts none"),
+      playerMotionReanchorsReadiness:
+        reanchored.includes("state HOLDING_READY") && anchorShift > 0.35,
+      reanchoredReadinessRemainsActionFree:
+        reanchored.includes("responsibility NONE") && reanchored.includes("latest attempts none"),
       sameRuntimeCausalMicroscopeAvailable:
         expanded.includes("Pre-contact readiness") && expanded.includes("S4 corrigibility"),
       qScopesToInterventionRatherThanReadiness:
-        qDuringApproach.includes("phase APPROACHING") &&
-        !qDuringApproach.includes("state NONE"),
-      reachedInterceptFlankStopsAdvance:
-        holding.includes("state HOLDING_READY") && holding.includes("latest attempts none"),
+        qDuringApproach.includes("phase APPROACHING") && !qDuringApproach.includes("state NONE"),
       windupHandsAuthorityToS2S3S4:
         committedBlocked.includes("state NONE") &&
         committedBlocked.includes("responsibility OWNED") &&
         committedBlocked.includes("blocked YES"),
       releaseCompletesMaterialContribution:
-        interrupted.includes("interrupted by companion"),
-      playerMotionReanchorsReadiness:
-        Math.hypot(anchorAfter.x - anchorBefore.x, anchorAfter.y - anchorBefore.y) > 0.35
+        interrupted.includes("interrupted by companion")
     },
     errors
   };
