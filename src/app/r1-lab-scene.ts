@@ -12,6 +12,10 @@ import {
   type S2SituatedResponsibilityDecision
 } from "../brain/situated-responsibility";
 import {
+  proposeS3MaterialContribution,
+  type S3MaterialContributionProposal
+} from "../brain/s3-material-contribution";
+import {
   PlayerDirectiveRuntime,
   arbitrateCompanionAction,
   type CompanionArbitrationDecision,
@@ -214,6 +218,8 @@ export class R1LabScene extends Phaser.Scene {
   private sharedPressure: SharedPressureSnapshot | null = null;
   private sharedDanger: SharedDangerSnapshot | null = null;
   private situatedResponsibility: S2SituatedResponsibilityDecision | null = null;
+  private s3AuthorityEnabled = false;
+  private s3Contribution: S3MaterialContributionProposal | null = null;
   private pendingActionAttempts: WorldActionAttempt[] = [];
   private lastActionOutcomes: readonly WorldActionOutcome[] = [];
   private lastSharedDangerEpisodeOutcome: SharedDangerEpisodeOutcome = "NONE";
@@ -393,6 +399,7 @@ export class R1LabScene extends Phaser.Scene {
     this.sharedPressure = pressureBefore;
     this.autonomousProposalDecision = null;
     this.arbitrationDecision = null;
+    this.s3Contribution = null;
 
     const relationshipSemantic = (
       this.companionMode === "relational" || this.companionMode === "spatial"
@@ -410,7 +417,28 @@ export class R1LabScene extends Phaser.Scene {
       };
     })() : null;
 
-    if (this.companionMode === "manual") {
+    if (this.scenarioId === "shared-danger" && this.s3AuthorityEnabled) {
+      this.relationalDecision = null;
+      this.spatialDecision = null;
+      const proposal = proposeS3MaterialContribution({
+        snapshot: before,
+        responsibility: this.situatedResponsibility,
+        rules: S1_SHARED_DANGER_RULES
+      });
+      this.s3Contribution = proposal;
+      companionIntent = proposal.motionIntent;
+      if (
+        proposal.actionAttempt &&
+        !this.pendingActionAttempts.some((attempt) => attempt.actorId === "companion")
+      ) {
+        this.pendingActionAttempts.push(proposal.actionAttempt);
+        this.logEvent("S3 autonomous companion INTERVENE queued from OWNED responsibility");
+      }
+      if (proposal.focusId === "hostile") {
+        target = { ...actor(before, "hostile").position };
+        objectiveKey = `s3:${proposal.kind.toLowerCase()}:hostile`;
+      }
+    } else if (this.companionMode === "manual") {
       this.relationalDecision = null;
       this.spatialDecision = null;
       companionIntent = {
@@ -1320,7 +1348,9 @@ export class R1LabScene extends Phaser.Scene {
           this.lastActionOutcomes.length > 0
             ? `latest attempts ${this.lastActionOutcomes.map((outcome) => `${outcome.actorId}:${outcome.status}@${compact(outcome.distance)}m`).join(" · ")}`
             : "latest attempts none",
-          "S1 apparatus only · companion authority locked to MANUAL"
+          this.s3AuthorityEnabled
+            ? "S3 bounded authority ON · S1 manual baseline overridden for research"
+            : "S1 apparatus only · companion authority locked to MANUAL"
         ]
       }] : []),
       ...(apparatusActive && this.situatedResponsibility ? [{
@@ -1335,7 +1365,23 @@ export class R1LabScene extends Phaser.Scene {
           `companion↔hostile ${compactNullable(this.situatedResponsibility.evidence.companionToHostileDistance)}m · straight-line reach ${this.situatedResponsibility.evidence.straightLineTicksToInterventionRange ?? "n/a"}t · consequence window ${this.situatedResponsibility.evidence.consequenceTicksRemaining ?? "n/a"}t`,
           `basis ${this.situatedResponsibility.reasonCode}`,
           this.situatedResponsibility.reason,
-          "S2 ZERO AUTHORITY · observation/responsibility cannot emit movement or action"
+          "S2 ZERO AUTHORITY · the judgement itself cannot emit movement or action"
+        ]
+      }] : []),
+      ...(apparatusActive ? [{
+        id: "s3-contribution",
+        title: "S3 bounded material contribution",
+        tone: this.s3AuthorityEnabled
+          ? this.s3Contribution?.kind === "INTERVENE"
+            ? "success" as const
+            : "warning" as const
+          : "normal" as const,
+        lines: [
+          `authority ${this.s3AuthorityEnabled ? "ON" : "OFF"}`,
+          `proposal ${this.s3Contribution?.kind ?? "NOT_EVALUATED"} · focus ${this.s3Contribution?.focusId ?? "none"} · distance ${compactNullable(this.s3Contribution?.distanceToFocus ?? null)}m`,
+          `world action ${this.s3Contribution?.actionAttempt?.kind ?? "none"}`,
+          this.s3Contribution?.reason ?? "S3 is dormant until bounded authority is explicitly enabled",
+          "S3 authority is fixture-local and downstream of S2 responsibility; no command grammar"
         ]
       }] : []),
       {
@@ -1668,6 +1714,7 @@ export class R1LabScene extends Phaser.Scene {
     else if (action === "scenario-shared-danger") void this.loadScenario("shared-danger");
     else if (action === "s1-player-intervene") this.queueWorldAction("player");
     else if (action === "s1-companion-intervene") this.queueWorldAction("companion");
+    else if (action === "toggle-s3-authority") this.toggleS3Authority();
   }
 
   private queueWorldAction(actorId: "player" | "companion"): void {
@@ -1681,6 +1728,16 @@ export class R1LabScene extends Phaser.Scene {
     }
     this.pendingActionAttempts.push({ actorId, kind: "INTERVENE", targetId: "hostile" });
     this.logEvent(`S1 INTERVENE queued · ${actorId}`);
+  }
+
+  private toggleS3Authority(): void {
+    if (this.scenarioId !== "shared-danger") {
+      this.logEvent("S3 authority ignored outside shared-danger apparatus");
+      return;
+    }
+    this.s3AuthorityEnabled = !this.s3AuthorityEnabled;
+    this.s3Contribution = null;
+    this.logEvent(`S3 bounded material authority ${this.s3AuthorityEnabled ? "ON" : "OFF"}`);
   }
 
   private issuePlayerDirective(kind: PlayerDirectiveKind): void {
@@ -1752,7 +1809,7 @@ export class R1LabScene extends Phaser.Scene {
 
   private cycleCompanionMode(): void {
     if (this.scenarioId === "shared-danger") {
-      this.logEvent("S1 apparatus keeps companion authority MANUAL");
+      this.logEvent("shared-danger keeps legacy companion mode MANUAL; S3 bounded authority is a separate research gate");
       return;
     }
     const index = COMPANION_MODES.indexOf(this.companionMode);
@@ -1869,6 +1926,8 @@ export class R1LabScene extends Phaser.Scene {
       this.pendingActionAttempts.length = 0;
       this.lastActionOutcomes = [];
       this.lastSharedDangerEpisodeOutcome = "NONE";
+      this.s3AuthorityEnabled = false;
+      this.s3Contribution = null;
       this.playerTrail.length = 0;
       this.companionTrail.length = 0;
       this.causalTrace.reset();
