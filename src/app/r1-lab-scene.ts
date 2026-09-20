@@ -231,6 +231,7 @@ export class R1LabScene extends Phaser.Scene {
   private s3Contribution: S3MaterialContributionProposal | null = null;
   private s4WithholdEnabled = false;
   private s4CorrectionDecision: S4CorrectionDecision | null = null;
+  private sharedDangerReadinessEnabled = false;
   private sharedDangerReadiness: SharedDangerReadinessDecision | null = null;
   private pendingActionAttempts: WorldActionAttempt[] = [];
   private lastActionOutcomes: readonly WorldActionOutcome[] = [];
@@ -452,14 +453,16 @@ export class R1LabScene extends Phaser.Scene {
       });
       this.s4CorrectionDecision = correction;
 
-      const readiness = evaluateSharedDangerReadiness({
-        snapshot: before,
-        danger: this.sharedDanger,
-        responsibility: this.situatedResponsibility
-      });
+      const readiness = this.sharedDangerReadinessEnabled
+        ? evaluateSharedDangerReadiness({
+            snapshot: before,
+            danger: this.sharedDanger,
+            responsibility: this.situatedResponsibility
+          })
+        : null;
       this.sharedDangerReadiness = readiness;
 
-      if (proposal.kind === "NONE" && readiness.state !== "NONE") {
+      if (proposal.kind === "NONE" && readiness && readiness.state !== "NONE") {
         companionIntent = readiness.motionIntent;
         if (readiness.target) {
           target = { ...readiness.target };
@@ -1491,7 +1494,7 @@ export class R1LabScene extends Phaser.Scene {
             ? "warning" as const
             : "normal" as const,
         lines: [
-          `state ${this.sharedDangerReadiness.state} · basis ${this.sharedDangerReadiness.reasonCode}`,
+          `authority ${this.sharedDangerReadinessEnabled ? "ON" : "OFF"} · state ${this.sharedDangerReadiness.state} · basis ${this.sharedDangerReadiness.reasonCode}`,
           this.sharedDangerReadiness.target
             ? `guard target ${compact(this.sharedDangerReadiness.target.x)}, ${compact(this.sharedDangerReadiness.target.y)} · companion gap ${compactNullable(this.sharedDangerReadiness.companionToTargetDistance)}m`
             : "guard target none",
@@ -2104,6 +2107,7 @@ export class R1LabScene extends Phaser.Scene {
       this.lastActionOutcomes = [];
       this.lastSharedDangerEpisodeOutcome = "NONE";
       this.s3AuthorityEnabled = this.teammateSpecimenSurface && id === "shared-danger";
+      this.sharedDangerReadinessEnabled = this.teammateSpecimenSurface && id === "shared-danger";
       this.s3Contribution = null;
       this.s4WithholdEnabled = false;
       this.s4CorrectionDecision = null;
