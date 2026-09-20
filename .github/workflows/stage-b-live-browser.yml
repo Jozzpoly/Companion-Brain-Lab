@@ -1,0 +1,58 @@
+name: stage-b-live-browser
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/app/r1-lab-scene.ts"
+      - "src/brain/r1-workbench-spatial-stack.ts"
+      - "src/brain/stage-b-partner.ts"
+      - "src/world/shared-pressure.ts"
+      - "src/world/world.ts"
+      - "src/debug/causal-frame-trace.ts"
+      - "scripts/stage-b-live-browser-smoke.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/stage-b-live-browser.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: stage-b-live-browser-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SOURCE_SHA: ${{ github.sha }}
+      GITHUB_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: |
+          if npm install; then
+            exit 0
+          fi
+          latest_log="$(ls -t "$HOME"/.npm/_logs/*-debug-0.log 2>/dev/null | head -n 1 || true)"
+          if [ -z "$latest_log" ] || ! grep -Fq "Cannot read properties of null (reading 'edgesOut')" "$latest_log"; then
+            if [ -n "$latest_log" ]; then cat "$latest_log"; fi
+            exit 1
+          fi
+          rm -rf node_modules
+          npm install --legacy-peer-deps
+      - name: Build ordinary runtime
+        run: npm run build
+      - name: Stage B ordinary-browser gate
+        run: npm run browser:stage-b
+      - name: Upload Stage B browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage-b-live-browser-${{ github.sha }}
+          path: artifacts/stage-b-live-browser/
+          if-no-files-found: warn
+          retention-days: 14
