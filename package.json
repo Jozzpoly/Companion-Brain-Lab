@@ -27,7 +27,8 @@
     "browser:audit:os-prep3-ph07": "node scripts/os-prep3-ph07-pillar-mirror-browser-specimen.mjs",
     "browser:audit:os-prep5-owner": "node scripts/os-prep5-owner-sandbox-candidate-browser-specimen.mjs",
     "browser:command-autonomy": "node scripts/command-autonomy-browser-smoke.mjs",
-    "browser:s1-apparatus": "node scripts/s1-shared-danger-browser-smoke.mjs"
+    "browser:s1-apparatus": "node scripts/s1-shared-danger-browser-smoke.mjs",
+    "browser:s2-responsibility": "node scripts/s2-situated-responsibility-browser-smoke.mjs"
   },
   "dependencies": {
     "@dimforge/rapier2d-deterministic-compat": "0.20.0",
