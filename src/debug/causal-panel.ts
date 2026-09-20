@@ -59,7 +59,7 @@ const DEFAULT_LAYERS: Readonly<Record<WorldDebugLayer, boolean>> = {
   contacts: true
 };
 
-const DEFAULT_OPEN_SECTION_IDS = new Set(["stage-b", "run", "recovery", "route", "motion", "a1", "p2"]);
+const DEFAULT_OPEN_SECTION_IDS = new Set(["direction", "run", "stage-b", "recovery", "route", "motion", "a1", "p2"]);
 
 export class CausalPanelDisclosureState {
   private readonly remembered = new Map<string, boolean>();
@@ -95,8 +95,6 @@ function layerLabel(layer: WorldDebugLayer): string {
 export class CausalPanel {
   private readonly root: HTMLElement;
   private readonly ownerSandboxSurface: boolean;
-  private readonly teammateSandboxSurface: boolean;
-  private readonly participantSurface: boolean;
   private readonly content: HTMLElement;
   private readonly title: HTMLElement;
   private readonly subtitle: HTMLElement;
@@ -113,22 +111,12 @@ export class CausalPanel {
     this.root = root;
     this.root.replaceChildren();
     const participantParams = new URLSearchParams(window.location.search);
-    this.teammateSandboxSurface = participantParams.get("teammate") === "1";
-    this.ownerSandboxSurface =
-      !this.teammateSandboxSurface && participantParams.get("owner") === "1";
-    this.participantSurface = this.ownerSandboxSurface || this.teammateSandboxSurface;
-    if (this.participantSurface) {
+    this.ownerSandboxSurface = participantParams.get("owner") === "1";
+    if (this.ownerSandboxSurface) {
       this.collapsed = true;
-      this.root.classList.add("is-collapsed");
-      if (this.teammateSandboxSurface) {
-        this.root.classList.add("is-teammate-sandbox");
-        this.root.setAttribute("aria-label", "Stage B companion review controls");
-        document.title = "Companion Brain Lab — Stage B Slice";
-      } else {
-        this.root.classList.add("is-owner-sandbox");
-        this.root.setAttribute("aria-label", "Owner movement review controls");
-        document.title = "Companion Brain Lab — Movement Review";
-      }
+      this.root.classList.add("is-collapsed", "is-owner-sandbox");
+      this.root.setAttribute("aria-label", "Owner movement review controls");
+      document.title = "Companion Brain Lab — Movement Review";
     }
 
     for (const [layer, visible] of Object.entries(DEFAULT_LAYERS) as Array<[WorldDebugLayer, boolean]>) {
@@ -161,7 +149,7 @@ export class CausalPanel {
       collapse.title = this.collapsed ? "Expand research panel" : "Collapse debug panel";
     });
 
-    collapse.hidden = this.participantSurface;
+    collapse.hidden = this.ownerSandboxSurface;
     header.append(heading, this.badge, collapse);
 
     this.content = document.createElement("div");
@@ -249,13 +237,13 @@ export class CausalPanel {
 
     this.content.append(controls, layers, this.sectionsRoot, hint);
 
-    if (this.participantSurface) {
+    if (this.ownerSandboxSurface) {
       const ownerControls = document.createElement("section");
       ownerControls.className = "owner-review-controls";
 
       const ownerTitle = document.createElement("strong");
       ownerTitle.className = "owner-review-title";
-      ownerTitle.textContent = this.teammateSandboxSurface ? "Stage B slice" : "Movement review";
+      ownerTitle.textContent = "Movement review";
 
       const ownerHint = document.createElement("span");
       ownerHint.className = "owner-review-hint";
@@ -263,7 +251,7 @@ export class CausalPanel {
 
       ownerControls.append(ownerTitle, ownerHint);
 
-      if (!this.teammateSandboxSurface) {
+      if (true) {
         const scenarios = document.createElement("div");
         scenarios.className = "owner-review-scenarios";
         scenarios.append(
@@ -298,7 +286,7 @@ export class CausalPanel {
   }
 
   layerVisible(layer: WorldDebugLayer): boolean {
-    if (this.participantSurface) return false;
+    if (this.ownerSandboxSurface) return false;
     return this.layerValues.get(layer) ?? false;
   }
 

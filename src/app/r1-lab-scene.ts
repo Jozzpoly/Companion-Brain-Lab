@@ -64,12 +64,8 @@ import type {
   WorldSnapshot
 } from "../world/types";
 import { LabWorld } from "../world/world";
-import {
-  isOwnerReviewSearch,
-  isTeammateReviewSearch,
-  ownerReviewAllowsPanelAction,
-  teammateReviewAllowsPanelAction
-} from "./owner-review-mode";
+import { isOwnerReviewSearch, ownerReviewAllowsPanelAction } from "./owner-review-mode";
+import { PlayerCommandHud } from "./player-command-hud";
 import { bindWorldStaticTraversalQuery } from "./static-traversal-query-adapter";
 
 const VIEW_WIDTH = 1200;
@@ -184,7 +180,7 @@ export class R1LabScene extends Phaser.Scene {
   private naturalActuator = true;
   private timeScaleIndex = 2;
   private ownerReviewSurface = false;
-  private teammateReviewSurface = false;
+  private commandHud!: PlayerCommandHud;
 
   private readonly relationalBrain = new RelationalPositioningBrain();
   private readonly relationshipOrientation = new RelationshipOrientationTracker();
@@ -219,7 +215,7 @@ export class R1LabScene extends Phaser.Scene {
   private keys!: Record<
     "w" | "a" | "s" | "d" | "up" | "down" | "left" | "right" |
     "reset" | "pause" | "step" | "mode" | "incident" | "natural" | "time" |
-    "one" | "two" | "three" | "four",
+    "one" | "two" | "three" | "four" | "f1" | "f2" | "f3",
     Phaser.Input.Keyboard.Key
   >;
 
@@ -229,10 +225,8 @@ export class R1LabScene extends Phaser.Scene {
 
   create(): void {
     this.ownerReviewSurface = isOwnerReviewSearch(window.location.search);
-    this.teammateReviewSurface = isTeammateReviewSearch(window.location.search);
-    if (this.ownerReviewSurface || this.teammateReviewSurface) {
-      // Participant surfaces are immutable stimuli. Research controls remain
-      // available only through the ordinary workbench entrypoint.
+    if (this.ownerReviewSurface) {
+      // Historical movement-review identity remains frozen for comparison only.
       this.companionMode = "spatial";
       this.naturalActuator = true;
       this.timeScaleIndex = 2;
@@ -241,6 +235,7 @@ export class R1LabScene extends Phaser.Scene {
 
     this.graphics = this.add.graphics();
     this.panel = new CausalPanel((action) => this.handlePanelAction(action));
+    this.commandHud = new PlayerCommandHud((kind) => this.issuePlayerDirective(kind));
 
     const keyboard = this.input.keyboard;
     if (!keyboard) throw new Error("Keyboard input is required for R1 workbench.");
@@ -263,7 +258,10 @@ export class R1LabScene extends Phaser.Scene {
       one: Phaser.Input.Keyboard.KeyCodes.ONE,
       two: Phaser.Input.Keyboard.KeyCodes.TWO,
       three: Phaser.Input.Keyboard.KeyCodes.THREE,
-      four: Phaser.Input.Keyboard.KeyCodes.FOUR
+      four: Phaser.Input.Keyboard.KeyCodes.FOUR,
+      f1: Phaser.Input.Keyboard.KeyCodes.F1,
+      f2: Phaser.Input.Keyboard.KeyCodes.F2,
+      f3: Phaser.Input.Keyboard.KeyCodes.F3
     }) as typeof this.keys;
 
     void this.loadScenario(this.scenarioId);
@@ -1138,6 +1136,12 @@ export class R1LabScene extends Phaser.Scene {
     const autonomousProposal = this.autonomousProposalDecision;
     const arbitration = this.arbitrationDecision;
 
+    this.commandHud.update({
+      directive,
+      selectedAction: arbitration?.selectedKind ?? null,
+      arbitrationSource: arbitration?.source ?? null
+    });
+
     const sections: CausalPanelModel["sections"] = [
       {
         id: "direction",
@@ -1411,9 +1415,6 @@ export class R1LabScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keys.reset)) void this.loadScenario(this.scenarioId);
     if (Phaser.Input.Keyboard.JustDown(this.keys.incident)) this.captureIncident();
 
-    // Stage B teammate review is intentionally one Open-field stimulus.
-    if (this.teammateReviewSurface) return;
-
     if (Phaser.Input.Keyboard.JustDown(this.keys.one)) void this.loadScenario("open");
     if (Phaser.Input.Keyboard.JustDown(this.keys.two)) void this.loadScenario("pillar");
     if (Phaser.Input.Keyboard.JustDown(this.keys.three)) void this.loadScenario("doorway");
@@ -1421,6 +1422,9 @@ export class R1LabScene extends Phaser.Scene {
 
     if (this.ownerReviewSurface) return;
 
+    if (Phaser.Input.Keyboard.JustDown(this.keys.f1)) this.issuePlayerDirective("AT_WILL");
+    if (Phaser.Input.Keyboard.JustDown(this.keys.f2)) this.issuePlayerDirective("FOLLOW_ME");
+    if (Phaser.Input.Keyboard.JustDown(this.keys.f3)) this.issuePlayerDirective("HOLD_HERE");
     if (Phaser.Input.Keyboard.JustDown(this.keys.pause)) this.togglePause();
     if (Phaser.Input.Keyboard.JustDown(this.keys.step)) this.queueSingleStep();
     if (Phaser.Input.Keyboard.JustDown(this.keys.mode)) this.cycleCompanionMode();
@@ -1429,10 +1433,6 @@ export class R1LabScene extends Phaser.Scene {
   }
 
   private handlePanelAction(action: CausalPanelAction): void {
-    if (this.teammateReviewSurface && !teammateReviewAllowsPanelAction(action)) {
-      this.logEvent(`Teammate review ignored non-participant action ${action}`);
-      return;
-    }
     if (this.ownerReviewSurface && !ownerReviewAllowsPanelAction(action)) {
       this.logEvent(`Owner review ignored research action ${action}`);
       return;
@@ -1578,9 +1578,7 @@ export class R1LabScene extends Phaser.Scene {
     const anchor = document.createElement("a");
     const sourceLabel = incident.build.sourceSha?.slice(0, 12) ?? "unbound";
     anchor.href = url;
-    anchor.download = this.teammateReviewSurface
-      ? `companion-stage-b-${sourceLabel}-${snapshot.scenarioId}-tick-${snapshot.tick}.json`
-      : `companion-os-prep-${sourceLabel}-${snapshot.scenarioId}-tick-${snapshot.tick}.json`;
+    anchor.download = `companion-workbench-${sourceLabel}-${snapshot.scenarioId}-tick-${snapshot.tick}.json`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
