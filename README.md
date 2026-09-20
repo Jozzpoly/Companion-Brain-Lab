@@ -15,14 +15,15 @@ That file outranks historical plans, old experiment names, closed PRs, deleted b
 - **Foundation / movement survival:** `PASS · REWORK-READY`.
 - The Owner already accepted that the movement foundation is good enough to **move on**. Do not reopen that gate without a new concrete falsification.
 - The 2026-09-20 OS-PREP-5 movement review was rejected as a **redundant Owner gate**: ordinary live behavior was still too similar to the previously accepted movement organism.
-- The project has a strong physical / causal / research substrate, but it has **not yet built the original broad minimum-useful-partner**. The authoritative world still lacks the real shared responsibility that should make the companion useful rather than merely well-instrumented.
-- The next product frontier is therefore **live teammate behavior**, not another movement-only review campaign.
+- The project has a strong physical / causal / research substrate and now has its **first machine-qualified live shared-responsibility authority**: in the Open fixture the ordinary SPATIAL/NATURAL companion can autonomously switch from regrouping to `RESPOND_TO_THREAT`, physically contain a deterministic world pressure, produce a World-owned outcome, and return to regrouping.
+- This is **not yet an Owner/gameplay PASS or the broad minimum-useful-partner**. The pressure source is deliberately minimal and abstract; browser/perceptual qualification is the immediate frontier before mechanics expand.
+- The product frontier remains **live teammate behavior**, not another movement-only review campaign.
 
 ## North star
 
 > During unscripted play, the Owner increasingly treats the companion as a teammate: can rely on it without babysitting, can predict enough to coordinate, notices meaningful initiative, and can correct or direct it quickly when desired.
 
-Near-term work should create a visibly different ordinary companion by introducing the smallest real shared responsibility / pressure loop that exercises attention, action identity, assistance, engagement/disengagement and recovery.
+Near-term work should now qualify and deepen the first live shared-responsibility loop until the rendered ordinary companion is unmistakably different from the old follower organism. Expansion is justified only by concrete deficits exposed by that qualification.
 
 ## Repository discipline
 

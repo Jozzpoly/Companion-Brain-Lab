@@ -109,15 +109,26 @@ Strong current donors / invariants include:
 - trustworthy incident/provenance tooling;
 - participant-first judgement plus causal microscope when needed.
 
-### Not yet the intended teammate
+### First teammate authority now exists, but minimum-useful-partner is not yet earned
 
-The authoritative world has not yet seriously exercised:
+As of the Stage B Slice 0 checkpoint `b6db640ba008be6d16b750bad5e9022d8d4e59ee`, the ordinary SPATIAL/NATURAL companion now seriously exercises a first bounded subset that the movement-only organism did not:
 
-- situational responsibility;
-- threat / tactical focus;
-- meaningful action/intention identity;
-- assistance toward an external shared goal;
-- engage / disengage decisions;
+- an external shared-world pressure can become authoritative;
+- the companion exposes explicit live action identity: `REGROUP` or `RESPOND_TO_THREAT`;
+- active pressure temporarily outranks ordinary relationship positioning;
+- the existing physical/routing/NATURAL chain realizes that new objective rather than a shadow layer;
+- World observes the post-physics result and owns `CONTAINED` / `BREACHED` outcome evidence;
+- after containment the companion relinquishes the pressure objective and returns to relationship/regroup behavior;
+- causal frames/incidents distinguish baseline relationship target, live objective target, action identity and factual pressure outcome.
+
+This is **machine-qualified new authority, not an Owner/gameplay PASS**. The current pressure source is deliberately minimal and abstract; it is not yet combat and does not establish good teammate feel.
+
+Still not seriously exercised:
+
+- a tangible hostile/combat interaction;
+- richer threat / tactical focus and target choice;
+- assistance that can vary meaningfully with player action;
+- nuanced engage / disengage decisions;
 - pre-combat readiness;
 - explicit corrigibility / player commands;
 - autonomy vs obedience conflict;
@@ -125,7 +136,7 @@ The authoritative world has not yet seriously exercised:
 - few-companion cooperation;
 - live higher-cognition input.
 
-The current companion is therefore best understood as a **well-instrumented embodied movement/cooperation substrate**, not yet the minimum useful partner envisioned at project start.
+The current companion is therefore no longer only a movement substrate, but it is **still not yet the broad minimum useful partner** envisioned at project start.
 
 ---
 
@@ -133,17 +144,35 @@ The current companion is therefore best understood as a **well-instrumented embo
 
 ### Stage B Recovery — from instrumented follower to first useful partner
 
-The next campaign must create **ordinary live behavior that is perceptually and causally different**, not another shadow-only research layer around the old organism.
+The campaign must create **ordinary live behavior that is perceptually and causally different**, not another shadow-only research layer around the old organism.
 
-The first bounded vertical slice should introduce the smallest real **shared responsibility / pressure loop** in the authoritative world.
+#### Slice 0 — implemented and machine-qualified, Owner-unqualified
 
-A strong current direction is:
+The first bounded vertical slice now exists on ordinary live authority:
 
-`world pressure/threat → attention/responsibility → explicit action identity → assistance/engagement → disengage/regroup → factual outcome`
+`world pressure/threat → RESPONSIBILITY: RESPOND_TO_THREAT → existing physical movement authority → sustained physical response → World CONTAINED/BREACHED → REGROUP`
 
-The exact mechanics are not frozen by this document. The implementation should be chosen against current code and falsifiers.
+Current scope is intentionally narrow:
 
-A simple hostile / deterministic pressure source and minimal world-authoritative melee are legitimate apparatus if they are the cheapest truthful way to make assistance matter. Do **not** expand immediately into a full combat game.
+- enabled only in the Open fixture;
+- deterministic pressure source, not a full hostile actor;
+- no player command is required for the companion to assume bounded responsibility;
+- no new combat architecture;
+- no claim yet that the rendered/playable experience is good enough to show the Owner.
+
+Machine evidence at `b6db640ba008be6d16b750bad5e9022d8d4e59ee`:
+
+- TypeScript PASS;
+- **176 test files / 661 tests PASS**;
+- production build PASS;
+- `stage-b-live-partner.integration.test.ts` drives `LabWorld + R1 NATURAL + routing + post-World pressure` with zero player movement input and proves that the companion notices the pressure, switches to `RESPOND_TO_THREAT`, physically contains it, produces a World-owned `CONTAINED by companion` outcome, then returns to `REGROUP` without a breach;
+- the focused Stage B live-chain test itself completes in about 0.87 s; the ~39.8 s full Vitest duration is dominated by the existing historical test corpus.
+
+The next question is no longer “can we wire shared responsibility into authority?”. It is:
+
+> **does the actual rendered ordinary runtime make this new responsibility legible, causally trustworthy and perceptually unlike the old follower organism?**
+
+Qualify that in-browser before expanding mechanics. If the pressure-zone apparatus is too abstract to produce meaningful teammate judgement, replace or deepen the apparatus (for example with the smallest tangible hostile/minimal combat interaction) rather than polishing the abstraction indefinitely.
 
 ### Required perceptual criterion
 
@@ -297,6 +326,13 @@ Do **not** spend the next tranche:
 - creating a huge combat architecture;
 - designing final commands / multi-companion / LLM systems prematurely.
 
-Do spend it on the smallest truthful vertical slice that lets the companion **share responsibility for something the player actually cares about in the world**.
+The smallest truthful shared-responsibility slice now exists and is machine-qualified.
+
+Current execution frontier:
+
+1. qualify the default rendered runtime in-browser without spending Owner attention: verify the live action switch, visible pressure, factual containment/breach transition, regroup transition, provenance and absence of runtime errors;
+2. falsify whether the current abstract pressure source is perceptually sufficient to demonstrate a teammate rather than merely a new objective marker;
+3. if insufficient, deepen the apparatus only as far as needed for a tangible shared problem (likely the smallest hostile/minimal-combat interaction), reusing Foundation movement rather than reopening it;
+4. ask for Owner judgement only when the ordinary build is unmistakably doing something the old movement organism could not.
 
 That is the current frontier.
