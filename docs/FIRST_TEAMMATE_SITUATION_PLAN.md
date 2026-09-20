@@ -639,10 +639,27 @@ Bounded candidate:
 - `APPROACHING`;
 - S2 `TRACKING`;
 - S2 responsibility `NONE`;
-- one player-anchored hostile-facing guard position;
+- one player-anchored hostile-facing intercept flank;
 - movement/preparation only;
 - no `INTERVENE` attempt;
-- stop/hold if spacing is too compressed;
+- hold after reaching the off-axis flank;
 - `WINDUP` remains the transition into the existing S2→S3 contribution path.
 
 This tranche also authorizes only the minimal semantic world rendering needed to make readiness and action provenance participant-readable. It does not authorize a general art pipeline or cosmetic milestone.
+
+
+### Readiness representation correction — artifact falsification
+
+The first machine-qualified readiness implementation placed the companion directly on the player→hostile axis. Browser mechanics passed, but participant artifact review rejected that representation: the S1 hostile is a sensor and can pass through the companion, so an on-axis posture visually promises a body-block that does not materially exist.
+
+This is a representation FAIL, not a reason to promote solid-body combat physics prematurely.
+
+The revised bounded hypothesis is an **off-axis player-local intercept flank**:
+
+- slightly forward from the player toward the hostile;
+- laterally displaced from the hostile's direct player-bound path;
+- close enough that a later committed hostile can still be explicitly interrupted within the existing World action range;
+- preparation movement cannot itself block or resolve the hostile;
+- reaching the flank becomes `HOLDING_READY` until the causal situation changes.
+
+This correction preserves the key S1 invariant `movement ≠ intervention` while making pre-contact preparation spatially distinct.
