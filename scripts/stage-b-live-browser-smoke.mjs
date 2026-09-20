@@ -113,6 +113,61 @@ try {
   );
   invariant(firstThreatPosition, "Stage B active panel exposed no advancing threat position.");
 
+  const followButton = page.getByRole("button", { name: "Follow me", exact: true });
+  const holdButton = page.getByRole("button", { name: "Hold here", exact: true });
+  const atWillButton = page.getByRole("button", { name: "At will", exact: true });
+  invariant(await followButton.isVisible(), "Player-direction Follow me control is missing.");
+  invariant(await holdButton.isVisible(), "Player-direction Hold here control is missing.");
+  invariant(await atWillButton.isVisible(), "Player-direction At will control is missing.");
+
+  await followButton.click();
+  const followConflict = await waitForPanel(
+    page,
+    (text) =>
+      hasOrdinaryBaseline(text) &&
+      text.includes("world pressure ACTIVE") &&
+      text.includes("directive FOLLOW_ME") &&
+      text.includes("local brain proposes RESPOND_TO_THREAT") &&
+      text.includes("selected FOLLOW_PLAYER · source PLAYER_DIRECTIVE") &&
+      text.includes("FOLLOW_ME currently outranks the autonomous threat-response proposal"),
+    8_000,
+    "FOLLOW_ME versus autonomous threat proposal"
+  );
+
+  await page.screenshot({
+    path: `${ROOT}/command-conflict-follow.png`,
+    type: "png",
+    fullPage: true
+  });
+
+  await holdButton.click();
+  const holdConflict = await waitForPanel(
+    page,
+    (text) =>
+      hasOrdinaryBaseline(text) &&
+      text.includes("world pressure ACTIVE") &&
+      text.includes("directive HOLD_HERE") &&
+      text.includes("hold anchor") &&
+      text.includes("local brain proposes RESPOND_TO_THREAT") &&
+      text.includes("selected HOLD_POSITION · source PLAYER_DIRECTIVE") &&
+      text.includes("HOLD_HERE currently outranks the autonomous threat-response proposal"),
+    8_000,
+    "HOLD_HERE versus autonomous threat proposal"
+  );
+
+  await atWillButton.click();
+  const autonomyRestored = await waitForPanel(
+    page,
+    (text) =>
+      hasOrdinaryBaseline(text) &&
+      text.includes("world pressure ACTIVE") &&
+      text.includes("directive AT_WILL") &&
+      text.includes("local brain proposes RESPOND_TO_THREAT") &&
+      text.includes("selected RESPOND_TO_THREAT · source AUTONOMY"),
+    8_000,
+    "AT_WILL restoration of local autonomy"
+  );
+
   const advancing = await waitForPanel(
     page,
     (text) => {
@@ -199,6 +254,23 @@ try {
       firstThreatPosition,
       advancingThreatPosition,
       observedThreatMovement: distance(firstThreatPosition, advancingThreatPosition)
+    },
+    commandAutonomy: {
+      followMe: {
+        directiveVisible: followConflict.includes("directive FOLLOW_ME"),
+        autonomousProposalPreserved: followConflict.includes("local brain proposes RESPOND_TO_THREAT"),
+        selected: "FOLLOW_PLAYER",
+        source: "PLAYER_DIRECTIVE"
+      },
+      holdHere: {
+        directiveVisible: holdConflict.includes("directive HOLD_HERE"),
+        autonomousProposalPreserved: holdConflict.includes("local brain proposes RESPOND_TO_THREAT"),
+        selected: "HOLD_POSITION",
+        source: "PLAYER_DIRECTIVE"
+      },
+      atWill: {
+        autonomyRestored: autonomyRestored.includes("selected RESPOND_TO_THREAT · source AUTONOMY")
+      }
     },
     factualOutcome: {
       tick: containedTick,
