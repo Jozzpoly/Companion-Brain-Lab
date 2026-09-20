@@ -633,40 +633,115 @@ S3 claim limits:
 - S3 authority is a workbench research toggle, not product UX;
 - no general threat selection, engagement policy, combat loop, tactical competence, trust, teammate feel or Owner approval has been earned.
 
-### Active gate — S4 corrigibility / player agency
+### S4 qualification — corrigibility / player agency
 
-The first material autonomous behavior now exists. This is the first point at which player correction is a real question rather than speculative command UI.
+Status:
 
-Do **not** resurrect the post-FAIL `AT_WILL / FOLLOW_ME / HOLD_HERE` grammar as product design.
+> **MACHINE-QUALIFIED BOUNDED CORRECTION SEAM · NOT A GENERAL COMMAND SYSTEM**
 
-S4 should begin with one bounded research correction:
+Qualified run:
 
-> **WITHHOLD THIS COMPANION INTERVENTION**
+`s4-corrigibility-browser #1 · SUCCESS`
 
-The correction must sit **after** cognition/proposal and **before** execution.
+Supporting regression after integration:
 
-Required evidence:
+- `s1-shared-danger-browser #19 · SUCCESS`;
+- `s4-corrigibility-browser #3 · SUCCESS`.
 
-1. S2 may remain `OWNED`; the correction must not falsify or erase what the companion currently believes.
-2. S3's raw material proposal remains inspectable.
-3. while correction is active, effective companion movement/action for that contribution is blocked.
-4. player can still materially act on the same problem.
-5. releasing the correction before consequence lets the still-valid autonomous proposal re-emerge without issuing a new command.
-6. the correction must not become a permanent global obedience mode or a new product command grammar.
+Earned claim:
 
-Only after this narrow correction tension is qualified should the project ask whether richer direction such as follow/hold/engage deserves promotion from historical donor evidence.
+> a player correction can constrain effective execution of an autonomous material contribution while S2's situated judgement and the raw S3 proposal remain intact and inspectable.
 
-### Do not spend the next tranche on
+Demonstrated counterfactuals:
 
-- polishing S1 hostile visuals or sensor physics without an S4/S5 falsifier;
-- general command UI;
-- HP/inventory/factions/multi-enemy combat;
-- general-purpose planner/utility architecture;
-- CCC/A1/S5 promotion by code volume;
+- without correction, bounded S3 autonomy can interrupt the hostile;
+- with correction active, S2 can remain `OWNED` and raw S3 can still propose contribution while effective movement/action is zeroed;
+- player can intervene while companion execution is withheld and own the factual World outcome;
+- releasing correction before consequence allows the still-valid autonomy to resume without a second instruction.
+
+This validates the **placement of corrigibility downstream from cognition**, not any final command vocabulary, key binding or UX.
+
+### Integrated participant path — machine PASS, pre-Owner FAIL
+
+Current participant route:
+
+`?teammate=1`
+
+Machine-qualified properties:
+
+- same ordinary runtime;
+- shared-danger starts directly;
+- bounded S3 autonomy starts active without debug ceremony;
+- full Causal Workbench starts collapsed but remains expandable in the same runtime;
+- manual companion participant control is hidden/disabled;
+- temporary hold-`Q` correction can constrain intervention;
+- player can still own the outcome;
+- releasing `Q` restores valid autonomy.
+
+Qualified run:
+
+`teammate-participant-browser #4 · SUCCESS` at `0aca54a…`.
+
+However participant-first artifact review is a **PRE-OWNER FAIL**.
+
+Reason:
+
+> the live surface is still honestly describable as blue/yellow/orange circles on an empty field; cognition and causal seams are substantially richer than the visible situation.
+
+Specific deficit:
+
+- during `APPROACHING`, S2 notices the external problem but the companion communicates almost none of that awareness through behavior;
+- participant-visible action remains mostly “yellow circle reaches red/orange circle”;
+- success is largely represented by a green X;
+- the hostile remains an intentionally abstract sensor fixture;
+- a human Owner test now would risk repeating the already-rejected “new logic hidden behind circles” milestone.
+
+Therefore **do not send the current participant route as an Owner gate.**
+
+### Active gate — pre-contact readiness / embodied causal legibility
+
+The next question is:
+
+> **Can awareness of a shared problem become visible as bounded embodied preparation before the hostile commits, without prematurely attacking, abandoning the player relation, or growing a combat framework?**
+
+First bounded hypothesis:
+
+- while shared danger is `APPROACHING`;
+- S2 attention is `TRACKING`;
+- S2 responsibility is still `NONE`;
+- companion may adopt one conservative **guard/readiness position** on the hostile-facing side of the player;
+- this preparation emits movement only, never an `INTERVENE` action;
+- once `WINDUP` creates earned responsibility, S3 remains the only material intervention path;
+- the readiness target must stay player-local rather than chase the hostile;
+- if the geometry becomes too compressed for a meaningful guard position, readiness should stop/hold instead of forcing itself between bodies.
+
+The first implementation may use a simple open-field geometric guard target. It is a fixture hypothesis, not a tactical-positioning architecture.
+
+Participant presentation should also expose readiness causally through the world itself — movement/stance/role-readable glyphs — rather than another explanatory debug label.
+
+### Falsifiers for the readiness tranche
+
+Reject/replan if:
+
+1. readiness is merely a new text state with no participant-visible behavior;
+2. companion starts chasing the hostile during `APPROACHING`;
+3. readiness itself performs or guarantees the intervention;
+4. player movement stops being first-class to the guard relation;
+5. the guard target requires a general tactical planner/pathfinder before it is useful;
+6. the result still looks like the same static yellow follower until `WINDUP`;
+7. cosmetic rendering improves screenshots but the behavioral delta remains effectively zero.
+
+### Do not spend this tranche on
+
+- final combat art or animation pipeline;
+- HP/damage/inventory/factions/multiple hostiles;
+- generalized threat selection;
+- resurrecting F1/F2/F3 command grammar;
+- general planner/utility systems;
 - LLM/higher cognition;
-- branch-per-experiment infrastructure;
-- an Owner gate before the machine-side S4 tension is coherent.
+- polishing the sensor hostile into final enemy architecture;
+- an Owner gate before participant-first behavior materially changes.
 
 The controlling question is now:
 
-> **Can the player quickly constrain a useful autonomous contribution without deleting the companion's own situated judgement or turning it into a puppet?**
+> **Can the companion visibly prepare for a shared problem before it acts, so its later intervention reads as situated initiative rather than a late target chase?**
