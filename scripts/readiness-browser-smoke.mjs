@@ -65,7 +65,7 @@ try {
       text.includes("attention TRACKING") &&
       text.includes("responsibility NONE") &&
       text.includes("state GUARDING") &&
-      text.includes("basis GUARD_TARGET_AVAILABLE") &&
+      text.includes("basis INTERCEPT_FLANK_AVAILABLE") &&
       text.includes("guard target") &&
       text.includes("READINESS MOVEMENT ONLY") &&
       text.includes("latest attempts none"),
@@ -111,7 +111,7 @@ try {
     "Participant surface does not acknowledge the intervention-only correction."
   );
 
-  // B — preparation must stop compressing once a safe guard point no longer exists.
+  // B — preparation must settle once the player-local intercept flank is reached.
   const holding = await waitForPanel(
     page,
     (text) =>
@@ -119,14 +119,14 @@ try {
       text.includes("attention TRACKING") &&
       text.includes("responsibility NONE") &&
       text.includes("state HOLDING_READY") &&
-      text.includes("basis GUARD_GEOMETRY_COMPRESSED") &&
+      text.includes("basis INTERCEPT_FLANK_REACHED") &&
       text.includes("latest attempts none"),
     8_000,
-    "compressed pre-contact readiness"
+    "reached pre-contact intercept flank"
   );
   invariant(
     holding.includes("READINESS MOVEMENT ONLY"),
-    "Compressed readiness lost its movement-only contract."
+    "Reached readiness flank lost its movement-only contract."
   );
   await shot(page, "03-readiness-holds-before-commitment.png");
 
@@ -175,7 +175,7 @@ try {
     holding.includes("state HOLDING_READY") &&
       holding.includes("responsibility NONE") &&
       holding.includes("latest attempts none"),
-    "Readiness failed to stop before commitment when guard geometry compressed."
+    "Readiness failed to settle at the intercept flank before commitment."
   );
   invariant(
     committedBlocked.includes("state NONE") &&
@@ -207,7 +207,7 @@ try {
       qScopesToInterventionRatherThanReadiness:
         qDuringApproach.includes("phase APPROACHING") &&
         !qDuringApproach.includes("state NONE"),
-      compressedGeometryStopsGuardAdvance:
+      reachedInterceptFlankStopsAdvance:
         holding.includes("state HOLDING_READY") && holding.includes("latest attempts none"),
       windupHandsAuthorityToS2S3S4:
         committedBlocked.includes("state NONE") &&
