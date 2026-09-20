@@ -10,12 +10,19 @@ export interface SharedDangerHudState {
   danger: SharedDangerSnapshot | null;
   lastEpisodeOutcome: SharedDangerEpisodeOutcome;
   lastActionOutcomes: readonly WorldActionOutcome[];
+  teammateSpecimen: boolean;
+  autonomyEnabled: boolean;
+  withholdActive: boolean;
 }
 
 export class SharedDangerApparatusHud {
   private readonly root: HTMLElement;
   private readonly playerButton: HTMLButtonElement;
   private readonly companionButton: HTMLButtonElement;
+  private readonly heading: HTMLElement;
+  private readonly hint: HTMLElement;
+  private readonly state: HTMLElement;
+  private readonly actions: HTMLElement;
 
   constructor(onIntervene: (actorId: ActorId) => void) {
     const gamePane = document.querySelector<HTMLElement>("#game-pane");
@@ -27,16 +34,20 @@ export class SharedDangerApparatusHud {
     this.root.setAttribute("aria-label", "Shared danger apparatus");
     this.root.hidden = true;
 
-    const heading = document.createElement("div");
-    heading.className = "shared-danger-heading";
-    heading.textContent = "S1 manual controls";
+    this.heading = document.createElement("div");
+    this.heading.className = "shared-danger-heading";
+    this.heading.textContent = "S1 manual controls";
 
-    const hint = document.createElement("div");
-    hint.className = "shared-danger-hint";
-    hint.textContent = "WASD player · arrows companion";
+    this.hint = document.createElement("div");
+    this.hint.className = "shared-danger-hint";
+    this.hint.textContent = "WASD player · arrows companion";
 
-    const actions = document.createElement("div");
-    actions.className = "shared-danger-actions";
+    this.state = document.createElement("div");
+    this.state.className = "shared-danger-state";
+    this.state.hidden = true;
+
+    this.actions = document.createElement("div");
+    this.actions.className = "shared-danger-actions";
 
     this.playerButton = document.createElement("button");
     this.playerButton.type = "button";
@@ -52,9 +63,9 @@ export class SharedDangerApparatusHud {
     this.companionButton.innerHTML = "<kbd>Enter</kbd><span>Companion intervene</span>";
     this.companionButton.addEventListener("click", () => onIntervene("companion"));
 
-    actions.append(this.playerButton, this.companionButton);
+    this.actions.append(this.playerButton, this.companionButton);
 
-    this.root.append(heading, hint, actions);
+    this.root.append(this.heading, this.hint, this.state, this.actions);
     gamePane.append(this.root);
   }
 
@@ -72,5 +83,22 @@ export class SharedDangerApparatusHud {
     const complete = value.danger?.phase === "COMPLETE";
     this.playerButton.disabled = complete;
     this.companionButton.disabled = complete;
+
+    this.heading.textContent = value.teammateSpecimen
+      ? "Teammate specimen"
+      : "S1 manual controls";
+    this.hint.textContent = value.teammateSpecimen
+      ? "WASD move · E intervene · hold Q to withhold companion"
+      : "WASD player · arrows companion";
+    this.companionButton.hidden = value.teammateSpecimen;
+    this.actions.classList.toggle("is-teammate", value.teammateSpecimen);
+    this.state.hidden = !value.teammateSpecimen;
+    this.state.textContent = value.teammateSpecimen
+      ? value.withholdActive
+        ? "Q HELD · companion contribution withheld"
+        : value.autonomyEnabled
+          ? "Companion autonomy active"
+          : "Companion autonomy inactive"
+      : "";
   }
 }
