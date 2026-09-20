@@ -1,0 +1,65 @@
+name: readiness-browser
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/brain/shared-danger-readiness.ts"
+      - "src/brain/shared-danger-readiness.test.ts"
+      - "src/brain/situated-responsibility.ts"
+      - "src/brain/s3-material-contribution.ts"
+      - "src/brain/s4-correction.ts"
+      - "src/app/r1-lab-scene.ts"
+      - "src/app/shared-danger-apparatus-hud.ts"
+      - "src/debug/causal-panel.ts"
+      - "src/world/shared-danger-contract.ts"
+      - "src/world/world.ts"
+      - "index.html"
+      - "scripts/readiness-browser-smoke.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/readiness-browser.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: readiness-browser-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SOURCE_SHA: ${{ github.sha }}
+      GITHUB_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: |
+          if npm install; then
+            exit 0
+          fi
+          latest_log="$(ls -t "$HOME"/.npm/_logs/*-debug-0.log 2>/dev/null | head -n 1 || true)"
+          if [ -z "$latest_log" ] || ! grep -Fq "Cannot read properties of null (reading 'edgesOut')" "$latest_log"; then
+            if [ -n "$latest_log" ]; then cat "$latest_log"; fi
+            exit 1
+          fi
+          rm -rf node_modules
+          npm install --legacy-peer-deps
+      - name: Readiness and causal unit gate
+        run: npx vitest run src/brain/shared-danger-readiness.test.ts src/brain/situated-responsibility.test.ts src/brain/s3-material-contribution.test.ts src/brain/s4-correction.test.ts
+      - name: Build ordinary runtime
+        run: npm run build
+      - name: Pre-contact readiness browser gate
+        run: npm run browser:readiness
+      - name: Upload readiness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: readiness-browser-${{ github.sha }}
+          path: artifacts/readiness-browser/
+          if-no-files-found: warn
+          retention-days: 14
