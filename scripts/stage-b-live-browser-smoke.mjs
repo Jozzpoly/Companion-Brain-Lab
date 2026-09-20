@@ -85,7 +85,7 @@ try {
       hasOrdinaryBaseline(text) &&
       text.includes("Stage B · live shared responsibility") &&
       text.includes("world pressure QUIET") &&
-      text.includes("companion action REGROUP"),
+      text.includes("selected action REGROUP · AUTONOMY"),
     15_000,
     "ordinary Stage B baseline"
   );
@@ -99,7 +99,7 @@ try {
       text.includes("world pressure ACTIVE") &&
       text.includes("advancing threat") &&
       text.includes("threat advancing") &&
-      text.includes("companion action RESPOND_TO_THREAT") &&
+      text.includes("selected action RESPOND_TO_THREAT · AUTONOMY") &&
       text.includes("LIVE RESPOND_TO_THREAT") &&
       text.includes("baseline relationship"),
     15_000,
@@ -123,7 +123,7 @@ try {
         respondingTick !== null &&
         tick >= respondingTick + 20 &&
         text.includes("world pressure ACTIVE") &&
-        text.includes("companion action RESPOND_TO_THREAT") &&
+        text.includes("selected action RESPOND_TO_THREAT · AUTONOMY") &&
         position !== null &&
         firstThreatPosition !== null &&
         distance(position, firstThreatPosition) > 0.08
@@ -148,7 +148,7 @@ try {
       text.includes("world pressure RECOVERING") &&
       text.includes("outcome CONTAINED") &&
       text.includes("resolved by companion") &&
-      text.includes("companion action REGROUP") &&
+      text.includes("selected action REGROUP · AUTONOMY") &&
       text.includes("LIVE REGROUP"),
     20_000,
     "World-owned containment and regroup"
@@ -302,7 +302,7 @@ try {
     (text) =>
       hasOrdinaryBaseline(text) &&
       text.includes("world pressure ACTIVE") &&
-      text.includes("companion action RESPOND_TO_THREAT"),
+      text.includes("selected action RESPOND_TO_THREAT · AUTONOMY"),
     15_000,
     "hidden Stage B participant authority state"
   );
@@ -334,7 +334,7 @@ try {
     forbiddenScenarioControlsAbsent: true,
     hiddenAuthorityObserved:
       participantActive.includes("world pressure ACTIVE") &&
-      participantActive.includes("companion action RESPOND_TO_THREAT"),
+      participantActive.includes("selected action RESPOND_TO_THREAT · AUTONOMY"),
     semanticStateVisibleToParticipant: false,
     errors: participantErrors
   };
