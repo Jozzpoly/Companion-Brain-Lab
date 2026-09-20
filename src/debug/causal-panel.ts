@@ -19,7 +19,8 @@ export type CausalPanelAction =
   | "scenario-head-on"
   | "scenario-shared-danger"
   | "s1-player-intervene"
-  | "s1-companion-intervene";
+  | "s1-companion-intervene"
+  | "toggle-s3-authority";
 
 export type WorldDebugLayer =
   | "relationship"
@@ -206,7 +207,8 @@ export class CausalPanel {
     apparatusGrid.className = "debug-button-grid debug-apparatus-grid";
     apparatusGrid.append(
       button("Player intervene", "s1-player-intervene"),
-      button("Companion intervene", "s1-companion-intervene")
+      button("Companion intervene", "s1-companion-intervene"),
+      button("S3 authority", "toggle-s3-authority")
     );
     const directiveTitle = document.createElement("h2");
     directiveTitle.textContent = "Player direction";
