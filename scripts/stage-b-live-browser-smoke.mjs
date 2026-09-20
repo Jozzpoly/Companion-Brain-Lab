@@ -253,12 +253,19 @@ try {
     (await participantControls.locator(".owner-review-title").textContent()) === "Teammate slice",
     "Teammate participant title is wrong."
   );
-  for (const label of ["Reset", "Save"]) {
-    invariant(
-      await participantControls.getByRole("button", { name: label, exact: true }).isVisible(),
-      `Teammate participant control missing: ${label}`
-    );
-  }
+  invariant(
+    await participantControls.getByRole("button", { name: "Reset", exact: true }).isVisible(),
+    "Teammate participant control missing: Reset"
+  );
+  const participantSave = participantControls.locator(".owner-capture");
+  invariant(
+    await participantSave.isVisible(),
+    "Teammate participant Save control is not visible."
+  );
+  invariant(
+    (await participantSave.textContent())?.trim() === "Save",
+    "Teammate participant capture control lost its visible Save label."
+  );
   for (const forbidden of ["Open", "Pillar", "Door", "Head-on"]) {
     invariant(
       (await participantControls.getByRole("button", { name: forbidden, exact: true }).count()) === 0,
