@@ -22,6 +22,10 @@ on:
       - ".github/workflows/readiness-browser.yml"
   workflow_dispatch:
 
+permissions:
+  contents: read
+  statuses: write
+
 concurrency:
   group: readiness-browser-${{ github.ref }}
   cancel-in-progress: true
@@ -63,3 +67,19 @@ jobs:
           path: artifacts/readiness-browser/
           if-no-files-found: warn
           retention-days: 14
+      - name: Publish readiness-browser commit status
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          state="$JOB_STATUS"
+          if [ "$state" != "success" ]; then state="failure"; fi
+          curl -sS -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            -d '{"state":"'"$state"'","context":"readiness-browser","description":"pre-contact readiness '"$state"'","target_url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}'
+
