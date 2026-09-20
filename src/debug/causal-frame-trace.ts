@@ -64,9 +64,18 @@ export interface CausalDecisionPhase {
   comfortStartBlockers?: readonly string[];
   rehabilitatedCandidateCount?: number | null;
   comfortExitCandidateCount?: number | null;
-  /** Explicit ordinary-live teammate action, separate from the movement mechanism used to realize it. */
+  /** Explicit Owner/player direction state; separate from both autonomy and movement execution. */
+  playerDirectiveKind?: string | null;
+  playerDirectiveIssuedTick?: number | null;
+  playerDirectiveHoldAnchor?: Vec2 | null;
+  /** Local brain proposal before player-direction arbitration. */
+  autonomousProposalKind?: string | null;
+  autonomousProposalReason?: string | null;
+  /** Explicit ordinary-live selected teammate action after arbitration. */
   partnerAction?: string | null;
   partnerActionReason?: string | null;
+  arbitrationSource?: string | null;
+  arbitrationReason?: string | null;
   liveObjectiveKey?: string | null;
   liveObjectiveTarget?: Vec2 | null;
   sharedPressurePhase?: string | null;
@@ -159,6 +168,7 @@ function cloneFrame(frame: CausalFrame): CausalFrame {
     decision: {
       ...frame.decision,
       relationshipTarget: cloneVec(frame.decision.relationshipTarget),
+      playerDirectiveHoldAnchor: cloneVec(frame.decision.playerDirectiveHoldAnchor),
       liveObjectiveTarget: cloneVec(frame.decision.liveObjectiveTarget),
       preferredVelocity: cloneVec(frame.decision.preferredVelocity),
       refinedVelocity: cloneVec(frame.decision.refinedVelocity),

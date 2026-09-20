@@ -11,6 +11,7 @@ on:
       - "index.html"
       - "src/brain/r1-workbench-spatial-stack.ts"
       - "src/brain/stage-b-partner.ts"
+      - "src/brain/player-directive.ts"
       - "src/world/shared-pressure.ts"
       - "src/world/world.ts"
       - "src/debug/causal-frame-trace.ts"

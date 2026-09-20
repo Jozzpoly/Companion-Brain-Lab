@@ -7,6 +7,9 @@ export type CausalPanelAction =
   | "cycle-a1-authority"
   | "cycle-time"
   | "capture-incident"
+  | "directive-at-will"
+  | "directive-follow"
+  | "directive-hold"
   | "p2-preview"
   | "p2-arm-singleton"
   | "p2-disarm"
@@ -190,6 +193,14 @@ export class CausalPanel {
         button("P2 Disarm", "p2-disarm")
       );
     }
+    const directiveGrid = document.createElement("div");
+    directiveGrid.className = "debug-button-grid debug-directive-grid";
+    directiveGrid.append(
+      button("At will", "directive-at-will"),
+      button("Follow me", "directive-follow"),
+      button("Hold here", "directive-hold")
+    );
+
     const scenarioGrid = document.createElement("div");
     scenarioGrid.className = "debug-button-grid debug-scenario-grid";
     scenarioGrid.append(
@@ -198,7 +209,9 @@ export class CausalPanel {
       button("Doorway", "scenario-doorway"),
       button("Head-on", "scenario-head-on")
     );
-    controls.append(controlTitle, controlGrid, scenarioGrid);
+    const directiveTitle = document.createElement("h2");
+    directiveTitle.textContent = "Player direction";
+    controls.append(controlTitle, controlGrid, directiveTitle, directiveGrid, scenarioGrid);
 
     controls.addEventListener("click", (event) => {
       const target = event.target;

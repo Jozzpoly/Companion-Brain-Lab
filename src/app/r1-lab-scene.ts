@@ -8,6 +8,13 @@ import {
   type StageBPartnerAction
 } from "../brain/stage-b-partner";
 import {
+  PlayerDirectiveRuntime,
+  arbitrateCompanionAction,
+  type CompanionArbitrationDecision,
+  type PlayerDirectiveKind,
+  type PlayerDirectiveSnapshot
+} from "../brain/player-directive";
+import {
   COMPANION_MODES,
   RelationalPositioningBrain,
   chaseIntent,
@@ -157,7 +164,9 @@ interface StepDecisionEvidence {
   finalConstraint: FinalCommandConstraintResult | null;
   shadowCoordination: ShadowCoordinationFrame | null;
   shadowCoordinationError: string | null;
-  partnerAction: StageBPartnerAction | null;
+  playerDirective: PlayerDirectiveSnapshot | null;
+  autonomousProposal: StageBPartnerAction | null;
+  arbitration: CompanionArbitrationDecision | null;
   pressureBefore: SharedPressureSnapshot | null;
 }
 
@@ -181,6 +190,7 @@ export class R1LabScene extends Phaser.Scene {
   private readonly relationshipOrientation = new RelationshipOrientationTracker();
   private readonly spatialStack = new R1WorkbenchSpatialStack();
   private readonly a1Authority = new A1AuthorityRuntime();
+  private readonly playerDirective = new PlayerDirectiveRuntime();
   private relationalDecision: RelationalDecision | null = null;
   private spatialDecision: SpatialLocomotionDecision | null = null;
   private spatialRepairDecision: R1SpatialRepairEvidence | null = null;
@@ -190,7 +200,8 @@ export class R1LabScene extends Phaser.Scene {
   private progressDecision: ProgressRecoveryDecision | null = null;
   private shadowCoordination: ShadowCoordinationFrame | null = null;
   private shadowCoordinationError: string | null = null;
-  private partnerActionDecision: StageBPartnerAction | null = null;
+  private autonomousProposalDecision: StageBPartnerAction | null = null;
+  private arbitrationDecision: CompanionArbitrationDecision | null = null;
   private sharedPressure: SharedPressureSnapshot | null = null;
   private appliedLocalRetries = 0;
   private decisionRoutePlan: StaticRoutePlan | null = null;
@@ -342,7 +353,8 @@ export class R1LabScene extends Phaser.Scene {
     this.decisionRoutePlan = null;
     const pressureBefore = this.world.sharedPressure();
     this.sharedPressure = pressureBefore;
-    this.partnerActionDecision = null;
+    this.autonomousProposalDecision = null;
+    this.arbitrationDecision = null;
 
     const relationshipSemantic = (
       this.companionMode === "relational" || this.companionMode === "spatial"
@@ -382,13 +394,17 @@ export class R1LabScene extends Phaser.Scene {
       if (!relationshipSemantic) throw new Error("SPATIAL mode requires canonical semantic orientation.");
       const relationship = this.relationalBrain.decisionWithSemanticOrientation(before, relationshipSemantic.orientation);
       this.relationalDecision = relationship;
-      const partnerAction = decideStageBPartnerAction(pressureBefore);
-      this.partnerActionDecision = partnerAction;
-      const liveTarget = partnerAction.kind === "RESPOND_TO_THREAT" && partnerAction.target
-        ? partnerAction.target
-        : relationship.target;
+      const autonomousProposal = decideStageBPartnerAction(pressureBefore);
+      this.autonomousProposalDecision = autonomousProposal;
+      const arbitration = arbitrateCompanionAction({
+        directive: this.playerDirective.snapshot(),
+        autonomousProposal,
+        relationshipTarget: relationship.target
+      });
+      this.arbitrationDecision = arbitration;
+      const liveTarget = arbitration.target;
       target = { ...liveTarget };
-      objectiveKey = partnerAction.objectiveKey ?? `spatial-slot:${relationship.selectedSlot}`;
+      objectiveKey = arbitration.objectiveKey;
       actuator = this.naturalActuator ? "natural" : "direct";
       const route = this.buildRoute(before, liveTarget);
       this.decisionRoutePlan = route;
@@ -454,7 +470,9 @@ export class R1LabScene extends Phaser.Scene {
       finalConstraint: this.finalConstraintDecision,
       shadowCoordination: this.shadowCoordination,
       shadowCoordinationError: this.shadowCoordinationError,
-      partnerAction: this.partnerActionDecision,
+      playerDirective: this.playerDirective.snapshot(),
+      autonomousProposal: this.autonomousProposalDecision,
+      arbitration: this.arbitrationDecision,
       pressureBefore
     };
   }
@@ -626,8 +644,17 @@ export class R1LabScene extends Phaser.Scene {
         relationshipLabel: evidence.relationship?.selectedSlot ?? null,
         relationshipState: evidence.relationship?.objectiveState ?? null,
         relationshipTarget: evidence.relationship ? { ...evidence.relationship.target } : null,
-        partnerAction: evidence.partnerAction?.kind ?? null,
-        partnerActionReason: evidence.partnerAction?.reason ?? null,
+        playerDirectiveKind: evidence.playerDirective?.kind ?? null,
+        playerDirectiveIssuedTick: evidence.playerDirective?.issuedTick ?? null,
+        playerDirectiveHoldAnchor: evidence.playerDirective?.holdAnchor
+          ? { ...evidence.playerDirective.holdAnchor }
+          : null,
+        autonomousProposalKind: evidence.autonomousProposal?.kind ?? null,
+        autonomousProposalReason: evidence.autonomousProposal?.reason ?? null,
+        partnerAction: evidence.arbitration?.selectedKind ?? null,
+        partnerActionReason: evidence.arbitration?.reason ?? null,
+        arbitrationSource: evidence.arbitration?.source ?? null,
+        arbitrationReason: evidence.arbitration?.reason ?? null,
         liveObjectiveKey: evidence.objectiveKey,
         liveObjectiveTarget: target ? { ...target } : null,
         sharedPressurePhase: evidence.pressureBefore?.phase ?? null,
@@ -1107,9 +1134,28 @@ export class R1LabScene extends Phaser.Scene {
     const a1Situation = a1.latestSituation;
     const p2 = window.__authorityA12p2BrowserBridge?.snapshot() ?? null;
     const pressure = this.sharedPressure;
-    const partnerAction = this.partnerActionDecision;
+    const directive = this.playerDirective.snapshot();
+    const autonomousProposal = this.autonomousProposalDecision;
+    const arbitration = this.arbitrationDecision;
 
     const sections: CausalPanelModel["sections"] = [
+      {
+        id: "direction",
+        title: "Player direction ↔ local autonomy",
+        tone: arbitration?.source === "PLAYER_DIRECTIVE" ? "success" : "normal",
+        lines: [
+          `directive ${directive.kind} · issued t${directive.issuedTick}`,
+          directive.holdAnchor
+            ? `hold anchor ${compact(directive.holdAnchor.x)}, ${compact(directive.holdAnchor.y)}`
+            : "hold anchor none",
+          `local brain proposes ${autonomousProposal?.kind ?? "NOT_EVALUATED"}`,
+          autonomousProposal?.reason ?? "autonomous proposal unavailable",
+          arbitration
+            ? `selected ${arbitration.selectedKind} · source ${arbitration.source} · target ${compact(arbitration.target.x)}, ${compact(arbitration.target.y)}`
+            : "arbitration waiting for first SPATIAL decision",
+          arbitration?.reason ?? "no arbitration result yet"
+        ]
+      },
       {
         id: "stage-b",
         title: "Stage B · live shared responsibility",
@@ -1135,8 +1181,9 @@ export class R1LabScene extends Phaser.Scene {
                   ? `next advancing threat in ${pressure.ticksUntilActivation ?? 0}t`
                   : `outcome ${pressure.lastOutcome} · resolved by ${pressure.lastResolvedBy}`,
               `intercept ${pressure.responseTicks}/${pressure.requiredResponseTicks}t · ${pressure.lastResponder === "companion" ? "companion ENGAGED" : pressure.phase === "ACTIVE" ? "threat advancing" : "no active intercept"}`,
-              `companion action ${partnerAction?.kind ?? "NOT_EVALUATED"}`,
-              partnerAction?.reason ?? pressure.reason,
+              `autonomous proposal ${autonomousProposal?.kind ?? "NOT_EVALUATED"}`,
+              `selected action ${arbitration?.selectedKind ?? "NOT_EVALUATED"} · ${arbitration?.source ?? "no arbitration"}`,
+              arbitration?.reason ?? pressure.reason,
               pressure.reason
             ]
       },
@@ -1211,21 +1258,15 @@ export class R1LabScene extends Phaser.Scene {
         title: "Objective · live vs relationship",
         tone: this.relationalDecision?.objectiveState === "NO_VALID_RELATIONAL_SLOT" ? "warning" : "normal",
         lines: this.relationalDecision
-          ? partnerAction?.kind === "RESPOND_TO_THREAT" && partnerAction.target
-            ? [
-                `LIVE ${partnerAction.kind} · ${partnerAction.objectiveKey ?? "unkeyed"}`,
-                `live target ${compact(partnerAction.target.x)}, ${compact(partnerAction.target.y)}`,
-                `baseline relationship ${this.relationalDecision.selectedSlot} · target ${compact(this.relationalDecision.target.x)}, ${compact(this.relationalDecision.target.y)}`,
-                "shared-world responsibility temporarily outranks ordinary relationship positioning",
-                partnerAction.reason
-              ]
-            : [
-                `LIVE REGROUP · spatial-slot:${this.relationalDecision.selectedSlot}`,
-                `relationship #${this.relationalDecision.reconsiderationCount} · ${this.relationalDecision.selectedSlot}`,
-                `relationship state ${this.relationalDecision.objectiveState}`,
-                `target ${compact(this.relationalDecision.target.x)}, ${compact(this.relationalDecision.target.y)}`,
-                this.relationalDecision.reason
-              ]
+          ? [
+              `LIVE ${arbitration?.selectedKind ?? "NOT_EVALUATED"} · ${arbitration?.objectiveKey ?? "unkeyed"}`,
+              arbitration
+                ? `live target ${compact(arbitration.target.x)}, ${compact(arbitration.target.y)} · source ${arbitration.source}`
+                : "live target unavailable",
+              `baseline relationship ${this.relationalDecision.selectedSlot} · target ${compact(this.relationalDecision.target.x)}, ${compact(this.relationalDecision.target.y)}`,
+              `autonomy ${autonomousProposal?.kind ?? "NOT_EVALUATED"} · directive ${directive.kind}`,
+              arbitration?.reason ?? this.relationalDecision.reason
+            ]
           : [`${this.companionMode} baseline has no supervised relational objective`]
       },
       {
@@ -1358,7 +1399,7 @@ export class R1LabScene extends Phaser.Scene {
     ];
 
     this.panel.update({
-      title: "Companion Brain Lab · Stage B Recovery",
+      title: "Companion Brain Lab · Command / Autonomy Workbench",
       subtitle: `frame ${latest?.sequence ?? "-"} · observation t${latest?.observation.worldTick ?? "-"} → outcome t${latest?.outcome.worldTick ?? "-"}`,
       badge: post ? post.state.toUpperCase() : "LOADING",
       badgeTone,
@@ -1405,6 +1446,9 @@ export class R1LabScene extends Phaser.Scene {
     else if (action === "cycle-a1-authority") this.cycleA1Authority();
     else if (action === "cycle-time") this.cycleTimeScale();
     else if (action === "capture-incident") this.captureIncident();
+    else if (action === "directive-at-will") this.issuePlayerDirective("AT_WILL");
+    else if (action === "directive-follow") this.issuePlayerDirective("FOLLOW_ME");
+    else if (action === "directive-hold") this.issuePlayerDirective("HOLD_HERE");
     else if (action === "p2-preview") this.previewP2();
     else if (action === "p2-arm-singleton") this.armP2Singleton();
     else if (action === "p2-disarm") this.disarmP2();
@@ -1412,6 +1456,17 @@ export class R1LabScene extends Phaser.Scene {
     else if (action === "scenario-pillar") void this.loadScenario("pillar");
     else if (action === "scenario-doorway") void this.loadScenario("doorway");
     else if (action === "scenario-head-on") void this.loadScenario("head-on");
+  }
+
+  private issuePlayerDirective(kind: PlayerDirectiveKind): void {
+    const snapshot = this.snapshotValue;
+    if (!snapshot) return;
+    const companion = actor(snapshot, "companion");
+    const previous = this.playerDirective.snapshot();
+    const next = this.playerDirective.issue(kind, snapshot.tick, companion.position);
+    this.logEvent(
+      `player directive ${previous.kind} -> ${next.kind} @ t${snapshot.tick}${next.holdAnchor ? ` · anchor ${compact(next.holdAnchor.x)}, ${compact(next.holdAnchor.y)}` : ""}`
+    );
   }
 
   private previewP2(): void {
@@ -1551,7 +1606,8 @@ export class R1LabScene extends Phaser.Scene {
     this.relationshipOrientation.reset();
     this.spatialStack.reset();
     this.relationalDecision = null;
-    this.partnerActionDecision = null;
+    this.autonomousProposalDecision = null;
+    this.arbitrationDecision = null;
     this.clearSpatialDebug();
     this.decisionRoutePlan = null;
     this.postRoutePlan = null;
@@ -1571,7 +1627,9 @@ export class R1LabScene extends Phaser.Scene {
       this.scenarioId = id;
       this.snapshotValue = next.snapshot();
       this.sharedPressure = next.sharedPressure();
-      this.partnerActionDecision = null;
+      this.autonomousProposalDecision = null;
+      this.arbitrationDecision = null;
+      this.playerDirective.reset(this.snapshotValue.tick);
       this.accumulator = 0;
       this.singleStepQueued = false;
       this.playerTrail.length = 0;
