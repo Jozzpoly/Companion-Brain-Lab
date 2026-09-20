@@ -90,7 +90,7 @@ try {
     "Manual companion intervention must be hidden in teammate specimen."
   );
   invariant(
-    await page.getByText("WASD move · E intervene · hold Q to withhold companion").isVisible(),
+    await page.getByText("WASD move · E intervene · hold Q to withhold intervention").isVisible(),
     "Participant-facing teammate controls are not visible."
   );
 
@@ -149,7 +149,7 @@ try {
     "participant Q correction blocks effective contribution"
   );
   invariant(
-    await page.getByText("Q HELD · companion contribution withheld").isVisible(),
+    await page.getByText("Q HELD · companion intervention withheld").isVisible(),
     "Held correction has no participant-facing acknowledgement."
   );
   await page.keyboard.press("Enter");
