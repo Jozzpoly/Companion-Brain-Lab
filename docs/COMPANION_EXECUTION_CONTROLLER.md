@@ -482,7 +482,7 @@ This directly triggers the campaign's anti-regression rule: do not ask the Owner
 
 During `APPROACHING`, attention may drive **bounded preparation** even though intervention responsibility remains `NONE`.
 
-The first candidate is a conservative player-local guard position:
+The first candidate is a conservative player-local off-axis intercept flank:
 
 `player position + normalized(player → hostile) × bounded guard offset`
 
@@ -491,7 +491,7 @@ Rules:
 - guard movement is allowed only while the external problem is being tracked and has not committed;
 - no World action attempt is emitted by readiness;
 - the target is anchored to the player, not to the hostile;
-- readiness stops rather than forcing a nonsensical between-bodies position when spacing becomes too tight;
+- readiness uses an off-axis player-local intercept target and never claims body-block authority;
 - `WINDUP` hands authority back to the existing S2→S3 intervention path;
 - full workbench must expose readiness state/target/reason;
 - participant-first world rendering must make the stance/preparation legible without requiring that panel.
@@ -514,3 +514,20 @@ Rules:
 - no Owner gate merely because readiness tests are green.
 
 Promotion requires both causal evidence and participant-first artifact review.
+
+
+### Readiness representation correction — artifact falsification
+
+The first machine-qualified readiness implementation placed the companion directly on the player→hostile axis. Browser mechanics passed, but participant artifact review rejected that representation: the S1 hostile is a sensor and can pass through the companion, so an on-axis posture visually promises a body-block that does not materially exist.
+
+This is a representation FAIL, not a reason to promote solid-body combat physics prematurely.
+
+The revised bounded hypothesis is an **off-axis player-local intercept flank**:
+
+- slightly forward from the player toward the hostile;
+- laterally displaced from the hostile's direct player-bound path;
+- close enough that a later committed hostile can still be explicitly interrupted within the existing World action range;
+- preparation movement cannot itself block or resolve the hostile;
+- reaching the flank becomes `HOLDING_READY` until the causal situation changes.
+
+This correction preserves the key S1 invariant `movement ≠ intervention` while making pre-contact preparation spatially distinct.
