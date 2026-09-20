@@ -1,6 +1,6 @@
 # Companion Brain Lab — CURRENT
 
-Status: **CANONICAL EXECUTION ENTRYPOINT · COMPANION CORE RECOVERY**
+Status: **CANONICAL EXECUTION ENTRYPOINT · STRATEGIC RECOVERY / QUESTION-DRIVEN EXECUTION**
 Date: **2026-09-20**
 
 Read this first before continuing the project.
@@ -196,72 +196,136 @@ This sequence is a planning skeleton, not frozen architecture. Reassess after ea
 - make current public action, player directive, autonomy proposal, arbitration result, execution and World outcome inspectable when those concepts exist;
 - retain Stage B threat only as optional apparatus/regression evidence.
 
-**R1 — Player Directive seam · IMPLEMENTED / MACHINE-QUALIFIED, NOT OWNER-QUALIFIED**
+**Post-FAIL command/autonomy spike — USEFUL EVIDENCE, NOT ROADMAP AUTHORITY**
 
-The first explicit direction substrate now exists on moving `main`:
+After the 2026-09-20 Stage B Owner FAIL, commits `7021f732…` through `fb81148f…` rapidly explored one plausible direction:
 
-`player directive → interpreted constraint → local autonomous proposal → arbitration → public action intent → R1/NATURAL execution → World outcome`
+`player directive → interpreted constraint → local autonomous proposal → arbitration → public action → execution → World outcome`
 
-Current deliberately small experimental vocabulary:
+The spike produced technically useful evidence:
 
-- `AT_WILL` — releases responsibility selection to the local brain;
-- `FOLLOW_ME` — player-local leash rather than a cognition kill-switch;
-- `HOLD_HERE` — responsibility envelope around the captured hold anchor.
+- full Causal Workbench and world layers can coexist with a fast player-facing command surface;
+- a blocked autonomous proposal can remain visible instead of being erased by player direction;
+- an experimental directive can constrain rather than completely disable local autonomy;
+- browser/runtime qualification stayed clean;
+- the losing and winning sides of arbitration can be recorded causally.
 
-A separate player-facing command strip exposes provisional `F1/F2/F3` shortcuts while the full Causal Workbench remains visible in the same runtime. These bindings and labels are research UI, not final game UX.
+Current experimental vocabulary is `AT_WILL / FOLLOW_ME / HOLD_HERE`; the current implementation also contains provisional F1/F2/F3 bindings and numerical autonomy envelopes.
 
-The directive does not directly mutate World truth and does not erase the autonomous proposal. The workbench/causal trace records:
+**None of those concrete choices are Owner-approved design.**
 
-- active directive and issue tick;
-- hold anchor when relevant;
-- local autonomous proposal;
-- `UNCONSTRAINED / COMPATIBLE / BLOCKED` directive compatibility;
-- constraint distance and limit;
-- arbitration source and selected public action;
-- execution and post-World outcome.
+The spike was implemented before full strategic recovery had completed. Therefore:
 
-Browser evidence at `c4a62608313536fe470a960ab643f4e37b1154d5` demonstrated on one continuous live threat episode:
+- its separation of responsibilities is a **strong donor candidate / falsifier apparatus**;
+- its concrete command grammar is **OPEN**;
+- its F1/F2/F3 presentation is **OPEN**;
+- its leash/hold radii are **test constants, not design truth**;
+- its use of the Stage B threat proxy is **fixture evidence, not product direction**;
+- it does **not** establish that commands are the immediate next product feature;
+- it does **not** establish that a tangible hostile exchange is the next implementation step.
 
-- distant `RESPOND_TO_THREAT` under `FOLLOW_ME` → `BLOCKED`, `FOLLOW_PLAYER · PLAYER_DIRECTIVE`;
-- the same `FOLLOW_ME` remained active while the threat approached;
-- once inside the player-local leash → `COMPATIBLE`, `RESPOND_TO_THREAT · AUTONOMY`;
-- distant proposal under `HOLD_HERE` → `BLOCKED`, `HOLD_POSITION · PLAYER_DIRECTIVE`;
-- `AT_WILL` restores unconstrained local authority;
-- full workbench + world layers + player command HUD coexist with zero browser/runtime errors.
+Do not delete this work merely because it was premature. Do not let its existence make it architecture authority either.
 
-This is evidence that commands can bound rather than disable local autonomy. It is **not** evidence yet that the command vocabulary, leash radii, hostile apparatus or gameplay feel are good enough.
+## 5. Current recovery campaign — discover the first compelling teammate situation
 
-**R2 — Autonomy ↔ obedience experiment**
+The project does **not** currently have a justified linear feature roadmap.
 
-Use one shared-world problem to force real tension between local initiative and player direction.
+The next job is to choose and build the smallest coherent situation in which the project's real tensions become necessary and observable. That situation should be selected for **Owner-visible information gain**, not because the latest code already happens to contain commands, a threat proxy, or a particular brain seam.
 
-The important evidence is not “did the NPC obey?” but:
+### C0 — Truth / donor map
 
-- what did the player ask?
-- what did the local brain independently want to do?
-- what constraints did the directive create?
-- what action won and why?
-- did the result preserve player agency?
-- when did the companion legitimately deviate, refuse or reconsider?
-- could the Owner understand the decision from the workbench?
+Before behavior expansion, maintain an explicit classification of existing material:
 
-**R3 — Tangible action/combat apparatus**
+- **Owner-confirmed / closed:** project mission, Foundation `PASS · REWORK-READY`, importance of full causal/debug observability, rejection of the stripped movement/Stage-B Owner stimuli;
+- **strong evidence / donor candidates:** World authority, existing physical body/movement competence, incident capture, causal workbench, provenance/falsifiers, directive/proposal/arbitration separation from the post-FAIL spike;
+- **experimental mechanisms:** CCC/A1/S5/A1.1 research, Stage B pressure proxy, current command grammar/HUD/envelope constants;
+- **rejected product claims:** movement-only culmination, hidden-debug participant shell, marker proximity presented as teammate capability;
+- **open design:** actual local-brain organization, command vocabulary/UX, combat implementation, readiness, engagement/disengagement, correction/refusal semantics, few-companion cooperation and higher cognition.
 
-Only after the command/autonomy seam is real, replace the abstract threat proxy as needed with the smallest tangible hostile/action exchange that makes assistance, protection, engagement, disengagement and preparation materially meaningful.
+Evidence can move an item between categories. Code existence alone cannot.
 
-Do not jump straight to a full combat architecture.
+### C1 — Choose a teammate situation, not a mechanism
 
-**R4 — Owner Sandbox**
+Define one compact playable situation that can answer several high-value questions together.
 
-The next Owner gate must demonstrate a capability the old follower could not plausibly fake:
+The situation should make it possible to observe some combination of:
 
-- the Owner can direct the companion quickly;
-- the companion retains bounded local autonomy;
-- a shared problem creates an actual command/autonomy tradeoff;
-- debug exposes the complete causal chain;
-- the experience is not reducible to “yellow circle chases another target”.
+- useful initiative without micromanagement;
+- player direction/correction at low attention cost;
+- shared responsibility with a factual consequence;
+- pre-contact/readiness or engagement/disengagement;
+- competition between helpfulness and player agency;
+- failure/recovery that is causally explainable;
+- movement/body competence under a real purpose rather than movement for its own sake.
 
-Until that exists, keep implementation and machine/browser falsification inside the agent loop.
+Combat/pre-combat is a central long-term target and may be the best domain, but **the domain and mechanic are still hypotheses until this design step justifies them**.
+
+Before implementation, write down:
+
+1. what new Owner-visible capability the situation can reveal;
+2. why the accepted Foundation build cannot already fake that capability;
+3. which existing donors are actually needed;
+4. the smallest falsifier that would reject the chosen representation;
+5. what remains intentionally absent.
+
+If the proposed delta can be summarized as “another target, circle, timer, label or mode”, stop and redesign the situation.
+
+### C2 — Build one coherent specimen
+
+Only after C1 closes, build the smallest integrated specimen that answers the chosen question.
+
+Rules:
+
+- reuse earned Foundation competence rather than reopening movement by default;
+- transplant donors only when the situation exposes a need;
+- keep World factual authority;
+- keep full causal/debug observability available in the same runtime;
+- a blind first impression may use collapsed/hidden **view state**, but must not require a separate impoverished build;
+- preserve comparison baselines where they answer a live question;
+- do not grow a framework or broad command/combat architecture ahead of the specimen.
+
+### C3 — Agent-side falsification
+
+Before spending Owner attention:
+
+- mechanical/contract checks must pass;
+- browser/runtime behavior must match the intended causal chain;
+- the new capability must be visibly different from the previously accepted Foundation organism;
+- inspect screenshots/recordings, not only text/test assertions;
+- deliberately seek the interpretation “this is still just the old follower with new instrumentation”.
+
+A machine PASS is permission to ask a better human question, never an Owner/gameplay PASS.
+
+### C4 — Integrated Owner gate
+
+Ask for Owner judgement only when the specimen contains a material capability that the previous accepted build did not have.
+
+The Owner should be able to play normally, then inspect the workbench and captured incident in the same runtime.
+
+The gate asks about teammate qualities:
+
+- did useful initiative occur for an intelligible reason?
+- could the Owner direct/correct it quickly when desired?
+- did the companion preserve rather than steal player agency?
+- did the pair feel like they were addressing the same situation?
+- when it failed, did the causal apparatus explain the failure?
+- did the build create genuine desire to keep playing/exploring, rather than merely proving a mechanism?
+
+A material Owner FAIL returns to C1/C2 and may invalidate representation, responsibility split or even the chosen situation. Do not default to parameter tuning.
+
+### How `kontynuuj` operates
+
+Every short `kontynuuj` means:
+
+1. recover the active Owner objective and newest feedback;
+2. verify live `main`, CI and current evidence;
+3. ask whether the current next step is still the highest-value unresolved boundary;
+4. prefer Owner-visible capability × information gain × reversibility over roadmap momentum;
+5. execute the smallest move that can materially close/falsify that boundary;
+6. update canonical state when evidence changes the project model;
+7. continue autonomously until Owner judgement is uniquely valuable or a real strategic fork appears.
+
+A local green test is **not** a stop condition and is **not** authority to advance to the next prewritten feature.
 
 ### Required perceptual criterion
 
@@ -416,30 +480,33 @@ Historical branch recovery index:
 
 Do **not** spend the next tranche:
 
-- polishing the old movement-only review;
-- rebuilding branch-per-experiment infrastructure;
-- resuming A1 merely because it was unfinished;
-- cleaning historical code before product direction requires it;
-- creating a huge combat architecture;
-- designing final commands / multi-companion / LLM systems prematurely.
+- polishing the rejected movement or Stage B Owner stimuli;
+- building from the assumption that the post-FAIL F1/F2/F3 spike is the chosen command system;
+- hardening the current autonomy radii into design constants;
+- implementing a hostile/combat exchange merely because the previous assistant named it next;
+- reopening Foundation movement without a richer-gameplay falsifier;
+- resuming CCC/A1 because historical research exists;
+- adding LLM cognition, multi-companion architecture or a broad combat framework;
+- creating branch-per-experiment infrastructure.
 
-The Stage B Owner stimulus has **failed**. Do not polish it or ask the Owner to repeat it.
+Current live repository truth:
 
-Current execution frontier:
+- canonical branch: `main` only;
+- current HEAD after the post-FAIL exploratory spike: `fb81148f8bc39d796fc487bfa206d5464265fbdd`;
+- validate and command-autonomy browser gates are green;
+- those green gates prove the spike's mechanics, **not its product direction**;
+- Stage B remains an Owner-rejected product stimulus;
+- the full causal workbench remains mandatory research apparatus;
+- Foundation remains `PASS · REWORK-READY`.
 
-1. R0 is restored on moving `main`: full causal/debug workbench and player-facing command UI coexist;
-2. R1 is machine-qualified: player directives bound rather than erase local autonomy, and arbitration is inspectable;
-3. advance into **R2/R3 together through one bounded tangible interaction**: use a minimal hostile/action exchange to make command/autonomy consequences physically meaningful rather than marker-based;
-4. preserve the existing threat loop only as a regression fixture while replacing its product role;
-5. falsify whether `FOLLOW_ME` / `HOLD_HERE` envelopes produce intelligible initiative, not merely technically valid arbitration;
-6. do not request another Owner test until the runtime contains genuine player direction, bounded autonomy, the full workbench **and** a shared-world interaction that is not reducible to colored target circles.
+### Immediate work
 
-Do **not** reopen Foundation movement unless richer gameplay produces a concrete falsifier.
+The next implementation step is **not chosen yet**.
 
-Do **not** build final command vocabulary, multi-companion logic, LLM cognition or a full combat game yet.
+First close C0/C1:
 
-The immediate next implementation question is:
+> **What is the smallest coherent teammate situation that would make useful initiative, quick correction, shared responsibility and causal failure meaningfully observable — and which current mechanisms are actually necessary to build it?**
 
-> **What is the smallest player-directive + local-autonomy contract that lets the Owner tell the companion what they want while still observing a real teammate make bounded local decisions?**
+Answer that from the recovered Owner intent, existing evidence and live repo. Then implement only the bounded specimen required by that answer.
 
-That is the current frontier.
+This explicit uncertainty is intentional. It protects the project from turning the assistant's freshest implementation idea into roadmap authority.

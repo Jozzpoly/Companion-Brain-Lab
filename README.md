@@ -19,15 +19,15 @@ That file outranks historical plans, old experiment names, closed PRs, deleted b
 - Owner feedback: it felt like a regression toward day-one capability; visible change was essentially red/green threat circles; there was no meaningful player command/control layer; hiding the accumulated debug/workbench made prior progress feel discarded.
 - The repo still contains the full causal/debug workbench; the rejected participant surface hid it rather than deleting it.
 - Stage B is therefore retained only as donor/regression evidence.
-- Moving `main` now has the first machine-qualified **player direction + bounded local autonomy + explicit arbitration** seam: `AT_WILL`, `FOLLOW_ME` and `HOLD_HERE` are experimental directive envelopes, the local proposal remains visible when blocked, and the full causal workbench coexists with a fast command HUD.
-- The active frontier is now the smallest **tangible hostile/action exchange** needed to make those command/autonomy consequences physically meaningful rather than marker-based.
+- Moving `main` contains a **post-FAIL command/autonomy spike**. Its separation of player directive, autonomous proposal, arbitration, execution and World outcome is useful donor evidence; its concrete `AT_WILL/FOLLOW_ME/HOLD_HERE`, F1/F2/F3 UI and autonomy radii are experimental, not roadmap authority.
+- The active frontier is **strategic recovery and selection of the first coherent teammate situation**. No specific next mechanic—commands, hostile exchange, combat slice or otherwise—is currently pre-authorized merely because code for it exists.
 - Foundation movement remains `PASS · REWORK-READY` and should not be reopened without a new gameplay falsifier.
 
 ## North star
 
 > During unscripted play, the Owner increasingly treats the companion as a teammate: can rely on it without babysitting, can predict enough to coordinate, notices meaningful initiative, and can correct or direct it quickly when desired.
 
-Near-term work should restore the full Owner-visible workbench and build the smallest real player-directive seam that can coexist with local autonomy. The next Owner test must expose genuine direction/correction plus autonomous teammate behavior in the same runtime; another follower-plus-marker stimulus is not sufficient.
+Near-term work should use the restored full workbench and existing donors to design the first coherent teammate situation before further behavior expansion. The next Owner test must expose a genuinely new, integrated teammate capability in the same debuggable runtime; another movement-only, marker-only or mechanism-only specimen is not sufficient.
 
 ## Repository discipline
 
