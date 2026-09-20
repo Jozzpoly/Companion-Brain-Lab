@@ -15,15 +15,16 @@ That file outranks historical plans, old experiment names, closed PRs, deleted b
 - **Foundation / movement survival:** `PASS · REWORK-READY`.
 - The Owner already accepted that the movement foundation is good enough to **move on**. Do not reopen that gate without a new concrete falsification.
 - The 2026-09-20 OS-PREP-5 movement review was rejected as a **redundant Owner gate**: ordinary live behavior was still too similar to the previously accepted movement organism.
-- The project has a strong physical / causal / research substrate and now has its **first machine-qualified live shared-responsibility authority**: in the Open fixture the ordinary SPATIAL/NATURAL companion can autonomously switch from regrouping to `RESPOND_TO_THREAT`, physically contain a deterministic world pressure, produce a World-owned outcome, and return to regrouping.
-- This is **not yet an Owner/gameplay PASS or the broad minimum-useful-partner**. The pressure source is deliberately minimal and abstract; browser/perceptual qualification is the immediate frontier before mechanics expand.
+- The project now has a **machine-qualified Stage B Slice 1**: an advancing world-owned threat can reach the player and breach; the ordinary SPATIAL/NATURAL companion can autonomously leave regrouping, intercept it, produce a World-owned `CONTAINED` outcome and return to regrouping.
+- Exact participant source `295452947e5936b79a7e3c40a79f6fdb3f239836` is publicly pinned at the Stage B teammate surface and has passed post-deploy provenance/behavior smoke.
+- This is **not yet an Owner/gameplay PASS or real combat**. Owner perceptual judgement is now the next gate; implementation expansion should wait for that evidence.
 - The product frontier remains **live teammate behavior**, not another movement-only review campaign.
 
 ## North star
 
 > During unscripted play, the Owner increasingly treats the companion as a teammate: can rely on it without babysitting, can predict enough to coordinate, notices meaningful initiative, and can correct or direct it quickly when desired.
 
-Near-term work should now qualify and deepen the first live shared-responsibility loop until the rendered ordinary companion is unmistakably different from the old follower organism. Expansion is justified only by concrete deficits exposed by that qualification.
+Near-term implementation is intentionally paused at the qualified Stage B Slice 1 boundary. The next evidence should come from Owner interaction with the unprimed participant surface; subsequent work should deepen only the concrete deficit that interaction exposes.
 
 ## Repository discipline
 
@@ -41,4 +42,4 @@ This repository is intentionally **main-first**.
 - Foundation verdict: [`docs/FOUNDATION_FINAL_READINESS.md`](docs/FOUNDATION_FINAL_READINESS.md)
 - Current execution authority: [`docs/CURRENT.md`](docs/CURRENT.md)
 
-Public Pages remain an operational historical preview surface. In particular, the existing `/owner/` movement-review surface is **not the current Owner decision gate**.
+Public Pages preserve historical surfaces without replacing them. The existing `/owner/` movement-review surface is historical; the current Owner decision gate is the separately pinned Stage B participant surface at `/teammate/?teammate=1`.

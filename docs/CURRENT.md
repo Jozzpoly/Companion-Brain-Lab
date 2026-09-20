@@ -109,25 +109,39 @@ Strong current donors / invariants include:
 - trustworthy incident/provenance tooling;
 - participant-first judgement plus causal microscope when needed.
 
-### First teammate authority now exists, but minimum-useful-partner is not yet earned
+### Stage B Slice 1 is Owner-judgement-ready, but minimum-useful-partner is not yet earned
 
-As of the Stage B Slice 0 checkpoint `b6db640ba008be6d16b750bad5e9022d8d4e59ee`, the ordinary SPATIAL/NATURAL companion now seriously exercises a first bounded subset that the movement-only organism did not:
+The current participant candidate is pinned to exact source:
 
-- an external shared-world pressure can become authoritative;
-- the companion exposes explicit live action identity: `REGROUP` or `RESPOND_TO_THREAT`;
-- active pressure temporarily outranks ordinary relationship positioning;
-- the existing physical/routing/NATURAL chain realizes that new objective rather than a shadow layer;
-- World observes the post-physics result and owns `CONTAINED` / `BREACHED` outcome evidence;
-- after containment the companion relinquishes the pressure objective and returns to relationship/regroup behavior;
-- causal frames/incidents distinguish baseline relationship target, live objective target, action identity and factual pressure outcome.
+`295452947e5936b79a7e3c40a79f6fdb3f239836`
 
-This is **machine-qualified new authority, not an Owner/gameplay PASS**. The current pressure source is deliberately minimal and abstract; it is not yet combat and does not establish good teammate feel.
+It advances Slice 0 into a more perceptually honest shared-world problem:
+
+- the pressure source is now a **world-owned advancing threat proxy**, not a stationary objective marker;
+- it moves toward the player while undefended;
+- reaching the player causes factual World-owned `BREACHED`;
+- the ordinary SPATIAL/NATURAL companion can autonomously leave its relationship objective, expose live `RESPOND_TO_THREAT`, chase/intercept the moving threat and sustain the intercept;
+- successful interception produces factual World-owned `CONTAINED by companion`;
+- after resolution the companion relinquishes the responsibility and returns to `REGROUP`;
+- no player command, A1 authority, P2, LLM or new combat architecture is involved.
+
+This is still **not combat**: proximity-based sustained interception is apparatus for testing shared responsibility, not an attack system.
+
+Machine/browser qualification is complete:
+
+- normal repository gate PASS;
+- Stage B unit/world and live-chain tests PASS;
+- ordinary browser runtime proves the threat actually advances before interception and reaches `CONTAINED → REGROUP` without injected player input;
+- a separate participant surface strips research/debug authority, locks Open + SPATIAL/NATURAL + A1 OFF + 1×, and exposes only WASD, Reset and Save;
+- the participant UI deliberately does **not** reveal `RESPOND_TO_THREAT`, pressure phase or expected interpretation;
+- public Pages post-deploy smoke proves exact pinned provenance and captures authoritative `RESPOND_TO_THREAT` evidence while semantic/action state remains invisible to the participant.
+
+The build is therefore **machine-qualified and ready for Owner perceptual/gameplay judgement**, but it has no Owner PASS yet.
 
 Still not seriously exercised:
 
-- a tangible hostile/combat interaction;
+- a tangible hostile with actual combat/action exchange;
 - richer threat / tactical focus and target choice;
-- assistance that can vary meaningfully with player action;
 - nuanced engage / disengage decisions;
 - pre-combat readiness;
 - explicit corrigibility / player commands;
@@ -136,7 +150,11 @@ Still not seriously exercised:
 - few-companion cooperation;
 - live higher-cognition input.
 
-The current companion is therefore no longer only a movement substrate, but it is **still not yet the broad minimum useful partner** envisioned at project start.
+The immediate uncertainty is now experiential:
+
+> Does the companion's behavior read, without textual priming, as useful autonomous participation in a shared problem — or still as an arbitrary yellow body chasing a red target?
+
+That Owner judgement now has unique value and should precede further mechanic expansion.
 
 ---
 
@@ -146,33 +164,41 @@ The current companion is therefore no longer only a movement substrate, but it i
 
 The campaign must create **ordinary live behavior that is perceptually and causally different**, not another shadow-only research layer around the old organism.
 
-#### Slice 0 — implemented and machine-qualified, Owner-unqualified
+#### Slice 1 — advancing shared threat · machine-qualified · Owner judgement required
 
-The first bounded vertical slice now exists on ordinary live authority:
+Authoritative live chain:
 
-`world pressure/threat → RESPONSIBILITY: RESPOND_TO_THREAT → existing physical movement authority → sustained physical response → World CONTAINED/BREACHED → REGROUP`
+`advancing world threat → RESPOND_TO_THREAT → R1/NATURAL pursuit/intercept → World CONTAINED or BREACHED → REGROUP`
 
-Current scope is intentionally narrow:
+Pinned participant source:
 
-- enabled only in the Open fixture;
-- deterministic pressure source, not a full hostile actor;
-- no player command is required for the companion to assume bounded responsibility;
-- no new combat architecture;
-- no claim yet that the rendered/playable experience is good enough to show the Owner.
+`295452947e5936b79a7e3c40a79f6fdb3f239836`
 
-Machine evidence at `b6db640ba008be6d16b750bad5e9022d8d4e59ee`:
+Public participant URL:
 
-- TypeScript PASS;
-- **176 test files / 661 tests PASS**;
-- production build PASS;
-- `stage-b-live-partner.integration.test.ts` drives `LabWorld + R1 NATURAL + routing + post-World pressure` with zero player movement input and proves that the companion notices the pressure, switches to `RESPOND_TO_THREAT`, physically contains it, produces a World-owned `CONTAINED by companion` outcome, then returns to `REGROUP` without a breach;
-- the focused Stage B live-chain test itself completes in about 0.87 s; the ~39.8 s full Vitest duration is dominated by the existing historical test corpus.
+`https://jozzpoly.github.io/Companion-Brain-Lab/teammate/?teammate=1`
 
-The next question is no longer “can we wire shared responsibility into authority?”. It is:
+Publication authority is separate from the stimulus: workflow commit `eac9c4b3ddb9e10f2306385f24250f58a8cddb07` rebuilds that exact immutable SHA and publishes it alongside, without replacing, the historical Foundation, CCC-0 and `/owner/` surfaces.
 
-> **does the actual rendered ordinary runtime make this new responsibility legible, causally trustworthy and perceptually unlike the old follower organism?**
+Post-deploy smoke on 2026-09-20 passed on the first attempt and established:
 
-Qualify that in-browser before expanding mechanics. If the pressure-zone apparatus is too abstract to produce meaningful teammate judgement, replace or deepen the apparatus (for example with the smallest tangible hostile/minimal combat interaction) rather than polishing the abstraction indefinitely.
+- public incident provenance = exact pinned SHA;
+- build state = `PINNED_SOURCE_SHA`;
+- scenario = Open;
+- mode = SPATIAL;
+- actuator = NATURAL;
+- A1 = OFF;
+- time scale = 1×;
+- P2 unavailable;
+- participant controls = Reset + Save only;
+- semantic/action state is not visible to the participant;
+- captured causal frames nevertheless contain authoritative `RESPOND_TO_THREAT` during ACTIVE pressure.
+
+**Do not deepen the mechanic before Owner feedback unless the public surface itself breaks.**
+
+The next research question is not architectural. It is perceptual/gameplay judgement:
+
+> Does this feel like the first credible step from follower toward teammate, and if not, what concrete part of the causal interaction fails to communicate that?
 
 ### Required perceptual criterion
 
@@ -309,6 +335,14 @@ CCC-0 historical zero-authority preview:
 
 `857620b758bdaafcbfbab48da06ff89e7fc238cd`
 
+Current Stage B Owner-judgement candidate:
+
+`295452947e5936b79a7e3c40a79f6fdb3f239836`
+
+Public Stage B participant surface:
+
+`https://jozzpoly.github.io/Companion-Brain-Lab/teammate/?teammate=1`
+
 Historical branch recovery index:
 
 `archive/branch-manifest-2026-09-20.json`
@@ -326,13 +360,18 @@ Do **not** spend the next tranche:
 - creating a huge combat architecture;
 - designing final commands / multi-companion / LLM systems prematurely.
 
-The smallest truthful shared-responsibility slice now exists and is machine-qualified.
+The current Stage B Slice 1 is machine-qualified, publicly pinned and ready for Owner judgement.
 
 Current execution frontier:
 
-1. qualify the default rendered runtime in-browser without spending Owner attention: verify the live action switch, visible pressure, factual containment/breach transition, regroup transition, provenance and absence of runtime errors;
-2. falsify whether the current abstract pressure source is perceptually sufficient to demonstrate a teammate rather than merely a new objective marker;
-3. if insufficient, deepen the apparatus only as far as needed for a tangible shared problem (likely the smallest hostile/minimal-combat interaction), reusing Foundation movement rather than reopening it;
-4. ask for Owner judgement only when the ordinary build is unmistakably doing something the old movement organism could not.
+1. **stop implementation expansion until Owner feedback on the pinned participant stimulus;**
+2. ask the Owner to interact naturally for a short period and describe what they perceive before explaining the hidden action/state labels;
+3. use Owner evidence to distinguish among at least three materially different outcomes:
+   - behavior reads as useful autonomous participation → preserve the core causal loop and deepen toward richer action/combat;
+   - intention is visible but interaction is too abstract/artificial → replace the threat proxy/intercept apparatus with the smallest tangible hostile/action exchange;
+   - companion still reads as arbitrary follower/target-chaser → investigate the causal/perceptual failure before adding breadth;
+4. reopen movement/Foundation only if this richer live situation exposes a concrete movement failure that blocks teammate behavior.
 
-That is the current frontier.
+Do not spend the waiting tranche inventing commands, memory, LLM cognition, multi-companion logic or a full combat architecture.
+
+That Owner judgement is the current frontier.
