@@ -8,6 +8,10 @@ import {
   type StageBPartnerAction
 } from "../brain/stage-b-partner";
 import {
+  evaluateS2SituatedResponsibility,
+  type S2SituatedResponsibilityDecision
+} from "../brain/situated-responsibility";
+import {
   PlayerDirectiveRuntime,
   arbitrateCompanionAction,
   type CompanionArbitrationDecision,
@@ -70,7 +74,7 @@ import type {
   WorldSnapshot,
   WorldBodyId
 } from "../world/types";
-import { LabWorld } from "../world/world";
+import { LabWorld, S1_SHARED_DANGER_RULES } from "../world/world";
 import { isOwnerReviewSearch, ownerReviewAllowsPanelAction } from "./owner-review-mode";
 import { PlayerCommandHud } from "./player-command-hud";
 import { SharedDangerApparatusHud } from "./shared-danger-apparatus-hud";
@@ -209,6 +213,7 @@ export class R1LabScene extends Phaser.Scene {
   private arbitrationDecision: CompanionArbitrationDecision | null = null;
   private sharedPressure: SharedPressureSnapshot | null = null;
   private sharedDanger: SharedDangerSnapshot | null = null;
+  private situatedResponsibility: S2SituatedResponsibilityDecision | null = null;
   private pendingActionAttempts: WorldActionAttempt[] = [];
   private lastActionOutcomes: readonly WorldActionOutcome[] = [];
   private lastSharedDangerEpisodeOutcome: SharedDangerEpisodeOutcome = "NONE";
@@ -321,6 +326,7 @@ export class R1LabScene extends Phaser.Scene {
     this.snapshotValue = after;
     this.sharedPressure = this.world.sharedPressure();
     this.sharedDanger = worldResult.sharedDanger;
+    this.updateSituatedResponsibility(after);
     if (worldResult.actionOutcomes.length > 0) {
       this.lastActionOutcomes = worldResult.actionOutcomes;
     }
@@ -855,6 +861,38 @@ export class R1LabScene extends Phaser.Scene {
     }
   }
 
+  private updateSituatedResponsibility(snapshot: WorldSnapshot): void {
+    const previous = this.situatedResponsibility;
+
+    if (snapshot.scenarioId !== "shared-danger" || !this.world || !this.sharedDanger) {
+      this.situatedResponsibility = null;
+      return;
+    }
+
+    const next = evaluateS2SituatedResponsibility({
+      snapshot,
+      danger: this.sharedDanger,
+      rules: S1_SHARED_DANGER_RULES,
+      companionMaxSpeed: this.world.actorMovementCapability("companion").maxSpeed,
+      worldStepSeconds: S0_STEP_SECONDS
+    });
+    this.situatedResponsibility = next;
+
+    const changed =
+      !previous ||
+      previous.focusId !== next.focusId ||
+      previous.attention !== next.attention ||
+      previous.responsibility !== next.responsibility ||
+      previous.reasonCode !== next.reasonCode;
+
+    if (changed) {
+      this.logEvent(
+        `S2 focus ${previous?.focusId ?? "none"} -> ${next.focusId ?? "none"} · ` +
+        `attention ${next.attention} · responsibility ${next.responsibility} · ${next.reasonCode}`
+      );
+    }
+  }
+
   private logSharedDangerTransition(
     before: SharedDangerSnapshot | null,
     after: SharedDangerSnapshot | null,
@@ -1283,6 +1321,21 @@ export class R1LabScene extends Phaser.Scene {
             ? `latest attempts ${this.lastActionOutcomes.map((outcome) => `${outcome.actorId}:${outcome.status}@${compact(outcome.distance)}m`).join(" · ")}`
             : "latest attempts none",
           "S1 apparatus only · companion authority locked to MANUAL"
+        ]
+      }] : []),
+      ...(apparatusActive && this.situatedResponsibility ? [{
+        id: "s2-responsibility",
+        title: "S2 zero authority · attention / responsibility",
+        tone: this.situatedResponsibility.responsibility === "OWNED"
+          ? "warning" as const
+          : "normal" as const,
+        lines: [
+          `focus ${this.situatedResponsibility.focusId ?? "none"} · attention ${this.situatedResponsibility.attention} · responsibility ${this.situatedResponsibility.responsibility}`,
+          `player risk ${this.situatedResponsibility.evidence.playerAtMaterialRisk ? "YES" : "no"} · player↔hostile ${compactNullable(this.situatedResponsibility.evidence.playerToHostileDistance)}m`,
+          `companion↔hostile ${compactNullable(this.situatedResponsibility.evidence.companionToHostileDistance)}m · straight-line reach ${this.situatedResponsibility.evidence.straightLineTicksToInterventionRange ?? "n/a"}t · consequence window ${this.situatedResponsibility.evidence.consequenceTicksRemaining ?? "n/a"}t`,
+          `basis ${this.situatedResponsibility.reasonCode}`,
+          this.situatedResponsibility.reason,
+          "S2 ZERO AUTHORITY · observation/responsibility cannot emit movement or action"
         ]
       }] : []),
       {
@@ -1824,6 +1877,7 @@ export class R1LabScene extends Phaser.Scene {
       this.lastPostSignature = "";
       this.resetBrains();
       if (this.a1Authority.enabled()) this.a1Authority.resetOwnedState();
+      this.updateSituatedResponsibility(this.snapshotValue);
       this.recordTrail(this.snapshotValue);
       this.updatePostEvidence(this.snapshotValue);
       this.logEvent(`scenario ${id} loaded`);
