@@ -23,6 +23,11 @@ async function waitForPanel(page, predicate, timeout = 15_000, label = "panel co
   throw new Error(`${label} timed out. Latest panel: ${JSON.stringify(latest.slice(0, 5600))}`);
 }
 
+function interceptTarget(text) {
+  const match = text.match(/intercept target (-?\\d+\\.\\d+), (-?\\d+\\.\\d+)/);
+  return match ? { x: Number(match[1]), y: Number(match[2]) } : null;
+}
+
 async function shot(page, name) {
   await page.screenshot({ path: `${ROOT}/${name}.png`, type: "png", fullPage: true });
 }
@@ -66,7 +71,7 @@ try {
       text.includes("responsibility NONE") &&
       text.includes("state GUARDING") &&
       text.includes("basis INTERCEPT_FLANK_AVAILABLE") &&
-      text.includes("guard target") &&
+      text.includes("intercept target") &&
       text.includes("READINESS MOVEMENT ONLY") &&
       text.includes("latest attempts none"),
     8_000,
@@ -83,7 +88,7 @@ try {
   await page.locator(".debug-collapse").click();
   const expanded = await panelText(page);
   invariant(
-    expanded.includes("Pre-contact readiness · player-local guard") &&
+    expanded.includes("Pre-contact readiness · player-local intercept flank") &&
       expanded.includes("state GUARDING") &&
       expanded.includes("S2 zero authority") &&
       expanded.includes("S3 bounded material contribution") &&
@@ -187,6 +192,51 @@ try {
     interrupted.includes("interrupted by companion"),
     "Existing S3 material contribution did not resume after readiness/correction handoff."
   );
+  // E — readiness must remain player-local under live Owner movement.
+  await page.keyboard.press("r");
+  const anchorBeforeText = await waitForPanel(
+    page,
+    (text) =>
+      text.includes("phase APPROACHING") &&
+      text.includes("state HOLDING_READY") &&
+      text.includes("responsibility NONE") &&
+      text.includes("latest attempts none") &&
+      interceptTarget(text) !== null,
+    6_000,
+    "initial player-local intercept flank"
+  );
+  const anchorBefore = interceptTarget(anchorBeforeText);
+  invariant(anchorBefore !== null, "Initial readiness intercept target is unavailable.");
+
+  await page.keyboard.down("w");
+  await page.waitForTimeout(350);
+  await page.keyboard.up("w");
+
+  const anchorAfterText = await waitForPanel(
+    page,
+    (text) => {
+      const target = interceptTarget(text);
+      if (
+        !target ||
+        !text.includes("phase APPROACHING") ||
+        !text.includes("state HOLDING_READY") ||
+        !text.includes("responsibility NONE") ||
+        !text.includes("latest attempts none")
+      ) return false;
+      return Math.hypot(target.x - anchorBefore.x, target.y - anchorBefore.y) > 0.35;
+    },
+    5_000,
+    "readiness re-anchors after player movement"
+  );
+  const anchorAfter = interceptTarget(anchorAfterText);
+  invariant(anchorAfter !== null, "Moved readiness intercept target is unavailable.");
+  invariant(
+    Math.hypot(anchorAfter.x - anchorBefore.x, anchorAfter.y - anchorBefore.y) > 0.35,
+    "Readiness target did not materially move with the player."
+  );
+  await shot(page, "06-readiness-reanchors-after-player-movement.png");
+  await page.keyboard.press("p");
+
   invariant(
     await page.locator("#runtime-fault-sentinel").count() === 0,
     "Readiness runtime fault sentinel is visible."
