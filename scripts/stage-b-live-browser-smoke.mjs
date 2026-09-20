@@ -131,7 +131,8 @@ try {
       text.includes("directive FOLLOW_ME") &&
       text.includes("local brain proposes RESPOND_TO_THREAT") &&
       text.includes("selected FOLLOW_PLAYER · source PLAYER_DIRECTIVE") &&
-      text.includes("FOLLOW_ME currently outranks the autonomous threat-response proposal"),
+      text.includes("constraint BLOCKED") &&
+      text.includes("FOLLOW_ME blocks this autonomous response"),
     8_000,
     "FOLLOW_ME versus autonomous threat proposal"
   );
@@ -152,9 +153,28 @@ try {
       text.includes("hold anchor") &&
       text.includes("local brain proposes RESPOND_TO_THREAT") &&
       text.includes("selected HOLD_POSITION · source PLAYER_DIRECTIVE") &&
-      text.includes("HOLD_HERE currently outranks the autonomous threat-response proposal"),
+      text.includes("constraint BLOCKED") &&
+      text.includes("HOLD_HERE blocks this autonomous response"),
     8_000,
     "HOLD_HERE versus autonomous threat proposal"
+  );
+
+  // Re-issue FOLLOW_ME and leave it active. A distant threat must initially
+  // remain blocked, but as the same world problem enters the player-local leash
+  // the local brain should regain bounded autonomy without changing the directive.
+  await followButton.click();
+  const followCompatible = await waitForPanel(
+    page,
+    (text) =>
+      hasOrdinaryBaseline(text) &&
+      text.includes("world pressure ACTIVE") &&
+      text.includes("directive FOLLOW_ME") &&
+      text.includes("local brain proposes RESPOND_TO_THREAT") &&
+      text.includes("selected RESPOND_TO_THREAT · source AUTONOMY") &&
+      text.includes("constraint COMPATIBLE") &&
+      text.includes("FOLLOW_ME acts as a leash rather than an autonomy kill-switch"),
+    10_000,
+    "FOLLOW_ME bounded-autonomy release"
   );
 
   await atWillButton.click();
@@ -165,9 +185,10 @@ try {
       text.includes("world pressure ACTIVE") &&
       text.includes("directive AT_WILL") &&
       text.includes("local brain proposes RESPOND_TO_THREAT") &&
-      text.includes("selected RESPOND_TO_THREAT · source AUTONOMY"),
+      text.includes("selected RESPOND_TO_THREAT · source AUTONOMY") &&
+      text.includes("constraint UNCONSTRAINED"),
     8_000,
-    "AT_WILL restoration of local autonomy"
+    "AT_WILL restoration of unconstrained local autonomy"
   );
 
   const advancing = await waitForPanel(
@@ -261,17 +282,29 @@ try {
       followMe: {
         directiveVisible: followConflict.includes("directive FOLLOW_ME"),
         autonomousProposalPreserved: followConflict.includes("local brain proposes RESPOND_TO_THREAT"),
-        selected: "FOLLOW_PLAYER",
-        source: "PLAYER_DIRECTIVE"
+        distantProposal: {
+          compatibility: "BLOCKED",
+          selected: "FOLLOW_PLAYER",
+          source: "PLAYER_DIRECTIVE"
+        },
+        localProposal: {
+          compatibility: followCompatible.includes("constraint COMPATIBLE") ? "COMPATIBLE" : "MISSING",
+          selected: "RESPOND_TO_THREAT",
+          source: "AUTONOMY",
+          sameDirectiveRemainedActive: followCompatible.includes("directive FOLLOW_ME")
+        }
       },
       holdHere: {
         directiveVisible: holdConflict.includes("directive HOLD_HERE"),
         autonomousProposalPreserved: holdConflict.includes("local brain proposes RESPOND_TO_THREAT"),
+        compatibility: "BLOCKED",
         selected: "HOLD_POSITION",
         source: "PLAYER_DIRECTIVE"
       },
       atWill: {
-        autonomyRestored: autonomyRestored.includes("selected RESPOND_TO_THREAT · source AUTONOMY")
+        autonomyRestored:
+          autonomyRestored.includes("selected RESPOND_TO_THREAT · source AUTONOMY") &&
+          autonomyRestored.includes("constraint UNCONSTRAINED")
       }
     },
     factualOutcome: {
