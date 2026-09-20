@@ -117,11 +117,17 @@ export class CausalPanel {
     this.root.replaceChildren();
     const participantParams = new URLSearchParams(window.location.search);
     this.ownerSandboxSurface = participantParams.get("owner") === "1";
+    const teammateSpecimenSurface = participantParams.get("teammate") === "1";
     if (this.ownerSandboxSurface) {
       this.collapsed = true;
       this.root.classList.add("is-collapsed", "is-owner-sandbox");
       this.root.setAttribute("aria-label", "Owner movement review controls");
       document.title = "Companion Brain Lab — Movement Review";
+    } else if (teammateSpecimenSurface) {
+      // Same full workbench, participant-first initial view only.
+      this.collapsed = true;
+      this.root.classList.add("is-collapsed");
+      document.title = "Companion Brain Lab — Teammate Specimen";
     }
 
     for (const [layer, visible] of Object.entries(DEFAULT_LAYERS) as Array<[WorldDebugLayer, boolean]>) {
