@@ -66,8 +66,9 @@ function chooseStableLocalSide(input: {
   const lateral = cx * input.perpendicular.x + cy * input.perpendicular.y;
   if (lateral > READINESS_SIDE_DEADBAND) return 1;
   if (lateral < -READINESS_SIDE_DEADBAND) return -1;
-  // The authored S1 fixture begins collinear. Pick one deterministic flank;
-  // subsequent frames preserve it because the companion moves onto that side.
+  // The authored S1 fixture begins collinear. Pick one deterministic flank.
+  // Runtime continuity is carried explicitly through previousSide so player
+  // motion cannot silently flip the companion across the threat axis.
   return -1;
 }
 
@@ -75,6 +76,7 @@ export function evaluateSharedDangerReadiness(input: {
   snapshot: WorldSnapshot;
   danger: SharedDangerSnapshot | null;
   responsibility: S2SituatedResponsibilityDecision | null;
+  previousSide?: -1 | 1 | null;
 }): SharedDangerReadinessDecision {
   const danger = input.danger;
   const responsibility = input.responsibility;
@@ -121,7 +123,7 @@ export function evaluateSharedDangerReadiness(input: {
     y: phy / playerHostileDistance
   };
   const perpendicular = { x: -forward.y, y: forward.x };
-  const side = chooseStableLocalSide({
+  const side = input.previousSide ?? chooseStableLocalSide({
     player: player.position,
     companion: companion.position,
     perpendicular
