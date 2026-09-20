@@ -1,14 +1,7 @@
-import type {
-  CompanionArbitrationSource,
-  CompanionPublicActionKind,
-  PlayerDirectiveKind,
-  PlayerDirectiveSnapshot
-} from "../brain/player-directive";
+import type { PlayerDirectiveKind, PlayerDirectiveSnapshot } from "../brain/player-directive";
 
 export interface PlayerCommandHudState {
   directive: PlayerDirectiveSnapshot;
-  selectedAction: CompanionPublicActionKind | null;
-  arbitrationSource: CompanionArbitrationSource | null;
 }
 
 const COMMANDS: ReadonlyArray<{ kind: PlayerDirectiveKind; key: string; label: string }> = [
@@ -70,9 +63,6 @@ export class PlayerCommandHud {
     const directiveLabel =
       COMMANDS.find((entry) => entry.kind === state.directive.kind)?.label ??
       state.directive.kind;
-    this.status.textContent = state.selectedAction
-      ? `Order: ${directiveLabel} · acting: ${state.selectedAction}`
-      : `Order: ${directiveLabel}`;
-    this.status.dataset.source = state.arbitrationSource ?? "NONE";
+    this.status.textContent = `Order: ${directiveLabel}`;
   }
 }

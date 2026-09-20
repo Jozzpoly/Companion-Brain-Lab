@@ -1136,11 +1136,7 @@ export class R1LabScene extends Phaser.Scene {
     const autonomousProposal = this.autonomousProposalDecision;
     const arbitration = this.arbitrationDecision;
 
-    this.commandHud.update({
-      directive,
-      selectedAction: arbitration?.selectedKind ?? null,
-      arbitrationSource: arbitration?.source ?? null
-    });
+    this.commandHud.update({ directive });
 
     const sections: CausalPanelModel["sections"] = [
       {

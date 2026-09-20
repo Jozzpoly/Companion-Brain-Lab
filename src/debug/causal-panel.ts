@@ -233,7 +233,7 @@ export class CausalPanel {
 
     const hint = document.createElement("section");
     hint.className = "debug-section debug-hint";
-    hint.textContent = "Keyboard remains available: WASD · M mode · N actuator · T time · P pause · O step · I incident · R reset.";
+    hint.textContent = "Keyboard: WASD move · F1 At will · F2 Follow me · F3 Hold here · M mode · N actuator · T time · P pause · O step · I incident · R reset.";
 
     this.content.append(controls, layers, this.sectionsRoot, hint);
 
@@ -251,17 +251,15 @@ export class CausalPanel {
 
       ownerControls.append(ownerTitle, ownerHint);
 
-      if (true) {
-        const scenarios = document.createElement("div");
-        scenarios.className = "owner-review-scenarios";
-        scenarios.append(
-          button("Open", "scenario-open"),
-          button("Pillar", "scenario-pillar"),
-          button("Door", "scenario-doorway"),
-          button("Head-on", "scenario-head-on")
-        );
-        ownerControls.append(scenarios);
-      }
+      const scenarios = document.createElement("div");
+      scenarios.className = "owner-review-scenarios";
+      scenarios.append(
+        button("Open", "scenario-open"),
+        button("Pillar", "scenario-pillar"),
+        button("Door", "scenario-doorway"),
+        button("Head-on", "scenario-head-on")
+      );
+      ownerControls.append(scenarios);
 
       const actions = document.createElement("div");
       actions.className = "owner-review-actions";
