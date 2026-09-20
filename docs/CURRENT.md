@@ -226,7 +226,7 @@ The spike was implemented before full strategic recovery had completed. Therefor
 
 Do not delete this work merely because it was premature. Do not let its existence make it architecture authority either.
 
-## 5. Current recovery campaign — discover the first compelling teammate situation
+### Current recovery campaign — discover the first compelling teammate situation
 
 The project does **not** currently have a justified linear feature roadmap.
 
@@ -269,6 +269,68 @@ Before implementation, write down:
 5. what remains intentionally absent.
 
 If the proposed delta can be summarized as “another target, circle, timer, label or mode”, stop and redesign the situation.
+
+### C1 result — leading situation contract, not implementation authority
+
+C1 comparison rejects two tempting continuations as the primary specimen:
+
+- another movement/chokepoint/command-only test can still be faked by the accepted movement organism;
+- another Stage B pressure-proxy refinement is too close to the Owner-rejected marker interaction.
+
+A non-combat cooperative task remains a legitimate future research direction, but inventing a new task domain solely to avoid the project's original combat/pre-combat interest would add breadth without resolving the central teammate question.
+
+The current **leading hypothesis** is therefore a compact **shared-danger encounter with a meaningful pre-contact window**.
+
+This is a situation contract, not a combat-system decision.
+
+Required experiential beats:
+
+`ordinary movement / calm → problem becomes perceptible → preparation / responsibility choice → player and companion can both affect what happens → factual consequence → disengage / recovery / regroup`
+
+The specimen must make these questions observable:
+
+- does the companion notice something other than the player that deserves attention?
+- does it take useful initiative without immediately abandoning the player relation?
+- can the Owner quickly redirect/correct it when needed?
+- can the companion help without solving the whole situation and stealing agency?
+- does preparation before contact communicate anything useful?
+- can it disengage/recover for an intelligible reason?
+- can the workbench explain the exact causal chain afterward?
+
+World/action audit at current `main` establishes:
+
+- authoritative `ActorId` still contains only `player | companion`;
+- scenarios contain only those two physical actors;
+- the ordinary World command surface is movement-only `MotionIntent`;
+- Stage B's “threat” is a side-loop proxy, not an ordinary embodied actor/entity participating through the same action/outcome contract;
+- there is no authoritative attack/interaction attempt seam yet.
+
+Therefore the next technical design task is **not** “implement combat”. It is:
+
+> determine the smallest world-level representation and attempt→outcome seam required for this situation, while keeping movement, cognition, player direction and factual consequence separate.
+
+Exact choices remain OPEN, including:
+
+- whether the first problem source is represented as an ordinary actor or another embodied world entity;
+- the first material action available to player/companion;
+- damage/health versus interruption/stagger/other consequence;
+- perception/attention representation;
+- readiness/action labels;
+- command vocabulary and bindings.
+
+#### C1 falsifiers
+
+Reject or redesign the specimen if any of these becomes true:
+
+1. it can still be accurately described as “yellow follower chases a target marker”;
+2. the companion's useful behavior is achievable without representing any shared-world responsibility;
+3. the Owner is mostly observing the companion rather than participating in the same problem;
+4. success requires constant command spam;
+5. autonomy makes the companion play the encounter for the Owner;
+6. a command simply disables cognition instead of shaping discretion;
+7. the visible behavior only becomes intelligible after reading debugger labels;
+8. the implementation starts requiring a broad combat framework, inventory, RPG stats, animation architecture or multi-enemy tactics before the core teammate question can be answered;
+9. movement/foundation is reopened without a concrete failure caused by this richer situation.
 
 ### C2 — Build one coherent specimen
 
