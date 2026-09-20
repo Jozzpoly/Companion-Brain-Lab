@@ -16,6 +16,10 @@ import {
   type S3MaterialContributionProposal
 } from "../brain/s3-material-contribution";
 import {
+  applyS4Correction,
+  type S4CorrectionDecision
+} from "../brain/s4-correction";
+import {
   PlayerDirectiveRuntime,
   arbitrateCompanionAction,
   type CompanionArbitrationDecision,
@@ -220,6 +224,8 @@ export class R1LabScene extends Phaser.Scene {
   private situatedResponsibility: S2SituatedResponsibilityDecision | null = null;
   private s3AuthorityEnabled = false;
   private s3Contribution: S3MaterialContributionProposal | null = null;
+  private s4WithholdEnabled = false;
+  private s4CorrectionDecision: S4CorrectionDecision | null = null;
   private pendingActionAttempts: WorldActionAttempt[] = [];
   private lastActionOutcomes: readonly WorldActionOutcome[] = [];
   private lastSharedDangerEpisodeOutcome: SharedDangerEpisodeOutcome = "NONE";
@@ -400,6 +406,7 @@ export class R1LabScene extends Phaser.Scene {
     this.autonomousProposalDecision = null;
     this.arbitrationDecision = null;
     this.s3Contribution = null;
+    this.s4CorrectionDecision = null;
 
     const relationshipSemantic = (
       this.companionMode === "relational" || this.companionMode === "spatial"
@@ -426,13 +433,18 @@ export class R1LabScene extends Phaser.Scene {
         rules: S1_SHARED_DANGER_RULES
       });
       this.s3Contribution = proposal;
-      companionIntent = proposal.motionIntent;
+      const correction = applyS4Correction({
+        proposal,
+        correction: this.s4WithholdEnabled ? "WITHHOLD_CURRENT_CONTRIBUTION" : "NONE"
+      });
+      this.s4CorrectionDecision = correction;
+      companionIntent = correction.effectiveMotionIntent;
       if (
-        proposal.actionAttempt &&
+        correction.effectiveActionAttempt &&
         !this.pendingActionAttempts.some((attempt) => attempt.actorId === "companion")
       ) {
-        this.pendingActionAttempts.push(proposal.actionAttempt);
-        this.logEvent("S3 autonomous companion INTERVENE queued from OWNED responsibility");
+        this.pendingActionAttempts.push(correction.effectiveActionAttempt);
+        this.logEvent("S3 autonomous companion INTERVENE queued after S4 correction gate");
       }
       if (proposal.focusId === "hostile") {
         target = { ...actor(before, "hostile").position };
@@ -1384,6 +1396,23 @@ export class R1LabScene extends Phaser.Scene {
           "S3 authority is fixture-local and downstream of S2 responsibility; no command grammar"
         ]
       }] : []),
+      ...(apparatusActive ? [{
+        id: "s4-correction",
+        title: "S4 corrigibility · execution constraint",
+        tone: this.s4WithholdEnabled
+          ? this.s4CorrectionDecision?.blocked
+            ? "warning" as const
+            : "normal" as const
+          : "normal" as const,
+        lines: [
+          `correction ${this.s4WithholdEnabled ? "WITHHOLD_CURRENT_CONTRIBUTION" : "NONE"}`,
+          `raw S3 ${this.s3Contribution?.kind ?? "NOT_EVALUATED"} · S2 responsibility ${this.situatedResponsibility?.responsibility ?? "UNKNOWN"}`,
+          `blocked ${this.s4CorrectionDecision?.blocked ? "YES" : "no"} · effective move ${this.s4CorrectionDecision ? `${compact(this.s4CorrectionDecision.effectiveMotionIntent.move.x)}, ${compact(this.s4CorrectionDecision.effectiveMotionIntent.move.y)}` : "n/a"}`,
+          `effective world action ${this.s4CorrectionDecision?.effectiveActionAttempt?.kind ?? "none"}`,
+          this.s4CorrectionDecision?.reason ?? "S4 is dormant until S3 authority evaluates a contribution",
+          "S4 research correction constrains execution only; it does not rewrite S2 judgement or raw S3 proposal"
+        ]
+      }] : []),
       {
         id: "direction",
         title: "Player direction ↔ local autonomy",
@@ -1715,6 +1744,7 @@ export class R1LabScene extends Phaser.Scene {
     else if (action === "s1-player-intervene") this.queueWorldAction("player");
     else if (action === "s1-companion-intervene") this.queueWorldAction("companion");
     else if (action === "toggle-s3-authority") this.toggleS3Authority();
+    else if (action === "toggle-s4-withhold") this.toggleS4Withhold();
   }
 
   private queueWorldAction(actorId: "player" | "companion"): void {
@@ -1730,6 +1760,17 @@ export class R1LabScene extends Phaser.Scene {
     this.logEvent(`S1 INTERVENE queued · ${actorId}`);
   }
 
+  private toggleS4Withhold(): void {
+    if (this.scenarioId !== "shared-danger" || !this.s3AuthorityEnabled) {
+      this.logEvent("S4 withhold ignored unless shared-danger S3 authority is enabled");
+      return;
+    }
+    this.s4WithholdEnabled = !this.s4WithholdEnabled;
+    this.logEvent(
+      `S4 correction ${this.s4WithholdEnabled ? "WITHHOLD_CURRENT_CONTRIBUTION" : "NONE"}`
+    );
+  }
+
   private toggleS3Authority(): void {
     if (this.scenarioId !== "shared-danger") {
       this.logEvent("S3 authority ignored outside shared-danger apparatus");
@@ -1737,6 +1778,8 @@ export class R1LabScene extends Phaser.Scene {
     }
     this.s3AuthorityEnabled = !this.s3AuthorityEnabled;
     this.s3Contribution = null;
+    if (!this.s3AuthorityEnabled) this.s4WithholdEnabled = false;
+    this.s4CorrectionDecision = null;
     this.logEvent(`S3 bounded material authority ${this.s3AuthorityEnabled ? "ON" : "OFF"}`);
   }
 
@@ -1928,6 +1971,8 @@ export class R1LabScene extends Phaser.Scene {
       this.lastSharedDangerEpisodeOutcome = "NONE";
       this.s3AuthorityEnabled = false;
       this.s3Contribution = null;
+      this.s4WithholdEnabled = false;
+      this.s4CorrectionDecision = null;
       this.playerTrail.length = 0;
       this.companionTrail.length = 0;
       this.causalTrace.reset();
