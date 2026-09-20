@@ -12,6 +12,12 @@ async function panelText(page) {
   return (await page.locator("#debug-panel").textContent()) ?? "";
 }
 
+async function tapKey(page, key, holdMs = 50) {
+  await page.keyboard.down(key);
+  await page.waitForTimeout(holdMs);
+  await page.keyboard.up(key);
+}
+
 async function waitForPanel(page, predicate, timeout = 15_000, label = "panel condition") {
   const startedAt = Date.now();
   let latest = "";
@@ -84,7 +90,7 @@ try {
   await shot(page, "01-readiness-guarding-participant.png");
 
   // Freeze the exact preparation state and prove the full causal microscope remains in the same runtime.
-  await page.keyboard.press("p");
+  await tapKey(page, "p");
   await page.locator(".debug-collapse").click();
   const expanded = await panelText(page);
   invariant(
@@ -97,7 +103,7 @@ try {
   );
   await shot(page, "02-readiness-workbench-expanded.png");
   await page.locator(".debug-collapse").click();
-  await page.keyboard.press("p");
+  await tapKey(page, "p");
 
   // Q is intentionally narrower than readiness: it withholds intervention, not preparatory movement.
   await page.keyboard.down("q");
@@ -193,7 +199,7 @@ try {
     "Existing S3 material contribution did not resume after readiness/correction handoff."
   );
   // E — readiness must remain player-local under live Owner movement.
-  await page.keyboard.press("r");
+  await tapKey(page, "r");
   const anchorBeforeText = await waitForPanel(
     page,
     (text) =>
@@ -235,7 +241,7 @@ try {
     "Readiness target did not materially move with the player."
   );
   await shot(page, "06-readiness-reanchors-after-player-movement.png");
-  await page.keyboard.press("p");
+  await tapKey(page, "p");
 
   invariant(
     await page.locator("#runtime-fault-sentinel").count() === 0,
@@ -264,7 +270,9 @@ try {
         committedBlocked.includes("responsibility OWNED") &&
         committedBlocked.includes("blocked YES"),
       releaseCompletesMaterialContribution:
-        interrupted.includes("interrupted by companion")
+        interrupted.includes("interrupted by companion"),
+      playerMotionReanchorsReadiness:
+        Math.hypot(anchorAfter.x - anchorBefore.x, anchorAfter.y - anchorBefore.y) > 0.35
     },
     errors
   };
