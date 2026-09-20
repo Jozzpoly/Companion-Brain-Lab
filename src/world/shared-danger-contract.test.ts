@@ -155,7 +155,7 @@ describe("S1-A shared-danger World contract", () => {
     expect(result.after.lastOutcome).toBe("NONE");
   });
 
-  it("returns from recovery to approach only when recovery time is exhausted", () => {
+  it("ends the one-shot encounter when recovery time is exhausted", () => {
     const waiting = resolve({
       before: recovering(2),
       attempts: [attempt("player")]
@@ -168,7 +168,24 @@ describe("S1-A shared-danger World contract", () => {
       before: recovering(1),
       attempts: []
     });
-    expect(released.after.phase).toBe("APPROACHING");
+    expect(released.after.phase).toBe("COMPLETE");
     expect(released.after.phaseTicksRemaining).toBe(0);
+  });
+
+  it("keeps a completed encounter inert until the scenario is reset", () => {
+    const complete: SharedDangerSnapshot = {
+      ...initialSharedDangerSnapshot(),
+      phase: "COMPLETE",
+      lastOutcome: "INTERRUPTED",
+      lastOutcomeTick: 9
+    };
+    const result = resolve({
+      before: complete,
+      attempts: [attempt("player")]
+    });
+
+    expect(result.actionOutcomes[0]?.status).toBe("INVALID_PHASE");
+    expect(result.after.phase).toBe("COMPLETE");
+    expect(result.after.lastOutcome).toBe("INTERRUPTED");
   });
 });

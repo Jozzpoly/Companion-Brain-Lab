@@ -5,7 +5,8 @@ export type SharedDangerEntityId = "hostile";
 export type SharedDangerPhase =
   | "APPROACHING"
   | "WINDUP"
-  | "RECOVERING";
+  | "RECOVERING"
+  | "COMPLETE";
 
 export type SharedDangerEpisodeOutcome =
   | "NONE"
@@ -105,6 +106,9 @@ function validateSnapshot(snapshot: SharedDangerSnapshot): void {
     if (snapshot.phaseTicksRemaining <= 0) {
       throw new Error(`${snapshot.phase} requires positive phaseTicksRemaining.`);
     }
+  }
+  if ((snapshot.phase === "APPROACHING" || snapshot.phase === "COMPLETE") && snapshot.phaseTicksRemaining !== 0) {
+    throw new Error(`${snapshot.phase} requires phaseTicksRemaining = 0.`);
   }
 }
 
@@ -293,8 +297,19 @@ export function resolveSharedDangerAfterPhysics(
     return {
       after: {
         ...cloneSnapshot(input.before),
-        phase: "APPROACHING",
+        phase: "COMPLETE",
         phaseTicksRemaining: 0,
+        interruptedBy: []
+      },
+      actionOutcomes,
+      episodeOutcome: "NONE"
+    };
+  }
+
+  if (input.before.phase === "COMPLETE") {
+    return {
+      after: {
+        ...cloneSnapshot(input.before),
         interruptedBy: []
       },
       actionOutcomes,

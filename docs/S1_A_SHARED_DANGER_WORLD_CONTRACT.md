@@ -26,7 +26,8 @@ Properties:
 - an action attempted while the pre-resolution phase is `APPROACHING` does not become retroactively valid if the hostile enters `WINDUP` later in that same tick;
 - proximity alone never interrupts the hostile;
 - moving out of attack range during windup may make the eventual factual attack miss;
-- recovery is explicit and bounded.
+- recovery is explicit and bounded;
+- the first apparatus is intentionally **one-shot**: recovery ends in `COMPLETE`, and reset starts the next encounter. This avoids accidentally growing a repeated enemy-AI loop during S1.
 
 Implemented contract module:
 
@@ -49,7 +50,7 @@ May not claim:
 
 ## Next authorized work
 
-S1-B may now integrate this contract into one physical World scenario with:
+S1-B may now integrate this one-shot contract into one physical World scenario with:
 
 - a material hostile body;
 - deterministic World-owned approach/windup/recovery apparatus;
