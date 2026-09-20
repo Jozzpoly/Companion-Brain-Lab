@@ -38,7 +38,7 @@ function apparatusBaseline(text) {
 }
 
 async function resetDanger(page) {
-  await page.keyboard.press("5");
+  await page.getByRole("button", { name: "Danger", exact: true }).click();
   return waitForPanel(
     page,
     (text) =>
