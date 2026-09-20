@@ -1,6 +1,6 @@
 import type { S2SituatedResponsibilityDecision } from "./situated-responsibility";
 import type { SharedDangerSnapshot } from "../world/shared-danger-contract";
-import type { MotionIntent, WorldSnapshot } from "../world/types";
+import type { MotionIntent, Vec2, WorldSnapshot } from "../world/types";
 
 export type SharedDangerReadinessState =
   | "NONE"
@@ -10,23 +10,33 @@ export type SharedDangerReadinessState =
 export type SharedDangerReadinessReasonCode =
   | "NO_TRACKED_APPROACH"
   | "RESPONSIBILITY_ALREADY_ACTIVE"
-  | "GUARD_TARGET_AVAILABLE"
-  | "GUARD_GEOMETRY_COMPRESSED";
+  | "INTERCEPT_FLANK_AVAILABLE"
+  | "INTERCEPT_FLANK_REACHED";
 
 export interface SharedDangerReadinessDecision {
   kind: "SHARED_DANGER_READINESS";
   state: SharedDangerReadinessState;
   reasonCode: SharedDangerReadinessReasonCode;
-  target: { x: number; y: number } | null;
+  target: Vec2 | null;
   motionIntent: MotionIntent;
   playerToHostileDistance: number | null;
   companionToTargetDistance: number | null;
+  side: -1 | 1 | null;
   reason: string;
 }
 
-export const READINESS_GUARD_OFFSET = 1.15;
-export const READINESS_MIN_PLAYER_HOSTILE_SPACE = 2.05;
+/**
+ * Deliberately apparatus-local geometry.
+ *
+ * The companion prepares near the player, slightly forward and laterally off
+ * the hostile's direct path. This creates an intercept position for the later
+ * explicit action without pretending that the S1 sensor hostile is physically
+ * body-blocked by readiness movement.
+ */
+export const READINESS_FORWARD_OFFSET = 0.45;
+export const READINESS_LATERAL_OFFSET = 0.65;
 export const READINESS_ARRIVAL_RADIUS = 0.08;
+const READINESS_SIDE_DEADBAND = 0.05;
 
 function zero(
   reasonCode: SharedDangerReadinessReasonCode,
@@ -41,8 +51,24 @@ function zero(
     motionIntent: { actorId: "companion", move: { x: 0, y: 0 } },
     playerToHostileDistance,
     companionToTargetDistance: null,
+    side: null,
     reason
   };
+}
+
+function chooseStableLocalSide(input: {
+  player: Vec2;
+  companion: Vec2;
+  perpendicular: Vec2;
+}): -1 | 1 {
+  const cx = input.companion.x - input.player.x;
+  const cy = input.companion.y - input.player.y;
+  const lateral = cx * input.perpendicular.x + cy * input.perpendicular.y;
+  if (lateral > READINESS_SIDE_DEADBAND) return 1;
+  if (lateral < -READINESS_SIDE_DEADBAND) return -1;
+  // The authored S1 fixture begins collinear. Pick one deterministic flank;
+  // subsequent frames preserve it because the companion moves onto that side.
+  return -1;
 }
 
 export function evaluateSharedDangerReadiness(input: {
@@ -82,47 +108,60 @@ export function evaluateSharedDangerReadiness(input: {
   const phx = hostile.position.x - player.position.x;
   const phy = hostile.position.y - player.position.y;
   const playerHostileDistance = Math.hypot(phx, phy);
-
-  if (playerHostileDistance <= READINESS_MIN_PLAYER_HOSTILE_SPACE) {
-    return {
-      kind: "SHARED_DANGER_READINESS",
-      state: "HOLDING_READY",
-      reasonCode: "GUARD_GEOMETRY_COMPRESSED",
-      target: null,
-      motionIntent: { actorId: "companion", move: { x: 0, y: 0 } },
-      playerToHostileDistance: playerHostileDistance,
-      companionToTargetDistance: null,
-      reason:
-        "the tracked hostile is now too close to the player for the bounded between-bodies guard point; hold readiness instead of forcing a late chase"
-    };
+  if (playerHostileDistance <= 1e-9) {
+    return zero(
+      "NO_TRACKED_APPROACH",
+      "player and hostile positions do not define a usable readiness direction",
+      playerHostileDistance
+    );
   }
 
-  const inv = playerHostileDistance > 1e-9 ? 1 / playerHostileDistance : 0;
-  const direction = { x: phx * inv, y: phy * inv };
+  const forward = {
+    x: phx / playerHostileDistance,
+    y: phy / playerHostileDistance
+  };
+  const perpendicular = { x: -forward.y, y: forward.x };
+  const side = chooseStableLocalSide({
+    player: player.position,
+    companion: companion.position,
+    perpendicular
+  });
+
   const target = {
-    x: player.position.x + direction.x * READINESS_GUARD_OFFSET,
-    y: player.position.y + direction.y * READINESS_GUARD_OFFSET
+    x:
+      player.position.x +
+      forward.x * READINESS_FORWARD_OFFSET +
+      perpendicular.x * READINESS_LATERAL_OFFSET * side,
+    y:
+      player.position.y +
+      forward.y * READINESS_FORWARD_OFFSET +
+      perpendicular.y * READINESS_LATERAL_OFFSET * side
   };
 
   const tx = target.x - companion.position.x;
   const ty = target.y - companion.position.y;
   const companionTargetDistance = Math.hypot(tx, ty);
-  const move = companionTargetDistance <= READINESS_ARRIVAL_RADIUS
-    ? { x: 0, y: 0 }
-    : {
-        x: tx / companionTargetDistance,
-        y: ty / companionTargetDistance
-      };
+  const arrived = companionTargetDistance <= READINESS_ARRIVAL_RADIUS;
 
   return {
     kind: "SHARED_DANGER_READINESS",
-    state: "GUARDING",
-    reasonCode: "GUARD_TARGET_AVAILABLE",
+    state: arrived ? "HOLDING_READY" : "GUARDING",
+    reasonCode: arrived ? "INTERCEPT_FLANK_REACHED" : "INTERCEPT_FLANK_AVAILABLE",
     target,
-    motionIntent: { actorId: "companion", move },
+    motionIntent: {
+      actorId: "companion",
+      move: arrived
+        ? { x: 0, y: 0 }
+        : {
+            x: tx / companionTargetDistance,
+            y: ty / companionTargetDistance
+          }
+    },
     playerToHostileDistance: playerHostileDistance,
     companionToTargetDistance: companionTargetDistance,
-    reason:
-      "the companion tracks an approaching shared problem and prepares at a conservative player-local guard point without issuing an intervention"
+    side,
+    reason: arrived
+      ? "the companion has reached a player-local off-axis intercept flank and holds preparation without issuing a material action"
+      : "the companion tracks the approaching problem and moves to a player-local off-axis intercept flank without chasing or body-blocking the hostile"
   };
 }
