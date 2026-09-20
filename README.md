@@ -15,16 +15,17 @@ That file outranks historical plans, old experiment names, closed PRs, deleted b
 - **Foundation / movement survival:** `PASS · REWORK-READY`.
 - The Owner already accepted that the movement foundation is good enough to **move on**. Do not reopen that gate without a new concrete falsification.
 - The 2026-09-20 OS-PREP-5 movement review was rejected as a **redundant Owner gate**: ordinary live behavior was still too similar to the previously accepted movement organism.
-- The project now has a **machine-qualified Stage B Slice 1**: an advancing world-owned threat can reach the player and breach; the ordinary SPATIAL/NATURAL companion can autonomously leave regrouping, intercept it, produce a World-owned `CONTAINED` outcome and return to regrouping.
-- Exact participant source `295452947e5936b79a7e3c40a79f6fdb3f239836` is publicly pinned at the Stage B teammate surface and has passed post-deploy provenance/behavior smoke.
-- This is **not yet an Owner/gameplay PASS or real combat**. Owner perceptual judgement is now the next gate; implementation expansion should wait for that evidence.
-- The product frontier remains **live teammate behavior**, not another movement-only review campaign.
+- Stage B Slice 1 (`295452947e5936b79a7e3c40a79f6fdb3f239836`) remains machine-qualified as a narrow live-authority experiment, but the 2026-09-20 Owner test **rejected it as a product/Owner milestone**.
+- Owner feedback: it felt like a regression toward day-one capability; visible change was essentially red/green threat circles; there was no meaningful player command/control layer; hiding the accumulated debug/workbench made prior progress feel discarded.
+- The repo still contains the full causal/debug workbench; the rejected participant surface hid it rather than deleting it.
+- Stage B is therefore retained only as donor/regression evidence. The active frontier is **player direction + bounded local autonomy + explicit arbitration + full causal observability**, followed by the smallest tangible action/combat apparatus needed to make those interactions meaningful.
+- Foundation movement remains `PASS · REWORK-READY` and should not be reopened without a new gameplay falsifier.
 
 ## North star
 
 > During unscripted play, the Owner increasingly treats the companion as a teammate: can rely on it without babysitting, can predict enough to coordinate, notices meaningful initiative, and can correct or direct it quickly when desired.
 
-Near-term implementation is intentionally paused at the qualified Stage B Slice 1 boundary. The next evidence should come from Owner interaction with the unprimed participant surface; subsequent work should deepen only the concrete deficit that interaction exposes.
+Near-term work should restore the full Owner-visible workbench and build the smallest real player-directive seam that can coexist with local autonomy. The next Owner test must expose genuine direction/correction plus autonomous teammate behavior in the same runtime; another follower-plus-marker stimulus is not sufficient.
 
 ## Repository discipline
 
@@ -42,4 +43,4 @@ This repository is intentionally **main-first**.
 - Foundation verdict: [`docs/FOUNDATION_FINAL_READINESS.md`](docs/FOUNDATION_FINAL_READINESS.md)
 - Current execution authority: [`docs/CURRENT.md`](docs/CURRENT.md)
 
-Public Pages preserve historical surfaces without replacing them. The existing `/owner/` movement-review surface is historical; the current Owner decision gate is the separately pinned Stage B participant surface at `/teammate/?teammate=1`.
+Public Pages preserve historical surfaces without replacing them. Both the old `/owner/` movement review and the Stage B `/teammate/?teammate=1` surface are historical/rejected Owner stimuli, not the current decision gate.

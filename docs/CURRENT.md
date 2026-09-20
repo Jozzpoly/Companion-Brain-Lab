@@ -1,6 +1,6 @@
 # Companion Brain Lab — CURRENT
 
-Status: **CANONICAL EXECUTION ENTRYPOINT · STAGE B RECOVERY**
+Status: **CANONICAL EXECUTION ENTRYPOINT · COMPANION CORE RECOVERY**
 Date: **2026-09-20**
 
 Read this first before continuing the project.
@@ -109,96 +109,143 @@ Strong current donors / invariants include:
 - trustworthy incident/provenance tooling;
 - participant-first judgement plus causal microscope when needed.
 
-### Stage B Slice 1 is Owner-judgement-ready, but minimum-useful-partner is not yet earned
+### Stage B Slice 1 — OWNER FAIL as a product surface · retain only as bounded donor/evidence
 
-The current participant candidate is pinned to exact source:
+Owner test on 2026-09-20 rejected the Stage B participant build pinned to:
 
 `295452947e5936b79a7e3c40a79f6fdb3f239836`
 
-It advances Slice 0 into a more perceptually honest shared-world problem:
+The Owner's material feedback:
 
-- the pressure source is now a **world-owned advancing threat proxy**, not a stationary objective marker;
-- it moves toward the player while undefended;
-- reaching the player causes factual World-owned `BREACHED`;
-- the ordinary SPATIAL/NATURAL companion can autonomously leave its relationship objective, expose live `RESPOND_TO_THREAT`, chase/intercept the moving threat and sustain the intercept;
-- successful interception produces factual World-owned `CONTAINED by companion`;
-- after resolution the companion relinquishes the responsibility and returns to `REGROUP`;
-- no player command, A1 authority, P2, LLM or new combat architecture is involved.
+- the build felt like a **regression toward day-one capability**;
+- visible product change was experienced as little more than red/green circles added to the old companion;
+- the companion still had no meaningful player command/control layer;
+- removing the accumulated debug/workbench made the project feel as if prior research had been thrown away;
+- presenting this as an Owner gate repeated the same mistake as the earlier rejected movement-review build.
 
-This is still **not combat**: proximity-based sustained interception is apparatus for testing shared responsibility, not an attack system.
+This feedback outranks the earlier machine/browser qualification.
 
-Machine/browser qualification is complete:
+The Stage B mechanism still provides narrow technical evidence:
 
-- normal repository gate PASS;
-- Stage B unit/world and live-chain tests PASS;
-- ordinary browser runtime proves the threat actually advances before interception and reaches `CONTAINED → REGROUP` without injected player input;
-- a separate participant surface strips research/debug authority, locks Open + SPATIAL/NATURAL + A1 OFF + 1×, and exposes only WASD, Reset and Save;
-- the participant UI deliberately does **not** reveal `RESPOND_TO_THREAT`, pressure phase or expected interpretation;
-- public Pages post-deploy smoke proves exact pinned provenance and captures authoritative `RESPOND_TO_THREAT` evidence while semantic/action state remains invisible to the participant.
+- live action identity can switch from relationship/regrouping to an external responsibility;
+- the existing body/routing/NATURAL chain can realize that objective;
+- World can own factual `CONTAINED/BREACHED` outcomes;
+- exact causal incident/provenance remains available.
 
-The build is therefore **machine-qualified and ready for Owner perceptual/gameplay judgement**, but it has no Owner PASS yet.
+But those facts do **not** make Stage B a useful partner, command system, combat system, or acceptable Owner-facing milestone.
 
-Still not seriously exercised:
+Therefore:
 
-- a tangible hostile with actual combat/action exchange;
-- richer threat / tactical focus and target choice;
-- nuanced engage / disengage decisions;
+> **Stage B Slice 1 is demoted to a donor/regression fixture. It is not the current product direction and must not be routed back to the Owner as the active test.**
+
+The failure is strategic, not cosmetic. The project narrowed the rich original mission into one autonomous target override and then hid the very causal workbench that the Owner uses to understand and direct the research.
+
+### Debug / Owner Sandbox correction
+
+The project has always treated visual/causal debugging as first-class apparatus. The current repo still contains the R1 Causal Workbench and its accumulated layers; that work was **hidden by the special participant surface, not deleted**.
+
+New invariant:
+
+> **Participant-first interpretation is a sequencing technique, not permission to remove Owner observability.**
+
+Future Owner Sandbox builds must keep the causal workbench and debug layers available in the same runtime, with low-friction collapse/expand if a blind first impression is useful. Do not create a deliberately impoverished Owner surface that hides the project's accumulated state, reasoning, failure evidence or controls.
+
+Still not seriously exercised at product quality:
+
+- fast player direction / command intent;
+- autonomy-vs-obedience arbitration;
+- tangible combat / action exchange;
+- richer threat/focus selection;
 - pre-combat readiness;
-- explicit corrigibility / player commands;
-- autonomy vs obedience conflict;
-- general tactical/episodic memory;
+- explicit disagreement/corrigibility;
+- tactical/episodic memory;
 - few-companion cooperation;
-- live higher-cognition input.
+- live higher cognition.
 
-The immediate uncertainty is now experiential:
-
-> Does the companion's behavior read, without textual priming, as useful autonomous participation in a shared problem — or still as an arbitrary yellow body chasing a red target?
-
-That Owner judgement now has unique value and should precede further mechanic expansion.
+These are now evaluated against the recovered original mission rather than postponed behind another movement-only gate.
 
 ---
 
 ## 5. Current strategic objective
 
-### Stage B Recovery — from instrumented follower to first useful partner
+### Companion Core Recovery — restore the original research axis
 
-The campaign must create **ordinary live behavior that is perceptually and causally different**, not another shadow-only research layer around the old organism.
+The original 2026-09-13 skeleton remains the strongest statement of the mission:
 
-#### Slice 1 — advancing shared threat · machine-qualified · Owner judgement required
+- strong local live brain;
+- one companion first, later a few;
+- combat **and preparation for combat**;
+- fast low-attention player direction inspired by Mount & Blade's command grammar;
+- commands interpreted as intent/constraints where appropriate rather than joystick puppeteering;
+- useful autonomy without babysitting;
+- explicit study of **autonomy ↔ obedience**;
+- first-class visual/causal debugging;
+- later higher cognition only when it adds value.
 
-Authoritative live chain:
+The Foundation PASS explicitly bought permission for aggressive redesign. The project must stop treating the legacy eight-slot follower plus new target sources as the product.
 
-`advancing world threat → RESPOND_TO_THREAT → R1/NATURAL pursuit/intercept → World CONTAINED or BREACHED → REGROUP`
+#### Recovery sequence
 
-Pinned participant source:
+This sequence is a planning skeleton, not frozen architecture. Reassess after each real result.
 
-`295452947e5936b79a7e3c40a79f6fdb3f239836`
+**R0 — Restore the Owner research surface**
 
-Public participant URL:
+- keep the accumulated Causal Workbench and world overlays available in the ordinary Owner runtime;
+- preserve incident capture/provenance;
+- do not make “blind participant” a separate impoverished build;
+- make current public action, player directive, autonomy proposal, arbitration result, execution and World outcome inspectable when those concepts exist;
+- retain Stage B threat only as optional apparatus/regression evidence.
 
-`https://jozzpoly.github.io/Companion-Brain-Lab/teammate/?teammate=1`
+**R1 — Player Directive seam**
 
-Publication authority is separate from the stimulus: workflow commit `eac9c4b3ddb9e10f2306385f24250f58a8cddb07` rebuilds that exact immutable SHA and publishes it alongside, without replacing, the historical Foundation, CCC-0 and `/owner/` surfaces.
+Introduce the smallest explicit player-direction substrate before building a large command tree.
 
-Post-deploy smoke on 2026-09-20 passed on the first attempt and established:
+Required separation:
 
-- public incident provenance = exact pinned SHA;
-- build state = `PINNED_SOURCE_SHA`;
-- scenario = Open;
-- mode = SPATIAL;
-- actuator = NATURAL;
-- A1 = OFF;
-- time scale = 1×;
-- P2 unavailable;
-- participant controls = Reset + Save only;
-- semantic/action state is not visible to the participant;
-- captured causal frames nevertheless contain authoritative `RESPOND_TO_THREAT` during ACTIVE pressure.
+`player directive → interpreted constraints/priorities → local autonomous proposal → arbitration → public action intent → execution → World outcome`
 
-**Do not deepen the mechanic before Owner feedback unless the public surface itself breaks.**
+The directive must not directly mutate World truth or become a disguised movement joystick.
 
-The next research question is not architectural. It is perceptual/gameplay judgement:
+Start with a tiny command vocabulary chosen for information value, not completeness. Current leading candidates from the original research frame are variants of:
 
-> Does this feel like the first credible step from follower toward teammate, and if not, what concrete part of the causal interaction fails to communicate that?
+- follow / stay with me;
+- hold here / preserve responsibility for an area;
+- protect / prioritize my safety or nearby threats;
+- at-will / relax explicit direction.
+
+Exact labels/UI remain open until implementation planning.
+
+**R2 — Autonomy ↔ obedience experiment**
+
+Use one shared-world problem to force real tension between local initiative and player direction.
+
+The important evidence is not “did the NPC obey?” but:
+
+- what did the player ask?
+- what did the local brain independently want to do?
+- what constraints did the directive create?
+- what action won and why?
+- did the result preserve player agency?
+- when did the companion legitimately deviate, refuse or reconsider?
+- could the Owner understand the decision from the workbench?
+
+**R3 — Tangible action/combat apparatus**
+
+Only after the command/autonomy seam is real, replace the abstract threat proxy as needed with the smallest tangible hostile/action exchange that makes assistance, protection, engagement, disengagement and preparation materially meaningful.
+
+Do not jump straight to a full combat architecture.
+
+**R4 — Owner Sandbox**
+
+The next Owner gate must demonstrate a capability the old follower could not plausibly fake:
+
+- the Owner can direct the companion quickly;
+- the companion retains bounded local autonomy;
+- a shared problem creates an actual command/autonomy tradeoff;
+- debug exposes the complete causal chain;
+- the experience is not reducible to “yellow circle chases another target”.
+
+Until that exists, keep implementation and machine/browser falsification inside the agent loop.
 
 ### Required perceptual criterion
 
@@ -339,7 +386,7 @@ Current Stage B Owner-judgement candidate:
 
 `295452947e5936b79a7e3c40a79f6fdb3f239836`
 
-Public Stage B participant surface:
+Rejected Stage B participant surface (historical evidence only; **not current Owner gate**):
 
 `https://jozzpoly.github.io/Companion-Brain-Lab/teammate/?teammate=1`
 
@@ -360,18 +407,23 @@ Do **not** spend the next tranche:
 - creating a huge combat architecture;
 - designing final commands / multi-companion / LLM systems prematurely.
 
-The current Stage B Slice 1 is machine-qualified, publicly pinned and ready for Owner judgement.
+The Stage B Owner stimulus has **failed**. Do not polish it or ask the Owner to repeat it.
 
 Current execution frontier:
 
-1. **stop implementation expansion until Owner feedback on the pinned participant stimulus;**
-2. ask the Owner to interact naturally for a short period and describe what they perceive before explaining the hidden action/state labels;
-3. use Owner evidence to distinguish among at least three materially different outcomes:
-   - behavior reads as useful autonomous participation → preserve the core causal loop and deepen toward richer action/combat;
-   - intention is visible but interaction is too abstract/artificial → replace the threat proxy/intercept apparatus with the smallest tangible hostile/action exchange;
-   - companion still reads as arbitrary follower/target-chaser → investigate the causal/perceptual failure before adding breadth;
-4. reopen movement/Foundation only if this richer live situation exposes a concrete movement failure that blocks teammate behavior.
+1. restore the full Owner-visible causal/debug surface on the active development runtime;
+2. design and implement the minimal **Player Directive** seam on top of the earned Foundation contracts;
+3. make autonomous proposal vs player directive vs arbitration outcome explicitly inspectable;
+4. use the existing threat loop only as one cheap pressure fixture where useful, not as the product;
+5. add the smallest tangible action/combat interaction only when needed to make command/autonomy consequences real;
+6. do not request another Owner test until the runtime contains genuine player direction, bounded autonomy and the causal workbench together.
 
-Do not spend the waiting tranche inventing commands, memory, LLM cognition, multi-companion logic or a full combat architecture.
+Do **not** reopen Foundation movement unless richer gameplay produces a concrete falsifier.
 
-That Owner judgement is the current frontier.
+Do **not** build final command vocabulary, multi-companion logic, LLM cognition or a full combat game yet.
+
+The immediate next implementation question is:
+
+> **What is the smallest player-directive + local-autonomy contract that lets the Owner tell the companion what they want while still observing a real teammate make bounded local decisions?**
+
+That is the current frontier.
