@@ -36,7 +36,7 @@ function headOnVelocityInputs() {
   ];
 }
 
-function actor(actors: readonly ActorSnapshot[], id: "player" | "companion"): ActorSnapshot {
+function actor(actors: readonly ActorSnapshot[], id: ActorSnapshot["id"]): ActorSnapshot {
   const found = actors.find((candidate) => candidate.id === id);
   if (!found) throw new Error(`missing ${id}`);
   return found;

@@ -33,7 +33,7 @@ import type {
   StaticTraversalOptions,
   Vec2,
   WorldSnapshot,
-  type WorldBodyId
+  WorldBodyId
 } from "./types";
 
 export type AuthorityA0StepObserver = (evidence: AuthorityA0WorldStepEvidence) => void;
