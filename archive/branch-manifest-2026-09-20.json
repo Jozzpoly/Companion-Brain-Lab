@@ -1,0 +1,449 @@
+{
+  "schema": "companion-brain-lab-branch-archive-manifest-v1",
+  "capturedAt": "2026-09-20T01:12:00Z",
+  "purpose": "Pre-cleanup recovery manifest. Every legacy branch tip listed here was also incorporated into the archive anchor ancestry before branch deletion.",
+  "archiveBranch": "archive/pre-cleanup-2026-09-20",
+  "preserve": [
+    "main",
+    "archive/pre-cleanup-2026-09-20"
+  ],
+  "branchCount": 109,
+  "branches": [
+    {
+      "name": "agent/live-relationship-semantic-wiring-candidate",
+      "sha": "a5bbe35f0c6084c1a798f00a4184dbae8c063839"
+    },
+    {
+      "name": "archive/pre-cleanup-2026-09-20",
+      "sha": "b574ad8848a7bc0ad05150b4798218ab68b162e2"
+    },
+    {
+      "name": "audit/ccc0-owner-readiness-falsification",
+      "sha": "453561533ef74b82630726a2fd88ec4b5e68833a"
+    },
+    {
+      "name": "audit/companion-behavior-forensics",
+      "sha": "345c85172b5cf8b65f656a21b8a627554f089feb"
+    },
+    {
+      "name": "diagnostic/authority-a1-2z4f-failure-transport",
+      "sha": "9d8cb49aa0e4e188631ecf456d2c9add705ee313"
+    },
+    {
+      "name": "do-not-use-placeholder",
+      "sha": "df6c6de7bae2b4235f90fcbff09b4e3c1e655872"
+    },
+    {
+      "name": "evidence/a1-2y-summary-probe",
+      "sha": "b088a2fcc9f69d933ae1a56f2c2620061516b9ac"
+    },
+    {
+      "name": "evidence/a1-2z3-visual-probe",
+      "sha": "d0d1731b31d649e701b2048abf20f44b4dc15b1c"
+    },
+    {
+      "name": "experiment/a1-no-contact-cross-future-falsifier",
+      "sha": "23fac7cadd7a8bf46c09854a55047f5b46521448"
+    },
+    {
+      "name": "experiment/a1-opportunity-persistence",
+      "sha": "bb2aa1e4546ccba7d1e40640a47b7e14da6285c5"
+    },
+    {
+      "name": "experiment/authority-a1-2-post-z4-promotion-readiness",
+      "sha": "d283b5d1fe71416cd786d892aced22f6c7a01c58"
+    },
+    {
+      "name": "experiment/authority-a1-2a-moving-frame-rollout",
+      "sha": "67c1cdede7188574ec67fa47175984b9a5328a3c"
+    },
+    {
+      "name": "experiment/authority-a1-2b-candidate-reachability",
+      "sha": "4e497c9648a4e82531154ce7b310348020473ce4"
+    },
+    {
+      "name": "experiment/authority-a1-2c-player-future-hypotheses",
+      "sha": "f5cf2002a53b626fe06ea583e9380ef7d7a7ba34"
+    },
+    {
+      "name": "experiment/authority-a1-2d-direct-joint-future-matrix",
+      "sha": "e75fa0a61ab31d6af906447e3a0a0e65095d1235"
+    },
+    {
+      "name": "experiment/authority-a1-2e-hard-radius-safety",
+      "sha": "aa306c38c9d878f0a0251e8158c3ad903abc37f3"
+    },
+    {
+      "name": "experiment/authority-a1-2f-egress-aware-g3-matrix",
+      "sha": "1d355533f6df38aa7ae74f5c41cb0fcc254d3097"
+    },
+    {
+      "name": "experiment/authority-a1-2g-world-rehearsal-substrate",
+      "sha": "1b4dfee79b25458b982f11ddb17104454c7da554"
+    },
+    {
+      "name": "experiment/authority-a1-2h-player-future-interventions",
+      "sha": "1dc52c7044662375b0dbee1afbff7faa94cbcff9"
+    },
+    {
+      "name": "experiment/authority-a1-2i-player-rehearsal-adapter",
+      "sha": "68b19cfcf14f150f5601de78c283f0e6f0ecd895"
+    },
+    {
+      "name": "experiment/authority-a1-2j-joint-physical-rehearsal",
+      "sha": "19d69e214840290c17d10316c332a3c07ff469be"
+    },
+    {
+      "name": "experiment/authority-a1-2k-joint-hard-body-trace",
+      "sha": "324ac55f67660a8cbeee3b3e346017997c8fe54d"
+    },
+    {
+      "name": "experiment/authority-a1-2l-g3-trace-policy",
+      "sha": "13ffc57c22b9073287a20cef718a86b2de4c15c4"
+    },
+    {
+      "name": "experiment/authority-a1-2m-player-agency-trajectory",
+      "sha": "00163a5049fa9f6b3de8f25757f9f31861c89c28"
+    },
+    {
+      "name": "experiment/authority-a1-2n-g4-cooperation-preference",
+      "sha": "ef8d1d2da942e7737181c684eb6d2160ad303bd6"
+    },
+    {
+      "name": "experiment/authority-a1-2o-concrete-command-proposals",
+      "sha": "df2d4a43e6d0a6440e46587913ee363e54ddda8b"
+    },
+    {
+      "name": "experiment/authority-a1-2p-fixed-command-cross-future-profile",
+      "sha": "25a049efc05a9f3ba9751a24a558cc2d300755ec"
+    },
+    {
+      "name": "experiment/authority-a1-2q-terminal-relationship-utility",
+      "sha": "f4397be3837bc0be30cdd576bdc9c72b49e25c28"
+    },
+    {
+      "name": "experiment/authority-a1-2r-g4-relation-graphs",
+      "sha": "08de09dad08fb6d25ea5a6c5b3a8b563756a6ec1"
+    },
+    {
+      "name": "experiment/authority-a1-2r0-g4-command-identity",
+      "sha": "d15b43b735732a2f87b96447cb19d98b259a9f2c"
+    },
+    {
+      "name": "experiment/authority-a1-2s0-robustness-research-dossier",
+      "sha": "4363c8dcfa54ea99dbd4677b7a837df54bed976a"
+    },
+    {
+      "name": "experiment/authority-a1-2s1-cross-future-contradiction-atlas",
+      "sha": "c7d3841a927455fe45b1077b15be8765692bfbef"
+    },
+    {
+      "name": "experiment/authority-a1-2t-decision-horizon-frontier",
+      "sha": "bef12932f302f953a0b5cc1ae54c3a4294ab6526"
+    },
+    {
+      "name": "experiment/authority-a1-2u-radial-pace-evidence",
+      "sha": "2b7d72e251155b5e2dc93d89bb26619b594aaffa"
+    },
+    {
+      "name": "experiment/authority-a1-2v-candidate-evidence-certificate",
+      "sha": "6f21f1afa91b1c73572731f9b2a3afd1f1e5b104"
+    },
+    {
+      "name": "experiment/authority-a1-2w-evidence-conflict-atlas",
+      "sha": "86f7b892fbb878c1766fa7d24a4460bf94e4f15a"
+    },
+    {
+      "name": "experiment/authority-a1-2x-structured-frontier-audit",
+      "sha": "d2abfd34b6c343b48603db16c56f965d74d5e23f"
+    },
+    {
+      "name": "experiment/authority-a1-2y-cross-future-frontier-robustness",
+      "sha": "1040b40a57fa17a402ecb804220dfddfbcf92da9"
+    },
+    {
+      "name": "experiment/authority-a1-2z-reversal-robustness-translation-audit",
+      "sha": "4874369b50563c46ac80b8e5e2a99971f4396bab"
+    },
+    {
+      "name": "experiment/authority-a1-2z1-observer-query-noninterference",
+      "sha": "9f85b286e90479ad65096bd2530143389ce5e9d1"
+    },
+    {
+      "name": "experiment/authority-a1-2z3-head-on-browser-specimen",
+      "sha": "b9919354eb95be9ef61bfcdbe6b282fa7591ff10"
+    },
+    {
+      "name": "experiment/authority-a1-2z4-h1-primary-shadow-head-on",
+      "sha": "8bcdf475aaf838b670c8f861ca07eb935ad51781"
+    },
+    {
+      "name": "experiment/authority-a1-2z4a-head-on-reflection-audit",
+      "sha": "df6c6de7bae2b4235f90fcbff09b4e3c1e655872"
+    },
+    {
+      "name": "experiment/authority-a1-2z4b-head-on-tangent-class-browser",
+      "sha": "4589188d8f358928e73ca97002157c944603b603"
+    },
+    {
+      "name": "experiment/authority-a1-2z4c-live-state-shadow",
+      "sha": "214efd948e90ad1c5fa5a11f98bd61b08cdbaf47"
+    },
+    {
+      "name": "experiment/authority-a1-2z4d-class-support-trace",
+      "sha": "08b30b12c8da6dd7cf9c4cd81b7181c13a208b00"
+    },
+    {
+      "name": "experiment/authority-a1-2z4e-evidence-transport",
+      "sha": "8ba838314e8a7f06cdc30f73871911ce92cc315a"
+    },
+    {
+      "name": "experiment/authority-a1-2z4f-tick0-early-live-class-map",
+      "sha": "cde58ee85247e3577c6eb51421d0ac81aaa261c7"
+    },
+    {
+      "name": "experiment/authority-a1-2z4g-stage-attribution-trace",
+      "sha": "7c6736de44b8cf7178d6eb14f0bf428a4a6cf751"
+    },
+    {
+      "name": "experiment/authority-a1-relative-region",
+      "sha": "61dc17cf534a128cb9c5e1a004305d75a5c3ea97"
+    },
+    {
+      "name": "experiment/authority-a1-situation",
+      "sha": "277103133b1cff0b73e0577f4202b2c96ee293c3"
+    },
+    {
+      "name": "experiment/ccc-0-owner-readiness-repair",
+      "sha": "857620b758bdaafcbfbab48da06ff89e7fc238cd"
+    },
+    {
+      "name": "experiment/ccc-0-shadow-coordination",
+      "sha": "4318d895f1e83ba921faf1c7f4bd7cefea1c46f2"
+    },
+    {
+      "name": "experiment/evidence-a1-2z4-semantic-marker-probe",
+      "sha": "8748c10fbfbe450b4baa6b4302e47f10e6ffc591"
+    },
+    {
+      "name": "experiment/evidence-a1-2z4a-reflection-marker-probe",
+      "sha": "1757f83b8b6e291ad72edbb6208649076234921e"
+    },
+    {
+      "name": "experiment/evidence-a1-2z4b-failure-probe",
+      "sha": "ba39743d9448bc658a595670e14124e17076278c"
+    },
+    {
+      "name": "experiment/evidence-a1-2z4b-failure-probe-v2",
+      "sha": "851b120fb7cdce852def8b1521bdc9df6f5b30f1"
+    },
+    {
+      "name": "experiment/os-prep1-evidence-integrity",
+      "sha": "944a6eb3d6e7ecd56171023e08894d0ea6fff2f8"
+    },
+    {
+      "name": "experiment/os-prep3-ph01-turn-mirror",
+      "sha": "bd6ec29218659373f94fe0885de36623bfb27e7f"
+    },
+    {
+      "name": "experiment/os-prep3-ph01-turn-reversal",
+      "sha": "610c0c7f1ef8055af44ebca245b440614ecc58f8"
+    },
+    {
+      "name": "experiment/os-prep3-ph02-post-expiry-temporal",
+      "sha": "f21e9076c0e54b2691212a09d424a62c464f8d33"
+    },
+    {
+      "name": "experiment/os-prep3-ph03-slow-walk",
+      "sha": "a45ed5547beacf080c7969b5a28cde9f43730b5e"
+    },
+    {
+      "name": "experiment/os-prep3-ph04-head-on-baseline",
+      "sha": "9ab5026d805ff9c042ed059ec190587c006554d6"
+    },
+    {
+      "name": "experiment/os-prep3-ph04-late-cross-front",
+      "sha": "a73dc9620954f7fbae5e7ee49c129b4f9d3dd7a4"
+    },
+    {
+      "name": "experiment/os-prep3-ph05-doorway-reversal",
+      "sha": "64cf14809f49e2ba8368552bcf330805b6e7373f"
+    },
+    {
+      "name": "experiment/os-prep3-ph05-doorway-settle",
+      "sha": "68265f8f451da11ff2b07937e82c7a18f71a6cd4"
+    },
+    {
+      "name": "experiment/os-prep3-ph07-pillar-mirror",
+      "sha": "6e1c605fa9574de8a1de0753c5b741ffd7611293"
+    },
+    {
+      "name": "experiment/os-prep5-movement-substrate-owner-review",
+      "sha": "510405960acf3cfce0a6985fe6f9da88ec95d0c2"
+    },
+    {
+      "name": "experiment/os-prep5-owner-sandbox-candidate",
+      "sha": "437cd11727eba327b99d8d70c80ce031c003a040"
+    },
+    {
+      "name": "experiment/r1-causal-workbench-v2",
+      "sha": "9a72c2237e859d838c183d23d1fc96f475867a45"
+    },
+    {
+      "name": "experiment/r1-progress-recovery",
+      "sha": "8e5c6476cef548a390acf1cbc3d9e63ca7e359a4"
+    },
+    {
+      "name": "experiment/r1-progress-recovery-audit",
+      "sha": "a927fff73f8b0eb56de67fd58df5faa7b69980e0"
+    },
+    {
+      "name": "experiment/r1-red-reproductions",
+      "sha": "fc3d53e1f62d2177b1784e19349dacb2174a47e7"
+    },
+    {
+      "name": "experiment/r1-spatial-contract-repair",
+      "sha": "91f7a9d07639a4cb29b890dd1fc5d7b7c466c1b9"
+    },
+    {
+      "name": "experiment/s0-physical-apparatus",
+      "sha": "673a08196c67e414263f677951db43d161d56d62"
+    },
+    {
+      "name": "experiment/s1-relational-positioning",
+      "sha": "77fec264f6a985e14bde2a2de08036bf20c214fa"
+    },
+    {
+      "name": "experiment/s2-debug-workbench",
+      "sha": "75fcf0e645152f3223d9ed9ee746212efbb00864"
+    },
+    {
+      "name": "experiment/s2c-shadow-routing",
+      "sha": "8ff58d0c38ae1fbc893695d05b2577fb8120185d"
+    },
+    {
+      "name": "experiment/s3-spatial-locomotion-core",
+      "sha": "db569443805a31c678ae77fb672a5adfe1d94553"
+    },
+    {
+      "name": "experiment/s4-natural-motion-continuity",
+      "sha": "d3357c790914939991d72a77f410f3b6934d9a26"
+    },
+    {
+      "name": "experiment/s5-continuous-relationship-field",
+      "sha": "391b2388a657125e4690e3f69cf0a5cd6b333ef3"
+    },
+    {
+      "name": "foundation/runtime-survival-cleanup",
+      "sha": "a15f36ba5b2fdbd3fe8f942e0303edf8962e9085"
+    },
+    {
+      "name": "main",
+      "sha": "508f9fbc365fb74da031b09672ae693e869ea9c1"
+    },
+    {
+      "name": "maintenance/restore-clean-ccc0-owner-gate",
+      "sha": "4318d895f1e83ba921faf1c7f4bd7cefea1c46f2"
+    },
+    {
+      "name": "noop-do-not-use",
+      "sha": "4363c8dcfa54ea99dbd4677b7a837df54bed976a"
+    },
+    {
+      "name": "ops/os-prep5-owner-pages",
+      "sha": "ca2250ab68a0a29b6097ac2585ff1fc3b62988b3"
+    },
+    {
+      "name": "ops/os-prep5-owner-pages-deploy-candidate",
+      "sha": "3d3353ba604d4f41c86e6549f876d5fd86b5f3e8"
+    },
+    {
+      "name": "planning/authority-a1-2-moving-frame-replan",
+      "sha": "39a4a4e49a700e5d63724664fb87ce8c1ff4acfa"
+    },
+    {
+      "name": "planning/authority-a1-2-post-g-future-causality",
+      "sha": "8ad270a4f5d8c9ca23f2f66222fcaf513ea14562"
+    },
+    {
+      "name": "planning/authority-a1-2-post-j-trace-policy",
+      "sha": "eab9fd431fe447585a4d4e9b6458f17dca71d861"
+    },
+    {
+      "name": "planning/authority-a1-2-post-l-g4-readiness",
+      "sha": "304ef1ff289831770b276a8a8ffe2adc82821df3"
+    },
+    {
+      "name": "planning/authority-a1-2-post-n-command-robustness",
+      "sha": "5f0634d8f59a38e81ba5222a3b02e366db13aaf9"
+    },
+    {
+      "name": "planning/authority-a1-2-post-z-decision-synthesis",
+      "sha": "006fc496030fa4ae16c3b3cc52642f82fc142bab"
+    },
+    {
+      "name": "planning/authority-a1-2z4a-qualified-reflection-finding",
+      "sha": "df6c6de7bae2b4235f90fcbff09b4e3c1e655872"
+    },
+    {
+      "name": "planning/authority-a1-relative-region",
+      "sha": "d055643b4f0d6758554186d0ad1efe67c128a1e9"
+    },
+    {
+      "name": "planning/companion-coordination-core",
+      "sha": "81ba1d8312d4289ba49f15da999e3a938d5f537c"
+    },
+    {
+      "name": "planning/coordination-authority-replan",
+      "sha": "37c64077a34f67fbaaa500f429f3f476dd7a1ee4"
+    },
+    {
+      "name": "planning/initial-research-skeleton",
+      "sha": "446ce0368a598fb549a9f3633ed44563bf8dca9e"
+    },
+    {
+      "name": "planning/os-prep4-owner-sandbox-transition",
+      "sha": "ef83dd45f13cdf97fcceef40d04d033fbc7130ba"
+    },
+    {
+      "name": "planning/r1-5-player-conflict-authority",
+      "sha": "0a384d604188b0e4e143ead21fed88ece8bedf19"
+    },
+    {
+      "name": "planning/r1-movement-robustness-workbench",
+      "sha": "aa08d728d524821c72802fa76085758ea42fff00"
+    },
+    {
+      "name": "review/pre-owner-sandbox-retrospective",
+      "sha": "4bdb9d7d4118f5eaf540e47abb327500c218b517"
+    },
+    {
+      "name": "stage-b/minimum-useful-partner-r0",
+      "sha": "510405960acf3cfce0a6985fe6f9da88ec95d0c2"
+    },
+    {
+      "name": "tmp-do-not-use",
+      "sha": "fc57a1110b4609fb622a3a4f5c8b4be31516a7b9"
+    },
+    {
+      "name": "unused-z4a-note",
+      "sha": "df6c6de7bae2b4235f90fcbff09b4e3c1e655872"
+    },
+    {
+      "name": "unused-z4a-note-2",
+      "sha": "df6c6de7bae2b4235f90fcbff09b4e3c1e655872"
+    },
+    {
+      "name": "unused-z4a-note-3",
+      "sha": "df6c6de7bae2b4235f90fcbff09b4e3c1e655872"
+    },
+    {
+      "name": "unused-z4a-note-4",
+      "sha": "df6c6de7bae2b4235f90fcbff09b4e3c1e655872"
+    },
+    {
+      "name": "unused-z4a-note-5",
+      "sha": "df6c6de7bae2b4235f90fcbff09b4e3c1e655872"
+    }
+  ]
+}
