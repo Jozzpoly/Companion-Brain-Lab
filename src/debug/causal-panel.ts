@@ -131,7 +131,7 @@ export class CausalPanel {
     }
 
     for (const [layer, visible] of Object.entries(DEFAULT_LAYERS) as Array<[WorldDebugLayer, boolean]>) {
-      this.layerValues.set(layer, visible);
+      this.layerValues.set(layer, teammateSpecimenSurface ? false : visible);
     }
 
     const header = document.createElement("div");
