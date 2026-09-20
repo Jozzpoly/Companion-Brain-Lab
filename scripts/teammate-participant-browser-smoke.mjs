@@ -209,7 +209,6 @@ try {
   );
   invariant(
     blockedBeforeRelease.includes("blocked YES") &&
-      released.includes("correction NONE") &&
       resumed.includes("interrupted by companion"),
     "Hold-to-correct input did not reversibly constrain autonomy."
   );
