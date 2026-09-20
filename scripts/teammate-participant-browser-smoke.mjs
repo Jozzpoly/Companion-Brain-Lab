@@ -134,6 +134,13 @@ try {
 
   // B: Q is a held correction; cognition/raw proposal survive and Enter cannot fake manual help.
   await reset(page);
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(40);
+  invariant(
+    (await panelText(page)).includes("latest attempts none"),
+    "Enter manually controlled the companion in teammate specimen."
+  );
+
   await page.keyboard.down("q");
   const held = await waitForPanel(
     page,
@@ -152,14 +159,9 @@ try {
     await page.getByText("Q HELD · companion intervention withheld").isVisible(),
     "Held correction has no participant-facing acknowledgement."
   );
-  await page.keyboard.press("Enter");
-  await page.waitForTimeout(120);
-  invariant(
-    (await panelText(page)).includes("latest attempts none"),
-    "Enter manually controlled the companion in teammate specimen."
-  );
-  await shot(page, "03-q-held-companion-withheld.png");
 
+  // Readiness makes the companion materially prepared, so do not consume the
+  // finite WINDUP window on diagnostic waits/screenshots before the player act.
   await page.keyboard.press("e");
   const playerOwned = await waitForPanel(
     page,
@@ -171,6 +173,7 @@ try {
     4_000,
     "participant owns outcome while Q holds"
   );
+  await shot(page, "03-q-held-player-owns-outcome.png");
   await page.keyboard.up("q");
 
   // C: hold is reversible; releasing Q restores still-valid autonomy.
