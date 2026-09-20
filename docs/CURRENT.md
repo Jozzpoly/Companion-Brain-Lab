@@ -563,20 +563,25 @@ Current live repository truth:
 
 ### Immediate work
 
-Execution is now governed by [COMPANION_EXECUTION_CONTROLLER.md](COMPANION_EXECUTION_CONTROLLER.md).
+Execution is governed by [COMPANION_EXECUTION_CONTROLLER.md](COMPANION_EXECUTION_CONTROLLER.md).
 
-The next authorized tranche is **S0/S1 design, not autonomous gameplay implementation**:
+Gate S0 is now **closed enough** for one bounded promotion. The selected first situation hypothesis is documented in [FIRST_TEAMMATE_SITUATION_PLAN.md](FIRST_TEAMMATE_SITUATION_PLAN.md):
 
-1. finish selection of the first teammate situation against its strongest rival;
-2. define the minimum player/manual-companion affordances and World consequences that make the situation genuinely shared;
-3. design the smallest authoritative attempt→outcome seam;
-4. qualify the situation with a manual/trivial baseline before adding a new local-brain mechanism;
-5. only then re-plan the first autonomous responsibility/action experiment from the resulting evidence.
+> a compact shared-danger encounter with a meaningful pre-contact window.
 
-Current leading hypothesis remains a compact shared-danger encounter with a meaningful pre-contact window, but it is not promoted to permanent architecture.
+Authority granted is deliberately narrow: **build/qualify the situation apparatus before adding new autonomous teammate cognition.**
 
-The controlling question is:
+Next authorized tranche = **S1-A → S1-C**:
+
+1. design the smallest embodied problem-source + explicit action-attempt + World-outcome contract;
+2. make within-tick movement/action/hostile-resolution ordering explicit and testable;
+3. implement one deterministic world problem in the same authoritative World progression;
+4. let player and manual/trivial companion materially intervene under the same rules;
+5. qualify success, failure and participant-first readability;
+6. only after that evidence, re-plan S2: situated attention/responsibility.
+
+Do **not** treat this as permission to build combat AI, HP/stats, final enemy architecture or final commands.
+
+The controlling question remains:
 
 > **Can we first build a situation that is genuinely worth cooperating in, before asking the AI to cooperate intelligently?**
-
-This prevents the assistant's freshest mechanism from becoming the problem definition.
