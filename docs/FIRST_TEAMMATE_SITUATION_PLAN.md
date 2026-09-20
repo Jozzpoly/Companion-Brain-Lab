@@ -1,6 +1,6 @@
 # First Teammate Situation — S0/S1 Plan
 
-Status: **S0 SITUATION SELECTED AS BOUNDED HYPOTHESIS · S1 APPARATUS DESIGN AUTHORIZED · NO AUTONOMOUS BRAIN AUTHORITY**
+Status: **S1 MACHINE-QUALIFIED APPARATUS · S2 SITUATED-RESPONSIBILITY DESIGN AUTHORIZED · NO AUTONOMOUS ACTION AUTHORITY**
 Date: **2026-09-20**
 
 Parent authority:
@@ -395,3 +395,63 @@ Do not implement those during S1 merely because they are foreseeable.
 **Authority not granted:** autonomous threat cognition, combat system, command grammar, HP, final enemy representation or Owner test.
 
 Reopen S0 if S1 falsifiers show that this situation cannot create a clean, low-scope shared problem.
+
+
+---
+
+## 14. S1 qualification result — 2026-09-20
+
+Qualified head:
+
+`ae7d6bc5394194840dbb9a0b29a4924be406eaeb`
+
+Browser gate:
+
+`s1-shared-danger-browser #7 · SUCCESS`
+
+### Evidence actually earned
+
+The implemented apparatus now demonstrates:
+
+- hostile state progresses inside the authoritative World step;
+- movement happens before action validation, then all attempts are validated against the same post-physics frame and pre-resolution phase;
+- attempt ordering cannot select the winner;
+- proximity alone does not interrupt;
+- player and manual companion use the same `INTERVENE` attempt/outcome contract;
+- invalid phase and out-of-range attempts fail factually;
+- no intervention can produce `PLAYER_HIT`;
+- player motion during commitment can produce `ATTACK_MISSED`;
+- successful intervention produces `INTERRUPTED`;
+- encounter completion and provenance survive later ticks/reset;
+- the full causal workbench can remain available while participant screenshots are captured with it collapsed.
+
+### Promotion
+
+S1 is **MACHINE-QUALIFIED as apparatus**.
+
+It is **not** Owner-qualified teammate behavior and does not claim combat AI, readiness AI, useful autonomy or command quality.
+
+### Important claim limits discovered during falsification
+
+1. The hostile currently uses a non-solid Rapier sensor and deterministic direct-to-player motion in an open field. This is sufficient for the current action/outcome seam, but not evidence for solid embodied contact, obstacle negotiation or enemy architecture.
+2. The participant presentation is abstract by design.
+3. In the manual-companion success artifact the companion can be visually occluded under the hostile. The causal workbench proves who acted, but participant-first action provenance is not yet product-grade.
+4. These limitations must not silently become permanent architecture merely because S1 passed.
+
+### S2 authorization
+
+Proceed only to a **zero-action-authority** situated-attention/responsibility spike.
+
+S2 must separate:
+
+`external problem observed → focus candidate → responsibility judgement → public reason`
+
+from:
+
+`movement/action execution`.
+
+The companion must be able to notice without owning, own without immediately acting, and withdraw responsibility when its causal basis disappears. The player remains a first-class situated reference.
+
+At least one counterfactual must hold where hostile phase is the same but responsibility differs because relevant spatial/relational facts differ. Otherwise S2 is only a renamed phase table and should be rejected.
+
+No command grammar or autonomous intervention is authorized until S2 earns this bounded claim.
