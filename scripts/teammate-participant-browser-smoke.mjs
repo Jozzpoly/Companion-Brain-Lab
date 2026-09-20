@@ -12,6 +12,12 @@ async function panelText(page) {
   return (await page.locator("#debug-panel").textContent()) ?? "";
 }
 
+async function tapKey(page, key, holdMs = 50) {
+  await page.keyboard.down(key);
+  await page.waitForTimeout(holdMs);
+  await page.keyboard.up(key);
+}
+
 async function waitForPanel(page, predicate, timeout = 15_000, label = "panel condition") {
   const startedAt = Date.now();
   let latest = "";
@@ -24,7 +30,7 @@ async function waitForPanel(page, predicate, timeout = 15_000, label = "panel co
 }
 
 async function reset(page) {
-  await page.keyboard.press("r");
+  await tapKey(page, "r");
   return waitForPanel(
     page,
     (text) =>
@@ -134,7 +140,7 @@ try {
 
   // B: Q is a held correction; cognition/raw proposal survive and Enter cannot fake manual help.
   await reset(page);
-  await page.keyboard.press("Enter");
+  await tapKey(page, "Enter");
   await page.waitForTimeout(40);
   invariant(
     (await panelText(page)).includes("latest attempts none"),
@@ -162,7 +168,7 @@ try {
 
   // Readiness makes the companion materially prepared, so do not consume the
   // finite WINDUP window on diagnostic waits/screenshots before the player act.
-  await page.keyboard.press("e");
+  await tapKey(page, "e");
   const playerOwned = await waitForPanel(
     page,
     (text) =>
