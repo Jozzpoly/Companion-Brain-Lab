@@ -14,7 +14,6 @@ export interface SharedDangerHudState {
 
 export class SharedDangerApparatusHud {
   private readonly root: HTMLElement;
-  private readonly state: HTMLElement;
   private readonly playerButton: HTMLButtonElement;
   private readonly companionButton: HTMLButtonElement;
 
@@ -30,7 +29,7 @@ export class SharedDangerApparatusHud {
 
     const heading = document.createElement("div");
     heading.className = "shared-danger-heading";
-    heading.textContent = "Shared danger · MANUAL apparatus";
+    heading.textContent = "S1 manual controls";
 
     const hint = document.createElement("div");
     hint.className = "shared-danger-hint";
@@ -55,10 +54,7 @@ export class SharedDangerApparatusHud {
 
     actions.append(this.playerButton, this.companionButton);
 
-    this.state = document.createElement("div");
-    this.state.className = "shared-danger-state";
-
-    this.root.append(heading, hint, actions, this.state);
+    this.root.append(heading, hint, actions);
     gamePane.append(this.root);
   }
 
@@ -70,18 +66,10 @@ export class SharedDangerApparatusHud {
     this.setVisible(value.active);
     if (!value.active) return;
 
-    const phase = value.danger?.phase ?? "UNAVAILABLE";
-    const lastAction = value.lastActionOutcomes.at(-1);
-    if (lastAction) {
-      this.state.textContent =
-        `${phase} · last ${lastAction.actorId} attempt: ${lastAction.status}`;
-    } else if (value.lastEpisodeOutcome !== "NONE") {
-      this.state.textContent = `${phase} · ${value.lastEpisodeOutcome}`;
-    } else {
-      this.state.textContent = phase;
-    }
-
-    const complete = phase === "COMPLETE";
+    // Player-facing apparatus controls deliberately omit phase/outcome labels.
+    // Causal state remains in the full workbench so participant-first visual
+    // evidence cannot pass merely because the UI explained the intended meaning.
+    const complete = value.danger?.phase === "COMPLETE";
     this.playerButton.disabled = complete;
     this.companionButton.disabled = complete;
   }
