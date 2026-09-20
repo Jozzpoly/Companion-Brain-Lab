@@ -19,12 +19,12 @@ jobs:
   owner-subpath:
     runs-on: ubuntu-latest
     env:
-      EXPECTED_OWNER_SHA: 437cd11727eba327b99d8d70c80ce031c003a040
+      EXPECTED_OWNER_SHA: 510405960acf3cfce0a6985fe6f9da88ec95d0c2
     steps:
-      - name: Checkout exact Owner Sandbox candidate
+      - name: Checkout exact qualified Owner movement-review stimulus
         uses: actions/checkout@v5
         with:
-          ref: 437cd11727eba327b99d8d70c80ce031c003a040
+          ref: 510405960acf3cfce0a6985fe6f9da88ec95d0c2
           path: owner
 
       - name: Setup Node
@@ -39,22 +39,22 @@ jobs:
             echo "Dependency install completed through normal npm peer resolution."
             exit 0
           fi
-          
+
           latest_log="$(ls -t "$HOME"/.npm/_logs/*-debug-0.log 2>/dev/null | head -n 1 || true)"
           if [ -z "$latest_log" ] || ! grep -Fq "Cannot read properties of null (reading 'edgesOut')" "$latest_log"; then
             echo "npm failed for an unrecognized reason; refusing fallback."
             if [ -n "$latest_log" ]; then cat "$latest_log"; fi
             exit 1
           fi
-          
+
           echo "Known npm Arborist edgesOut crash detected; retrying with peer auto-resolution disabled."
           rm -rf node_modules
           npm install --legacy-peer-deps
 
-      - name: Build exact pinned Owner Sandbox
+      - name: Build exact pinned Owner movement review
         working-directory: owner
         env:
-          VITE_SOURCE_SHA: 437cd11727eba327b99d8d70c80ce031c003a040
+          VITE_SOURCE_SHA: 510405960acf3cfce0a6985fe6f9da88ec95d0c2
         run: npm run build
 
       - name: Assemble Pages-like owner subpath
@@ -62,7 +62,7 @@ jobs:
           mkdir -p site/owner
           cp -R owner/dist/. site/owner/
 
-      - name: Smoke Pages-like owner subpath and downloaded provenance
+      - name: Smoke revised Pages-like owner subpath
         working-directory: owner
         run: |
           python3 -m http.server 4173 --directory ../site >/tmp/os-prep5-pages-http.log 2>&1 &
@@ -83,26 +83,63 @@ jobs:
               acceptDownloads: true
             });
             const page = await context.newPage();
-            const response = await page.goto("http://127.0.0.1:4173/owner/?owner=1", {
-              waitUntil: "domcontentloaded",
-              timeout: 30_000
+            const errors = { page: [], console: [], requests: [] };
+            page.on("pageerror", (error) => errors.page.push(error.message));
+            page.on("console", (message) => {
+              if (message.type() === "error") errors.console.push(message.text());
             });
+            page.on("requestfailed", (request) => {
+              errors.requests.push(
+                `${request.method()} ${request.url()} :: ${request.failure()?.errorText ?? "failed"}`
+              );
+            });
+
+            // Deliberately attack query composition on the real /owner/ subpath.
+            const response = await page.goto(
+              "http://127.0.0.1:4173/owner/?owner=1&a1debug=1&a1p2=1&semanticpush=1&foundationFaultProbe=1",
+              { waitUntil: "domcontentloaded", timeout: 30_000 }
+            );
             if (!response?.ok()) throw new Error(`Owner subpath HTTP ${response?.status() ?? "no-response"}.`);
 
             await page.locator("#game-root canvas").waitFor({ state: "visible", timeout: 15_000 });
             const panel = page.locator("#debug-panel");
             if (!(await panel.evaluate((node) => node.classList.contains("is-owner-sandbox")))) {
-              throw new Error("Owner subpath did not enter participant mode.");
+              throw new Error("Owner subpath did not enter movement-review participant mode.");
             }
-            if (!(await panel.evaluate((node) => node.classList.contains("is-collapsed")))) {
-              throw new Error("Owner subpath did not start collapsed.");
+            if (await page.locator(".debug-collapse").isVisible()) {
+              throw new Error("Owner subpath exposes research-panel disclosure.");
             }
+            const researchDisplay = await page.locator(".debug-panel-content").evaluate(
+              (node) => getComputedStyle(node).display
+            );
+            if (researchDisplay !== "none") {
+              throw new Error(`Owner subpath research content is visible: ${researchDisplay}.`);
+            }
+
+            const controls = page.locator(".owner-review-controls");
+            if (!(await controls.isVisible())) throw new Error("Owner participant controls are missing.");
+            for (const label of ["Open", "Pillar", "Door", "Head-on", "Reset"]) {
+              if (!(await controls.getByRole("button", { name: label, exact: true }).isVisible())) {
+                throw new Error(`Owner participant control missing: ${label}`);
+              }
+            }
+            const save = controls.locator(".owner-capture");
+            if (!(await save.isVisible())) throw new Error("Owner Save control is missing.");
             if (await page.evaluate(() => window.__authorityA12p2BrowserBridge !== undefined)) {
               throw new Error("Owner subpath unexpectedly exposes P2.");
             }
 
+            // Attack the old workbench mutation keys.
+            for (const key of ["m", "n", "t", "p", "o"]) await page.keyboard.press(key);
+            await page.waitForTimeout(150);
+
+            // Produce ordinary Owner input before capture.
+            await page.keyboard.down("d");
+            await page.waitForTimeout(250);
+            await page.keyboard.up("d");
+
             const wait = page.waitForEvent("download", { timeout: 15_000 });
-            await page.locator(".owner-capture").click();
+            await save.click();
             const download = await wait;
             const downloadedPath = await download.path();
             if (!downloadedPath) throw new Error("Owner subpath Save produced no file.");
@@ -117,9 +154,31 @@ jobs:
               incident?.capture?.mode !== "spatial" ||
               incident?.capture?.actuator !== "natural" ||
               incident?.capture?.a1Variant !== "off" ||
+              incident?.capture?.timeScale !== 1 ||
+              incident?.capture?.paused !== false ||
               incident?.p2?.available !== false
             ) {
-              throw new Error("Owner subpath authority baseline mismatch.");
+              throw new Error("Owner subpath participant stimulus mutated outside its contract.");
+            }
+
+            const ownerMove = [...(incident.frames ?? [])].reverse().find(
+              (frame) =>
+                frame.observation?.playerControlMove?.x === 1 &&
+                frame.observation?.playerControlMove?.y === 0
+            );
+            if (!ownerMove) throw new Error("Owner subpath incident lost recent +X Owner input.");
+
+            await controls.getByRole("button", { name: "Door", exact: true }).click();
+            await page.waitForTimeout(150);
+            if (!(await controls.isVisible())) {
+              throw new Error("Owner controls disappeared after scenario switch.");
+            }
+
+            if (await page.locator("#runtime-fault-sentinel").count()) {
+              throw new Error("Owner subpath runtime fault sentinel is visible.");
+            }
+            if (errors.page.length || errors.console.length || errors.requests.length) {
+              throw new Error(`Browser errors: ${JSON.stringify(errors)}`);
             }
 
             console.log(JSON.stringify({
@@ -127,13 +186,21 @@ jobs:
               sourceSha: incident.build.sourceSha,
               buildState: incident.build.state,
               path: "/owner/?owner=1",
+              adversarialQuerySanitized: true,
+              attemptedResearchKeys: ["M", "N", "T", "P", "O"],
               baseline: {
                 mode: incident.capture.mode,
                 actuator: incident.capture.actuator,
                 a1Variant: incident.capture.a1Variant,
+                timeScale: incident.capture.timeScale,
+                paused: incident.capture.paused,
                 p2Available: incident.p2.available
-              }
+              },
+              participantControls: ["Open", "Pillar", "Door", "Head-on", "Reset", "Save"],
+              recentOwnerMove: ownerMove.observation.playerControlMove,
+              errors
             }));
+
             await context.close();
           } finally {
             await browser.close();
