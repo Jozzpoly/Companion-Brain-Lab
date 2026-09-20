@@ -1,0 +1,62 @@
+name: s3-material-contribution-browser
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/brain/situated-responsibility.ts"
+      - "src/brain/situated-responsibility.test.ts"
+      - "src/brain/s3-material-contribution.ts"
+      - "src/brain/s3-material-contribution.test.ts"
+      - "src/app/r1-lab-scene.ts"
+      - "src/debug/causal-panel.ts"
+      - "src/world/shared-danger-contract.ts"
+      - "src/world/world.ts"
+      - "scripts/s3-material-contribution-browser-smoke.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/s3-material-contribution-browser.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: s3-material-contribution-browser-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SOURCE_SHA: ${{ github.sha }}
+      GITHUB_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: |
+          if npm install; then
+            exit 0
+          fi
+          latest_log="$(ls -t "$HOME"/.npm/_logs/*-debug-0.log 2>/dev/null | head -n 1 || true)"
+          if [ -z "$latest_log" ] || ! grep -Fq "Cannot read properties of null (reading 'edgesOut')" "$latest_log"; then
+            if [ -n "$latest_log" ]; then cat "$latest_log"; fi
+            exit 1
+          fi
+          rm -rf node_modules
+          npm install --legacy-peer-deps
+      - name: S2/S3 causal unit gate
+        run: npx vitest run src/brain/situated-responsibility.test.ts src/brain/s3-material-contribution.test.ts
+      - name: Build ordinary runtime
+        run: npm run build
+      - name: S3 material-contribution browser gate
+        run: npm run browser:s3-contribution
+      - name: Upload S3 causal evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s3-material-contribution-browser-${{ github.sha }}
+          path: artifacts/s3-material-contribution-browser/
+          if-no-files-found: warn
+          retention-days: 14
