@@ -420,6 +420,7 @@ export class R1LabScene extends Phaser.Scene {
     this.arbitrationDecision = null;
     this.s3Contribution = null;
     this.s4CorrectionDecision = null;
+    const previousReadinessSide = this.sharedDangerReadiness?.side ?? null;
     this.sharedDangerReadiness = null;
 
     const relationshipSemantic = (
@@ -457,7 +458,8 @@ export class R1LabScene extends Phaser.Scene {
         ? evaluateSharedDangerReadiness({
             snapshot: before,
             danger: this.sharedDanger,
-            responsibility: this.situatedResponsibility
+            responsibility: this.situatedResponsibility,
+            previousSide: previousReadinessSide
           })
         : null;
       this.sharedDangerReadiness = readiness;
