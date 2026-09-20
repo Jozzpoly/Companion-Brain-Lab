@@ -11,6 +11,7 @@ import {
 } from "./authority-a0-step-evidence";
 import { movementCapabilityFromScenario, type MovementCapability } from "./movement-capability";
 import { scenario } from "./scenarios";
+import { SharedPressureLoop, type SharedPressureSnapshot } from "./shared-pressure";
 import type {
   ActorId,
   DirectTraversalResult,
@@ -53,11 +54,16 @@ export class LabWorld {
 
   private constructor(
     private readonly scenarioIdValue: ScenarioId,
-    private readonly physical: RapierPhysicalWorld
+    private readonly physical: RapierPhysicalWorld,
+    private readonly sharedPressureLoop: SharedPressureLoop
   ) {}
 
   static async create(id: ScenarioId): Promise<LabWorld> {
-    return new LabWorld(id, await RapierPhysicalWorld.create(scenario(id)));
+    return new LabWorld(
+      id,
+      await RapierPhysicalWorld.create(scenario(id)),
+      new SharedPressureLoop(id)
+    );
   }
 
   dispose(): void {
@@ -72,6 +78,10 @@ export class LabWorld {
     return this.latestAuthorityA0EvidenceValue
       ? cloneAuthorityA0WorldStepEvidence(this.latestAuthorityA0EvidenceValue)
       : null;
+  }
+
+  sharedPressure(): SharedPressureSnapshot {
+    return this.sharedPressureLoop.snapshot();
   }
 
   directTraversal(actorId: ActorId, target: Vec2): DirectTraversalResult {
@@ -110,6 +120,9 @@ export class LabWorld {
       actors,
       obstacles: spec.obstacles
     };
+    // Shared responsibility is world-owned evidence. It observes the factual
+    // post-physics state and never advances independently from World time.
+    this.sharedPressureLoop.observe(after);
     this.latestAuthorityA0EvidenceValue = buildAuthorityA0WorldStepEvidence({
       before,
       after,

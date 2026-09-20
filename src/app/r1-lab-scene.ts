@@ -4,6 +4,10 @@ import type { MotionContinuityStepResult } from "../brain/motion-continuity";
 import type { PreferredVelocityRefinement } from "../brain/preferred-velocity-refinement";
 import type { ProgressRecoveryDecision } from "../brain/progress-recovery";
 import {
+  decideStageBPartnerAction,
+  type StageBPartnerAction
+} from "../brain/stage-b-partner";
+import {
   COMPANION_MODES,
   RelationalPositioningBrain,
   chaseIntent,
@@ -43,6 +47,7 @@ import {
 } from "../navigation/static-router";
 import { S0_STEP_SECONDS } from "../physics/rapier-physical-world";
 import { SCENARIOS } from "../world/scenarios";
+import type { SharedPressureSnapshot } from "../world/shared-pressure";
 import type {
   ActorSnapshot,
   MotionIntent,
@@ -147,6 +152,8 @@ interface StepDecisionEvidence {
   finalConstraint: FinalCommandConstraintResult | null;
   shadowCoordination: ShadowCoordinationFrame | null;
   shadowCoordinationError: string | null;
+  partnerAction: StageBPartnerAction | null;
+  pressureBefore: SharedPressureSnapshot | null;
 }
 
 export class R1LabScene extends Phaser.Scene {
@@ -177,6 +184,8 @@ export class R1LabScene extends Phaser.Scene {
   private progressDecision: ProgressRecoveryDecision | null = null;
   private shadowCoordination: ShadowCoordinationFrame | null = null;
   private shadowCoordinationError: string | null = null;
+  private partnerActionDecision: StageBPartnerAction | null = null;
+  private sharedPressure: SharedPressureSnapshot | null = null;
   private appliedLocalRetries = 0;
   private decisionRoutePlan: StaticRoutePlan | null = null;
   private postRoutePlan: StaticRoutePlan | null = null;
@@ -268,6 +277,8 @@ export class R1LabScene extends Phaser.Scene {
     const evidence = this.computeIntents(this.snapshotValue);
     const after = this.world.step(evidence.intents);
     this.snapshotValue = after;
+    this.sharedPressure = this.world.sharedPressure();
+    this.logSharedPressureTransition(evidence.pressureBefore, this.sharedPressure);
     this.updatePostEvidence(after, evidence.target);
 
     if (
@@ -322,6 +333,9 @@ export class R1LabScene extends Phaser.Scene {
     this.shadowCoordination = null;
     this.shadowCoordinationError = null;
     this.decisionRoutePlan = null;
+    const pressureBefore = this.world.sharedPressure();
+    this.sharedPressure = pressureBefore;
+    this.partnerActionDecision = null;
 
     const relationshipSemantic = (
       this.companionMode === "relational" || this.companionMode === "spatial"
@@ -361,15 +375,20 @@ export class R1LabScene extends Phaser.Scene {
       if (!relationshipSemantic) throw new Error("SPATIAL mode requires canonical semantic orientation.");
       const relationship = this.relationalBrain.decisionWithSemanticOrientation(before, relationshipSemantic.orientation);
       this.relationalDecision = relationship;
-      target = { ...relationship.target };
-      objectiveKey = `spatial-slot:${relationship.selectedSlot}`;
+      const partnerAction = decideStageBPartnerAction(pressureBefore);
+      this.partnerActionDecision = partnerAction;
+      const liveTarget = partnerAction.kind === "RESPOND_TO_THREAT" && partnerAction.target
+        ? partnerAction.target
+        : relationship.target;
+      target = { ...liveTarget };
+      objectiveKey = partnerAction.objectiveKey ?? `spatial-slot:${relationship.selectedSlot}`;
       actuator = this.naturalActuator ? "natural" : "direct";
-      const route = this.buildRoute(before, relationship.target);
+      const route = this.buildRoute(before, liveTarget);
       this.decisionRoutePlan = route;
       const traversalQuery = bindWorldStaticTraversalQuery(this.world);
       const input = {
         snapshot: before,
-        relationshipTarget: relationship.target,
+        relationshipTarget: liveTarget,
         routePlan: route,
         query: traversalQuery,
         occupancy: (center: Vec2, radius: number) => this.world!.staticCircleOccupancy(center, radius)
@@ -426,7 +445,9 @@ export class R1LabScene extends Phaser.Scene {
       continuity: this.continuityDecision,
       finalConstraint: this.finalConstraintDecision,
       shadowCoordination: this.shadowCoordination,
-      shadowCoordinationError: this.shadowCoordinationError
+      shadowCoordinationError: this.shadowCoordinationError,
+      partnerAction: this.partnerActionDecision,
+      pressureBefore
     };
   }
 
@@ -596,7 +617,13 @@ export class R1LabScene extends Phaser.Scene {
         relationshipRevision: evidence.relationship?.reconsiderationCount ?? null,
         relationshipLabel: evidence.relationship?.selectedSlot ?? null,
         relationshipState: evidence.relationship?.objectiveState ?? null,
-        relationshipTarget: target ? { ...target } : null,
+        relationshipTarget: evidence.relationship ? { ...evidence.relationship.target } : null,
+        partnerAction: evidence.partnerAction?.kind ?? null,
+        partnerActionReason: evidence.partnerAction?.reason ?? null,
+        liveObjectiveKey: evidence.objectiveKey,
+        liveObjectiveTarget: target ? { ...target } : null,
+        sharedPressurePhase: evidence.pressureBefore?.phase ?? null,
+        sharedPressureCycle: evidence.pressureBefore?.cycle ?? null,
         routeStatus: evidence.route?.status ?? null,
         routePath: evidence.route?.routeNodeIds.join(">") ?? "",
         routeCost: evidence.route?.cost ?? null,
@@ -706,7 +733,11 @@ export class R1LabScene extends Phaser.Scene {
         displacement,
         postRouteStatus: this.postRoutePlan?.status ?? null,
         postRoutePath: this.postRoutePlan?.routeNodeIds.join(">") ?? "",
-        postRouteClearanceConstrained: this.postRoutePlan?.clearanceConstrained ?? null
+        postRouteClearanceConstrained: this.postRoutePlan?.clearanceConstrained ?? null,
+        sharedPressurePhase: this.sharedPressure?.phase ?? null,
+        sharedPressureOutcome: this.sharedPressure?.lastOutcome ?? null,
+        sharedPressureResolvedBy: this.sharedPressure?.lastResolvedBy ?? null,
+        sharedPressureResponseTicks: this.sharedPressure?.responseTicks ?? null
       },
       post
     };
@@ -736,6 +767,23 @@ export class R1LabScene extends Phaser.Scene {
     if (this.eventLog.length > 80) this.eventLog.splice(0, this.eventLog.length - 80);
   }
 
+  private logSharedPressureTransition(
+    before: SharedPressureSnapshot | null,
+    after: SharedPressureSnapshot | null
+  ): void {
+    if (!after?.enabled) return;
+    if (
+      !before ||
+      before.phase !== after.phase ||
+      before.lastOutcome !== after.lastOutcome ||
+      before.cycle !== after.cycle
+    ) {
+      this.logEvent(
+        `team pressure ${before?.phase ?? "NONE"} -> ${after.phase} · outcome ${after.lastOutcome} · ${after.reason}`
+      );
+    }
+  }
+
   private drawWorld(snapshot: WorldSnapshot): void {
     const scale = Math.min(VIEW_WIDTH / snapshot.width, VIEW_HEIGHT / snapshot.height);
     const offsetX = (VIEW_WIDTH - snapshot.width * scale) / 2;
@@ -750,6 +798,8 @@ export class R1LabScene extends Phaser.Scene {
     for (const obstacle of snapshot.obstacles) {
       this.graphics.fillRect(sx(obstacle.x), sy(obstacle.y), obstacle.width * scale, obstacle.height * scale);
     }
+
+    this.drawSharedPressure(sx, sy, scale);
 
     if (this.panel.layerVisible("trails")) this.drawTrails(sx, sy);
     if (this.panel.layerVisible("relationship")) this.drawRelationship(sx, sy);
@@ -774,6 +824,46 @@ export class R1LabScene extends Phaser.Scene {
       }
       if (this.panel.layerVisible("motion")) this.drawMotion(value, sx, sy, scale);
     }
+  }
+
+  private drawSharedPressure(
+    sx: (x: number) => number,
+    sy: (y: number) => number,
+    scale: number
+  ): void {
+    const pressure = this.sharedPressure;
+    if (!pressure?.enabled || !pressure.target || pressure.phase === "QUIET") return;
+
+    const contained = pressure.lastOutcome === "CONTAINED";
+    const breached = pressure.lastOutcome === "BREACHED";
+    const color = contained ? 0x7ee787 : breached ? 0xff5d66 : 0xff7b72;
+    const alpha = pressure.phase === "ACTIVE" ? 0.2 : 0.1;
+    this.graphics.fillStyle(color, alpha);
+    this.graphics.fillCircle(
+      sx(pressure.target.x),
+      sy(pressure.target.y),
+      pressure.responseRadius * scale
+    );
+    this.graphics.lineStyle(4, color, pressure.phase === "ACTIVE" ? 0.95 : 0.6);
+    this.graphics.strokeCircle(
+      sx(pressure.target.x),
+      sy(pressure.target.y),
+      pressure.responseRadius * scale
+    );
+    this.graphics.lineStyle(3, color, 0.95);
+    const arm = Math.max(8, pressure.responseRadius * scale * 0.28);
+    this.graphics.lineBetween(
+      sx(pressure.target.x) - arm,
+      sy(pressure.target.y),
+      sx(pressure.target.x) + arm,
+      sy(pressure.target.y)
+    );
+    this.graphics.lineBetween(
+      sx(pressure.target.x),
+      sy(pressure.target.y) - arm,
+      sx(pressure.target.x),
+      sy(pressure.target.y) + arm
+    );
   }
 
   private drawTrails(sx: (x: number) => number, sy: (y: number) => number): void {
@@ -1006,8 +1096,40 @@ export class R1LabScene extends Phaser.Scene {
     const a1Active = a1.variant !== "off" && this.companionMode === "spatial";
     const a1Situation = a1.latestSituation;
     const p2 = window.__authorityA12p2BrowserBridge?.snapshot() ?? null;
+    const pressure = this.sharedPressure;
+    const partnerAction = this.partnerActionDecision;
 
     const sections: CausalPanelModel["sections"] = [
+      {
+        id: "stage-b",
+        title: "Stage B · live shared responsibility",
+        tone: !pressure?.enabled
+          ? "normal"
+          : pressure.phase === "ACTIVE"
+            ? "warning"
+            : pressure.lastOutcome === "BREACHED"
+              ? "danger"
+              : pressure.lastOutcome === "CONTAINED"
+                ? "success"
+                : "normal",
+        lines: !pressure?.enabled
+          ? [
+              "bounded pressure loop inactive in this fixture",
+              "switch to Open field for the first live teammate vertical slice"
+            ]
+          : [
+              `world pressure ${pressure.phase} · episode ${pressure.cycle + 1} · breaches ${pressure.breaches}`,
+              pressure.phase === "ACTIVE" && pressure.target
+                ? `threat ${compact(pressure.target.x)}, ${compact(pressure.target.y)} · deadline ${pressure.ticksUntilDeadline ?? 0}t`
+                : pressure.phase === "QUIET"
+                  ? `next pressure in ${pressure.ticksUntilActivation ?? 0}t`
+                  : `outcome ${pressure.lastOutcome} · resolved by ${pressure.lastResolvedBy}`,
+              `sustained response ${pressure.responseTicks}/${pressure.requiredResponseTicks}t · current responder ${pressure.lastResponder}`,
+              `companion action ${partnerAction?.kind ?? "NOT_EVALUATED"}`,
+              partnerAction?.reason ?? pressure.reason,
+              pressure.reason
+            ]
+      },
       {
         id: "run",
         title: "Run",
@@ -1076,16 +1198,24 @@ export class R1LabScene extends Phaser.Scene {
       } satisfies CausalPanelSection] : []),
       {
         id: "objective",
-        title: "Objective",
+        title: "Objective · live vs relationship",
         tone: this.relationalDecision?.objectiveState === "NO_VALID_RELATIONAL_SLOT" ? "warning" : "normal",
         lines: this.relationalDecision
-          ? [
-              `relationship #${this.relationalDecision.reconsiderationCount} · ${this.relationalDecision.selectedSlot}`,
-              `relationship state ${this.relationalDecision.objectiveState}`,
-              `semantic objective spatial-slot:${this.relationalDecision.selectedSlot}`,
-              `target ${compact(this.relationalDecision.target.x)}, ${compact(this.relationalDecision.target.y)}`,
-              this.relationalDecision.reason
-            ]
+          ? partnerAction?.kind === "RESPOND_TO_THREAT" && partnerAction.target
+            ? [
+                `LIVE ${partnerAction.kind} · ${partnerAction.objectiveKey ?? "unkeyed"}`,
+                `live target ${compact(partnerAction.target.x)}, ${compact(partnerAction.target.y)}`,
+                `baseline relationship ${this.relationalDecision.selectedSlot} · target ${compact(this.relationalDecision.target.x)}, ${compact(this.relationalDecision.target.y)}`,
+                "shared-world responsibility temporarily outranks ordinary relationship positioning",
+                partnerAction.reason
+              ]
+            : [
+                `LIVE REGROUP · spatial-slot:${this.relationalDecision.selectedSlot}`,
+                `relationship #${this.relationalDecision.reconsiderationCount} · ${this.relationalDecision.selectedSlot}`,
+                `relationship state ${this.relationalDecision.objectiveState}`,
+                `target ${compact(this.relationalDecision.target.x)}, ${compact(this.relationalDecision.target.y)}`,
+                this.relationalDecision.reason
+              ]
           : [`${this.companionMode} baseline has no supervised relational objective`]
       },
       {
@@ -1218,7 +1348,7 @@ export class R1LabScene extends Phaser.Scene {
     ];
 
     this.panel.update({
-      title: "R1 Robustness Workbench · CCC-0 shadow",
+      title: "Companion Brain Lab · Stage B Recovery",
       subtitle: `frame ${latest?.sequence ?? "-"} · observation t${latest?.observation.worldTick ?? "-"} → outcome t${latest?.outcome.worldTick ?? "-"}`,
       badge: post ? post.state.toUpperCase() : "LOADING",
       badgeTone,
@@ -1401,6 +1531,7 @@ export class R1LabScene extends Phaser.Scene {
     this.relationshipOrientation.reset();
     this.spatialStack.reset();
     this.relationalDecision = null;
+    this.partnerActionDecision = null;
     this.clearSpatialDebug();
     this.decisionRoutePlan = null;
     this.postRoutePlan = null;
@@ -1419,6 +1550,8 @@ export class R1LabScene extends Phaser.Scene {
       this.world = next;
       this.scenarioId = id;
       this.snapshotValue = next.snapshot();
+      this.sharedPressure = next.sharedPressure();
+      this.partnerActionDecision = null;
       this.accumulator = 0;
       this.singleStepQueued = false;
       this.playerTrail.length = 0;

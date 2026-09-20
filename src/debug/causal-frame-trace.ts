@@ -64,6 +64,13 @@ export interface CausalDecisionPhase {
   comfortStartBlockers?: readonly string[];
   rehabilitatedCandidateCount?: number | null;
   comfortExitCandidateCount?: number | null;
+  /** Explicit ordinary-live teammate action, separate from the movement mechanism used to realize it. */
+  partnerAction?: string | null;
+  partnerActionReason?: string | null;
+  liveObjectiveKey?: string | null;
+  liveObjectiveTarget?: Vec2 | null;
+  sharedPressurePhase?: string | null;
+  sharedPressureCycle?: number | null;
   /** Explicitly non-authoritative CCC-0 research evidence; ageTicks exposes cached multi-rate evidence. */
   shadowCoordination?: CausalShadowCoordinationEvidence | null;
 }
@@ -87,6 +94,10 @@ export interface CausalOutcomePhase {
   postRouteStatus: string | null;
   postRoutePath: string;
   postRouteClearanceConstrained?: boolean | null;
+  sharedPressurePhase?: string | null;
+  sharedPressureOutcome?: string | null;
+  sharedPressureResolvedBy?: string | null;
+  sharedPressureResponseTicks?: number | null;
 }
 
 export interface CausalPostClassification {
@@ -148,6 +159,7 @@ function cloneFrame(frame: CausalFrame): CausalFrame {
     decision: {
       ...frame.decision,
       relationshipTarget: cloneVec(frame.decision.relationshipTarget),
+      liveObjectiveTarget: cloneVec(frame.decision.liveObjectiveTarget),
       preferredVelocity: cloneVec(frame.decision.preferredVelocity),
       refinedVelocity: cloneVec(frame.decision.refinedVelocity),
       comfortStartBlockers: frame.decision.comfortStartBlockers
