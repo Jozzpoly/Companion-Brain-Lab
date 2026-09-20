@@ -303,10 +303,7 @@ export function resolveSharedDangerAfterPhysics(
 
   if (input.before.phase === "COMPLETE") {
     return {
-      after: {
-        ...cloneSnapshot(input.before),
-        interruptedBy: []
-      },
+      after: cloneSnapshot(input.before),
       actionOutcomes,
       episodeOutcome: "NONE"
     };
