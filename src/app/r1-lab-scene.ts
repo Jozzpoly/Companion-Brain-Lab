@@ -1487,7 +1487,7 @@ export class R1LabScene extends Phaser.Scene {
       }] : []),
       ...(apparatusActive && this.sharedDangerReadiness ? [{
         id: "readiness",
-        title: "Pre-contact readiness · player-local guard",
+        title: "Pre-contact readiness · player-local intercept flank",
         tone: this.sharedDangerReadiness.state === "GUARDING"
           ? "success" as const
           : this.sharedDangerReadiness.state === "HOLDING_READY"
@@ -1496,8 +1496,8 @@ export class R1LabScene extends Phaser.Scene {
         lines: [
           `authority ${this.sharedDangerReadinessEnabled ? "ON" : "OFF"} · state ${this.sharedDangerReadiness.state} · basis ${this.sharedDangerReadiness.reasonCode}`,
           this.sharedDangerReadiness.target
-            ? `guard target ${compact(this.sharedDangerReadiness.target.x)}, ${compact(this.sharedDangerReadiness.target.y)} · companion gap ${compactNullable(this.sharedDangerReadiness.companionToTargetDistance)}m`
-            : "guard target none",
+            ? `intercept target ${compact(this.sharedDangerReadiness.target.x)}, ${compact(this.sharedDangerReadiness.target.y)} · companion gap ${compactNullable(this.sharedDangerReadiness.companionToTargetDistance)}m`
+            : "intercept target none",
           `player↔hostile ${compactNullable(this.sharedDangerReadiness.playerToHostileDistance)}m`,
           this.sharedDangerReadiness.reason,
           "READINESS MOVEMENT ONLY · no World action attempt"
