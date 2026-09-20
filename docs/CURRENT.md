@@ -1,13 +1,13 @@
 # Companion Brain Lab — CURRENT
 
-Status: **CURRENT EXECUTION ENTRYPOINT · REVISED OS-PREP-5 QUALIFIED · PRE-DEPLOYMENT BOUNDARY**
+Status: **CURRENT EXECUTION ENTRYPOINT · PUBLIC OWNER MOVEMENT REVIEW · OWNER JUDGEMENT BOUNDARY**
 Date: **2026-09-20**
 
 Read this first when resuming the active Companion work. This file is intentionally small. It points to the current campaign and defines how short continuation prompts should be interpreted.
 
 Historical plans and qualification documents remain valuable evidence, but they do not outrank this file, current Owner intent, or live repository state.
 
-## 0. Current stage — revised movement-review candidate qualified
+## 0. Current stage — public Owner movement review
 
 The pre-Owner-Sandbox retrospective is complete.
 
@@ -15,58 +15,58 @@ Canonical decision dossier:
 
 - [RETROSPECTIVE_T7_DECISION_DOSSIER.md](RETROSPECTIVE_T7_DECISION_DOSSIER.md)
 
-Canonical qualification:
+Canonical exact-candidate qualification:
 
 - [OS_PREP_5_REVISED_MOVEMENT_REVIEW_QUALIFICATION.md](OS_PREP_5_REVISED_MOVEMENT_REVIEW_QUALIFICATION.md)
 
-Exact qualified Owner movement-review stimulus:
+Canonical public deployment evidence:
+
+- [OS_PREP_5_REVISED_MOVEMENT_REVIEW_PUBLIC_DEPLOYMENT.md](OS_PREP_5_REVISED_MOVEMENT_REVIEW_PUBLIC_DEPLOYMENT.md)
+
+Exact public Owner movement-review stimulus:
 
 `510405960acf3cfce0a6985fe6f9da88ec95d0c2`
 
-Source branch:
+Public deployment commit on `main`:
 
-`experiment/os-prep5-movement-substrate-owner-review`
+`508f9fbc365fb74da031b09672ae693e869ea9c1`
 
-Validation:
+Deployment state:
 
-- Validate #1370 / run `35476301593` — **FULL GREEN**;
-- candidate-specific adversarial participant specimen — **PASS**;
-- full inherited movement/semantic/A1 evidence tail — **PASS**;
-- artifact-level provenance + participant screenshot inspection — **PASS**.
-
-The candidate is immutable for the next operational step. Do not add documentation or fixes to its branch merely to record qualification.
+- main validate — **PASS**;
+- Pages build — **PASS**;
+- Pages deploy — **PASS**;
+- real public Chromium smoke — **PASS**;
+- public smoke exact source = `510405...`;
+- public smoke build state = `PINNED_SOURCE_SHA`;
+- public participant contract = SPATIAL / NATURAL / A1 OFF / 1x / RUNNING / P2 unavailable.
 
 ## 1. Active product question
 
-The old broad Owner-Sandbox question is rejected.
-
-The current Owner experiment asks only:
+The current human experiment asks only:
 
 > **Is the current embodied movement/relationship substrate good enough — and sufficiently worth preserving — that Companion Brain Lab should stop treating locomotion as its main research frontier and begin the first true minimum-useful-partner experiment?**
 
 This is a movement-foundation closure question, not a broad teammate-quality test.
 
-## 2. Current operational boundary
+## 2. Current execution boundary
 
-Public deployment has **not** occurred.
+Engineering preparation and public deployment are complete.
 
-The next safe technical step is:
+The next required evidence is **Owner play judgement**.
 
-> update the existing provisional Pages operations rehearsal to pin exact `510405...` and run a non-public Pages-like `/owner/` dry-run against the revised participant contract.
+Do not add gameplay, fix known PH pathologies, promote S5/A1.1, resume A1 selector/frontier research, or start threat/combat/commands before the Owner has interacted with the public movement-review surface.
 
-The dry-run must prove:
+For the first Owner encounter:
 
-- exact checkout and `VITE_SOURCE_SHA` pinning to `510405...`;
-- real `/owner/?owner=1` subpath behavior;
-- participant-only controls;
-- research/P2/fault query contamination blocked;
-- historical M/N/T/P/O mutation attempts blocked;
-- Save incident exact provenance;
-- no browser/runtime/request failures.
+- keep it unscripted;
+- do not front-load known pathology labels;
+- use Save only for moments that feel notably good, bad, fake, surprising or unreadable;
+- preserve first impressions before causal/debug interpretation.
 
-Do **not** repoint real GitHub Pages automatically.
+When the Owner says `kontynuuj` **after providing play feedback or captured evidence**, continue with causal reconstruction and decide whether the movement-first era can close.
 
-When the Owner says `kontynuuj`, continue from this operational pre-deployment boundary unless live repository state changed.
+If the Owner says `kontynuuj` without having tested the public surface, do not silently resume engineering; the current boundary is human evidence.
 
 ## 3. Current authority truth
 
