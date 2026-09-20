@@ -449,16 +449,38 @@ Immediately stop and re-enter the strategic loop if:
 
 ## 10. Current immediate action
 
-Gate S0 is now closed enough to authorize **S1 apparatus work only**. See [FIRST_TEAMMATE_SITUATION_PLAN.md](FIRST_TEAMMATE_SITUATION_PLAN.md).
+S1 is now **MACHINE-QUALIFIED as apparatus only** at `ae7d6bc5394194840dbb9a0b29a4924be406eaeb`.
 
-Do **not** implement autonomous combat/hostile cognition yet.
+The exact claim is narrow:
 
-Next authorized tranche:
+> one external World problem can coexist with movement, explicit player/manual-companion action attempts and World-owned outcomes under one authoritative tick contract.
 
-1. close S1-A contract design: embodied problem-source identity, explicit action-attempt/outcome contract and within-tick ordering;
-2. implement the smallest zero-brain World apparatus;
-3. expose manual player + manual/trivial companion participation;
-4. qualify success/failure/readability before adding local cognition;
-5. re-plan S2 only from that evidence.
+Do not promote from this:
 
-This is not permission to build a combat framework.
+- hostile sensor/direct-motion fixture;
+- `INTERVENE` as final action vocabulary;
+- current visual telegraph;
+- player-only hostile target;
+- action ranges/timers;
+- any combat-system conclusion.
+
+Participant-first artifact review also found a concrete readability debt: successful manual companion intervention can leave the yellow companion visually occluded under the hostile. This does not invalidate the World/action contract, but it prevents treating S1 presentation as product-quality evidence.
+
+### Active gate: S2 — situated attention / public responsibility
+
+Authority granted:
+
+- add the smallest zero-authority local-brain representation that can notice an external problem, keep the player as a first-class situated reference, and form/withdraw bounded responsibility for an inspectable reason;
+- expose the resulting focus/responsibility state in causal evidence;
+- test counterfactuals where the same problem state does **not** imply the same responsibility because spatial/relational context differs.
+
+Authority withheld:
+
+- no autonomous movement/action contribution yet;
+- no command/corrigibility layer;
+- no combat framework;
+- no HP/inventory/factions/multiple enemies;
+- no LLM/higher-cognition integration;
+- no wholesale promotion of CCC/A1/S5 donors.
+
+S2 should be deliberately short. If it earns its claim, re-plan S3 immediately around one material autonomous contribution. If it degenerates into labels that do not create a falsifiable decision boundary, reject it rather than deepening shadow instrumentation.
