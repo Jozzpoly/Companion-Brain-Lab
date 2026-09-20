@@ -17,5 +17,21 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - run: npm install
+      - name: Install dependencies
+        run: |
+          if npm install; then
+            echo "Dependency install completed through normal npm peer resolution."
+            exit 0
+          fi
+
+          latest_log="$(ls -t "$HOME"/.npm/_logs/*-debug-0.log 2>/dev/null | head -n 1 || true)"
+          if [ -z "$latest_log" ] || ! grep -Fq "Cannot read properties of null (reading 'edgesOut')" "$latest_log"; then
+            echo "npm failed for an unrecognized reason; refusing fallback."
+            if [ -n "$latest_log" ]; then cat "$latest_log"; fi
+            exit 1
+          fi
+
+          echo "Known npm Arborist edgesOut crash detected; retrying with peer auto-resolution disabled."
+          rm -rf node_modules
+          npm install --legacy-peer-deps
       - run: npm run check
