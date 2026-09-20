@@ -26,19 +26,37 @@ function snapshot(tick: number, player: Vec2, companion: Vec2): WorldSnapshot {
 }
 
 describe("Stage B shared pressure world loop", () => {
-  it("activates deterministically and can be materially contained by the companion", () => {
+  it("creates an advancing external problem instead of a stationary objective marker", () => {
     const loop = new SharedPressureLoop("open");
-    loop.observe(snapshot(89, { x: 3, y: 4 }, { x: 8, y: 4 }));
-    expect(loop.snapshot().phase).toBe("QUIET");
+    const player = { x: 3, y: 4 };
+    const companion = { x: 1, y: 7 };
 
-    loop.observe(snapshot(90, { x: 3, y: 4 }, { x: 8, y: 4 }));
-    const active = loop.snapshot();
-    expect(active.phase).toBe("ACTIVE");
-    expect(active.target).not.toBeNull();
+    loop.observe(snapshot(90, player, companion));
+    const initial = loop.snapshot();
+    expect(initial.phase).toBe("ACTIVE");
+    expect(initial.target).not.toBeNull();
+    expect(initial.threatDistanceToPlayer).not.toBeNull();
 
-    const target = active.target!;
-    for (let tick = 91; tick <= 132; tick += 1) {
-      loop.observe(snapshot(tick, { x: 3, y: 4 }, target));
+    for (let tick = 91; tick <= 120; tick += 1) {
+      loop.observe(snapshot(tick, player, companion));
+    }
+
+    const advanced = loop.snapshot();
+    expect(advanced.phase).toBe("ACTIVE");
+    expect(advanced.target).not.toEqual(initial.target);
+    expect(advanced.threatDistanceToPlayer!).toBeLessThan(initial.threatDistanceToPlayer!);
+    expect(advanced.lastResponder).toBe("none");
+  });
+
+  it("can be materially intercepted and contained by the companion", () => {
+    const loop = new SharedPressureLoop("open");
+    const player = { x: 3, y: 4 };
+    loop.observe(snapshot(90, player, { x: 8, y: 4 }));
+
+    for (let tick = 91; tick <= 140 && loop.snapshot().phase === "ACTIVE"; tick += 1) {
+      const target = loop.snapshot().target;
+      if (!target) throw new Error("active threat lost its target");
+      loop.observe(snapshot(tick, player, target));
     }
 
     const contained = loop.snapshot();
@@ -48,18 +66,22 @@ describe("Stage B shared pressure world loop", () => {
     expect(contained.breaches).toBe(0);
   });
 
-  it("records a factual breach when nobody answers before the deadline", () => {
+  it("produces a factual breach when the moving threat reaches an undefended player", () => {
     const loop = new SharedPressureLoop("open");
-    loop.observe(snapshot(90, { x: 3, y: 4 }, { x: 8, y: 4 }));
-    const deadline = loop.snapshot().deadlineTick;
-    expect(deadline).not.toBeNull();
+    const player = { x: 3, y: 4 };
+    const absentCompanion = { x: 1, y: 7 };
+    loop.observe(snapshot(90, player, absentCompanion));
 
-    loop.observe(snapshot(deadline!, { x: 3, y: 4 }, { x: 8, y: 4 }));
+    for (let tick = 91; tick <= 700 && loop.snapshot().phase === "ACTIVE"; tick += 1) {
+      loop.observe(snapshot(tick, player, absentCompanion));
+    }
+
     const breached = loop.snapshot();
     expect(breached.phase).toBe("RECOVERING");
     expect(breached.lastOutcome).toBe("BREACHED");
     expect(breached.lastResolvedBy).toBe("none");
     expect(breached.breaches).toBe(1);
+    expect(breached.threatDistanceToPlayer!).toBeLessThanOrEqual(breached.breachDistance);
   });
 
   it("does not leak the Stage B apparatus into constrained movement fixtures", () => {

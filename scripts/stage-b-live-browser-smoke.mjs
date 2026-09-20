@@ -39,6 +39,15 @@ function hasOrdinaryBaseline(text) {
   );
 }
 
+function threatPosition(text) {
+  const match = text.match(/advancing threat\s+(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/);
+  return match ? { x: Number(match[1]), y: Number(match[2]) } : null;
+}
+
+function distance(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
 const server = await preview({
   logLevel: "error",
   preview: { host: "127.0.0.1", port: 4173, strictPort: true }
@@ -88,6 +97,8 @@ try {
     (text) =>
       hasOrdinaryBaseline(text) &&
       text.includes("world pressure ACTIVE") &&
+      text.includes("advancing threat") &&
+      text.includes("threat advancing") &&
       text.includes("companion action RESPOND_TO_THREAT") &&
       text.includes("LIVE RESPOND_TO_THREAT") &&
       text.includes("baseline relationship"),
@@ -95,10 +106,34 @@ try {
     "live responsibility takeover"
   );
   const respondingTick = tickFromPanel(responding);
+  const firstThreatPosition = threatPosition(responding);
   invariant(
     respondingTick !== null && respondingTick > initialTick,
     "Stage B responsibility takeover did not advance World time."
   );
+  invariant(firstThreatPosition, "Stage B active panel exposed no advancing threat position.");
+
+  const advancing = await waitForPanel(
+    page,
+    (text) => {
+      const tick = tickFromPanel(text);
+      const position = threatPosition(text);
+      return (
+        tick !== null &&
+        respondingTick !== null &&
+        tick >= respondingTick + 20 &&
+        text.includes("world pressure ACTIVE") &&
+        text.includes("companion action RESPOND_TO_THREAT") &&
+        position !== null &&
+        firstThreatPosition !== null &&
+        distance(position, firstThreatPosition) > 0.08
+      );
+    },
+    10_000,
+    "advancing threat movement before intercept"
+  );
+  const advancingThreatPosition = threatPosition(advancing);
+  invariant(advancingThreatPosition, "Advancing Stage B specimen lost threat position.");
 
   await page.screenshot({
     path: `${ROOT}/responding.png`,
@@ -160,7 +195,10 @@ try {
       tick: respondingTick,
       pressure: "ACTIVE",
       action: "RESPOND_TO_THREAT",
-      baselineRelationshipRemainsVisible: true
+      baselineRelationshipRemainsVisible: true,
+      firstThreatPosition,
+      advancingThreatPosition,
+      observedThreatMovement: distance(firstThreatPosition, advancingThreatPosition)
     },
     factualOutcome: {
       tick: containedTick,

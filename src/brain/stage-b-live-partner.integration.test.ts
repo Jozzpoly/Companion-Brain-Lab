@@ -16,7 +16,7 @@ function distance(a: Vec2, b: Vec2): number {
 }
 
 describe("Stage B live teammate vertical slice", () => {
-  it("lets the ordinary NATURAL companion notice, answer, contain and leave a shared-world threat without player input", async () => {
+  it("lets the ordinary NATURAL companion intercept an advancing threat without player input, contain it, and regroup", async () => {
     const world = await LabWorld.create("open");
     const stack = new R1WorkbenchSpatialStack();
     let snapshot = world.snapshot();
@@ -25,12 +25,21 @@ describe("Stage B live teammate vertical slice", () => {
     let containedByCompanion = false;
     let sawRegroupAfterContainment = false;
     let containmentDistance = Number.POSITIVE_INFINITY;
+    let firstThreatTarget: Vec2 | null = null;
+    let maximumThreatDisplacement = 0;
 
     try {
-      for (let step = 0; step < 720; step += 1) {
+      for (let step = 0; step < 900; step += 1) {
         const pressureBefore = world.sharedPressure();
         const action = decideStageBPartnerAction(pressureBefore);
-        if (action.kind === "RESPOND_TO_THREAT") sawRespond = true;
+        if (action.kind === "RESPOND_TO_THREAT" && action.target) {
+          sawRespond = true;
+          if (!firstThreatTarget) firstThreatTarget = { ...action.target };
+          maximumThreatDisplacement = Math.max(
+            maximumThreatDisplacement,
+            distance(firstThreatTarget, action.target)
+          );
+        }
         if (containedByCompanion && action.kind === "REGROUP") {
           sawRegroupAfterContainment = true;
         }
@@ -95,6 +104,7 @@ describe("Stage B live teammate vertical slice", () => {
 
       const finalPressure = world.sharedPressure();
       expect(sawRespond).toBe(true);
+      expect(maximumThreatDisplacement).toBeGreaterThan(0.1);
       expect(containedByCompanion).toBe(true);
       expect(containmentDistance).toBeLessThanOrEqual(finalPressure.responseRadius + 0.03);
       expect(sawRegroupAfterContainment).toBe(true);

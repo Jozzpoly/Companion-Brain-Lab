@@ -56,7 +56,7 @@ const DEFAULT_LAYERS: Readonly<Record<WorldDebugLayer, boolean>> = {
   contacts: true
 };
 
-const DEFAULT_OPEN_SECTION_IDS = new Set(["run", "recovery", "route", "motion", "a1", "p2"]);
+const DEFAULT_OPEN_SECTION_IDS = new Set(["stage-b", "run", "recovery", "route", "motion", "a1", "p2"]);
 
 export class CausalPanelDisclosureState {
   private readonly remembered = new Map<string, boolean>();

@@ -838,33 +838,35 @@ export class R1LabScene extends Phaser.Scene {
     const contained = pressure.lastOutcome === "CONTAINED";
     const breached = pressure.lastOutcome === "BREACHED";
     const color = contained ? 0x7ee787 : breached ? 0xff5d66 : 0xff7b72;
-    const alpha = pressure.phase === "ACTIVE" ? 0.2 : 0.1;
-    this.graphics.fillStyle(color, alpha);
-    this.graphics.fillCircle(
-      sx(pressure.target.x),
-      sy(pressure.target.y),
-      pressure.responseRadius * scale
-    );
-    this.graphics.lineStyle(4, color, pressure.phase === "ACTIVE" ? 0.95 : 0.6);
-    this.graphics.strokeCircle(
-      sx(pressure.target.x),
-      sy(pressure.target.y),
-      pressure.responseRadius * scale
-    );
-    this.graphics.lineStyle(3, color, 0.95);
-    const arm = Math.max(8, pressure.responseRadius * scale * 0.28);
-    this.graphics.lineBetween(
-      sx(pressure.target.x) - arm,
-      sy(pressure.target.y),
-      sx(pressure.target.x) + arm,
-      sy(pressure.target.y)
-    );
-    this.graphics.lineBetween(
-      sx(pressure.target.x),
-      sy(pressure.target.y) - arm,
-      sx(pressure.target.x),
-      sy(pressure.target.y) + arm
-    );
+    const ringAlpha = pressure.phase === "ACTIVE" ? 0.72 : 0.4;
+    const coreAlpha = pressure.phase === "ACTIVE" ? 0.95 : 0.55;
+    const x = sx(pressure.target.x);
+    const y = sy(pressure.target.y);
+
+    // Outer ring is the companion's effective interception distance; the solid
+    // inner body is the actual advancing threat proxy. Keeping the two visually
+    // distinct avoids presenting another anonymous waypoint disk.
+    this.graphics.fillStyle(color, pressure.phase === "ACTIVE" ? 0.055 : 0.035);
+    this.graphics.fillCircle(x, y, pressure.responseRadius * scale);
+    this.graphics.lineStyle(2, color, ringAlpha);
+    this.graphics.strokeCircle(x, y, pressure.responseRadius * scale);
+
+    this.graphics.fillStyle(color, coreAlpha);
+    this.graphics.fillCircle(x, y, pressure.threatRadius * scale);
+    this.graphics.lineStyle(3, 0xe7e9ee, pressure.phase === "ACTIVE" ? 0.9 : 0.5);
+    this.graphics.strokeCircle(x, y, pressure.threatRadius * scale);
+
+    const spikeInner = pressure.threatRadius * scale * 1.15;
+    const spikeOuter = pressure.threatRadius * scale * 1.85;
+    this.graphics.lineStyle(3, color, ringAlpha);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      this.graphics.lineBetween(
+        x + dx * spikeInner,
+        y + dy * spikeInner,
+        x + dx * spikeOuter,
+        y + dy * spikeOuter
+      );
+    }
   }
 
   private drawTrails(sx: (x: number) => number, sy: (y: number) => number): void {
@@ -1121,11 +1123,11 @@ export class R1LabScene extends Phaser.Scene {
           : [
               `world pressure ${pressure.phase} · episode ${pressure.cycle + 1} · breaches ${pressure.breaches}`,
               pressure.phase === "ACTIVE" && pressure.target
-                ? `threat ${compact(pressure.target.x)}, ${compact(pressure.target.y)} · deadline ${pressure.ticksUntilDeadline ?? 0}t`
+                ? `advancing threat ${compact(pressure.target.x)}, ${compact(pressure.target.y)} · player distance ${compact(pressure.threatDistanceToPlayer ?? 0)}m · breach <=${compact(pressure.breachDistance)}m`
                 : pressure.phase === "QUIET"
-                  ? `next pressure in ${pressure.ticksUntilActivation ?? 0}t`
+                  ? `next advancing threat in ${pressure.ticksUntilActivation ?? 0}t`
                   : `outcome ${pressure.lastOutcome} · resolved by ${pressure.lastResolvedBy}`,
-              `sustained response ${pressure.responseTicks}/${pressure.requiredResponseTicks}t · current responder ${pressure.lastResponder}`,
+              `intercept ${pressure.responseTicks}/${pressure.requiredResponseTicks}t · ${pressure.lastResponder === "companion" ? "companion ENGAGED" : pressure.phase === "ACTIVE" ? "threat advancing" : "no active intercept"}`,
               `companion action ${partnerAction?.kind ?? "NOT_EVALUATED"}`,
               partnerAction?.reason ?? pressure.reason,
               pressure.reason
