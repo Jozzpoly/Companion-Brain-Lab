@@ -172,6 +172,31 @@ describe("S1-A shared-danger World contract", () => {
     expect(released.after.phaseTicksRemaining).toBe(0);
   });
 
+  it("preserves factual interrupter provenance through recovery and COMPLETE", () => {
+    const interrupted: SharedDangerSnapshot = {
+      ...initialSharedDangerSnapshot(),
+      phase: "RECOVERING",
+      phaseTicksRemaining: 1,
+      lastOutcome: "INTERRUPTED",
+      lastOutcomeTick: 9,
+      interruptedBy: ["player"]
+    };
+
+    const completed = resolve({
+      before: interrupted,
+      attempts: []
+    });
+    expect(completed.after.phase).toBe("COMPLETE");
+    expect(completed.after.lastOutcome).toBe("INTERRUPTED");
+    expect(completed.after.interruptedBy).toEqual(["player"]);
+
+    const inert = resolve({
+      before: completed.after,
+      attempts: []
+    });
+    expect(inert.after.interruptedBy).toEqual(["player"]);
+  });
+
   it("keeps a completed encounter inert until the scenario is reset", () => {
     const complete: SharedDangerSnapshot = {
       ...initialSharedDangerSnapshot(),

@@ -272,10 +272,7 @@ export function resolveSharedDangerAfterPhysics(
       };
     }
     return {
-      after: {
-        ...cloneSnapshot(input.before),
-        interruptedBy: []
-      },
+      after: cloneSnapshot(input.before),
       actionOutcomes,
       episodeOutcome: "NONE"
     };
@@ -287,8 +284,7 @@ export function resolveSharedDangerAfterPhysics(
       return {
         after: {
           ...cloneSnapshot(input.before),
-          phaseTicksRemaining: remaining,
-          interruptedBy: []
+          phaseTicksRemaining: remaining
         },
         actionOutcomes,
         episodeOutcome: "NONE"
@@ -298,8 +294,7 @@ export function resolveSharedDangerAfterPhysics(
       after: {
         ...cloneSnapshot(input.before),
         phase: "COMPLETE",
-        phaseTicksRemaining: 0,
-        interruptedBy: []
+        phaseTicksRemaining: 0
       },
       actionOutcomes,
       episodeOutcome: "NONE"
