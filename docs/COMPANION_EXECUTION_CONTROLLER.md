@@ -449,15 +449,16 @@ Immediately stop and re-enter the strategic loop if:
 
 ## 10. Current immediate action
 
-Do **not** implement autonomous combat/hostile logic yet.
+Gate S0 is now closed enough to authorize **S1 apparatus work only**. See [FIRST_TEAMMATE_SITUATION_PLAN.md](FIRST_TEAMMATE_SITUATION_PLAN.md).
 
-Complete Gate S0/S1 design:
+Do **not** implement autonomous combat/hostile cognition yet.
 
-1. finish the shared-danger situation dossier against its strongest rival;
-2. define the smallest player verbs, companion-manual verbs and World consequences needed for the apparatus;
-3. design the generic attempt→World-outcome seam without selecting a broad combat architecture;
-4. identify exact existing donors needed from Foundation/workbench;
-5. define apparatus falsifiers;
-6. only then implement the manual/simple shared-world specimen.
+Next authorized tranche:
 
-This is the next authorized tranche.
+1. close S1-A contract design: embodied problem-source identity, explicit action-attempt/outcome contract and within-tick ordering;
+2. implement the smallest zero-brain World apparatus;
+3. expose manual player + manual/trivial companion participation;
+4. qualify success/failure/readability before adding local cognition;
+5. re-plan S2 only from that evidence.
+
+This is not permission to build a combat framework.
