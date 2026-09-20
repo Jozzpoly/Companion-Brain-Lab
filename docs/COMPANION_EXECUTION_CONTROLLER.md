@@ -449,58 +449,68 @@ Immediately stop and re-enter the strategic loop if:
 
 ## 10. Current immediate action
 
-Current canonical head:
+Current qualified participant head:
 
-`9aec423bbadf2aa7bb6794d5a7c6d970fe17b958`
+`0aca54a19abb7d5573f75f1813e84ca30937b7d7`
 
 ### Promotion ledger
 
 | Gate | Current status | Claim actually earned |
 | --- | --- | --- |
-| S1 shared situation | **MACHINE-QUALIFIED APPARATUS** | authoritative shared problem + explicit player/manual-companion action attempts + World outcomes |
-| S2 situated responsibility | **MACHINE-QUALIFIED BOUNDED SEAM** | known problem can be tracked, owned or declined for inspectable situated reasons, with zero action authority |
-| S3 material contribution | **MACHINE-QUALIFIED BOUNDED AUTONOMY** | one S2-earned responsibility can drive one material World contribution; no earned responsibility means no contribution |
-| S4 corrigibility/player agency | **ACTIVE GATE** | not yet earned |
-| S5 continuity / richer teammate behavior | **OPEN** | not authorized |
+| S1 shared situation | **MACHINE-QUALIFIED APPARATUS** | authoritative shared problem + explicit player/manual-companion attempts + World outcomes |
+| S2 situated responsibility | **MACHINE-QUALIFIED BOUNDED SEAM** | known problem can be tracked, owned or declined for inspectable situated reasons |
+| S3 material contribution | **MACHINE-QUALIFIED BOUNDED AUTONOMY** | one earned responsibility can drive one material World contribution |
+| S4 corrigibility/player agency | **MACHINE-QUALIFIED BOUNDED CORRECTION** | execution can be constrained without erasing judgement/raw proposal |
+| integrated participant path | **MACHINE PASS · PRE-OWNER FAIL** | same-runtime autonomy/correction is operational, but visible situation is still too abstract |
+| pre-contact readiness / legibility | **ACTIVE GATE** | not yet earned |
 | Owner teammate gate | **OPEN** | premature |
 
 Machine qualification does not equal product or Owner qualification.
 
-### Active S4 hypothesis
+### Why the participant path is not the next Owner gate
 
-The first correction experiment should not start from the old command menu. It should isolate one causal tension:
+The participant artifact remains dominated by three abstract circles. The underlying causal stack is materially newer than Foundation/Stage B, but the visible experience still under-communicates:
 
-`S2 situated judgement → S3 raw material proposal → S4 player correction constraint → effective execution → World outcome`
+- awareness before commitment;
+- preparation;
+- action provenance;
+- embodied shared responsibility.
 
-Initial research correction:
+This directly triggers the campaign's anti-regression rule: do not ask the Owner to infer intelligence from debug evidence when the world itself does not communicate it.
 
-> **WITHHOLD THIS COMPANION INTERVENTION**
+### Active readiness hypothesis
 
-This is a temporary falsifier/control surface, not a final player command.
+During `APPROACHING`, attention may drive **bounded preparation** even though intervention responsibility remains `NONE`.
 
-S4 must prove all of the following before promotion:
+The first candidate is a conservative player-local guard position:
 
-- S2 can remain `OWNED` while the player blocks the current autonomous contribution;
-- raw S3 proposal remains visible instead of being rewritten to `NONE`;
-- effective movement/action is blocked while the correction applies;
-- the player can still intervene through the same World contract;
-- releasing the correction while its causal basis still exists allows autonomy to resume;
-- no command spam, command tree, global obedience mode or product HUD is required.
+`player position + normalized(player → hostile) × bounded guard offset`
+
+Rules:
+
+- guard movement is allowed only while the external problem is being tracked and has not committed;
+- no World action attempt is emitted by readiness;
+- the target is anchored to the player, not to the hostile;
+- readiness stops rather than forcing a nonsensical between-bodies position when spacing becomes too tight;
+- `WINDUP` hands authority back to the existing S2→S3 intervention path;
+- full workbench must expose readiness state/target/reason;
+- participant-first world rendering must make the stance/preparation legible without requiring that panel.
 
 ### Authority granted
 
-- add the smallest explicit correction state and arbitration seam between S3 proposal and execution;
-- expose raw proposal, correction state, effective contribution and reason separately;
-- add causal/unit/browser falsification for blocked, player-owned and released cases;
-- reuse the current shared-danger fixture and action contract.
+- implement one tiny readiness decision/proposal;
+- integrate it only into the shared-danger bounded stack;
+- add unit/browser counterfactuals proving preparation without premature intervention;
+- add minimal semantic world rendering necessary to see the readiness behavior;
+- preserve S1–S4 and historical donor regressions.
 
 ### Authority withheld
 
-- do not promote `AT_WILL / FOLLOW_ME / HOLD_HERE`;
-- do not add a generalized order system;
-- do not introduce combat architecture, HP, factions, inventory or multiple hostiles;
-- do not improve S1/S3 mechanics merely for polish;
-- do not erase S2 responsibility when correction blocks execution;
-- do not route this to the Owner until the correction tension itself is coherent.
+- no general tactical positioning system;
+- no new threat selector;
+- no combat framework;
+- no final command grammar;
+- no broad visual/art pipeline;
+- no Owner gate merely because readiness tests are green.
 
-If S4 can only work by replacing cognition with a player mode, reject the representation and re-plan.
+Promotion requires both causal evidence and participant-first artifact review.
