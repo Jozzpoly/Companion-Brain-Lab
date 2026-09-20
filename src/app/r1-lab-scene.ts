@@ -321,8 +321,12 @@ export class R1LabScene extends Phaser.Scene {
     this.snapshotValue = after;
     this.sharedPressure = this.world.sharedPressure();
     this.sharedDanger = worldResult.sharedDanger;
-    this.lastActionOutcomes = worldResult.actionOutcomes;
-    this.lastSharedDangerEpisodeOutcome = worldResult.episodeOutcome;
+    if (worldResult.actionOutcomes.length > 0) {
+      this.lastActionOutcomes = worldResult.actionOutcomes;
+    }
+    if (worldResult.episodeOutcome !== "NONE") {
+      this.lastSharedDangerEpisodeOutcome = worldResult.episodeOutcome;
+    }
     this.logSharedPressureTransition(evidence.pressureBefore, this.sharedPressure);
     this.logSharedDangerTransition(beforeDanger, this.sharedDanger, worldResult.actionOutcomes, worldResult.episodeOutcome);
     this.updatePostEvidence(after, evidence.target);
