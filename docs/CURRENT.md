@@ -540,73 +540,133 @@ Historical branch recovery index:
 
 ## 12. Immediate execution boundary
 
-Do **not** spend the next tranche:
-
-- polishing the rejected movement or Stage B Owner stimuli;
-- hardening the post-FAIL F1/F2/F3 spike into the command system;
-- treating the S1 hostile/action fiction as final combat architecture;
-- reopening Foundation movement without a richer-gameplay falsifier;
-- resuming CCC/A1 merely because historical research exists;
-- adding HP/inventory/factions/multi-enemy architecture, LLM cognition or few-companion scope;
-- creating branch-per-experiment infrastructure.
-
-### Live truth after S1 qualification
-
 Canonical branch remains `main` only.
 
-Current qualified head:
+Current head after the S2/S3 qualification tranche:
 
-`ae7d6bc5394194840dbb9a0b29a4924be406eaeb`
+`9aec423bbadf2aa7bb6794d5a7c6d970fe17b958`
 
-Fresh S1 browser evidence:
+### Machine-qualified stack now earned
 
-- workflow `s1-shared-danger-browser` run **#7** completed successfully on that exact SHA;
-- ordinary runtime build passed;
-- the browser specimen exercised invalid-phase rejection, unopposed `PLAYER_HIT`, player interruption, companion out-of-range failure, manual companion interruption, player movement producing `ATTACK_MISSED`, one-shot completion, reset and collapsed-workbench operation;
-- no autonomous companion brain is active in the S1 scenario.
+**S1 — shared-danger apparatus**
 
-### S1 promotion
-
-S1 is now:
+Status:
 
 > **MACHINE-QUALIFIED APPARATUS · NOT OWNER/PRODUCT QUALIFIED**
 
-Claim earned:
+Earned claim:
 
-> the lab can host one authoritative shared situation in which an external World body progresses in the same World tick, player and manually controlled companion can submit explicit material action attempts, and World-owned spatial/state rules determine factual outcomes.
+> one external World problem can progress in the authoritative tick while player and manually controlled companion submit explicit material attempts whose factual results are decided by World-owned spatial/state rules.
 
-This is enough to stop spending time proving the basic `movement ≠ action attempt ≠ World outcome` seam.
+Important limits remain:
 
-Claim limits remain important:
+- hostile is a non-solid Rapier sensor in an open-field fixture;
+- hostile motion is deterministic direct-to-player apparatus logic;
+- `INTERVENE` is not final combat vocabulary;
+- current telegraph/readability is abstract;
+- manual companion provenance can be visually ambiguous when bodies overlap.
 
-- the hostile is currently a deliberately non-solid Rapier sensor driven directly toward the player in an open-field fixture;
-- that does **not** prove solid body interaction, obstacle navigation, enemy architecture, combat feel or final hostile representation;
-- the visible telegraph is deliberately abstract;
-- participant-first artifact review found that the companion-success frame can visually occlude the yellow companion under the hostile, so action provenance/readability is not product-grade;
-- S1 contains no threat cognition, responsibility decision, useful autonomy, command system or teammate-feel claim.
+**S2 — situated responsibility**
 
-These are constraints on reuse, not reasons to turn S1 into a polishing campaign. Reopen apparatus representation only if S2/S3 needs one of the unproven properties.
+Status:
 
-### Next authorized tranche — S2 situated attention / public responsibility
+> **MACHINE-QUALIFIED BOUNDED RESPONSIBILITY SEAM · NOT A GENERAL ATTENTION SYSTEM**
 
-S2 is authorized **only as a bounded zero-action-authority cognition spike**.
+Fresh evidence:
 
-Question:
+- workflow `s2-situated-responsibility-browser #1` passed;
+- counterfactual unit tests passed;
+- ordinary build passed;
+- browser rehearsal passed with no page/console/request errors.
 
-> **Can the local brain form an inspectable, causally grounded judgement that an external shared-world problem deserves attention and that some responsibility for it belongs to the companion, while the player remains a first-class situated reference?**
+Earned claim:
 
-S2 must:
+> for the known shared problem, the local brain can publicly distinguish attention from responsibility and can own or withdraw responsibility for causal reasons involving the player's factual risk and the companion's material ability to intervene before consequence.
 
-1. expose explicit public focus/responsibility identity and reason-for-change;
-2. use authoritative situation facts, not a side-loop marker or debugger-only label;
-3. distinguish observation from responsibility — noticing a problem must not automatically mean owning it;
-4. include spatial/relational counterfactuals so the result is not merely `WINDUP → HELP`;
-5. keep movement/action authority at **zero** during this gate;
-6. preserve the S1 apparatus and full causal workbench as fixture/evidence, not architecture authority;
-7. remain small enough that a successful S2 can move immediately to S3 material contribution instead of becoming another long shadow-research campaign.
+Specifically:
 
-Do **not** reintroduce command grammar during S2. Corrigibility becomes meaningful only after S3 creates autonomous behavior worth correcting.
+- `APPROACHING` can be tracked without ownership;
+- the same `WINDUP` can produce `OWNED` when intervention is reachable or `NONE` when it is not;
+- player movement outside factual attack range withdraws responsibility;
+- `RECOVERING` keeps relevance while dropping active responsibility;
+- S2 itself emits no movement or action.
+
+Claim limits:
+
+- there is only one known external problem, so S2 does not prove selection among competing attention candidates;
+- straight-line time-to-intervention is an open-field lower-bound fixture calculation, not general reachability/pathfinding authority;
+- this is hand-authored bounded judgement, not a claim of broad intelligence.
+
+**S3 — first material autonomous contribution**
+
+Status:
+
+> **MACHINE-QUALIFIED BOUNDED AUTONOMOUS CONTRIBUTION · NOT TEAMMATE/COMBAT-AI QUALIFIED**
+
+Fresh evidence:
+
+- workflow `s3-material-contribution-browser #1` passed on `9aec423…`;
+- S2/S3 causal unit tests passed;
+- ordinary build passed;
+- browser rehearsal passed with no page/console/request errors;
+- `s1-shared-danger-browser #12`, `s2-situated-responsibility-browser #3` and `command-autonomy-browser #12` all passed on the shared code state `2a46a03…`.
+
+Earned claim:
+
+> when an explicitly enabled research authority consumes an S2-earned responsibility, the companion can make one material contribution through the same World action contract and change the factual outcome; when responsibility is absent, the contribution path remains inert.
+
+The browser rehearsal demonstrated:
+
+- reachable `OWNED` responsibility can lead to companion `INTERVENE` and World `INTERRUPTED`;
+- unreachable `WINDUP` keeps S3 inert and the player can still be hit;
+- when the player moves out of attack range, S2 withdraws responsibility, S3 becomes `NONE`, and World records `ATTACK_MISSED` rather than companion interruption.
+
+This is important player-agency evidence: the first autonomous contribution did not have to steal a player-owned resolution.
+
+Artifact caveat:
+
+- the screenshot named `01-owned-before-contribution` is **not** valid temporal evidence of a pre-action frame; the runtime advanced between the assertion and screenshot and the image already contains the interruption. The causal/browser assertion remains valid, but that frame must not be cited as proof of temporal ordering.
+
+S3 claim limits:
+
+- the open-field approach is deliberately provisional and must not become general locomotion/combat policy;
+- S3 authority is a workbench research toggle, not product UX;
+- no general threat selection, engagement policy, combat loop, tactical competence, trust, teammate feel or Owner approval has been earned.
+
+### Active gate — S4 corrigibility / player agency
+
+The first material autonomous behavior now exists. This is the first point at which player correction is a real question rather than speculative command UI.
+
+Do **not** resurrect the post-FAIL `AT_WILL / FOLLOW_ME / HOLD_HERE` grammar as product design.
+
+S4 should begin with one bounded research correction:
+
+> **WITHHOLD THIS COMPANION INTERVENTION**
+
+The correction must sit **after** cognition/proposal and **before** execution.
+
+Required evidence:
+
+1. S2 may remain `OWNED`; the correction must not falsify or erase what the companion currently believes.
+2. S3's raw material proposal remains inspectable.
+3. while correction is active, effective companion movement/action for that contribution is blocked.
+4. player can still materially act on the same problem.
+5. releasing the correction before consequence lets the still-valid autonomous proposal re-emerge without issuing a new command.
+6. the correction must not become a permanent global obedience mode or a new product command grammar.
+
+Only after this narrow correction tension is qualified should the project ask whether richer direction such as follow/hold/engage deserves promotion from historical donor evidence.
+
+### Do not spend the next tranche on
+
+- polishing S1 hostile visuals or sensor physics without an S4/S5 falsifier;
+- general command UI;
+- HP/inventory/factions/multi-enemy combat;
+- general-purpose planner/utility architecture;
+- CCC/A1/S5 promotion by code volume;
+- LLM/higher cognition;
+- branch-per-experiment infrastructure;
+- an Owner gate before the machine-side S4 tension is coherent.
 
 The controlling question is now:
 
-> **Can the companion first form a bounded, legible responsibility about a real shared situation before we let that judgement control anything?**
+> **Can the player quickly constrain a useful autonomous contribution without deleting the companion's own situated judgement or turning it into a puppet?**
