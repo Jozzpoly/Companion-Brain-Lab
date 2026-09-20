@@ -142,6 +142,45 @@ describe("shared-danger pre-contact readiness", () => {
     expect(distanceAtCommitment).toBeGreaterThan(0.3);
   });
 
+  it("re-anchors the intercept flank when the player moves", () => {
+    const before = evaluateSharedDangerReadiness({
+      snapshot: snapshot({
+        playerX: 0,
+        playerY: 0,
+        companionX: READINESS_FORWARD_OFFSET,
+        companionY: -READINESS_LATERAL_OFFSET,
+        hostileX: 5,
+        hostileY: 0
+      }),
+      danger: danger("APPROACHING"),
+      responsibility: trackedNone()
+    });
+    const after = evaluateSharedDangerReadiness({
+      snapshot: snapshot({
+        playerX: 0,
+        playerY: -1,
+        companionX: READINESS_FORWARD_OFFSET,
+        companionY: -READINESS_LATERAL_OFFSET,
+        hostileX: 5,
+        hostileY: 0
+      }),
+      danger: danger("APPROACHING"),
+      responsibility: trackedNone()
+    });
+
+    expect(before.target).not.toBeNull();
+    expect(after.target).not.toBeNull();
+    expect(Math.hypot(
+      (after.target?.x ?? 0) - (before.target?.x ?? 0),
+      (after.target?.y ?? 0) - (before.target?.y ?? 0)
+    )).toBeGreaterThan(0.5);
+    expect(Math.hypot(
+      (after.target?.x ?? 0) - 0,
+      (after.target?.y ?? 0) - (-1)
+    )).toBeCloseTo(Math.hypot(READINESS_FORWARD_OFFSET, READINESS_LATERAL_OFFSET), 8);
+    expect(after.motionIntent.actorId).toBe("companion");
+  });
+
   it("stops readiness as soon as the hostile commits to WINDUP", () => {
     const result = evaluateSharedDangerReadiness({
       snapshot: snapshot({ companionX: 1, companionY: -0.6, hostileX: 0.7 }),
