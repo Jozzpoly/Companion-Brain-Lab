@@ -86,7 +86,7 @@ try {
   );
   await shot(page, "00-participant-bootstrap.png");
   invariant(
-    await page.getByRole("button", { name: "Companion intervene", includeHidden: true }).isHidden(),
+    await page.locator('[data-shared-danger-hud="true"]').getByRole("button", { name: "Companion intervene", includeHidden: true }).isHidden(),
     "Manual companion intervention must be hidden in teammate specimen."
   );
   invariant(
