@@ -449,38 +449,58 @@ Immediately stop and re-enter the strategic loop if:
 
 ## 10. Current immediate action
 
-S1 is now **MACHINE-QUALIFIED as apparatus only** at `ae7d6bc5394194840dbb9a0b29a4924be406eaeb`.
+Current canonical head:
 
-The exact claim is narrow:
+`9aec423bbadf2aa7bb6794d5a7c6d970fe17b958`
 
-> one external World problem can coexist with movement, explicit player/manual-companion action attempts and World-owned outcomes under one authoritative tick contract.
+### Promotion ledger
 
-Do not promote from this:
+| Gate | Current status | Claim actually earned |
+| --- | --- | --- |
+| S1 shared situation | **MACHINE-QUALIFIED APPARATUS** | authoritative shared problem + explicit player/manual-companion action attempts + World outcomes |
+| S2 situated responsibility | **MACHINE-QUALIFIED BOUNDED SEAM** | known problem can be tracked, owned or declined for inspectable situated reasons, with zero action authority |
+| S3 material contribution | **MACHINE-QUALIFIED BOUNDED AUTONOMY** | one S2-earned responsibility can drive one material World contribution; no earned responsibility means no contribution |
+| S4 corrigibility/player agency | **ACTIVE GATE** | not yet earned |
+| S5 continuity / richer teammate behavior | **OPEN** | not authorized |
+| Owner teammate gate | **OPEN** | premature |
 
-- hostile sensor/direct-motion fixture;
-- `INTERVENE` as final action vocabulary;
-- current visual telegraph;
-- player-only hostile target;
-- action ranges/timers;
-- any combat-system conclusion.
+Machine qualification does not equal product or Owner qualification.
 
-Participant-first artifact review also found a concrete readability debt: successful manual companion intervention can leave the yellow companion visually occluded under the hostile. This does not invalidate the World/action contract, but it prevents treating S1 presentation as product-quality evidence.
+### Active S4 hypothesis
 
-### Active gate: S2 — situated attention / public responsibility
+The first correction experiment should not start from the old command menu. It should isolate one causal tension:
 
-Authority granted:
+`S2 situated judgement → S3 raw material proposal → S4 player correction constraint → effective execution → World outcome`
 
-- add the smallest zero-authority local-brain representation that can notice an external problem, keep the player as a first-class situated reference, and form/withdraw bounded responsibility for an inspectable reason;
-- expose the resulting focus/responsibility state in causal evidence;
-- test counterfactuals where the same problem state does **not** imply the same responsibility because spatial/relational context differs.
+Initial research correction:
 
-Authority withheld:
+> **WITHHOLD THIS COMPANION INTERVENTION**
 
-- no autonomous movement/action contribution yet;
-- no command/corrigibility layer;
-- no combat framework;
-- no HP/inventory/factions/multiple enemies;
-- no LLM/higher-cognition integration;
-- no wholesale promotion of CCC/A1/S5 donors.
+This is a temporary falsifier/control surface, not a final player command.
 
-S2 should be deliberately short. If it earns its claim, re-plan S3 immediately around one material autonomous contribution. If it degenerates into labels that do not create a falsifiable decision boundary, reject it rather than deepening shadow instrumentation.
+S4 must prove all of the following before promotion:
+
+- S2 can remain `OWNED` while the player blocks the current autonomous contribution;
+- raw S3 proposal remains visible instead of being rewritten to `NONE`;
+- effective movement/action is blocked while the correction applies;
+- the player can still intervene through the same World contract;
+- releasing the correction while its causal basis still exists allows autonomy to resume;
+- no command spam, command tree, global obedience mode or product HUD is required.
+
+### Authority granted
+
+- add the smallest explicit correction state and arbitration seam between S3 proposal and execution;
+- expose raw proposal, correction state, effective contribution and reason separately;
+- add causal/unit/browser falsification for blocked, player-owned and released cases;
+- reuse the current shared-danger fixture and action contract.
+
+### Authority withheld
+
+- do not promote `AT_WILL / FOLLOW_ME / HOLD_HERE`;
+- do not add a generalized order system;
+- do not introduce combat architecture, HP, factions, inventory or multiple hostiles;
+- do not improve S1/S3 mechanics merely for polish;
+- do not erase S2 responsibility when correction blocks execution;
+- do not route this to the Owner until the correction tension itself is coherent.
+
+If S4 can only work by replacing cognition with a player mode, reject the representation and re-plan.
