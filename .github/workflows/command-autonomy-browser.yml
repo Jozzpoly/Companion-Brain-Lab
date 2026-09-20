@@ -1,4 +1,4 @@
-name: stage-b-live-browser
+name: command-autonomy-browser
 
 on:
   push:
@@ -16,14 +16,14 @@ on:
       - "src/world/shared-pressure.ts"
       - "src/world/world.ts"
       - "src/debug/causal-frame-trace.ts"
-      - "scripts/stage-b-live-browser-smoke.mjs"
+      - "scripts/command-autonomy-browser-smoke.mjs"
       - "package.json"
       - "package-lock.json"
-      - ".github/workflows/stage-b-live-browser.yml"
+      - ".github/workflows/command-autonomy-browser.yml"
   workflow_dispatch:
 
 concurrency:
-  group: stage-b-live-browser-${{ github.ref }}
+  group: command-autonomy-browser-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -51,13 +51,13 @@ jobs:
           npm install --legacy-peer-deps
       - name: Build ordinary runtime
         run: npm run build
-      - name: Stage B ordinary-browser gate
-        run: npm run browser:stage-b
-      - name: Upload Stage B browser evidence
+      - name: Command/autonomy browser gate
+        run: npm run browser:command-autonomy
+      - name: Upload command/autonomy browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: stage-b-live-browser-${{ github.sha }}
-          path: artifacts/stage-b-live-browser/
+          name: command-autonomy-browser-${{ github.sha }}
+          path: artifacts/command-autonomy-browser/
           if-no-files-found: warn
           retention-days: 14

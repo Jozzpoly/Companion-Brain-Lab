@@ -196,24 +196,40 @@ This sequence is a planning skeleton, not frozen architecture. Reassess after ea
 - make current public action, player directive, autonomy proposal, arbitration result, execution and World outcome inspectable when those concepts exist;
 - retain Stage B threat only as optional apparatus/regression evidence.
 
-**R1 — Player Directive seam**
+**R1 — Player Directive seam · IMPLEMENTED / MACHINE-QUALIFIED, NOT OWNER-QUALIFIED**
 
-Introduce the smallest explicit player-direction substrate before building a large command tree.
+The first explicit direction substrate now exists on moving `main`:
 
-Required separation:
+`player directive → interpreted constraint → local autonomous proposal → arbitration → public action intent → R1/NATURAL execution → World outcome`
 
-`player directive → interpreted constraints/priorities → local autonomous proposal → arbitration → public action intent → execution → World outcome`
+Current deliberately small experimental vocabulary:
 
-The directive must not directly mutate World truth or become a disguised movement joystick.
+- `AT_WILL` — releases responsibility selection to the local brain;
+- `FOLLOW_ME` — player-local leash rather than a cognition kill-switch;
+- `HOLD_HERE` — responsibility envelope around the captured hold anchor.
 
-Start with a tiny command vocabulary chosen for information value, not completeness. Current leading candidates from the original research frame are variants of:
+A separate player-facing command strip exposes provisional `F1/F2/F3` shortcuts while the full Causal Workbench remains visible in the same runtime. These bindings and labels are research UI, not final game UX.
 
-- follow / stay with me;
-- hold here / preserve responsibility for an area;
-- protect / prioritize my safety or nearby threats;
-- at-will / relax explicit direction.
+The directive does not directly mutate World truth and does not erase the autonomous proposal. The workbench/causal trace records:
 
-Exact labels/UI remain open until implementation planning.
+- active directive and issue tick;
+- hold anchor when relevant;
+- local autonomous proposal;
+- `UNCONSTRAINED / COMPATIBLE / BLOCKED` directive compatibility;
+- constraint distance and limit;
+- arbitration source and selected public action;
+- execution and post-World outcome.
+
+Browser evidence at `c4a62608313536fe470a960ab643f4e37b1154d5` demonstrated on one continuous live threat episode:
+
+- distant `RESPOND_TO_THREAT` under `FOLLOW_ME` → `BLOCKED`, `FOLLOW_PLAYER · PLAYER_DIRECTIVE`;
+- the same `FOLLOW_ME` remained active while the threat approached;
+- once inside the player-local leash → `COMPATIBLE`, `RESPOND_TO_THREAT · AUTONOMY`;
+- distant proposal under `HOLD_HERE` → `BLOCKED`, `HOLD_POSITION · PLAYER_DIRECTIVE`;
+- `AT_WILL` restores unconstrained local authority;
+- full workbench + world layers + player command HUD coexist with zero browser/runtime errors.
+
+This is evidence that commands can bound rather than disable local autonomy. It is **not** evidence yet that the command vocabulary, leash radii, hostile apparatus or gameplay feel are good enough.
 
 **R2 — Autonomy ↔ obedience experiment**
 
@@ -382,7 +398,7 @@ CCC-0 historical zero-authority preview:
 
 `857620b758bdaafcbfbab48da06ff89e7fc238cd`
 
-Current Stage B Owner-judgement candidate:
+Rejected Stage B Owner stimulus source (historical evidence only):
 
 `295452947e5936b79a7e3c40a79f6fdb3f239836`
 
@@ -411,12 +427,12 @@ The Stage B Owner stimulus has **failed**. Do not polish it or ask the Owner to 
 
 Current execution frontier:
 
-1. restore the full Owner-visible causal/debug surface on the active development runtime;
-2. design and implement the minimal **Player Directive** seam on top of the earned Foundation contracts;
-3. make autonomous proposal vs player directive vs arbitration outcome explicitly inspectable;
-4. use the existing threat loop only as one cheap pressure fixture where useful, not as the product;
-5. add the smallest tangible action/combat interaction only when needed to make command/autonomy consequences real;
-6. do not request another Owner test until the runtime contains genuine player direction, bounded autonomy and the causal workbench together.
+1. R0 is restored on moving `main`: full causal/debug workbench and player-facing command UI coexist;
+2. R1 is machine-qualified: player directives bound rather than erase local autonomy, and arbitration is inspectable;
+3. advance into **R2/R3 together through one bounded tangible interaction**: use a minimal hostile/action exchange to make command/autonomy consequences physically meaningful rather than marker-based;
+4. preserve the existing threat loop only as a regression fixture while replacing its product role;
+5. falsify whether `FOLLOW_ME` / `HOLD_HERE` envelopes produce intelligible initiative, not merely technically valid arbitration;
+6. do not request another Owner test until the runtime contains genuine player direction, bounded autonomy, the full workbench **and** a shared-world interaction that is not reducible to colored target circles.
 
 Do **not** reopen Foundation movement unless richer gameplay produces a concrete falsifier.
 

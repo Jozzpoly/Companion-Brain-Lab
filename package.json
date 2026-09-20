@@ -26,7 +26,7 @@
     "browser:audit:os-prep3-ph05-settle": "node scripts/os-prep3-ph05-doorway-settle-browser-specimen.mjs",
     "browser:audit:os-prep3-ph07": "node scripts/os-prep3-ph07-pillar-mirror-browser-specimen.mjs",
     "browser:audit:os-prep5-owner": "node scripts/os-prep5-owner-sandbox-candidate-browser-specimen.mjs",
-    "browser:stage-b": "node scripts/stage-b-live-browser-smoke.mjs"
+    "browser:command-autonomy": "node scripts/command-autonomy-browser-smoke.mjs"
   },
   "dependencies": {
     "@dimforge/rapier2d-deterministic-compat": "0.20.0",

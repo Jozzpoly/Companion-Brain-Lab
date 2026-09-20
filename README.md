@@ -18,7 +18,9 @@ That file outranks historical plans, old experiment names, closed PRs, deleted b
 - Stage B Slice 1 (`295452947e5936b79a7e3c40a79f6fdb3f239836`) remains machine-qualified as a narrow live-authority experiment, but the 2026-09-20 Owner test **rejected it as a product/Owner milestone**.
 - Owner feedback: it felt like a regression toward day-one capability; visible change was essentially red/green threat circles; there was no meaningful player command/control layer; hiding the accumulated debug/workbench made prior progress feel discarded.
 - The repo still contains the full causal/debug workbench; the rejected participant surface hid it rather than deleting it.
-- Stage B is therefore retained only as donor/regression evidence. The active frontier is **player direction + bounded local autonomy + explicit arbitration + full causal observability**, followed by the smallest tangible action/combat apparatus needed to make those interactions meaningful.
+- Stage B is therefore retained only as donor/regression evidence.
+- Moving `main` now has the first machine-qualified **player direction + bounded local autonomy + explicit arbitration** seam: `AT_WILL`, `FOLLOW_ME` and `HOLD_HERE` are experimental directive envelopes, the local proposal remains visible when blocked, and the full causal workbench coexists with a fast command HUD.
+- The active frontier is now the smallest **tangible hostile/action exchange** needed to make those command/autonomy consequences physically meaningful rather than marker-based.
 - Foundation movement remains `PASS · REWORK-READY` and should not be reopened without a new gameplay falsifier.
 
 ## North star

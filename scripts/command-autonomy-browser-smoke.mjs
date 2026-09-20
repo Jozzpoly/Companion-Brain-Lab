@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { chromium } from "playwright-chromium";
 import { preview } from "vite";
 
-const ROOT = "artifacts/stage-b-live-browser";
+const ROOT = "artifacts/command-autonomy-browser";
 
 function invariant(condition, message) {
   if (!condition) throw new Error(message);
@@ -256,7 +256,7 @@ try {
   invariant(errors.requests.length === 0, `Failed requests: ${errors.requests.join(" | ")}`);
 
   const summary = {
-    schema: "companion-brain-lab-stage-b-live-browser-v1",
+    schema: "companion-brain-lab-command-autonomy-browser-v1",
     sourceSha: process.env.GITHUB_SHA ?? process.env.VITE_SOURCE_SHA ?? null,
     browser: browser.version(),
     entrypoint: "/",
@@ -391,7 +391,7 @@ try {
 
   await workbenchContext.close();
   await writeFile(`${ROOT}/summary.json`, JSON.stringify(summary, null, 2));
-  console.log(`[STAGE_B_LIVE_BROWSER] ${JSON.stringify(summary)}`);
+  console.log(`[COMMAND_AUTONOMY_BROWSER] ${JSON.stringify(summary)}`);
 } finally {
   await browser?.close();
   await new Promise((resolve) => server.httpServer.close(resolve));
