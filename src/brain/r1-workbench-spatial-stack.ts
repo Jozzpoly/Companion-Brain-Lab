@@ -44,6 +44,11 @@ export interface R1WorkbenchSpatialDebug {
 
 type ShadowCoordinationEvaluator = (input: ShadowCoordinationFrameInput) => ShadowCoordinationFrame;
 
+export type R1WorkbenchSpatialIntentInput = Omit<R1SpatialLocomotionInput, "previousMove"> & {
+  /** Preserve the actual baseline relationship semantic when live movement serves another objective. */
+  shadowLegacyRelationshipTarget?: Vec2;
+};
+
 function intentVelocity(intent: MotionIntent): Vec2 {
   return {
     x: intent.move.x * S3_EXPERIMENT_MAX_SPEED,
@@ -79,7 +84,7 @@ export class R1WorkbenchSpatialStack {
 
   intent(
     natural: boolean,
-    input: Omit<R1SpatialLocomotionInput, "previousMove">
+    input: R1WorkbenchSpatialIntentInput
   ): MotionIntent {
     // Authoritative movement is selected first on every physics tick. CCC-0 cannot
     // alter that selected value, but its synchronous research work may still add
@@ -103,7 +108,7 @@ export class R1WorkbenchSpatialStack {
           query: input.query,
           physicalSpeedCapability: S3_EXPERIMENT_MAX_SPEED,
           history: this.shadowHistory,
-          legacyRelationshipTarget: input.relationshipTarget,
+          legacyRelationshipTarget: input.shadowLegacyRelationshipTarget ?? input.relationshipTarget,
           legacyPreferredVelocity: preferred?.selectedVelocity ?? null,
           // World applies the same workbench speed scale to MotionIntent. Capture
           // the already-selected command as velocity evidence without changing it.

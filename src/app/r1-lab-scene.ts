@@ -389,6 +389,7 @@ export class R1LabScene extends Phaser.Scene {
       const input = {
         snapshot: before,
         relationshipTarget: liveTarget,
+        shadowLegacyRelationshipTarget: relationship.target,
         routePlan: route,
         query: traversalQuery,
         occupancy: (center: Vec2, radius: number) => this.world!.staticCircleOccupancy(center, radius)
