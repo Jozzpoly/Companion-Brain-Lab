@@ -94,7 +94,6 @@ export class CausalPanel {
   private readonly ownerSandboxSurface: boolean;
   private readonly teammateSandboxSurface: boolean;
   private readonly participantSurface: boolean;
-  private participantStatus: HTMLElement | null = null;
   private readonly content: HTMLElement;
   private readonly title: HTMLElement;
   private readonly subtitle: HTMLElement;
@@ -120,8 +119,8 @@ export class CausalPanel {
       this.root.classList.add("is-collapsed");
       if (this.teammateSandboxSurface) {
         this.root.classList.add("is-teammate-sandbox");
-        this.root.setAttribute("aria-label", "Stage B teammate review controls");
-        document.title = "Companion Brain Lab — Teammate Slice";
+        this.root.setAttribute("aria-label", "Stage B companion review controls");
+        document.title = "Companion Brain Lab — Stage B Slice";
       } else {
         this.root.classList.add("is-owner-sandbox");
         this.root.setAttribute("aria-label", "Owner movement review controls");
@@ -243,22 +242,15 @@ export class CausalPanel {
 
       const ownerTitle = document.createElement("strong");
       ownerTitle.className = "owner-review-title";
-      ownerTitle.textContent = this.teammateSandboxSurface ? "Teammate slice" : "Movement review";
+      ownerTitle.textContent = this.teammateSandboxSurface ? "Stage B slice" : "Movement review";
 
       const ownerHint = document.createElement("span");
       ownerHint.className = "owner-review-hint";
-      ownerHint.textContent = this.teammateSandboxSurface
-        ? "WASD to move · companion acts on its own"
-        : "WASD to move";
+      ownerHint.textContent = "WASD to move";
 
       ownerControls.append(ownerTitle, ownerHint);
 
-      if (this.teammateSandboxSurface) {
-        this.participantStatus = document.createElement("div");
-        this.participantStatus.className = "teammate-review-status";
-        this.participantStatus.textContent = "Waiting for world state…";
-        ownerControls.append(this.participantStatus);
-      } else {
+      if (!this.teammateSandboxSurface) {
         const scenarios = document.createElement("div");
         scenarios.className = "owner-review-scenarios";
         scenarios.append(
@@ -322,14 +314,6 @@ export class CausalPanel {
     this.subtitle.textContent = model.subtitle;
     this.badge.textContent = model.badge;
     this.badge.dataset.tone = model.badgeTone;
-
-    if (this.participantStatus) {
-      const stageB = model.sections.find((section) => section.id === "stage-b");
-      const pressureLine = stageB?.lines.find((line) => line.startsWith("world pressure")) ?? "world pressure unavailable";
-      const actionLine = stageB?.lines.find((line) => line.startsWith("companion action")) ?? "companion action unavailable";
-      this.participantStatus.textContent = `${pressureLine}\n${actionLine}`;
-      this.participantStatus.dataset.tone = stageB?.tone ?? "normal";
-    }
 
     const seen = new Set<string>();
     const desiredNodes: HTMLElement[] = [];

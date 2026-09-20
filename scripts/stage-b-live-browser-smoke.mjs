@@ -250,8 +250,12 @@ try {
   const participantControls = participantPage.locator(".owner-review-controls");
   invariant(await participantControls.isVisible(), "Teammate participant controls are missing.");
   invariant(
-    (await participantControls.locator(".owner-review-title").textContent()) === "Teammate slice",
-    "Teammate participant title is wrong."
+    (await participantControls.locator(".owner-review-title").textContent()) === "Stage B slice",
+    "Stage B participant title is wrong."
+  );
+  invariant(
+    (await participantControls.locator(".owner-review-hint").textContent()) === "WASD to move",
+    "Stage B participant hint leaks expected companion behavior."
   );
   invariant(
     await participantControls.getByRole("button", { name: "Reset", exact: true }).isVisible(),
@@ -289,14 +293,19 @@ try {
     "Teammate participant surface escaped the Open fixture."
   );
 
-  const participantStatus = participantPage.locator(".teammate-review-status");
-  await participantPage.waitForFunction(() => {
-    const node = document.querySelector(".teammate-review-status");
-    return Boolean(
-      node?.textContent?.includes("world pressure ACTIVE") &&
-      node?.textContent?.includes("companion action RESPOND_TO_THREAT")
-    );
-  }, undefined, { timeout: 15_000 });
+  invariant(
+    (await participantPage.locator(".teammate-review-status").count()) === 0,
+    "Stage B participant UI leaks live semantic/action state."
+  );
+  const participantActive = await waitForPanel(
+    participantPage,
+    (text) =>
+      hasOrdinaryBaseline(text) &&
+      text.includes("world pressure ACTIVE") &&
+      text.includes("companion action RESPOND_TO_THREAT"),
+    15_000,
+    "hidden Stage B participant authority state"
+  );
 
   await participantPage.screenshot({
     path: `${ROOT}/teammate-surface.png`,
@@ -323,7 +332,10 @@ try {
     timeScale: "1x",
     visibleControls: ["Reset", "Save"],
     forbiddenScenarioControlsAbsent: true,
-    liveStatus: await participantStatus.textContent(),
+    hiddenAuthorityObserved:
+      participantActive.includes("world pressure ACTIVE") &&
+      participantActive.includes("companion action RESPOND_TO_THREAT"),
+    semanticStateVisibleToParticipant: false,
     errors: participantErrors
   };
 
