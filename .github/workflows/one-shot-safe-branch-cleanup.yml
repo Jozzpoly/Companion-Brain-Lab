@@ -1,0 +1,102 @@
+name: one-shot-safe-branch-cleanup
+
+on:
+  push:
+    branches:
+      - archive/pre-cleanup-2026-09-20
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout archive branch with write credentials
+        uses: actions/checkout@v5
+        with:
+          ref: archive/pre-cleanup-2026-09-20
+          fetch-depth: 0
+
+      - name: Verify every disposable branch is archived, then delete it
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PRESERVE_MAIN="main"
+          PRESERVE_ARCHIVE="archive/pre-cleanup-2026-09-20"
+
+          git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'
+
+          archive_ref="refs/remotes/origin/$PRESERVE_ARCHIVE"
+          if ! git show-ref --verify --quiet "$archive_ref"; then
+            echo "::error::Archive ref missing: $archive_ref"
+            exit 1
+          fi
+
+          mapfile -t refs < <(git for-each-ref --format='%(refname)' refs/remotes/origin | sort)
+
+          disposable=()
+          for ref in "${refs[@]}"; do
+            branch="${ref#refs/remotes/origin/}"
+            case "$branch" in
+              HEAD|"$PRESERVE_MAIN"|"$PRESERVE_ARCHIVE")
+                continue
+                ;;
+            esac
+
+            sha="$(git rev-parse "$ref")"
+            if ! git merge-base --is-ancestor "$sha" "$archive_ref"; then
+              echo "::error::REFUSING DELETE: $branch @ $sha is not reachable from $PRESERVE_ARCHIVE"
+              exit 1
+            fi
+            disposable+=("$branch")
+          done
+
+          echo "Preflight PASS: ${#disposable[@]} disposable branches are all reachable from archive."
+
+          failures=()
+          deleted=0
+          for branch in "${disposable[@]}"; do
+            echo "Deleting $branch"
+            if git push origin --delete "$branch"; then
+              deleted=$((deleted + 1))
+            else
+              failures+=("$branch")
+            fi
+          done
+
+          if (( ${#failures[@]} > 0 )); then
+            printf '::error::Failed to delete %d branches:\n' "${#failures[@]}"
+            printf ' - %s\n' "${failures[@]}"
+            exit 1
+          fi
+
+          mapfile -t remaining < <(
+            git ls-remote --heads origin |
+              awk '{sub("refs/heads/","",$2); print $2}' |
+              sort
+          )
+
+          printf 'Remaining branches after cleanup:\n'
+          printf ' - %s\n' "${remaining[@]}"
+
+          if (( ${#remaining[@]} != 2 )); then
+            echo "::error::Expected exactly 2 branches after cleanup, got ${#remaining[@]}"
+            exit 1
+          fi
+
+          if [[ "${remaining[0]}" != "$PRESERVE_ARCHIVE" || "${remaining[1]}" != "$PRESERVE_MAIN" ]]; then
+            echo "::error::Unexpected remaining branch set."
+            exit 1
+          fi
+
+          {
+            echo "## Branch cleanup PASS"
+            echo
+            echo "- Deleted: $deleted"
+            echo "- Preserved: `$PRESERVE_MAIN`"
+            echo "- Preserved: `$PRESERVE_ARCHIVE`"
+            echo "- Every deleted tip passed archive-ancestry preflight."
+          } >> "$GITHUB_STEP_SUMMARY"
