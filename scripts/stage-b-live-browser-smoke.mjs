@@ -113,9 +113,11 @@ try {
   );
   invariant(firstThreatPosition, "Stage B active panel exposed no advancing threat position.");
 
-  const followButton = page.getByRole("button", { name: "Follow me", exact: true });
-  const holdButton = page.getByRole("button", { name: "Hold here", exact: true });
-  const atWillButton = page.getByRole("button", { name: "At will", exact: true });
+  const commandHud = page.locator('[data-player-command-hud="true"]');
+  invariant(await commandHud.isVisible(), "Player-facing command HUD is missing.");
+  const followButton = commandHud.getByRole("button", { name: "Follow me", exact: true });
+  const holdButton = commandHud.getByRole("button", { name: "Hold here", exact: true });
+  const atWillButton = commandHud.getByRole("button", { name: "At will", exact: true });
   invariant(await followButton.isVisible(), "Player-direction Follow me control is missing.");
   invariant(await holdButton.isVisible(), "Player-direction Hold here control is missing.");
   invariant(await atWillButton.isVisible(), "Player-direction At will control is missing.");
@@ -284,134 +286,77 @@ try {
 
   await context.close();
 
-  const participantContext = await browser.newContext({
+  // Regression for the Owner feedback: teammate=1 on moving main must no longer
+  // become a hidden-debug participant shell. The rejected public artifact stays
+  // pinned to its historical SHA; current development keeps the microscope.
+  const workbenchContext = await browser.newContext({
     viewport: { width: 1600, height: 1000 }
   });
-  const participantPage = await participantContext.newPage();
-  const participantErrors = { page: [], console: [], requests: [] };
-  participantPage.on("pageerror", (error) => participantErrors.page.push(error.message));
-  participantPage.on("console", (message) => {
-    if (message.type() === "error") participantErrors.console.push(message.text());
+  const workbenchPage = await workbenchContext.newPage();
+  const workbenchErrors = { page: [], console: [], requests: [] };
+  workbenchPage.on("pageerror", (error) => workbenchErrors.page.push(error.message));
+  workbenchPage.on("console", (message) => {
+    if (message.type() === "error") workbenchErrors.console.push(message.text());
   });
-  participantPage.on("requestfailed", (request) => {
-    participantErrors.requests.push(
+  workbenchPage.on("requestfailed", (request) => {
+    workbenchErrors.requests.push(
       `${request.method()} ${request.url()} :: ${request.failure()?.errorText ?? "failed"}`
     );
   });
 
-  await participantPage.goto(
-    "http://127.0.0.1:4173/?teammate=1&a1debug=1&a1p2=1&semanticpush=1&foundationFaultProbe=1",
-    { waitUntil: "domcontentloaded", timeout: 30_000 }
-  );
-  await participantPage.locator("#game-root canvas").waitFor({ state: "visible", timeout: 15_000 });
-  const participantPanel = participantPage.locator("#debug-panel");
+  await workbenchPage.goto("http://127.0.0.1:4173/?teammate=1", {
+    waitUntil: "domcontentloaded",
+    timeout: 30_000
+  });
+  await workbenchPage.locator("#game-root canvas").waitFor({ state: "visible", timeout: 15_000 });
+  const workbenchPanel = workbenchPage.locator("#debug-panel");
+
   invariant(
-    await participantPanel.evaluate((node) => node.classList.contains("is-teammate-sandbox")),
-    "Stage B participant surface did not enter teammate review mode."
-  );
-  invariant(
-    !(await participantPage.locator(".debug-collapse").isVisible()),
-    "Teammate participant surface exposes research-panel disclosure."
+    !(await workbenchPanel.evaluate((node) => node.classList.contains("is-teammate-sandbox"))),
+    "Moving main resurrected the rejected teammate hidden-debug shell."
   );
   invariant(
-    (await participantPage.locator(".debug-panel-content").evaluate(
+    await workbenchPage.locator(".debug-collapse").isVisible(),
+    "Current workbench lost the causal-panel disclosure control."
+  );
+  invariant(
+    (await workbenchPage.locator(".debug-panel-content").evaluate(
       (node) => getComputedStyle(node).display
-    )) === "none",
-    "Teammate participant surface exposes research content."
-  );
-  const participantControls = participantPage.locator(".owner-review-controls");
-  invariant(await participantControls.isVisible(), "Teammate participant controls are missing.");
-  invariant(
-    (await participantControls.locator(".owner-review-title").textContent()) === "Stage B slice",
-    "Stage B participant title is wrong."
+    )) !== "none",
+    "Current workbench hides causal/debug content."
   );
   invariant(
-    (await participantControls.locator(".owner-review-hint").textContent()) === "WASD to move",
-    "Stage B participant hint leaks expected companion behavior."
+    await workbenchPage.locator('[data-player-command-hud="true"]').isVisible(),
+    "Current workbench is missing the fast player command HUD."
   );
   invariant(
-    await participantControls.getByRole("button", { name: "Reset", exact: true }).isVisible(),
-    "Teammate participant control missing: Reset"
-  );
-  const participantSave = participantControls.locator(".owner-capture");
-  invariant(
-    await participantSave.isVisible(),
-    "Teammate participant Save control is not visible."
-  );
-  invariant(
-    (await participantSave.textContent())?.trim() === "Save",
-    "Teammate participant capture control lost its visible Save label."
-  );
-  for (const forbidden of ["Open", "Pillar", "Door", "Head-on"]) {
-    invariant(
-      (await participantControls.getByRole("button", { name: forbidden, exact: true }).count()) === 0,
-      `Teammate participant surface leaked scenario control: ${forbidden}`
-    );
-  }
-
-  // Research and historical movement-review keys must not mutate this one stimulus.
-  for (const key of ["m", "n", "t", "p", "o", "2", "3", "4"]) {
-    await participantPage.keyboard.press(key);
-  }
-  await participantPage.waitForTimeout(150);
-  const participantBaseline = await waitForPanel(
-    participantPage,
-    (text) => hasOrdinaryBaseline(text) && text.includes("world pressure QUIET"),
-    15_000,
-    "teammate participant immutable baseline"
-  );
-  invariant(
-    participantBaseline.includes("scenario Open field"),
-    "Teammate participant surface escaped the Open fixture."
+    await workbenchPage.getByText("Player direction ↔ local autonomy", { exact: true }).isVisible(),
+    "Current workbench is missing directive/autonomy causal state."
   );
 
-  invariant(
-    (await participantPage.locator(".teammate-review-status").count()) === 0,
-    "Stage B participant UI leaks live semantic/action state."
-  );
-  const participantActive = await waitForPanel(
-    participantPage,
-    (text) =>
-      hasOrdinaryBaseline(text) &&
-      text.includes("world pressure ACTIVE") &&
-      text.includes("selected action RESPOND_TO_THREAT · AUTONOMY"),
-    15_000,
-    "hidden Stage B participant authority state"
-  );
-
-  await participantPage.screenshot({
-    path: `${ROOT}/teammate-surface.png`,
+  await workbenchPage.screenshot({
+    path: `${ROOT}/command-autonomy-workbench.png`,
     type: "png",
     fullPage: true
   });
 
   invariant(
-    await participantPage.locator("#runtime-fault-sentinel").count() === 0,
-    "Teammate participant runtime fault sentinel is visible."
+    await workbenchPage.locator("#runtime-fault-sentinel").count() === 0,
+    "Current command/autonomy workbench faulted."
   );
-  invariant(participantErrors.page.length === 0, `Participant page errors: ${participantErrors.page.join(" | ")}`);
-  invariant(participantErrors.console.length === 0, `Participant console errors: ${participantErrors.console.join(" | ")}`);
-  invariant(participantErrors.requests.length === 0, `Participant failed requests: ${participantErrors.requests.join(" | ")}`);
+  invariant(workbenchErrors.page.length === 0, `Workbench page errors: ${workbenchErrors.page.join(" | ")}`);
+  invariant(workbenchErrors.console.length === 0, `Workbench console errors: ${workbenchErrors.console.join(" | ")}`);
+  invariant(workbenchErrors.requests.length === 0, `Workbench failed requests: ${workbenchErrors.requests.join(" | ")}`);
 
-  summary.participantSurface = {
+  summary.workbenchSurface = {
     query: "?teammate=1",
-    title: await participantPage.title(),
-    researchFlagsSanitized: true,
-    scenario: "open",
-    mode: "SPATIAL",
-    actuator: "NATURAL",
-    a1: "OFF",
-    timeScale: "1x",
-    visibleControls: ["Reset", "Save"],
-    forbiddenScenarioControlsAbsent: true,
-    hiddenAuthorityObserved:
-      participantActive.includes("world pressure ACTIVE") &&
-      participantActive.includes("selected action RESPOND_TO_THREAT · AUTONOMY"),
-    semanticStateVisibleToParticipant: false,
-    errors: participantErrors
+    fullCausalWorkbenchVisible: true,
+    playerCommandHudVisible: true,
+    hiddenDebugContractRetiredOnMovingMain: true,
+    errors: workbenchErrors
   };
 
-  await participantContext.close();
+  await workbenchContext.close();
   await writeFile(`${ROOT}/summary.json`, JSON.stringify(summary, null, 2));
   console.log(`[STAGE_B_LIVE_BROWSER] ${JSON.stringify(summary)}`);
 } finally {

@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "src/app/r1-lab-scene.ts"
+      - "src/app/player-command-hud.ts"
       - "src/app/owner-review-mode.ts"
       - "src/debug/causal-panel.ts"
       - "index.html"
