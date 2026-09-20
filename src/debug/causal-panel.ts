@@ -92,6 +92,9 @@ function layerLabel(layer: WorldDebugLayer): string {
 export class CausalPanel {
   private readonly root: HTMLElement;
   private readonly ownerSandboxSurface: boolean;
+  private readonly teammateSandboxSurface: boolean;
+  private readonly participantSurface: boolean;
+  private participantStatus: HTMLElement | null = null;
   private readonly content: HTMLElement;
   private readonly title: HTMLElement;
   private readonly subtitle: HTMLElement;
@@ -107,12 +110,23 @@ export class CausalPanel {
     if (!root) throw new Error("R1 CausalPanel requires #debug-panel.");
     this.root = root;
     this.root.replaceChildren();
-    this.ownerSandboxSurface = new URLSearchParams(window.location.search).get("owner") === "1";
-    if (this.ownerSandboxSurface) {
+    const participantParams = new URLSearchParams(window.location.search);
+    this.teammateSandboxSurface = participantParams.get("teammate") === "1";
+    this.ownerSandboxSurface =
+      !this.teammateSandboxSurface && participantParams.get("owner") === "1";
+    this.participantSurface = this.ownerSandboxSurface || this.teammateSandboxSurface;
+    if (this.participantSurface) {
       this.collapsed = true;
-      this.root.classList.add("is-owner-sandbox", "is-collapsed");
-      this.root.setAttribute("aria-label", "Owner movement review controls");
-      document.title = "Companion Brain Lab — Movement Review";
+      this.root.classList.add("is-collapsed");
+      if (this.teammateSandboxSurface) {
+        this.root.classList.add("is-teammate-sandbox");
+        this.root.setAttribute("aria-label", "Stage B teammate review controls");
+        document.title = "Companion Brain Lab — Teammate Slice";
+      } else {
+        this.root.classList.add("is-owner-sandbox");
+        this.root.setAttribute("aria-label", "Owner movement review controls");
+        document.title = "Companion Brain Lab — Movement Review";
+      }
     }
 
     for (const [layer, visible] of Object.entries(DEFAULT_LAYERS) as Array<[WorldDebugLayer, boolean]>) {
@@ -145,7 +159,7 @@ export class CausalPanel {
       collapse.title = this.collapsed ? "Expand research panel" : "Collapse debug panel";
     });
 
-    collapse.hidden = this.ownerSandboxSurface;
+    collapse.hidden = this.participantSurface;
     header.append(heading, this.badge, collapse);
 
     this.content = document.createElement("div");
@@ -223,26 +237,38 @@ export class CausalPanel {
 
     this.content.append(controls, layers, this.sectionsRoot, hint);
 
-    if (this.ownerSandboxSurface) {
+    if (this.participantSurface) {
       const ownerControls = document.createElement("section");
       ownerControls.className = "owner-review-controls";
 
       const ownerTitle = document.createElement("strong");
       ownerTitle.className = "owner-review-title";
-      ownerTitle.textContent = "Movement review";
+      ownerTitle.textContent = this.teammateSandboxSurface ? "Teammate slice" : "Movement review";
 
       const ownerHint = document.createElement("span");
       ownerHint.className = "owner-review-hint";
-      ownerHint.textContent = "WASD to move";
+      ownerHint.textContent = this.teammateSandboxSurface
+        ? "WASD to move · companion acts on its own"
+        : "WASD to move";
 
-      const scenarios = document.createElement("div");
-      scenarios.className = "owner-review-scenarios";
-      scenarios.append(
-        button("Open", "scenario-open"),
-        button("Pillar", "scenario-pillar"),
-        button("Door", "scenario-doorway"),
-        button("Head-on", "scenario-head-on")
-      );
+      ownerControls.append(ownerTitle, ownerHint);
+
+      if (this.teammateSandboxSurface) {
+        this.participantStatus = document.createElement("div");
+        this.participantStatus.className = "teammate-review-status";
+        this.participantStatus.textContent = "Waiting for world state…";
+        ownerControls.append(this.participantStatus);
+      } else {
+        const scenarios = document.createElement("div");
+        scenarios.className = "owner-review-scenarios";
+        scenarios.append(
+          button("Open", "scenario-open"),
+          button("Pillar", "scenario-pillar"),
+          button("Door", "scenario-doorway"),
+          button("Head-on", "scenario-head-on")
+        );
+        ownerControls.append(scenarios);
+      }
 
       const actions = document.createElement("div");
       actions.className = "owner-review-actions";
@@ -253,7 +279,7 @@ export class CausalPanel {
       save.setAttribute("aria-label", "Capture this moment");
       actions.append(reset, save);
 
-      ownerControls.append(ownerTitle, ownerHint, scenarios, actions);
+      ownerControls.append(actions);
       ownerControls.addEventListener("click", (event) => {
         const target = event.target;
         if (!(target instanceof HTMLButtonElement)) return;
@@ -267,7 +293,7 @@ export class CausalPanel {
   }
 
   layerVisible(layer: WorldDebugLayer): boolean {
-    if (this.ownerSandboxSurface) return false;
+    if (this.participantSurface) return false;
     return this.layerValues.get(layer) ?? false;
   }
 
@@ -296,6 +322,14 @@ export class CausalPanel {
     this.subtitle.textContent = model.subtitle;
     this.badge.textContent = model.badge;
     this.badge.dataset.tone = model.badgeTone;
+
+    if (this.participantStatus) {
+      const stageB = model.sections.find((section) => section.id === "stage-b");
+      const pressureLine = stageB?.lines.find((line) => line.startsWith("world pressure")) ?? "world pressure unavailable";
+      const actionLine = stageB?.lines.find((line) => line.startsWith("companion action")) ?? "companion action unavailable";
+      this.participantStatus.textContent = `${pressureLine}\n${actionLine}`;
+      this.participantStatus.dataset.tone = stageB?.tone ?? "normal";
+    }
 
     const seen = new Set<string>();
     const desiredNodes: HTMLElement[] = [];

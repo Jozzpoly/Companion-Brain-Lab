@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - "src/app/r1-lab-scene.ts"
+      - "src/app/owner-review-mode.ts"
+      - "src/debug/causal-panel.ts"
+      - "index.html"
       - "src/brain/r1-workbench-spatial-stack.ts"
       - "src/brain/stage-b-partner.ts"
       - "src/world/shared-pressure.ts"

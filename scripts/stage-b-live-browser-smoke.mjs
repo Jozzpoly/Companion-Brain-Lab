@@ -210,9 +210,119 @@ try {
     errors
   };
 
+  await context.close();
+
+  const participantContext = await browser.newContext({
+    viewport: { width: 1600, height: 1000 }
+  });
+  const participantPage = await participantContext.newPage();
+  const participantErrors = { page: [], console: [], requests: [] };
+  participantPage.on("pageerror", (error) => participantErrors.page.push(error.message));
+  participantPage.on("console", (message) => {
+    if (message.type() === "error") participantErrors.console.push(message.text());
+  });
+  participantPage.on("requestfailed", (request) => {
+    participantErrors.requests.push(
+      `${request.method()} ${request.url()} :: ${request.failure()?.errorText ?? "failed"}`
+    );
+  });
+
+  await participantPage.goto(
+    "http://127.0.0.1:4173/?teammate=1&a1debug=1&a1p2=1&semanticpush=1&foundationFaultProbe=1",
+    { waitUntil: "domcontentloaded", timeout: 30_000 }
+  );
+  await participantPage.locator("#game-root canvas").waitFor({ state: "visible", timeout: 15_000 });
+  const participantPanel = participantPage.locator("#debug-panel");
+  invariant(
+    await participantPanel.evaluate((node) => node.classList.contains("is-teammate-sandbox")),
+    "Stage B participant surface did not enter teammate review mode."
+  );
+  invariant(
+    !(await participantPage.locator(".debug-collapse").isVisible()),
+    "Teammate participant surface exposes research-panel disclosure."
+  );
+  invariant(
+    (await participantPage.locator(".debug-panel-content").evaluate(
+      (node) => getComputedStyle(node).display
+    )) === "none",
+    "Teammate participant surface exposes research content."
+  );
+  const participantControls = participantPage.locator(".owner-review-controls");
+  invariant(await participantControls.isVisible(), "Teammate participant controls are missing.");
+  invariant(
+    (await participantControls.locator(".owner-review-title").textContent()) === "Teammate slice",
+    "Teammate participant title is wrong."
+  );
+  for (const label of ["Reset", "Save"]) {
+    invariant(
+      await participantControls.getByRole("button", { name: label, exact: true }).isVisible(),
+      `Teammate participant control missing: ${label}`
+    );
+  }
+  for (const forbidden of ["Open", "Pillar", "Door", "Head-on"]) {
+    invariant(
+      (await participantControls.getByRole("button", { name: forbidden, exact: true }).count()) === 0,
+      `Teammate participant surface leaked scenario control: ${forbidden}`
+    );
+  }
+
+  // Research and historical movement-review keys must not mutate this one stimulus.
+  for (const key of ["m", "n", "t", "p", "o", "2", "3", "4"]) {
+    await participantPage.keyboard.press(key);
+  }
+  await participantPage.waitForTimeout(150);
+  const participantBaseline = await waitForPanel(
+    participantPage,
+    (text) => hasOrdinaryBaseline(text) && text.includes("world pressure QUIET"),
+    15_000,
+    "teammate participant immutable baseline"
+  );
+  invariant(
+    participantBaseline.includes("scenario Open field"),
+    "Teammate participant surface escaped the Open fixture."
+  );
+
+  const participantStatus = participantPage.locator(".teammate-review-status");
+  await participantPage.waitForFunction(() => {
+    const node = document.querySelector(".teammate-review-status");
+    return Boolean(
+      node?.textContent?.includes("world pressure ACTIVE") &&
+      node?.textContent?.includes("companion action RESPOND_TO_THREAT")
+    );
+  }, undefined, { timeout: 15_000 });
+
+  await participantPage.screenshot({
+    path: `${ROOT}/teammate-surface.png`,
+    type: "png",
+    fullPage: true
+  });
+
+  invariant(
+    await participantPage.locator("#runtime-fault-sentinel").count() === 0,
+    "Teammate participant runtime fault sentinel is visible."
+  );
+  invariant(participantErrors.page.length === 0, `Participant page errors: ${participantErrors.page.join(" | ")}`);
+  invariant(participantErrors.console.length === 0, `Participant console errors: ${participantErrors.console.join(" | ")}`);
+  invariant(participantErrors.requests.length === 0, `Participant failed requests: ${participantErrors.requests.join(" | ")}`);
+
+  summary.participantSurface = {
+    query: "?teammate=1",
+    title: await participantPage.title(),
+    researchFlagsSanitized: true,
+    scenario: "open",
+    mode: "SPATIAL",
+    actuator: "NATURAL",
+    a1: "OFF",
+    timeScale: "1x",
+    visibleControls: ["Reset", "Save"],
+    forbiddenScenarioControlsAbsent: true,
+    liveStatus: await participantStatus.textContent(),
+    errors: participantErrors
+  };
+
+  await participantContext.close();
   await writeFile(`${ROOT}/summary.json`, JSON.stringify(summary, null, 2));
   console.log(`[STAGE_B_LIVE_BROWSER] ${JSON.stringify(summary)}`);
-  await context.close();
 } finally {
   await browser?.close();
   await new Promise((resolve) => server.httpServer.close(resolve));
