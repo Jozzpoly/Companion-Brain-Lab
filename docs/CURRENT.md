@@ -713,9 +713,9 @@ First bounded hypothesis:
 - this preparation emits movement only, never an `INTERVENE` action;
 - once `WINDUP` creates earned responsibility, S3 remains the only material intervention path;
 - the readiness target must stay player-local rather than chase the hostile;
-- if the geometry becomes too compressed for a meaningful guard position, readiness should stop/hold instead of forcing itself between bodies.
+- if the geometry becomes too compressed for a meaningful intercept flank, readiness should stop/hold instead of forcing itself between bodies.
 
-The first implementation may use a simple open-field geometric guard target. It is a fixture hypothesis, not a tactical-positioning architecture.
+The first implementation may use a simple open-field geometric intercept target. It is a fixture hypothesis, not a tactical-positioning architecture.
 
 Participant presentation should also expose readiness causally through the world itself — movement/stance/role-readable glyphs — rather than another explanatory debug label.
 
@@ -727,7 +727,7 @@ Reject/replan if:
 2. companion starts chasing the hostile during `APPROACHING`;
 3. readiness itself performs or guarantees the intervention;
 4. player movement stops being first-class to the guard relation;
-5. the guard target requires a general tactical planner/pathfinder before it is useful;
+5. the intercept target requires a general tactical planner/pathfinder before it is useful;
 6. the result still looks like the same static yellow follower until `WINDUP`;
 7. cosmetic rendering improves screenshots but the behavioral delta remains effectively zero.
 
@@ -745,3 +745,20 @@ Reject/replan if:
 The controlling question is now:
 
 > **Can the companion visibly prepare for a shared problem before it acts, so its later intervention reads as situated initiative rather than a late target chase?**
+
+
+### Readiness representation correction — artifact falsification
+
+The first machine-qualified readiness implementation placed the companion directly on the player→hostile axis. Browser mechanics passed, but participant artifact review rejected that representation: the S1 hostile is a sensor and can pass through the companion, so an on-axis posture visually promises a body-block that does not materially exist.
+
+This is a representation FAIL, not a reason to promote solid-body combat physics prematurely.
+
+The revised bounded hypothesis is an **off-axis player-local intercept flank**:
+
+- slightly forward from the player toward the hostile;
+- laterally displaced from the hostile's direct player-bound path;
+- close enough that a later committed hostile can still be explicitly interrupted within the existing World action range;
+- preparation movement cannot itself block or resolve the hostile;
+- reaching the flank becomes `HOLDING_READY` until the causal situation changes.
+
+This correction preserves the key S1 invariant `movement ≠ intervention` while making pre-contact preparation spatially distinct.
