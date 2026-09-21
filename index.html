@@ -164,6 +164,188 @@
         width: 100%;
         min-height: 38px;
       }
+      .squad-field-lab-hud {
+        position:absolute;
+        left:14px;
+        top:14px;
+        z-index:12;
+        width:min(430px,calc(100% - 28px));
+        display:grid;
+        gap:8px;
+        padding:12px;
+        border:1px solid rgba(88,166,255,.48);
+        border-radius:10px;
+        background:rgba(13,17,23,.91);
+        box-shadow:0 10px 30px rgba(0,0,0,.32);
+        backdrop-filter:blur(6px);
+        pointer-events:auto;
+      }
+      .squad-lab-heading {
+        color:#f0f6fc;
+        font:800 13px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+        letter-spacing:.035em;
+        text-transform:uppercase;
+      }
+      .squad-lab-sub,.squad-lab-footer,.squad-lab-inline-hint {
+        color:#8b949e;
+        font:10px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      }
+      .squad-lab-roster {
+        display:grid;
+        grid-template-columns:repeat(5,minmax(0,1fr));
+        gap:5px;
+      }
+      .squad-lab-roster-button,.squad-lab-button {
+        min-height:31px;
+        border:1px solid #30363d;
+        border-radius:6px;
+        background:#161b22;
+        color:#9da7b3;
+        cursor:pointer;
+        font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      }
+      .squad-lab-roster-button:hover,.squad-lab-button:hover { background:#21262d; }
+      .squad-lab-roster-button.is-selected {
+        border-color:#58a6ff;
+        background:rgba(56,139,253,.14);
+        color:#dcecff;
+      }
+      .squad-lab-roster-button.is-focused {
+        box-shadow:0 0 0 2px rgba(255,255,255,.75) inset;
+        color:#fff;
+      }
+      .squad-lab-button.is-active {
+        border-color:#d2a8ff;
+        color:#f4e7ff;
+        background:rgba(163,113,247,.16);
+      }
+      .squad-lab-button-row {
+        display:grid;
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:6px;
+      }
+      .squad-lab-preset-grid {
+        display:grid;
+        grid-template-columns:repeat(4,minmax(0,1fr));
+        gap:5px;
+      }
+      .squad-lab-section-title {
+        margin-top:2px;
+        color:#c9d1d9;
+        font:700 10px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+        text-transform:uppercase;
+        letter-spacing:.05em;
+      }
+      .squad-lab-slider {
+        display:grid;
+        grid-template-columns:86px 42px 1fr;
+        align-items:center;
+        gap:7px;
+        color:#9da7b3;
+        font:10px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      }
+      .squad-lab-slider input { width:100%; accent-color:#58a6ff; }
+      .squad-lab-slider-value { color:#c9d1d9; text-align:right; }
+      .squad-lab-status,.squad-lab-order-status {
+        padding:6px 7px;
+        border:1px solid #21262d;
+        border-radius:6px;
+        background:rgba(22,27,34,.7);
+        color:#c9d1d9;
+        font:10px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      }
+      .squad-lab-order-status { color:#8b949e; }
+
+      #debug-panel.squad-field-debug,
+      #debug-panel.squad-field-debug.is-collapsed {
+        flex-basis:clamp(360px,24vw,460px);
+        width:clamp(360px,24vw,460px);
+        background:#0d1117;
+        border-left:1px solid #30363d;
+      }
+      #debug-panel.squad-field-debug.is-collapsed {
+        flex-basis:44px;
+        width:44px;
+      }
+      .squad-field-debug-header {
+        min-height:58px;
+        display:grid;
+        grid-template-columns:minmax(0,1fr) 32px;
+        gap:8px;
+        align-items:center;
+        padding:9px 8px 9px 12px;
+        border-bottom:1px solid #30363d;
+        background:#161b22;
+      }
+      .squad-field-debug-heading {
+        min-width:0;
+        display:flex;
+        flex-direction:column;
+        gap:2px;
+      }
+      .squad-field-debug-heading strong {
+        color:#e7e9ee;
+        font-size:13px;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+      }
+      .squad-field-debug-heading span {
+        color:#8b949e;
+        font:10px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+      }
+      .squad-field-debug-collapse {
+        width:30px;
+        height:32px;
+        border:1px solid #30363d;
+        border-radius:6px;
+        background:#21262d;
+        color:#c9d1d9;
+        cursor:pointer;
+      }
+      .squad-field-debug-content {
+        height:calc(100vh - 58px);
+        overflow-y:auto;
+        padding:10px;
+      }
+      .squad-field-debug-section {
+        margin-bottom:9px;
+        border:1px solid #21262d;
+        border-radius:8px;
+        background:#11161d;
+      }
+      .squad-field-debug-section.is-focus { border-color:rgba(88,166,255,.55); }
+      .squad-field-debug-section h2 {
+        margin:0;
+        padding:8px 10px;
+        border-bottom:1px solid #21262d;
+        color:#c9d1d9;
+        font-size:11px;
+      }
+      .squad-field-debug-lines {
+        padding:8px 10px 10px;
+        color:#9da7b3;
+        font:10px/1.48 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+        overflow-wrap:anywhere;
+      }
+      .squad-field-debug-lines > div + div { margin-top:3px; }
+      .squad-field-debug-foot {
+        color:#6e7681;
+        font:10px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+        padding:6px 2px 14px;
+      }
+      #debug-panel.squad-field-debug.is-collapsed .squad-field-debug-heading,
+      #debug-panel.squad-field-debug.is-collapsed .squad-field-debug-content {
+        display:none;
+      }
+      #debug-panel.squad-field-debug.is-collapsed .squad-field-debug-header {
+        grid-template-columns:1fr;
+        padding:9px 6px;
+      }
+
       @media (max-width: 980px) {
         #debug-panel { flex-basis: min(46vw, 460px); width: min(46vw, 460px); }
       }
