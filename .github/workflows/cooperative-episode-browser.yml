@@ -1,0 +1,78 @@
+name: cooperative-episode-browser
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/world/cooperative-episode-contract.ts"
+      - "src/world/cooperative-episode-contract.test.ts"
+      - "src/world/world.ts"
+      - "src/world/types.ts"
+      - "src/world/scenarios.ts"
+      - "src/app/r1-lab-scene.ts"
+      - "src/debug/causal-panel.ts"
+      - "scripts/cooperative-episode-browser-smoke.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/cooperative-episode-browser.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: cooperative-episode-browser-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SOURCE_SHA: ${{ github.sha }}
+      GITHUB_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: |
+          if npm install; then
+            exit 0
+          fi
+          latest_log="$(ls -t "$HOME"/.npm/_logs/*-debug-0.log 2>/dev/null | head -n 1 || true)"
+          if [ -z "$latest_log" ] || ! grep -Fq "Cannot read properties of null (reading 'edgesOut')" "$latest_log"; then
+            if [ -n "$latest_log" ]; then cat "$latest_log"; fi
+            exit 1
+          fi
+          rm -rf node_modules
+          npm install --legacy-peer-deps
+      - name: Full compile and unit/build gate
+        run: npm run check
+      - name: Continuous manual cooperative episode browser gate
+        run: npm run browser:cooperative-episode
+      - name: Upload cooperative episode evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cooperative-episode-browser-${{ github.sha }}
+          path: artifacts/cooperative-episode-browser/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Publish cooperative-episode-browser commit status
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          state="$JOB_STATUS"
+          if [ "$state" != "success" ]; then state="failure"; fi
+          curl -sS -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
+            -d '{"state":"'"$state"'","context":"cooperative-episode-browser","description":"continuous manual episode '"$state"'","target_url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}'
