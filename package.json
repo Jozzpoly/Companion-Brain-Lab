@@ -33,7 +33,8 @@
     "browser:s4-corrigibility": "node scripts/s4-corrigibility-browser-smoke.mjs",
     "browser:teammate-participant": "node scripts/teammate-participant-browser-smoke.mjs",
     "browser:readiness": "node scripts/readiness-browser-smoke.mjs",
-    "browser:cooperative-episode": "node scripts/cooperative-episode-browser-smoke.mjs"
+    "browser:cooperative-episode": "node scripts/cooperative-episode-browser-smoke.mjs",
+    "browser:cooperative-episode-choreography": "node scripts/cooperative-episode-manual-choreography.mjs"
   },
   "dependencies": {
     "@dimforge/rapier2d-deterministic-compat": "0.20.0",
