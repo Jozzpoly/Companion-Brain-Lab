@@ -187,3 +187,18 @@ Do not turn this into:
 ## Active research question
 
 > Can the lab become a small, highly legible squad-control instrument where the Owner can directly shape position, formation, behavior and dynamics, and use that authored behavior as evidence for what the companion brain should later learn to do autonomously?
+
+---
+
+## Superseding refinement — broad Field Lab, not one-companion v0
+
+The earlier safe progression in this note remains useful **internally**, but the latest Owner feedback makes one point explicit:
+
+> do not let the first one-companion tranche become the project object.
+
+The meaningful target is a cohesive broad sandbox with 1–4 real bodies, selection, manual control, world-space orders, editable freeform formation geometry, meaningful movement/behavior dynamics, scenario breadth and selection-aware debug.
+
+See:
+
+`docs/COMPANION_SQUAD_FIELD_LAB_CAMPAIGN.md`
+
