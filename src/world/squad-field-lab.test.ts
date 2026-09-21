@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LabWorld } from "./world";
+import { squadFieldLabScenario } from "./scenarios";
 import type { ExperimentalSquadMemberId, SquadMemberId, WorldSnapshot } from "./types";
 
 const zero = { x: 0, y: 0 };
@@ -26,6 +27,17 @@ describe("Companion / Squad Field Lab physical substrate", () => {
       "squad-3",
       "squad-4"
     ]);
+    world.dispose();
+  });
+
+  it("rebuilds a genuinely smaller physical roster instead of hiding unused companions", async () => {
+    const world = await LabWorld.createFromSpec(
+      squadFieldLabScenario(["companion", "squad-2"])
+    );
+    const ids = world.snapshot().actors.map((entry) => entry.id);
+    expect(ids).toEqual(["companion", "player", "squad-2"]);
+    expect(ids).not.toContain("squad-3");
+    expect(ids).not.toContain("squad-4");
     world.dispose();
   });
 
