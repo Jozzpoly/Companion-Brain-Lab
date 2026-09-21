@@ -1,11 +1,14 @@
 import type { FieldLabSquadControlSnapshot, FieldLabMemberTarget } from "../squad/field-lab-squad-control";
 import type { ActorSnapshot, SquadMemberId, WorldSnapshot } from "../world/types";
 
+export type FieldLabMemberStatus = "DIRECT" | "MOVING" | "ARRIVED" | "BLOCKED" | "INVALID_TARGET";
+
 export interface SquadFieldLabPanelState {
   snapshot: WorldSnapshot;
   control: FieldLabSquadControlSnapshot;
   focusedBody: ActorSnapshot;
   focusedTarget: FieldLabMemberTarget;
+  memberStatuses: Readonly<Record<SquadMemberId, FieldLabMemberStatus>>;
   recentEvents: readonly string[];
 }
 
@@ -64,7 +67,7 @@ export class SquadFieldLabPanel {
         const anchor = assignment.worldAnchor
           ? `@${fmt(assignment.worldAnchor.x)},${fmt(assignment.worldAnchor.y)}`
           : "@PLAYER";
-        return `${memberLabel(assignment.memberId)} ${assignment.mode} ${anchor}`;
+        return `${memberLabel(assignment.memberId)} ${assignment.mode} ${anchor} · ${state.memberStatuses[assignment.memberId]}`;
       })
       .join("<br>");
 
@@ -102,7 +105,7 @@ export class SquadFieldLabPanel {
       <section class="squad-field-debug-section is-focus">
         <h2>Focused · ${memberLabel(state.control.focused)}</h2>
         <div class="squad-field-debug-lines">
-          <div>authority ${state.focusedTarget.authority} · order ${state.focusedTarget.orderMode}</div>
+          <div>authority ${state.focusedTarget.authority} · order ${state.focusedTarget.orderMode} · ${state.memberStatuses[state.control.focused]}</div>
           <div>body ${fmt(state.focusedBody.position.x)}, ${fmt(state.focusedBody.position.y)}</div>
           <div>target ${target}${distance === null ? "" : ` · distance ${fmt(distance)}m`}</div>
           <div>slot local ${fmt(state.focusedTarget.localSlot.x)}, ${fmt(state.focusedTarget.localSlot.y)}</div>
