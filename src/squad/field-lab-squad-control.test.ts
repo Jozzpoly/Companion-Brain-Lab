@@ -11,7 +11,7 @@ describe("FieldLabSquadControl", () => {
     expect(state.selected).toEqual(["companion"]);
     expect(state.focused).toBe("companion");
     expect(state.slots.map((slot) => slot.memberId)).toEqual(FIELD_LAB_SQUAD_MEMBERS);
-    expect(state.groupMode).toBe("FOLLOW");
+    expect(state.assignments.every((assignment) => assignment.mode === "FOLLOW")).toBe(true);
   });
 
   it("supports additive selection and independent focus without losing group selection", () => {
@@ -38,6 +38,22 @@ describe("FieldLabSquadControl", () => {
     expect(control.targetFor("squad-2", { x: 3, y: 5 }).target).not.toBeNull();
   });
 
+  it("applies FOLLOW/HOLD/MOVE only to the current selection", () => {
+    const control = new FieldLabSquadControl();
+    control.selectOnly("squad-2");
+    control.toggleSelected("squad-3");
+    control.issueSelected("HOLD", { x: 8, y: 4 });
+
+    expect(control.assignmentFor("companion").mode).toBe("FOLLOW");
+    expect(control.assignmentFor("squad-2")).toEqual({
+      memberId: "squad-2",
+      mode: "HOLD",
+      worldAnchor: { x: 8, y: 4 }
+    });
+    expect(control.assignmentFor("squad-3").mode).toBe("HOLD");
+    expect(control.assignmentFor("squad-4").mode).toBe("FOLLOW");
+  });
+
   it("represents formations as editable local geometry rather than preset enums", () => {
     const control = new FieldLabSquadControl();
     control.setSlotOffset("squad-2", { x: -2, y: -0.25 });
@@ -50,14 +66,18 @@ describe("FieldLabSquadControl", () => {
     expect(target.target?.y).toBeCloseTo(7, 6);
   });
 
-  it("can switch the same formation from player-relative follow to a world anchor", () => {
+  it("lets one selected subset hold a world formation while another keeps following the player", () => {
     const control = new FieldLabSquadControl();
-    const follow = control.targetFor("companion", { x: 2, y: 3 }).target;
-    expect(follow).toEqual({ x: 3.55, y: 3 });
+    control.selectOnly("squad-2");
+    control.issueSelected("HOLD", { x: 8, y: 4 });
 
-    control.setGroupMode("HOLD", { x: 8, y: 4 });
-    const hold = control.targetFor("companion", { x: 100, y: 100 }).target;
-    expect(hold).toEqual({ x: 9.55, y: 4 });
+    const follower = control.targetFor("companion", { x: 2, y: 3 });
+    const held = control.targetFor("squad-2", { x: 100, y: 100 });
+
+    expect(follower.orderMode).toBe("FOLLOW");
+    expect(follower.worldAnchor).toEqual({ x: 2, y: 3 });
+    expect(held.orderMode).toBe("HOLD");
+    expect(held.worldAnchor).toEqual({ x: 8, y: 4 });
   });
 
   it("makes dynamics bounded and behaviorally meaningful inputs", () => {
