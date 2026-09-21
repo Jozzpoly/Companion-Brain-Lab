@@ -892,3 +892,26 @@ Canonical research note:
 
 This runs alongside S5 continuous-episode work and should improve the manual-baseline methodology rather than replace it.
 
+---
+
+## 16. Companion / Squad Field Lab — broad sandbox direction — 2026-09-21
+
+Latest Owner feedback rejects treating the next deliverable as a narrow one-companion control prototype.
+
+The target is now a **broader playable Companion / Squad Field Lab**: one coherent sandbox for experimenting with real 1–several companion bodies, manual control, selection, spatial orders, editable formations, behavior/dynamics, multiple spatial situations and selection-aware causal debug.
+
+Important distinction:
+
+- implementation may proceed through small reversible tranches;
+- **Owner-facing value must accumulate into a wide exploratory instrument**, not a sequence of tiny gate demos.
+
+Manual control is promoted from test fallback to research method:
+
+`Owner authors desired behavior → repeated patterns become candidate semantics → autonomy earns the right to reproduce them`.
+
+The existing Rapier layer is already body-generic enough to make a bounded multi-body extension plausible. Historical single-companion S1–S4 semantics must remain isolated.
+
+Canonical campaign:
+
+`docs/COMPANION_SQUAD_FIELD_LAB_CAMPAIGN.md`
+
