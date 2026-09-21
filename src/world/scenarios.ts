@@ -5,7 +5,8 @@ import type {
   ObstacleSpec,
   ScenarioId,
   ScenarioSpec,
-  SquadMemberId
+  SquadMemberId,
+  Vec2
 } from "./types";
 
 const WIDTH = 12;
@@ -141,6 +142,11 @@ export function scenario(id: ScenarioId): ScenarioSpec {
   return SCENARIOS[id];
 }
 
+export interface FieldLabSpawnOverrides {
+  player?: Vec2;
+  squad?: Readonly<Partial<Record<SquadMemberId, Vec2>>>;
+}
+
 const FIELD_LAB_MEMBER_SPAWNS: Readonly<Record<SquadMemberId, { x: number; y: number }>> = {
   companion: { x: 4.6, y: 5 },
   "squad-2": { x: 4.8, y: 3.8 },
@@ -156,7 +162,8 @@ const FIELD_LAB_MEMBER_SPAWNS: Readonly<Record<SquadMemberId, { x: number; y: nu
 export function squadFieldLabScenario(
   activeMembers: readonly SquadMemberId[],
   situation: FieldLabSituation = "TRAINING",
-  layout: FieldLabLayout = "MIXED"
+  layout: FieldLabLayout = "MIXED",
+  spawns: FieldLabSpawnOverrides = {}
 ): ScenarioSpec {
   const unique = [...new Set(activeMembers)];
   if (unique.length < 1 || unique.length > 4 || !unique.includes("companion")) {
@@ -169,9 +176,9 @@ export function squadFieldLabScenario(
   return {
     ...base,
     actors: [
-      actor("player", 3, 5),
+      actor("player", spawns.player?.x ?? 3, spawns.player?.y ?? 5),
       ...unique.map((memberId) => {
-        const spawn = FIELD_LAB_MEMBER_SPAWNS[memberId];
+        const spawn = spawns.squad?.[memberId] ?? FIELD_LAB_MEMBER_SPAWNS[memberId];
         return actor(memberId, spawn.x, spawn.y);
       }),
       ...(situation === "PRESSURE"
