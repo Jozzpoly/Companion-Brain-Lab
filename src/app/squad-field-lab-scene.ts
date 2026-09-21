@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { SquadFieldLabHud } from "./squad-field-lab-hud";
-import { SquadFieldLabPanel } from "../debug/squad-field-lab-panel";
+import { SquadFieldLabPanel, type FieldLabMemberStatus } from "../debug/squad-field-lab-panel";
 import {
   FIELD_LAB_SQUAD_MEMBERS,
   FieldLabSquadControl,
@@ -82,6 +82,22 @@ function memberLabel(id: SquadMemberId): string {
   if (id === "squad-2") return "C2";
   if (id === "squad-3") return "C3";
   return "C4";
+}
+
+function targetInsideWorld(snapshot: WorldSnapshot, body: ActorSnapshot, target: Vec2): boolean {
+  return (
+    target.x >= body.radius &&
+    target.y >= body.radius &&
+    target.x <= snapshot.width - body.radius &&
+    target.y <= snapshot.height - body.radius
+  );
+}
+
+function clampTargetToWorld(snapshot: WorldSnapshot, target: Vec2): Vec2 {
+  return {
+    x: Math.max(0.12, Math.min(snapshot.width - 0.12, target.x)),
+    y: Math.max(0.12, Math.min(snapshot.height - 0.12, target.y))
+  };
 }
 
 export class SquadFieldLabScene extends Phaser.Scene {
@@ -485,19 +501,28 @@ export class SquadFieldLabScene extends Phaser.Scene {
       const target = this.control.targetFor(memberId, player.position);
       if (!target.target) continue;
       const selected = control.selected.includes(memberId);
-      const tx = sx(target.target.x);
-      const ty = sy(target.target.y);
-      const color = selected ? 0x58a6ff : 0x6e7681;
-      const alpha = selected ? 0.95 : 0.28;
+      const body = actor(snapshot, memberId);
+      const validTarget = targetInsideWorld(snapshot, body, target.target);
+      const displayTarget = validTarget
+        ? target.target
+        : clampTargetToWorld(snapshot, target.target);
+      const tx = sx(displayTarget.x);
+      const ty = sy(displayTarget.y);
+      const color = !validTarget ? 0xff5d66 : selected ? 0x58a6ff : 0x6e7681;
+      const alpha = selected || !validTarget ? 0.95 : 0.28;
       this.graphics.lineStyle(selected ? 3 : 1, color, alpha);
       this.graphics.strokeCircle(tx, ty, selected ? 10 : 7);
       this.graphics.lineBetween(tx - 5, ty, tx + 5, ty);
       this.graphics.lineBetween(tx, ty - 5, tx, ty + 5);
 
       if (selected) {
-        const body = actor(snapshot, memberId);
-        this.graphics.lineStyle(2, color, 0.38);
+        this.graphics.lineStyle(2, color, validTarget ? 0.38 : 0.72);
         this.graphics.lineBetween(sx(body.position.x), sy(body.position.y), tx, ty);
+      }
+      if (!validTarget) {
+        this.graphics.lineStyle(4, 0xff5d66, 0.9);
+        this.graphics.lineBetween(tx - 7, ty - 7, tx + 7, ty + 7);
+        this.graphics.lineBetween(tx - 7, ty + 7, tx + 7, ty - 7);
       }
     }
 
@@ -574,11 +599,35 @@ export class SquadFieldLabScene extends Phaser.Scene {
     const focusedBody = actor(snapshot, state.focused);
     const player = actor(snapshot, "player");
     const focusedTarget = this.control.targetFor(state.focused, player.position);
+    const memberStatuses = {} as Record<SquadMemberId, FieldLabMemberStatus>;
+    for (const memberId of FIELD_LAB_SQUAD_MEMBERS) {
+      if (!state.activeMembers.includes(memberId)) {
+        memberStatuses[memberId] = "ARRIVED";
+        continue;
+      }
+      const body = actor(snapshot, memberId);
+      const target = this.control.targetFor(memberId, player.position);
+      if (target.authority === "DIRECT") {
+        memberStatuses[memberId] = "DIRECT";
+      } else if (!target.target || !targetInsideWorld(snapshot, body, target.target)) {
+        memberStatuses[memberId] = "INVALID_TARGET";
+      } else {
+        const d = distance(body.position, target.target);
+        const requestedSpeed = Math.hypot(body.requestedVelocity.x, body.requestedVelocity.y);
+        memberStatuses[memberId] =
+          d <= state.dynamics.slotTolerance * 1.35
+            ? "ARRIVED"
+            : body.motionError > 0.45 && requestedSpeed > 0.2
+              ? "BLOCKED"
+              : "MOVING";
+      }
+    }
     this.panel.update({
       snapshot,
       control: state,
       focusedBody,
       focusedTarget,
+      memberStatuses,
       recentEvents: this.eventLog
     });
   }
