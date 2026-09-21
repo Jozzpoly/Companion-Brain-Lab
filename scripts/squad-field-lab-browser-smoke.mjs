@@ -106,6 +106,29 @@ try {
   );
   await screenshot(page, "00-field-lab-initial.png");
 
+  // Squad-size controls rebuild the physical World roster; inactive members are
+  // absent from Rapier rather than merely hidden in the HUD.
+  await page.locator('[data-squad-size="2"]').click();
+  const twoBodies = await waitFor(
+    page,
+    (value) => value.includes("real squad bodies 2 · C1, C2"),
+    6_000,
+    "two-body real roster"
+  );
+  invariant(twoBodies.includes("C1") && twoBodies.includes("C2"), "Two-member roster truth missing.");
+  invariant(
+    await page.locator('.squad-lab-roster-button[data-member-id="squad-3"]').isDisabled(),
+    "C3 remains selectable after physical roster shrinks to two."
+  );
+
+  await page.locator('[data-squad-size="4"]').click();
+  await waitFor(
+    page,
+    (value) => value.includes("real squad bodies 4 · C1, C2, C3, C4"),
+    6_000,
+    "four-body roster restored"
+  );
+
   // Selection must be real control scope, not decorative highlighting.
   await page.locator('.squad-lab-roster-button[data-member-id="squad-2"]').click();
   await page.locator('.squad-lab-roster-button[data-member-id="squad-3"]').click({ modifiers: ["Shift"] });
@@ -261,6 +284,7 @@ try {
     schema: "companion-brain-lab-squad-field-lab-browser-v1",
     sourceSha: process.env.GITHUB_SHA ?? process.env.VITE_SOURCE_SHA ?? null,
     outcomes: {
+      realRosterCanShrinkAndGrow: true,
       fourEmbodiedMembersVisible: true,
       multiSelectionScopesOrders: true,
       focusedDirectControlMovesRealBody: true,
