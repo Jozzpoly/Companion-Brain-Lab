@@ -29,6 +29,7 @@ export interface FieldLabDynamics {
 }
 
 export interface FieldLabSquadControlSnapshot {
+  activeMembers: readonly SquadMemberId[];
   selected: readonly SquadMemberId[];
   focused: SquadMemberId;
   directControl: boolean;
@@ -123,6 +124,7 @@ export function inverseRotateFieldLabVector(value: Vec2, radians: number): Vec2 
 
 function cloneSnapshot(value: FieldLabSquadControlSnapshot): FieldLabSquadControlSnapshot {
   return {
+    activeMembers: [...value.activeMembers],
     selected: [...value.selected],
     focused: value.focused,
     directControl: value.directControl,
@@ -142,6 +144,7 @@ function cloneSnapshot(value: FieldLabSquadControlSnapshot): FieldLabSquadContro
 
 export class FieldLabSquadControl {
   private state: FieldLabSquadControlSnapshot = {
+    activeMembers: [...FIELD_LAB_SQUAD_MEMBERS],
     selected: ["companion"],
     focused: "companion",
     directControl: false,
@@ -164,6 +167,25 @@ export class FieldLabSquadControl {
 
   snapshot(): FieldLabSquadControlSnapshot {
     return cloneSnapshot(this.state);
+  }
+
+  setActiveCount(count: number): FieldLabSquadControlSnapshot {
+    if (!Number.isInteger(count) || count < 1 || count > FIELD_LAB_SQUAD_MEMBERS.length) {
+      throw new Error("Field Lab active squad count must be an integer from 1 to 4.");
+    }
+    const activeMembers = FIELD_LAB_SQUAD_MEMBERS.slice(0, count);
+    const selected = this.state.selected.filter((memberId) => activeMembers.includes(memberId));
+    const nextSelected = selected.length > 0 ? selected : [activeMembers[0]!];
+    const focused = activeMembers.includes(this.state.focused)
+      ? this.state.focused
+      : nextSelected[0]!;
+    this.state = {
+      ...this.state,
+      activeMembers,
+      selected: nextSelected,
+      focused
+    };
+    return this.snapshot();
   }
 
   selectOnly(memberId: SquadMemberId): FieldLabSquadControlSnapshot {
@@ -197,7 +219,7 @@ export class FieldLabSquadControl {
   selectAll(): FieldLabSquadControlSnapshot {
     this.state = {
       ...this.state,
-      selected: [...FIELD_LAB_SQUAD_MEMBERS]
+      selected: [...this.state.activeMembers]
     };
     return this.snapshot();
   }
@@ -382,6 +404,9 @@ export class FieldLabSquadControl {
   private assertMember(memberId: SquadMemberId): void {
     if (!FIELD_LAB_SQUAD_MEMBERS.includes(memberId)) {
       throw new Error(`Unknown Field Lab squad member: ${String(memberId)}`);
+    }
+    if (!this.state.activeMembers.includes(memberId)) {
+      throw new Error(`Inactive Field Lab squad member: ${String(memberId)}`);
     }
   }
 }
