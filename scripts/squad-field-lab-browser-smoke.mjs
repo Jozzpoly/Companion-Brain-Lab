@@ -322,13 +322,13 @@ try {
     page,
     "Enter",
     (value) =>
-      value.includes("squad-2:SUCCEEDED") &&
-      value.includes("latest World outcome REPELLED") &&
-      value.includes("repelled by squad-2"),
+      value.includes("REPEL squad-2 -> SUCCEEDED") &&
+      value.includes("pressure outcome REPELLED · repelled by squad-2") &&
+      value.includes("remembered REPELLED"),
     7_000,
     "C2 materially repels threat"
   );
-  invariant(c2Repel.includes("squad-2:SUCCEEDED"), "C2 is still decorative in cooperative pressure.");
+  invariant(c2Repel.includes("REPEL squad-2 -> SUCCEEDED"), "C2 is still decorative in cooperative pressure.");
   await screenshot(page, "06-c2-material-contribution.png");
 
   // Cycle 2: cluster C1+C2 and issue one selected-group material response.
@@ -355,14 +355,14 @@ try {
     page,
     "Space",
     (value) =>
-      value.includes("companion:SUCCEEDED") &&
-      value.includes("squad-2:SUCCEEDED") &&
-      value.includes("repelled by companion, squad-2"),
+      value.includes("REPEL companion -> SUCCEEDED") &&
+      value.includes("REPEL squad-2 -> SUCCEEDED") &&
+      value.includes("pressure outcome REPELLED · repelled by companion, squad-2"),
     8_000,
     "selected group jointly repels threat"
   );
   invariant(
-    groupRepel.includes("companion:SUCCEEDED") && groupRepel.includes("squad-2:SUCCEEDED"),
+    groupRepel.includes("REPEL companion -> SUCCEEDED") && groupRepel.includes("REPEL squad-2 -> SUCCEEDED"),
     "Selected group action did not produce multi-member material contribution."
   );
   await screenshot(page, "07-selected-group-joint-contribution.png");
@@ -378,8 +378,8 @@ try {
     page,
     "e",
     (value) =>
-      value.includes("player:SUCCEEDED") &&
-      value.includes("repelled by player"),
+      value.includes("REPEL player -> SUCCEEDED") &&
+      value.includes("pressure outcome REPELLED · repelled by player"),
     8_000,
     "player takeover under squad pressure"
   );
@@ -397,8 +397,8 @@ try {
   const hit = await waitFor(
     page,
     (value) =>
-      value.includes("latest World outcome PLAYER_HIT") &&
-      value.includes("phase DRIVEN_BACK") &&
+      value.includes("pressure outcome PLAYER_HIT") &&
+      value.includes("remembered PLAYER_HIT") &&
       value.includes("repelled by none"),
     10_000,
     "pressure no-action consequence"
