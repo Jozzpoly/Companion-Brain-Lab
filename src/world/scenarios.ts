@@ -1,4 +1,4 @@
-import type { ActorSpec, ObstacleSpec, ScenarioId, ScenarioSpec } from "./types";
+import type { ActorSpec, ObstacleSpec, ScenarioId, ScenarioSpec, SquadMemberId } from "./types";
 
 const WIDTH = 12;
 const HEIGHT = 8;
@@ -105,3 +105,36 @@ export const SCENARIOS: Readonly<Record<ScenarioId, ScenarioSpec>> = {
 export function scenario(id: ScenarioId): ScenarioSpec {
   return SCENARIOS[id];
 }
+
+const FIELD_LAB_MEMBER_SPAWNS: Readonly<Record<SquadMemberId, { x: number; y: number }>> = {
+  companion: { x: 4.6, y: 5 },
+  "squad-2": { x: 4.8, y: 3.8 },
+  "squad-3": { x: 4.8, y: 6.2 },
+  "squad-4": { x: 6.0, y: 5 }
+};
+
+/**
+ * Rebuilds the same authored Field Lab with a real bounded squad roster.
+ * Missing members are absent from the ScenarioSpec and therefore absent from
+ * Rapier; this is not a UI visibility trick.
+ */
+export function squadFieldLabScenario(activeMembers: readonly SquadMemberId[]): ScenarioSpec {
+  const unique = [...new Set(activeMembers)];
+  if (unique.length < 1 || unique.length > 4 || !unique.includes("companion")) {
+    throw new Error("Field Lab squad roster must contain canonical companion and 1-4 total members.");
+  }
+
+  const base = SCENARIOS["squad-field-lab"];
+  return {
+    ...base,
+    actors: [
+      actor("player", 3, 5),
+      ...unique.map((memberId) => {
+        const spawn = FIELD_LAB_MEMBER_SPAWNS[memberId];
+        return actor(memberId, spawn.x, spawn.y);
+      })
+    ],
+    obstacles: base.obstacles.map((obstacle) => ({ ...obstacle }))
+  };
+}
+
