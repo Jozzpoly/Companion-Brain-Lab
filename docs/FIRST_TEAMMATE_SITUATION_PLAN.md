@@ -706,3 +706,29 @@ The next question is experiential:
 
 Until that judgement exists, do not expand the situation merely to accumulate more machine-qualified mechanisms.
 
+---
+
+## 22. Owner evidence — readiness specimen is not the Owner test — 2026-09-21
+
+The public readiness specimen is retained as a bounded research artifact, but its promotion to S7 is retracted.
+
+The Owner recording demonstrates that a technically coherent chain can still collapse into an unreadable play experience.
+
+Key falsification:
+
+- Q can be registered without producing a meaningful visible correction;
+- E succeeds only during a hidden 0.75 s WINDUP and within 0.9 m;
+- outside that condition the advertised action can appear to do nothing;
+- the encounter permits extended movement/kiting without naturally presenting the intended intervention opportunity;
+- no sustained episode carries the actors through recovery and regroup.
+
+The next implementation must not begin by improving the test UI.
+
+It must begin by making the **cooperative episode itself** worth testing.
+
+Active design pressure:
+
+> one small playable situation should naturally expose awareness, preparation, contribution, player takeover/correction, changed world, disengagement and regroup without the Owner knowing internal phases.
+
+Only after that episode survives machine-side and participant-first continuous-play falsification should a new Owner surface be prepared.
+
