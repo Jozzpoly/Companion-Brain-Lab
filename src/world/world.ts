@@ -38,6 +38,7 @@ import type {
   ExperimentalSquadMotionIntent,
   MotionIntent,
   ScenarioId,
+  ScenarioSpec,
   StaticCircleOccupancyResult,
   StaticCircleTraversalResult,
   StaticTraversalOptions,
@@ -118,23 +119,27 @@ export class LabWorld {
   private cooperativeEpisodeValue: CooperativeEpisodeSnapshot | null;
 
   private constructor(
-    private readonly scenarioIdValue: ScenarioId,
+    private readonly scenarioSpecValue: ScenarioSpec,
     private readonly physical: RapierPhysicalWorld,
     private readonly sharedPressureLoop: SharedPressureLoop
   ) {
     this.sharedDangerValue =
-      scenarioIdValue === "shared-danger" ? initialSharedDangerSnapshot() : null;
+      scenarioSpecValue.id === "shared-danger" ? initialSharedDangerSnapshot() : null;
     this.cooperativeEpisodeValue =
-      scenarioIdValue === "cooperative-episode"
+      scenarioSpecValue.id === "cooperative-episode"
         ? initialCooperativeEpisodeSnapshot(S5_COOPERATIVE_EPISODE_RULES)
         : null;
   }
 
   static async create(id: ScenarioId): Promise<LabWorld> {
+    return LabWorld.createFromSpec(scenario(id));
+  }
+
+  static async createFromSpec(spec: ScenarioSpec): Promise<LabWorld> {
     return new LabWorld(
-      id,
-      await RapierPhysicalWorld.create(scenario(id)),
-      new SharedPressureLoop(id)
+      spec,
+      await RapierPhysicalWorld.create(spec),
+      new SharedPressureLoop(spec.id)
     );
   }
 
@@ -143,7 +148,7 @@ export class LabWorld {
   }
 
   actorMovementCapability(actorId: ActorId): MovementCapability {
-    return movementCapabilityFromScenario(scenario(this.scenarioIdValue), actorId);
+    return movementCapabilityFromScenario(this.scenarioSpecValue, actorId);
   }
 
   latestAuthorityA0StepEvidence(): AuthorityA0WorldStepEvidence | null {
@@ -211,7 +216,7 @@ export class LabWorld {
       throw new Error("Cooperative episode actions require the cooperative-episode scenario.");
     }
     const experimentalSquadMotionIntents = input.experimentalSquadMotionIntents ?? [];
-    if (this.scenarioIdValue !== "squad-field-lab" && experimentalSquadMotionIntents.length > 0) {
+    if (this.scenarioSpecValue.id !== "squad-field-lab" && experimentalSquadMotionIntents.length > 0) {
       throw new Error("Experimental squad motion is confined to the squad-field-lab scenario.");
     }
     for (const intent of experimentalSquadMotionIntents) {
@@ -231,10 +236,10 @@ export class LabWorld {
       experimentalSquadMotionIntents
     );
     this.tickValue += 1;
-    const spec = scenario(this.scenarioIdValue);
+    const spec = this.scenarioSpecValue;
     const after: WorldSnapshot = {
       tick: this.tickValue,
-      scenarioId: this.scenarioIdValue,
+      scenarioId: this.scenarioSpecValue.id,
       width: spec.width,
       height: spec.height,
       actors,
@@ -364,10 +369,10 @@ export class LabWorld {
   }
 
   snapshot(): WorldSnapshot {
-    const spec = scenario(this.scenarioIdValue);
+    const spec = this.scenarioSpecValue;
     return {
       tick: this.tickValue,
-      scenarioId: this.scenarioIdValue,
+      scenarioId: this.scenarioSpecValue.id,
       width: spec.width,
       height: spec.height,
       actors: this.physical.snapshot(),
