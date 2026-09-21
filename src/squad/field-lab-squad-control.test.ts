@@ -8,10 +8,27 @@ describe("FieldLabSquadControl", () => {
   it("starts with one focused companion but retains four editable real-member slots", () => {
     const control = new FieldLabSquadControl();
     const state = control.snapshot();
+    expect(state.activeMembers).toEqual(["companion", "squad-2", "squad-3", "squad-4"]);
     expect(state.selected).toEqual(["companion"]);
     expect(state.focused).toBe("companion");
     expect(state.slots.map((slot) => slot.memberId)).toEqual(FIELD_LAB_SQUAD_MEMBERS);
     expect(state.assignments.every((assignment) => assignment.mode === "FOLLOW")).toBe(true);
+  });
+
+  it("deploys a bounded 1-4 roster and repairs selection/focus when members leave", () => {
+    const control = new FieldLabSquadControl();
+    control.selectOnly("squad-4");
+    control.setDirectControl(true);
+    const two = control.setActiveCount(2);
+
+    expect(two.activeMembers).toEqual(["companion", "squad-2"]);
+    expect(two.selected).toEqual(["companion"]);
+    expect(two.focused).toBe("companion");
+    expect(() => control.focus("squad-4")).toThrow(/Inactive Field Lab squad member/);
+
+    const four = control.setActiveCount(4);
+    expect(four.activeMembers).toHaveLength(4);
+    expect(four.directControl).toBe(true);
   });
 
   it("supports additive selection and independent focus without losing group selection", () => {
