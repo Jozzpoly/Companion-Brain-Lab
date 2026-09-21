@@ -71,7 +71,7 @@ jobs:
       - name: Checkout exact machine-qualified teammate readiness candidate
         uses: actions/checkout@v5
         with:
-          ref: 1a15d3dbdd24f2215e7094519109d676747ee117
+          ref: cef9028c5cbc825ed43197da605c10e2251c53c1
           path: teammate-readiness
 
       - name: Setup Node
@@ -197,8 +197,8 @@ jobs:
       - name: Validate exact teammate readiness candidate and re-run qualified browser gates
         working-directory: teammate-readiness
         env:
-          VITE_SOURCE_SHA: 1a15d3dbdd24f2215e7094519109d676747ee117
-          GITHUB_SHA: 1a15d3dbdd24f2215e7094519109d676747ee117
+          VITE_SOURCE_SHA: cef9028c5cbc825ed43197da605c10e2251c53c1
+          GITHUB_SHA: cef9028c5cbc825ed43197da605c10e2251c53c1
         run: |
           npm run check
           npm run browser:readiness
@@ -240,7 +240,7 @@ jobs:
     env:
       EXPECTED_OWNER_SHA: 510405960acf3cfce0a6985fe6f9da88ec95d0c2
       EXPECTED_TEAMMATE_SHA: 295452947e5936b79a7e3c40a79f6fdb3f239836
-      EXPECTED_READINESS_SHA: 1a15d3dbdd24f2215e7094519109d676747ee117
+      EXPECTED_READINESS_SHA: cef9028c5cbc825ed43197da605c10e2251c53c1
       PAGE_URL: ${{ needs.deploy.outputs.page_url }}
     steps:
       - name: Checkout exact Owner Movement Review candidate for smoke tooling
