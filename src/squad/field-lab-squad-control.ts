@@ -7,12 +7,18 @@ export const FIELD_LAB_SQUAD_MEMBERS = [
   "squad-4"
 ] as const satisfies readonly SquadMemberId[];
 
-export type SquadGroupMode = "FOLLOW" | "HOLD" | "MOVE";
+export type SquadOrderMode = "FOLLOW" | "HOLD" | "MOVE";
 export type SquadMemberAuthority = "FORMATION" | "DIRECT";
 
 export interface FieldLabFormationSlot {
   memberId: SquadMemberId;
   offset: Vec2;
+}
+
+export interface FieldLabMemberAssignment {
+  memberId: SquadMemberId;
+  mode: SquadOrderMode;
+  worldAnchor: Vec2 | null;
 }
 
 export interface FieldLabDynamics {
@@ -25,16 +31,16 @@ export interface FieldLabSquadControlSnapshot {
   selected: readonly SquadMemberId[];
   focused: SquadMemberId;
   directControl: boolean;
-  groupMode: SquadGroupMode;
-  worldAnchor: Vec2 | null;
   orientationRadians: number;
   slots: readonly FieldLabFormationSlot[];
+  assignments: readonly FieldLabMemberAssignment[];
   dynamics: FieldLabDynamics;
 }
 
 export interface FieldLabMemberTarget {
   memberId: SquadMemberId;
   authority: SquadMemberAuthority;
+  orderMode: SquadOrderMode;
   target: Vec2 | null;
   localSlot: Vec2;
   worldAnchor: Vec2;
@@ -74,7 +80,7 @@ function memberOrder(a: SquadMemberId, b: SquadMemberId): number {
   return FIELD_LAB_SQUAD_MEMBERS.indexOf(a) - FIELD_LAB_SQUAD_MEMBERS.indexOf(b);
 }
 
-function rotate(value: Vec2, radians: number): Vec2 {
+export function rotateFieldLabVector(value: Vec2, radians: number): Vec2 {
   const cos = Math.cos(radians);
   const sin = Math.sin(radians);
   return {
@@ -83,17 +89,24 @@ function rotate(value: Vec2, radians: number): Vec2 {
   };
 }
 
+export function inverseRotateFieldLabVector(value: Vec2, radians: number): Vec2 {
+  return rotateFieldLabVector(value, -radians);
+}
+
 function cloneSnapshot(value: FieldLabSquadControlSnapshot): FieldLabSquadControlSnapshot {
   return {
     selected: [...value.selected],
     focused: value.focused,
     directControl: value.directControl,
-    groupMode: value.groupMode,
-    worldAnchor: value.worldAnchor ? { ...value.worldAnchor } : null,
     orientationRadians: value.orientationRadians,
     slots: value.slots.map((slot) => ({
       memberId: slot.memberId,
       offset: { ...slot.offset }
+    })),
+    assignments: value.assignments.map((assignment) => ({
+      memberId: assignment.memberId,
+      mode: assignment.mode,
+      worldAnchor: assignment.worldAnchor ? { ...assignment.worldAnchor } : null
     })),
     dynamics: { ...value.dynamics }
   };
@@ -104,12 +117,15 @@ export class FieldLabSquadControl {
     selected: ["companion"],
     focused: "companion",
     directControl: false,
-    groupMode: "FOLLOW",
-    worldAnchor: null,
     orientationRadians: 0,
     slots: FIELD_LAB_SQUAD_MEMBERS.map((memberId) => ({
       memberId,
       offset: { ...DEFAULT_SLOTS[memberId] }
+    })),
+    assignments: FIELD_LAB_SQUAD_MEMBERS.map((memberId) => ({
+      memberId,
+      mode: "FOLLOW",
+      worldAnchor: null
     })),
     dynamics: {
       spacingScale: 1,
@@ -187,30 +203,45 @@ export class FieldLabSquadControl {
     return this.snapshot();
   }
 
-  setGroupMode(mode: SquadGroupMode, anchor?: Vec2 | null): FieldLabSquadControlSnapshot {
+  issueSelected(mode: SquadOrderMode, anchor?: Vec2 | null): FieldLabSquadControlSnapshot {
     const worldAnchor =
       mode === "FOLLOW"
         ? null
         : anchor
-          ? finiteVec(anchor, "group anchor")
-          : this.state.worldAnchor;
+          ? finiteVec(anchor, "selected order anchor")
+          : null;
     if (mode !== "FOLLOW" && !worldAnchor) {
       throw new Error(`${mode} requires a world anchor.`);
     }
+    const selected = new Set(this.state.selected);
     this.state = {
       ...this.state,
-      groupMode: mode,
-      worldAnchor
+      assignments: this.state.assignments.map((assignment) =>
+        selected.has(assignment.memberId)
+          ? {
+              memberId: assignment.memberId,
+              mode,
+              worldAnchor: worldAnchor ? { ...worldAnchor } : null
+            }
+          : {
+              memberId: assignment.memberId,
+              mode: assignment.mode,
+              worldAnchor: assignment.worldAnchor ? { ...assignment.worldAnchor } : null
+            }
+      )
     };
     return this.snapshot();
   }
 
-  setWorldAnchor(anchor: Vec2): FieldLabSquadControlSnapshot {
-    this.state = {
-      ...this.state,
-      worldAnchor: finiteVec(anchor, "world anchor")
+  assignmentFor(memberId: SquadMemberId): FieldLabMemberAssignment {
+    this.assertMember(memberId);
+    const assignment = this.state.assignments.find((value) => value.memberId === memberId);
+    if (!assignment) throw new Error(`Missing assignment for ${memberId}.`);
+    return {
+      memberId,
+      mode: assignment.mode,
+      worldAnchor: assignment.worldAnchor ? { ...assignment.worldAnchor } : null
     };
-    return this.snapshot();
   }
 
   setOrientationRadians(radians: number): FieldLabSquadControlSnapshot {
@@ -276,21 +307,22 @@ export class FieldLabSquadControl {
     this.assertMember(memberId);
     const slot = this.state.slots.find((candidate) => candidate.memberId === memberId);
     if (!slot) throw new Error(`Missing formation slot for ${memberId}.`);
+    const assignment = this.assignmentFor(memberId);
 
     const anchor =
-      this.state.groupMode === "FOLLOW"
+      assignment.mode === "FOLLOW"
         ? finiteVec(playerPosition, "player position")
-        : this.state.worldAnchor
-          ? { ...this.state.worldAnchor }
+        : assignment.worldAnchor
+          ? { ...assignment.worldAnchor }
           : (() => {
-              throw new Error(`${this.state.groupMode} is missing its world anchor.`);
+              throw new Error(`${assignment.mode} is missing its world anchor.`);
             })();
 
     const localScaled = {
       x: slot.offset.x * this.state.dynamics.spacingScale,
       y: slot.offset.y * this.state.dynamics.spacingScale
     };
-    const rotated = rotate(localScaled, this.state.orientationRadians);
+    const rotated = rotateFieldLabVector(localScaled, this.state.orientationRadians);
     const target = {
       x: anchor.x + rotated.x,
       y: anchor.y + rotated.y
@@ -300,6 +332,7 @@ export class FieldLabSquadControl {
     return {
       memberId,
       authority: direct ? "DIRECT" : "FORMATION",
+      orderMode: assignment.mode,
       target: direct ? null : target,
       localSlot: { ...slot.offset },
       worldAnchor: anchor
