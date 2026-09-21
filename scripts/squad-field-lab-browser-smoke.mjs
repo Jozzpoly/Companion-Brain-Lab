@@ -293,6 +293,18 @@ try {
   invariant(afterMove && Math.hypot(afterMove.x - beforeMove.x, afterMove.y - beforeMove.y) > 0.45,
     "C4 did not materially respond to its world-space MOVE order.");
 
+  // Freeze the exact live spatial setup before rebuilding the World. Layout
+  // A/B is only meaningful if body positions survive, not merely control labels.
+  await tapKey(page, "p");
+  const pausedBeforeLayouts = await waitFor(
+    page,
+    (value) => value.includes("PAUSED") && value.includes("Focused · C4"),
+    3_000,
+    "pause before layout matrix"
+  );
+  const c4BeforeLayouts = focusedBody(pausedBeforeLayouts);
+  invariant(c4BeforeLayouts, "C4 position unavailable before layout matrix.");
+
   // The same squad/control state must survive multiple physical layouts.
   // These are real World rebuilds with different obstacle sets, not visual presets.
   for (const [layout, obstacleCount] of [
@@ -314,8 +326,18 @@ try {
       layoutState.includes("C4 MOVE"),
       `${layout} rebuild discarded the existing C4 assignment.`
     );
+    const c4AfterLayout = focusedBody(layoutState);
+    invariant(c4AfterLayout, `${layout} rebuild lost focused C4 body truth.`);
+    invariant(
+      Math.hypot(
+        c4AfterLayout.x - c4BeforeLayouts.x,
+        c4AfterLayout.y - c4BeforeLayouts.y
+      ) < 0.08,
+      `${layout} rebuild reset live C4 position instead of preserving the spatial setup.`
+    );
   }
   await screenshot(page, "05-layout-matrix-preserves-squad-state.png");
+  await tapKey(page, "p");
 
   // The same control state must survive a switch from spatial training into
   // continuous cooperative pressure. C4's independent MOVE assignment is a
@@ -332,6 +354,15 @@ try {
     "pressure situation preserving squad control state"
   );
   invariant(pressureLoaded.includes("spacing 1.50"), "Pressure rebuild lost live formation dynamics.");
+  const c4InPressure = focusedBody(pressureLoaded);
+  invariant(c4InPressure, "C4 position unavailable after pressure rebuild.");
+  invariant(
+    Math.hypot(
+      c4InPressure.x - c4BeforeLayouts.x,
+      c4InPressure.y - c4BeforeLayouts.y
+    ) < 0.25,
+    "TRAINING -> PRESSURE transition reset the existing live spatial setup."
+  );
   await screenshot(page, "05-pressure-preserves-squad-state.png");
 
   // Cycle 1: focused C2 gets the same material affordance as canonical C1.
@@ -461,6 +492,8 @@ try {
       worldSpaceMoveScopesToSelection: true,
       formationMotorRespondsMaterially: true,
       layoutMatrixPreservesSquadControlState: true,
+      layoutMatrixPreservesLiveBodyPositions: true,
+      pressurePreservesLiveBodyPositions: true,
       pressurePreservesSquadControlState: true,
       extraSquadMemberCanMateriallyContribute: true,
       selectedGroupCanJointlyContribute: true,
