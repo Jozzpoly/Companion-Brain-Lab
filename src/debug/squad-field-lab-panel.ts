@@ -1,4 +1,9 @@
 import type { FieldLabSquadControlSnapshot, FieldLabMemberTarget } from "../squad/field-lab-squad-control";
+import type {
+  CooperativeEpisodeActionOutcome,
+  CooperativeEpisodeOutcome,
+  CooperativeEpisodeSnapshot
+} from "../world/cooperative-episode-contract";
 import type { ActorSnapshot, SquadMemberId, WorldSnapshot } from "../world/types";
 
 export type FieldLabMemberStatus = "DIRECT" | "MOVING" | "ARRIVED" | "BLOCKED" | "INVALID_TARGET";
@@ -9,6 +14,9 @@ export interface SquadFieldLabPanelState {
   focusedBody: ActorSnapshot;
   focusedTarget: FieldLabMemberTarget;
   memberStatuses: Readonly<Record<SquadMemberId, FieldLabMemberStatus>>;
+  cooperativeEpisode: CooperativeEpisodeSnapshot | null;
+  cooperativeEpisodeOutcome: CooperativeEpisodeOutcome;
+  cooperativeActionOutcomes: readonly CooperativeEpisodeActionOutcome[];
   recentEvents: readonly string[];
 }
 
@@ -98,6 +106,19 @@ export class SquadFieldLabPanel {
           <div>response ${fmt(state.control.dynamics.responsiveness)} · tolerance ${fmt(state.control.dynamics.slotTolerance)}m</div>
         </div>
       </section>
+      ${state.cooperativeEpisode ? `
+      <section class="squad-field-debug-section" data-tone="${state.cooperativeEpisode.phase === "PRESSURING" ? "danger" : state.cooperativeEpisode.phase === "APPROACHING" ? "warning" : state.cooperativeEpisode.phase === "DRIVEN_BACK" ? "success" : "normal"}">
+        <h2>Cooperative pressure</h2>
+        <div class="squad-field-debug-lines">
+          <div>phase ${state.cooperativeEpisode.phase} · cycle ${state.cooperativeEpisode.cycle + 1} · remaining ${state.cooperativeEpisode.phaseTicksRemaining}t</div>
+          <div>latest World outcome ${state.cooperativeEpisodeOutcome} · remembered ${state.cooperativeEpisode.lastOutcome}</div>
+          <div>repelled by ${state.cooperativeEpisode.repelledBy.join(", ") || "none"}</div>
+          <div>attempts ${state.cooperativeActionOutcomes.length > 0
+            ? state.cooperativeActionOutcomes.map((outcome) => `${outcome.actorId}:${outcome.status}@${fmt(outcome.distance)}m`).join(" · ")
+            : "none this step"}</div>
+        </div>
+      </section>
+      ` : ""}
       <section class="squad-field-debug-section">
         <h2>Assignments</h2>
         <div class="squad-field-debug-lines">${assignmentLines}</div>
