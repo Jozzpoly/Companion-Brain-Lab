@@ -531,3 +531,36 @@ The revised bounded hypothesis is an **off-axis player-local intercept flank**:
 - reaching the flank becomes `HOLDING_READY` until the causal situation changes.
 
 This correction preserves the key S1 invariant `movement ≠ intervention` while making pre-contact preparation spatially distinct.
+
+---
+
+## 11. Promotion update — 2026-09-21
+
+**This section supersedes the promotion ledger and immediate-action wording in section 10.**
+
+| Gate | Current status | Claim actually earned |
+| --- | --- | --- |
+| S1 shared situation | **MACHINE-QUALIFIED APPARATUS** | authoritative shared problem + explicit player/manual-companion attempts + World outcomes |
+| S2 situated responsibility | **MACHINE-QUALIFIED BOUNDED SEAM** | known problem can be tracked, owned or declined for inspectable situated reasons |
+| S3 material contribution | **MACHINE-QUALIFIED BOUNDED AUTONOMY** | one earned responsibility can drive one material World contribution |
+| S4 corrigibility/player agency | **MACHINE-QUALIFIED BOUNDED CORRECTION** | execution can be constrained without erasing judgement/raw proposal |
+| pre-contact readiness / legibility | **MACHINE-QUALIFIED BOUNDED READINESS** | tracked approach can become player-local embodied preparation without premature action |
+| integrated public specimen | **PUBLICLY DEPLOYED · MACHINE-QUALIFIED** | S1–S4 + readiness coexist in one immutable public runtime with provenance |
+| S7 Owner teammate gate | **ACTIVE · OWNER JUDGEMENT REQUIRED** | teammate feel remains unproven |
+
+Pinned public candidate:
+
+`cef9028c5cbc825ed43197da605c10e2251c53c1`
+
+Public URL:
+
+`https://jozzpoly.github.io/Companion-Brain-Lab/teammate-readiness/?teammate=1`
+
+Qualification:
+
+`deploy-pinned-research-preview · run 35634004556 · SUCCESS`
+
+The next legitimate move is **not S5/S6/S8 feature expansion**. Agent-side falsification and delivery have reached diminishing returns for the current question. The next evidence must be Owner judgement of the integrated experience.
+
+Owner FAIL is first-class evidence and may invalidate the situation, readiness representation, responsibility split, correction model or broader causal assumptions. Do not automatically respond with parameter tuning.
+
