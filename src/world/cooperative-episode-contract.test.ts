@@ -18,7 +18,7 @@ const rules: CooperativeEpisodeRules = {
   homeArrivalRange: 0.1
 };
 
-function attempt(actorId: "player" | "companion"): CooperativeEpisodeActionAttempt {
+function attempt(actorId: "player" | "companion" | "squad-2" | "squad-3" | "squad-4"): CooperativeEpisodeActionAttempt {
   return { actorId, kind: "REPEL", targetId: "hostile" };
 }
 
@@ -38,6 +38,9 @@ function resolve(input: {
   hostile?: { x: number; y: number };
   player?: { x: number; y: number };
   companion?: { x: number; y: number };
+  squad2?: { x: number; y: number };
+  squad3?: { x: number; y: number };
+  squad4?: { x: number; y: number };
   attempts?: readonly CooperativeEpisodeActionAttempt[];
 }) {
   return resolveCooperativeEpisodeAfterPhysics({
@@ -46,7 +49,12 @@ function resolve(input: {
     postPhysics: {
       hostilePosition: input.hostile ?? { x: 5, y: 4 },
       playerPosition: input.player ?? { x: 4, y: 4 },
-      companionPosition: input.companion ?? { x: 6, y: 4 }
+      squadPositions: {
+        companion: input.companion ?? { x: 6, y: 4 },
+        "squad-2": input.squad2,
+        "squad-3": input.squad3,
+        "squad-4": input.squad4
+      }
     },
     attempts: input.attempts ?? [],
     rules
@@ -129,6 +137,27 @@ describe("S5 manual cooperative episode World contract", () => {
     });
     expect(forward).toEqual(reverse);
     expect(forward.after.repelledBy).toEqual(["companion", "player"]);
+  });
+
+  it("accepts simultaneous material contribution from multiple real squad members", () => {
+    const result = resolve({
+      companion: { x: 5.8, y: 4 },
+      squad2: { x: 5.4, y: 4.5 },
+      squad3: { x: 4.7, y: 4.4 },
+      attempts: [attempt("companion"), attempt("squad-2"), attempt("squad-3")]
+    });
+
+    expect(result.episodeOutcome).toBe("REPELLED");
+    expect(result.after.repelledBy).toEqual(["companion", "squad-2", "squad-3"]);
+    expect(result.actionOutcomes.every((outcome) => outcome.status === "SUCCEEDED")).toBe(true);
+  });
+
+  it("rejects an action from a squad participant whose embodied position is absent", () => {
+    expect(() =>
+      resolve({
+        attempts: [attempt("squad-4")]
+      })
+    ).toThrow(/missing post-physics position for squad-4/);
   });
 
   it("returns through driven-back and reset into a new calm cycle instead of COMPLETE", () => {
