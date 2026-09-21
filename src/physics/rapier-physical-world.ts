@@ -274,21 +274,27 @@ export class RapierPhysicalWorld {
 
   step(
     intents: readonly MotionIntent[],
-    worldDrivenIntents: readonly PhysicalWorldBodyMotionIntent[] = []
+    worldDrivenIntents: readonly PhysicalWorldBodyMotionIntent[] = [],
+    externallyDrivenIntents: readonly PhysicalWorldBodyMotionIntent[] = []
   ): ActorSnapshot[] {
     const byActor = new Map<WorldBodyId, Vec2>();
     for (const intent of intents) {
       if (byActor.has(intent.actorId)) throw new Error(`Duplicate motion intent: ${intent.actorId}`);
       byActor.set(intent.actorId, normalized(intent.move));
     }
-    for (const intent of worldDrivenIntents) {
-      if (!this.actors.has(intent.bodyId)) {
-        throw new Error(`World-driven motion references unknown body: ${intent.bodyId}`);
+    for (const [source, drivenIntents] of [
+      ["World", worldDrivenIntents],
+      ["External", externallyDrivenIntents]
+    ] as const) {
+      for (const intent of drivenIntents) {
+        if (!this.actors.has(intent.bodyId)) {
+          throw new Error(`${source}-driven motion references unknown body: ${intent.bodyId}`);
+        }
+        if (byActor.has(intent.bodyId)) {
+          throw new Error(`Duplicate physical motion authority: ${intent.bodyId}`);
+        }
+        byActor.set(intent.bodyId, normalized(intent.move));
       }
-      if (byActor.has(intent.bodyId)) {
-        throw new Error(`Duplicate physical motion authority: ${intent.bodyId}`);
-      }
-      byActor.set(intent.bodyId, normalized(intent.move));
     }
 
     const before = new Map<WorldBodyId, Vec2>();
