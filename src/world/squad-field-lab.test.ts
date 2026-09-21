@@ -41,6 +41,33 @@ describe("Companion / Squad Field Lab physical substrate", () => {
     world.dispose();
   });
 
+  it("can rebuild a different layout from the same authored body positions", async () => {
+    const spawns = {
+      player: { x: 2.4, y: 7.1 },
+      squad: {
+        companion: { x: 3.6, y: 7.1 },
+        "squad-2": { x: 4.2, y: 7.6 }
+      }
+    } as const;
+
+    const open = await LabWorld.createFromSpec(
+      squadFieldLabScenario(["companion", "squad-2"], "TRAINING", "OPEN", spawns)
+    );
+    const doorway = await LabWorld.createFromSpec(
+      squadFieldLabScenario(["companion", "squad-2"], "TRAINING", "DOORWAY", spawns)
+    );
+
+    expect(body(open.snapshot(), "player").position).toEqual(spawns.player);
+    expect(body(doorway.snapshot(), "player").position).toEqual(spawns.player);
+    expect(body(open.snapshot(), "squad-2").position).toEqual(spawns.squad["squad-2"]);
+    expect(body(doorway.snapshot(), "squad-2").position).toEqual(spawns.squad["squad-2"]);
+    expect(open.snapshot().obstacles).toHaveLength(0);
+    expect(doorway.snapshot().obstacles).toHaveLength(2);
+
+    open.dispose();
+    doorway.dispose();
+  });
+
   it("moves additional squad bodies through the explicit experimental authority seam", async () => {
     const world = await LabWorld.create("squad-field-lab");
     const before = world.snapshot();
