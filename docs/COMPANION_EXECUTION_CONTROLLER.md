@@ -607,3 +607,34 @@ Next legitimate work:
 
 Do not spend the next tranche on a new Owner-test shell.
 
+---
+
+## 13. Squad-control axis — Owner-confirmed — 2026-09-21
+
+A new Owner-confirmed control requirement now materially affects the route to S5.
+
+The lab should become capable of:
+
+- direct manual puppeteering of a selected companion;
+- spatial placement and editable formation intent;
+- bounded multi-selection / group control;
+- later experimental additional companions;
+- behavior and movement-dynamics adjustments;
+- selection-aware causal debugging.
+
+This is not a command-system promotion.
+
+Use it as a research instrument:
+
+`Owner-authored behavior → observe repeated intent → identify stable control semantics → automate only what earns automation`.
+
+### New gate pressure
+
+Before autonomous S5 is promoted, prefer evidence that the desired multi-beat episode can be authored manually through the control surface.
+
+### Constraint
+
+The existing single-companion evidence must remain valid.
+
+Do not broaden `ActorId` or existing S1–S4 claims casually. Extra companions should enter first as bounded manual-only embodied actors after the control grammar is useful with the canonical companion.
+
