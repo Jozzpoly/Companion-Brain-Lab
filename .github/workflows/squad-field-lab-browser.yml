@@ -8,6 +8,8 @@ on:
       - "src/world/types.ts"
       - "src/world/scenarios.ts"
       - "src/world/world.ts"
+      - "src/world/cooperative-episode-contract.ts"
+      - "src/world/cooperative-episode-contract.test.ts"
       - "src/world/squad-field-lab.test.ts"
       - "src/physics/rapier-physical-world.ts"
       - "src/squad/field-lab-squad-control.ts"
