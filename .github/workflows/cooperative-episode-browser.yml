@@ -13,6 +13,7 @@ on:
       - "src/app/r1-lab-scene.ts"
       - "src/debug/causal-panel.ts"
       - "scripts/cooperative-episode-browser-smoke.mjs"
+      - "scripts/cooperative-episode-manual-choreography.mjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/cooperative-episode-browser.yml"
@@ -53,12 +54,16 @@ jobs:
         run: npm run check
       - name: Continuous manual cooperative episode browser gate
         run: npm run browser:cooperative-episode
+      - name: Manual gold-standard choreography red-team
+        run: npm run browser:cooperative-episode-choreography
       - name: Upload cooperative episode evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cooperative-episode-browser-${{ github.sha }}
-          path: artifacts/cooperative-episode-browser/
+          path: |
+            artifacts/cooperative-episode-browser/
+            artifacts/cooperative-episode-choreography/
           if-no-files-found: warn
           retention-days: 14
       - name: Publish cooperative-episode-browser commit status
