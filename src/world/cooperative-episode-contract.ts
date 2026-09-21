@@ -1,4 +1,6 @@
-import type { ActorId, Vec2 } from "./types";
+import type { SquadMemberId, Vec2 } from "./types";
+
+export type CooperativeEpisodeParticipantId = "player" | SquadMemberId;
 
 export type CooperativeEpisodePhase =
   | "CALM"
@@ -29,12 +31,12 @@ export interface CooperativeEpisodeSnapshot {
   phaseTicksRemaining: number;
   lastOutcome: CooperativeEpisodeOutcome;
   lastOutcomeTick: number | null;
-  repelledBy: readonly ActorId[];
+  repelledBy: readonly CooperativeEpisodeParticipantId[];
   drivenBackDirection: Vec2 | null;
 }
 
 export interface CooperativeEpisodeActionAttempt {
-  actorId: ActorId;
+  actorId: CooperativeEpisodeParticipantId;
   kind: "REPEL";
   targetId: "hostile";
 }
@@ -47,7 +49,7 @@ export type CooperativeEpisodeActionStatus =
 export interface CooperativeEpisodeActionOutcome {
   observationTick: number;
   outcomeTick: number;
-  actorId: ActorId;
+  actorId: CooperativeEpisodeParticipantId;
   kind: "REPEL";
   targetId: "hostile";
   status: CooperativeEpisodeActionStatus;
@@ -60,7 +62,7 @@ export interface CooperativeEpisodeActionOutcome {
 export interface CooperativeEpisodePostPhysicsFrame {
   hostilePosition: Vec2;
   playerPosition: Vec2;
-  companionPosition: Vec2;
+  squadPositions: Readonly<Partial<Record<SquadMemberId, Vec2>>>;
 }
 
 export interface ResolveCooperativeEpisodeTickInput {
@@ -83,8 +85,16 @@ function distance(a: Vec2, b: Vec2): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-function actorPosition(frame: CooperativeEpisodePostPhysicsFrame, actorId: ActorId): Vec2 {
-  return actorId === "player" ? frame.playerPosition : frame.companionPosition;
+function actorPosition(
+  frame: CooperativeEpisodePostPhysicsFrame,
+  actorId: CooperativeEpisodeParticipantId
+): Vec2 {
+  if (actorId === "player") return frame.playerPosition;
+  const value = frame.squadPositions[actorId];
+  if (!value) {
+    throw new Error(`Cooperative episode missing post-physics position for ${actorId}.`);
+  }
+  return value;
 }
 
 function normalize(value: Vec2): Vec2 {
@@ -135,7 +145,7 @@ function assertRules(rules: CooperativeEpisodeRules): void {
 function validateAttempts(
   attempts: readonly CooperativeEpisodeActionAttempt[]
 ): CooperativeEpisodeActionAttempt[] {
-  const byActor = new Map<ActorId, CooperativeEpisodeActionAttempt>();
+  const byActor = new Map<CooperativeEpisodeParticipantId, CooperativeEpisodeActionAttempt>();
   for (const attempt of attempts) {
     if (attempt.kind !== "REPEL" || attempt.targetId !== "hostile") {
       throw new Error("Cooperative episode only accepts REPEL attempts against hostile.");
@@ -194,7 +204,7 @@ function actionOutcomes(
 
 function drivenBackDirection(
   frame: CooperativeEpisodePostPhysicsFrame,
-  successfulActors: readonly ActorId[]
+  successfulActors: readonly CooperativeEpisodeParticipantId[]
 ): Vec2 {
   if (successfulActors.length === 0) {
     return normalize({
