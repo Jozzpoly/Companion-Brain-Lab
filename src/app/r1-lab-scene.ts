@@ -1610,6 +1610,12 @@ export class R1LabScene extends Phaser.Scene {
           `phase ${this.cooperativeEpisode.phase} · cycle ${this.cooperativeEpisode.cycle + 1} · remaining ${this.cooperativeEpisode.phaseTicksRemaining}t`,
           `last world outcome ${this.cooperativeEpisode.lastOutcome} · outcome tick ${this.cooperativeEpisode.lastOutcomeTick ?? "none"}`,
           `repelled by ${this.cooperativeEpisode.repelledBy.join(", ") || "none"}`,
+          (() => {
+            const hostile = actor(snapshot, "hostile");
+            const player = actor(snapshot, "player");
+            const manualCompanion = actor(snapshot, "companion");
+            return `hostile ${compact(hostile.position.x)}, ${compact(hostile.position.y)} · player distance ${compact(distance(hostile.position, player.position))}m · companion distance ${compact(distance(hostile.position, manualCompanion.position))}m`;
+          })(),
           this.lastCooperativeEpisodeActionOutcomes.length > 0
             ? `latest attempts ${this.lastCooperativeEpisodeActionOutcomes.map((outcome) => `${outcome.actorId}:${outcome.status}@${compact(outcome.distance)}m`).join(" · ")}`
             : "latest attempts none",
