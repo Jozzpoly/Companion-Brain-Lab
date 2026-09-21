@@ -111,7 +111,7 @@ export class SquadFieldLabPanel {
         <h2>Cooperative pressure</h2>
         <div class="squad-field-debug-lines">
           <div>phase ${state.cooperativeEpisode.phase} · cycle ${state.cooperativeEpisode.cycle + 1} · remaining ${state.cooperativeEpisode.phaseTicksRemaining}t</div>
-          <div>latest World outcome ${state.cooperativeEpisodeOutcome} · remembered ${state.cooperativeEpisode.lastOutcome}</div>
+          <div>this-step outcome ${state.cooperativeEpisodeOutcome} · remembered ${state.cooperativeEpisode.lastOutcome}</div>
           <div>repelled by ${state.cooperativeEpisode.repelledBy.join(", ") || "none"}</div>
           <div>attempts ${state.cooperativeActionOutcomes.length > 0
             ? state.cooperativeActionOutcomes.map((outcome) => `${outcome.actorId}:${outcome.status}@${fmt(outcome.distance)}m`).join(" · ")
