@@ -19,7 +19,7 @@ import type {
   CooperativeEpisodeParticipantId,
   CooperativeEpisodeSnapshot
 } from "../world/cooperative-episode-contract";
-import { squadFieldLabScenario } from "../world/scenarios";
+import { squadFieldLabScenario, type FieldLabSpawnOverrides } from "../world/scenarios";
 import type {
   ActorSnapshot,
   ExperimentalSquadMotionIntent,
@@ -133,6 +133,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
   private latestCooperativeEpisodeOutcome: CooperativeEpisodeOutcome = "NONE";
   private lastCooperativeActionOutcomes: readonly CooperativeEpisodeActionOutcome[] = [];
   private pendingCooperativeAttempts: CooperativeEpisodeActionAttempt[] = [];
+  private positionMemory: FieldLabSpawnOverrides = { squad: {} };
   private readonly eventLog: string[] = [];
 
   private keys!: Record<
@@ -178,21 +179,21 @@ export class SquadFieldLabScene extends Phaser.Scene {
         const before = this.situation;
         this.situation = situation;
         this.log(`situation ${before} -> ${situation} · preserving squad control state`);
-        void this.loadWorld();
+        void this.loadWorld(true);
       },
       onLayout: (layout) => {
         if (this.layout === layout) return;
         const before = this.layout;
         this.layout = layout;
         this.log(`layout ${before} -> ${layout} · preserving squad control state`);
-        void this.loadWorld();
+        void this.loadWorld(true);
       },
       onSquadSize: (count) => {
         const before = this.control.snapshot().activeMembers.length;
         if (before === count) return;
         this.control.setActiveCount(count);
         this.log(`squad size ${before} -> ${count} · rebuilding real World roster`);
-        void this.loadWorld();
+        void this.loadWorld(true);
       },
       onSelect: (memberId, additive) => {
         additive ? this.control.toggleSelected(memberId) : this.control.selectOnly(memberId);
@@ -274,7 +275,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       this.draggingSlot = null;
     });
 
-    void this.loadWorld();
+    void this.loadWorld(false);
   }
 
   update(_time: number, deltaMs: number): void {
@@ -382,7 +383,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keys.situation)) {
       this.situation = this.situation === "TRAINING" ? "PRESSURE" : "TRAINING";
       this.log(`situation -> ${this.situation}`);
-      void this.loadWorld();
+      void this.loadWorld(true);
     }
     if (Phaser.Input.Keyboard.JustDown(this.keys.playerAction)) {
       this.queueCooperativeAttempt("player");
@@ -422,7 +423,8 @@ export class SquadFieldLabScene extends Phaser.Scene {
       this.log(`time ${TIME_SCALES[this.timeScaleIndex]}x`);
     }
     if (Phaser.Input.Keyboard.JustDown(this.keys.reset)) {
-      void this.loadWorld();
+      this.log("authored position reset requested");
+      void this.loadWorld(false);
     }
   }
 
@@ -836,14 +838,35 @@ export class SquadFieldLabScene extends Phaser.Scene {
     }
   }
 
+  private rememberCurrentPositions(): void {
+    if (!this.snapshotValue) return;
+    const rememberedSquad: Partial<Record<SquadMemberId, Vec2>> = {
+      ...(this.positionMemory.squad ?? {})
+    };
+    const playerBody = this.snapshotValue.actors.find((entry) => entry.id === "player");
+    for (const memberId of FIELD_LAB_SQUAD_MEMBERS) {
+      const body = this.snapshotValue.actors.find((entry) => entry.id === memberId);
+      if (body) rememberedSquad[memberId] = { ...body.position };
+    }
+    this.positionMemory = {
+      player: playerBody ? { ...playerBody.position } : this.positionMemory.player,
+      squad: rememberedSquad
+    };
+  }
+
   private log(value: string): void {
     const tick = this.snapshotValue?.tick ?? 0;
     this.eventLog.push(`t${tick} · ${value}`);
     if (this.eventLog.length > 80) this.eventLog.splice(0, this.eventLog.length - 80);
   }
 
-  private async loadWorld(): Promise<void> {
+  private async loadWorld(preservePositions: boolean): Promise<void> {
     if (this.loading) return;
+    if (preservePositions) {
+      this.rememberCurrentPositions();
+    } else {
+      this.positionMemory = { squad: {} };
+    }
     this.loading = true;
     const previous = this.world;
     try {
@@ -851,7 +874,8 @@ export class SquadFieldLabScene extends Phaser.Scene {
         squadFieldLabScenario(
           this.control.snapshot().activeMembers,
           this.situation,
-          this.layout
+          this.layout,
+          this.positionMemory
         )
       );
       previous?.dispose();
@@ -865,7 +889,8 @@ export class SquadFieldLabScene extends Phaser.Scene {
       this.latestCooperativeEpisodeOutcome = "NONE";
       this.cooperativeEpisode = next.cooperativeEpisode();
       this.log(
-        `Field Lab world reconstructed · ${this.situation}/${this.layout} · squad control state preserved`
+        `Field Lab world reconstructed · ${this.situation}/${this.layout} · ` +
+        `${preservePositions ? "positions + control preserved" : "authored default positions"}`
       );
       this.drawWorld(this.snapshotValue);
       this.updateUi(this.snapshotValue);
