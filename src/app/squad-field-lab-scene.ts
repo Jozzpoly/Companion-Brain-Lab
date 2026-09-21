@@ -12,6 +12,7 @@ import {
 } from "../squad/field-lab-squad-control";
 import { S0_STEP_SECONDS } from "../physics/rapier-physical-world";
 import { LabWorld } from "../world/world";
+import { squadFieldLabScenario } from "../world/scenarios";
 import type {
   ActorSnapshot,
   ExperimentalSquadMotionIntent,
@@ -133,6 +134,13 @@ export class SquadFieldLabScene extends Phaser.Scene {
 
     this.panel = new SquadFieldLabPanel();
     this.hud = new SquadFieldLabHud({
+      onSquadSize: (count) => {
+        const before = this.control.snapshot().activeMembers.length;
+        if (before === count) return;
+        this.control.setActiveCount(count);
+        this.log(`squad size ${before} -> ${count} · rebuilding real World roster`);
+        void this.loadWorld();
+      },
       onSelect: (memberId, additive) => {
         additive ? this.control.toggleSelected(memberId) : this.control.selectOnly(memberId);
         this.log(`${additive ? "toggle" : "select"} ${memberLabel(memberId)}`);
@@ -239,7 +247,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
     const player = actor(before, "player");
 
     const memberMoves = new Map<SquadMemberId, Vec2>();
-    for (const memberId of FIELD_LAB_SQUAD_MEMBERS) {
+    for (const memberId of control.activeMembers) {
       const body = actor(before, memberId);
       const target = this.control.targetFor(memberId, player.position);
       if (target.authority === "DIRECT") {
@@ -263,11 +271,12 @@ export class SquadFieldLabScene extends Phaser.Scene {
       { actorId: "player", move: playerMove },
       { actorId: "companion", move: memberMoves.get("companion") ?? { x: 0, y: 0 } }
     ];
-    const experimentalSquadMotionIntents: ExperimentalSquadMotionIntent[] = [
-      { bodyId: "squad-2", move: memberMoves.get("squad-2") ?? { x: 0, y: 0 } },
-      { bodyId: "squad-3", move: memberMoves.get("squad-3") ?? { x: 0, y: 0 } },
-      { bodyId: "squad-4", move: memberMoves.get("squad-4") ?? { x: 0, y: 0 } }
-    ];
+    const experimentalSquadMotionIntents: ExperimentalSquadMotionIntent[] = control.activeMembers
+      .filter((memberId): memberId is Exclude<SquadMemberId, "companion"> => memberId !== "companion")
+      .map((bodyId) => ({
+        bodyId,
+        move: memberMoves.get(bodyId) ?? { x: 0, y: 0 }
+      }));
 
     this.snapshotValue = this.world.stepSituation({
       motionIntents: canonicalIntents,
@@ -291,7 +300,10 @@ export class SquadFieldLabScene extends Phaser.Scene {
       [this.keys.three, "squad-3"],
       [this.keys.four, "squad-4"]
     ] as const) {
-      if (Phaser.Input.Keyboard.JustDown(key)) {
+      if (
+        Phaser.Input.Keyboard.JustDown(key) &&
+        this.control.snapshot().activeMembers.includes(memberId)
+      ) {
         this.control.selectOnly(memberId);
         this.log(`select ${memberLabel(memberId)}`);
       }
@@ -405,7 +417,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
   private memberAt(point: Vec2): SquadMemberId | null {
     if (!this.snapshotValue) return null;
     let best: { id: SquadMemberId; distance: number } | null = null;
-    for (const memberId of FIELD_LAB_SQUAD_MEMBERS) {
+    for (const memberId of this.control.snapshot().activeMembers) {
       const body = actor(this.snapshotValue, memberId);
       const d = distance(point, body.position);
       if (d <= body.radius + 0.18 && (!best || d < best.distance)) {
@@ -420,7 +432,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
     const player = actor(this.snapshotValue, "player");
     const selected = new Set(this.control.snapshot().selected);
     let best: { id: SquadMemberId; distance: number } | null = null;
-    for (const memberId of FIELD_LAB_SQUAD_MEMBERS) {
+    for (const memberId of this.control.snapshot().activeMembers) {
       if (!selected.has(memberId)) continue;
       const target = this.control.targetFor(memberId, player.position);
       if (!target.target) continue;
@@ -469,7 +481,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
 
     // Formation truth first: selected members get strong editable handles;
     // non-selected slots remain faint so the whole squad stays legible.
-    for (const memberId of FIELD_LAB_SQUAD_MEMBERS) {
+    for (const memberId of control.activeMembers) {
       const target = this.control.targetFor(memberId, player.position);
       if (!target.target) continue;
       const selected = control.selected.includes(memberId);
@@ -511,6 +523,10 @@ export class SquadFieldLabScene extends Phaser.Scene {
     this.playerLabel.setPosition(sx(playerBody.position.x), sy(playerBody.position.y));
 
     for (const memberId of FIELD_LAB_SQUAD_MEMBERS) {
+      const label = this.labels.get(memberId);
+      const active = control.activeMembers.includes(memberId);
+      label?.setVisible(active);
+      if (!active) continue;
       const body = actor(snapshot, memberId);
       const selected = control.selected.includes(memberId);
       const focused = control.focused === memberId;
@@ -534,7 +550,6 @@ export class SquadFieldLabScene extends Phaser.Scene {
         this.graphics.strokeCircle(sx(body.position.x), sy(body.position.y), body.radius * scale + 16);
       }
 
-      const label = this.labels.get(memberId);
       label?.setPosition(sx(body.position.x), sy(body.position.y));
       label?.setColor(focused ? "#ffffff" : "#ffe09a");
     }
@@ -579,7 +594,9 @@ export class SquadFieldLabScene extends Phaser.Scene {
     this.loading = true;
     const previous = this.world;
     try {
-      const next = await LabWorld.create("squad-field-lab");
+      const next = await LabWorld.createFromSpec(
+        squadFieldLabScenario(this.control.snapshot().activeMembers)
+      );
       previous?.dispose();
       this.world = next;
       this.snapshotValue = next.snapshot();
