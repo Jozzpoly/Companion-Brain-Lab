@@ -69,6 +69,18 @@ export const SCENARIOS: Readonly<Record<ScenarioId, ScenarioSpec>> = {
       actor("hostile", 8.5, 4, { radius: 0.32, speed: 1.4, collisionMode: "sensor" })
     ],
     obstacles: []
+  },
+  "cooperative-episode": {
+    id: "cooperative-episode",
+    label: "Cooperative episode · manual baseline",
+    width: WIDTH,
+    height: HEIGHT,
+    actors: [
+      actor("player", 3, 4),
+      actor("companion", 5.2, 4),
+      actor("hostile", 10.4, 4, { radius: 0.34, speed: 1.8, collisionMode: "sensor" })
+    ],
+    obstacles: []
   }
 };
 
