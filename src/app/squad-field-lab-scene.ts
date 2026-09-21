@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { SquadFieldLabHud } from "./squad-field-lab-hud";
+import { SquadFieldLabHud, type FieldLabSituation } from "./squad-field-lab-hud";
 import { SquadFieldLabPanel, type FieldLabMemberStatus } from "../debug/squad-field-lab-panel";
 import {
   FIELD_LAB_SQUAD_MEMBERS,
@@ -12,6 +12,13 @@ import {
 } from "../squad/field-lab-squad-control";
 import { S0_STEP_SECONDS } from "../physics/rapier-physical-world";
 import { LabWorld } from "../world/world";
+import type {
+  CooperativeEpisodeActionAttempt,
+  CooperativeEpisodeActionOutcome,
+  CooperativeEpisodeOutcome,
+  CooperativeEpisodeParticipantId,
+  CooperativeEpisodeSnapshot
+} from "../world/cooperative-episode-contract";
 import { squadFieldLabScenario } from "../world/scenarios";
 import type {
   ActorSnapshot,
@@ -48,7 +55,7 @@ function normalizedMotion(x: number, y: number): Vec2 {
   return length > 1 ? { x: x / length, y: y / length } : { x, y };
 }
 
-function actor(snapshot: WorldSnapshot, id: SquadMemberId | "player"): ActorSnapshot {
+function actor(snapshot: WorldSnapshot, id: SquadMemberId | "player" | "hostile"): ActorSnapshot {
   const value = snapshot.actors.find((entry) => entry.id === id);
   if (!value) throw new Error(`Squad Field Lab missing body: ${id}`);
   return value;
@@ -109,6 +116,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
   private readonly control = new FieldLabSquadControl();
   private readonly labels = new Map<SquadMemberId, Phaser.GameObjects.Text>();
   private playerLabel!: Phaser.GameObjects.Text;
+  private hostileLabel!: Phaser.GameObjects.Text;
 
   private accumulator = 0;
   private paused = false;
@@ -117,11 +125,17 @@ export class SquadFieldLabScene extends Phaser.Scene {
   private timeScaleIndex = 1;
   private transform: RenderTransform = { scale: 1, offsetX: 0, offsetY: 0 };
   private draggingSlot: SquadMemberId | null = null;
+  private situation: FieldLabSituation = "TRAINING";
+  private cooperativeEpisode: CooperativeEpisodeSnapshot | null = null;
+  private latestCooperativeEpisodeOutcome: CooperativeEpisodeOutcome = "NONE";
+  private lastCooperativeActionOutcomes: readonly CooperativeEpisodeActionOutcome[] = [];
+  private pendingCooperativeAttempts: CooperativeEpisodeActionAttempt[] = [];
   private readonly eventLog: string[] = [];
 
   private keys!: Record<
     "w" | "a" | "s" | "d" | "up" | "down" | "left" | "right" |
-    "tab" | "direct" | "reset" | "pause" | "step" | "time" |
+    "tab" | "direct" | "reset" | "pause" | "step" | "time" | "situation" |
+    "playerAction" | "focusedAction" | "selectedAction" |
     "one" | "two" | "three" | "four",
     Phaser.Input.Keyboard.Key
   >;
@@ -139,6 +153,12 @@ export class SquadFieldLabScene extends Phaser.Scene {
       color: "#9ecbff"
     }).setOrigin(0.5, 1.8).setDepth(4);
 
+    this.hostileLabel = this.add.text(0, 0, "THREAT", {
+      fontFamily: "ui-monospace, monospace",
+      fontSize: "11px",
+      color: "#ff9b5e"
+    }).setOrigin(0.5, 1.9).setDepth(4).setVisible(false);
+
     for (const memberId of FIELD_LAB_SQUAD_MEMBERS) {
       const label = this.add.text(0, 0, memberLabel(memberId), {
         fontFamily: "ui-monospace, monospace",
@@ -150,6 +170,13 @@ export class SquadFieldLabScene extends Phaser.Scene {
 
     this.panel = new SquadFieldLabPanel();
     this.hud = new SquadFieldLabHud({
+      onSituation: (situation) => {
+        if (this.situation === situation) return;
+        const before = this.situation;
+        this.situation = situation;
+        this.log(`situation ${before} -> ${situation} · preserving squad control state`);
+        void this.loadWorld();
+      },
       onSquadSize: (count) => {
         const before = this.control.snapshot().activeMembers.length;
         if (before === count) return;
@@ -182,7 +209,14 @@ export class SquadFieldLabScene extends Phaser.Scene {
       },
       onSpacing: (value) => this.control.setSpacingScale(value),
       onResponsiveness: (value) => this.control.setResponsiveness(value),
-      onTolerance: (value) => this.control.setSlotTolerance(value)
+      onTolerance: (value) => this.control.setSlotTolerance(value),
+      onPlayerRepel: () => this.queueCooperativeAttempt("player"),
+      onFocusedRepel: () => this.queueCooperativeAttempt(this.control.snapshot().focused),
+      onSelectedRepel: () => {
+        for (const memberId of this.control.snapshot().selected) {
+          this.queueCooperativeAttempt(memberId);
+        }
+      }
     });
 
     const keyboard = this.input.keyboard;
@@ -202,6 +236,10 @@ export class SquadFieldLabScene extends Phaser.Scene {
       pause: Phaser.Input.Keyboard.KeyCodes.P,
       step: Phaser.Input.Keyboard.KeyCodes.O,
       time: Phaser.Input.Keyboard.KeyCodes.T,
+      situation: Phaser.Input.Keyboard.KeyCodes.G,
+      playerAction: Phaser.Input.Keyboard.KeyCodes.E,
+      focusedAction: Phaser.Input.Keyboard.KeyCodes.ENTER,
+      selectedAction: Phaser.Input.Keyboard.KeyCodes.SPACE,
       one: Phaser.Input.Keyboard.KeyCodes.ONE,
       two: Phaser.Input.Keyboard.KeyCodes.TWO,
       three: Phaser.Input.Keyboard.KeyCodes.THREE,
@@ -213,7 +251,9 @@ export class SquadFieldLabScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.UP,
       Phaser.Input.Keyboard.KeyCodes.DOWN,
       Phaser.Input.Keyboard.KeyCodes.LEFT,
-      Phaser.Input.Keyboard.KeyCodes.RIGHT
+      Phaser.Input.Keyboard.KeyCodes.RIGHT,
+      Phaser.Input.Keyboard.KeyCodes.SPACE,
+      Phaser.Input.Keyboard.KeyCodes.ENTER
     ]);
 
     this.input.mouse?.disableContextMenu();
@@ -294,10 +334,29 @@ export class SquadFieldLabScene extends Phaser.Scene {
         move: memberMoves.get(bodyId) ?? { x: 0, y: 0 }
       }));
 
-    this.snapshotValue = this.world.stepSituation({
+    const cooperativeEpisodeAttempts =
+      this.situation === "PRESSURE" ? this.pendingCooperativeAttempts.splice(0) : [];
+    const result = this.world.stepSituation({
       motionIntents: canonicalIntents,
-      experimentalSquadMotionIntents
-    }).snapshot;
+      experimentalSquadMotionIntents,
+      cooperativeEpisodeAttempts
+    });
+    this.snapshotValue = result.snapshot;
+    this.cooperativeEpisode = result.cooperativeEpisode;
+    this.lastCooperativeActionOutcomes = result.cooperativeEpisodeActionOutcomes;
+    this.latestCooperativeEpisodeOutcome = result.cooperativeEpisodeOutcome;
+
+    for (const outcome of result.cooperativeEpisodeActionOutcomes) {
+      this.log(
+        `REPEL ${String(outcome.actorId)} -> ${outcome.status} @ ${outcome.distance.toFixed(2)}m`
+      );
+    }
+    if (result.cooperativeEpisodeOutcome !== "NONE") {
+      this.log(
+        `pressure outcome ${result.cooperativeEpisodeOutcome} · ` +
+        `repelled by ${result.cooperativeEpisode?.repelledBy.join(", ") || "none"}`
+      );
+    }
   }
 
   private handleKeyboard(): void {
@@ -309,6 +368,22 @@ export class SquadFieldLabScene extends Phaser.Scene {
       const state = this.control.snapshot();
       const next = this.control.setDirectControl(!state.directControl);
       this.log(`direct ${memberLabel(next.focused)} ${next.directControl ? "ON" : "off"}`);
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.keys.situation)) {
+      this.situation = this.situation === "TRAINING" ? "PRESSURE" : "TRAINING";
+      this.log(`situation -> ${this.situation}`);
+      void this.loadWorld();
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.keys.playerAction)) {
+      this.queueCooperativeAttempt("player");
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.keys.focusedAction)) {
+      this.queueCooperativeAttempt(this.control.snapshot().focused);
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.keys.selectedAction)) {
+      for (const memberId of this.control.snapshot().selected) {
+        this.queueCooperativeAttempt(memberId);
+      }
     }
     for (const [key, memberId] of [
       [this.keys.one, "companion"],
@@ -339,6 +414,29 @@ export class SquadFieldLabScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keys.reset)) {
       void this.loadWorld();
     }
+  }
+
+  private queueCooperativeAttempt(actorId: CooperativeEpisodeParticipantId): void {
+    if (this.situation !== "PRESSURE" || !this.cooperativeEpisode) {
+      this.log(`REPEL ignored · pressure inactive · ${String(actorId)}`);
+      return;
+    }
+    if (
+      actorId !== "player" &&
+      !this.control.snapshot().activeMembers.includes(actorId)
+    ) {
+      this.log(`REPEL ignored · inactive squad member ${String(actorId)}`);
+      return;
+    }
+    if (this.pendingCooperativeAttempts.some((attempt) => attempt.actorId === actorId)) {
+      return;
+    }
+    this.pendingCooperativeAttempts.push({
+      actorId,
+      kind: "REPEL",
+      targetId: "hostile"
+    });
+    this.log(`REPEL queued · ${String(actorId)}`);
   }
 
   private issueOrderFromHud(mode: SquadOrderMode): void {
@@ -492,6 +590,8 @@ export class SquadFieldLabScene extends Phaser.Scene {
       );
     }
 
+    this.drawCooperativePressure(snapshot, sx, sy, scale);
+
     const control = this.control.snapshot();
     const player = actor(snapshot, "player");
 
@@ -595,7 +695,12 @@ export class SquadFieldLabScene extends Phaser.Scene {
 
   private updateUi(snapshot: WorldSnapshot): void {
     const state = this.control.snapshot();
-    this.hud.update({ control: state });
+    this.hud.update({
+      control: state,
+      situation: this.situation,
+      episode: this.cooperativeEpisode,
+      latestEpisodeOutcome: this.latestCooperativeEpisodeOutcome
+    });
     const focusedBody = actor(snapshot, state.focused);
     const player = actor(snapshot, "player");
     const focusedTarget = this.control.targetFor(state.focused, player.position);
@@ -628,8 +733,94 @@ export class SquadFieldLabScene extends Phaser.Scene {
       focusedBody,
       focusedTarget,
       memberStatuses,
+      cooperativeEpisode: this.cooperativeEpisode,
+      cooperativeEpisodeOutcome: this.latestCooperativeEpisodeOutcome,
+      cooperativeActionOutcomes: this.lastCooperativeActionOutcomes,
       recentEvents: this.eventLog
     });
+  }
+
+  private drawCooperativePressure(
+    snapshot: WorldSnapshot,
+    sx: (x: number) => number,
+    sy: (y: number) => number,
+    scale: number
+  ): void {
+    const episode = this.cooperativeEpisode;
+    const hostile = snapshot.actors.find((entry) => entry.id === "hostile");
+    if (!episode || !hostile) {
+      this.hostileLabel.setVisible(false);
+      return;
+    }
+
+    const x = sx(hostile.position.x);
+    const y = sy(hostile.position.y);
+    const bodyR = hostile.radius * scale;
+    const threatColor = episode.phase === "PRESSURING" ? 0xff5d66 : 0xff9b5e;
+
+    this.hostileLabel.setVisible(true);
+    this.hostileLabel.setPosition(x, y);
+    this.hostileLabel.setColor(episode.phase === "PRESSURING" ? "#ff7b72" : "#ffb07a");
+
+    this.graphics.fillStyle(
+      episode.phase === "DRIVEN_BACK" && episode.lastOutcome === "REPELLED"
+        ? 0x7ee787
+        : episode.phase === "CALM"
+          ? 0x6e7681
+          : threatColor,
+      1
+    );
+    this.graphics.fillCircle(x, y, bodyR);
+    this.graphics.lineStyle(3, 0xf0f6fc, 0.82);
+    this.graphics.strokeCircle(x, y, bodyR);
+
+    if (episode.phase === "APPROACHING" || episode.phase === "PRESSURING") {
+      this.graphics.lineStyle(3, threatColor, 0.9);
+      for (let index = 0; index < 8; index += 1) {
+        const angle = (Math.PI * 2 * index) / 8;
+        const dx = Math.cos(angle);
+        const dy = Math.sin(angle);
+        this.graphics.lineBetween(
+          x + dx * bodyR * 1.15,
+          y + dy * bodyR * 1.15,
+          x + dx * bodyR * 1.55,
+          y + dy * bodyR * 1.55
+        );
+      }
+    }
+
+    if (episode.phase === "PRESSURING") {
+      const player = actor(snapshot, "player");
+      this.graphics.lineStyle(4, 0xff5d66, 0.72);
+      this.graphics.lineBetween(x, y, sx(player.position.x), sy(player.position.y));
+      const progress = Math.max(0, Math.min(1, episode.phaseTicksRemaining / 72));
+      this.graphics.lineStyle(3, 0xff5d66, 0.7);
+      this.graphics.strokeCircle(x, y, bodyR * (1.8 + (1 - progress) * 1.5));
+    }
+
+    if (episode.phase === "DRIVEN_BACK" && episode.lastOutcome === "REPELLED") {
+      const r = bodyR * 1.65;
+      this.graphics.lineStyle(5, 0x7ee787, 0.95);
+      this.graphics.lineBetween(x - r, y - r, x + r, y + r);
+      this.graphics.lineBetween(x - r, y + r, x + r, y - r);
+      for (const contributor of episode.repelledBy) {
+        const source = snapshot.actors.find((entry) => entry.id === contributor);
+        if (!source) continue;
+        this.graphics.lineStyle(3, 0x7ee787, 0.86);
+        this.graphics.lineBetween(sx(source.position.x), sy(source.position.y), x, y);
+      }
+    }
+
+    if (episode.phase === "DRIVEN_BACK" && episode.lastOutcome === "PLAYER_HIT") {
+      const player = actor(snapshot, "player");
+      const px = sx(player.position.x);
+      const py = sy(player.position.y);
+      const r = player.radius * scale * 2.0;
+      this.graphics.lineStyle(5, 0xff5d66, 0.92);
+      this.graphics.strokeCircle(px, py, r);
+      this.graphics.lineBetween(px - r, py, px + r, py);
+      this.graphics.lineBetween(px, py - r, px, py + r);
+    }
   }
 
   private log(value: string): void {
@@ -644,7 +835,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
     const previous = this.world;
     try {
       const next = await LabWorld.createFromSpec(
-        squadFieldLabScenario(this.control.snapshot().activeMembers)
+        squadFieldLabScenario(this.control.snapshot().activeMembers, this.situation)
       );
       previous?.dispose();
       this.world = next;
@@ -652,7 +843,13 @@ export class SquadFieldLabScene extends Phaser.Scene {
       this.accumulator = 0;
       this.singleStepQueued = false;
       this.draggingSlot = null;
-      this.log("Field Lab world reconstructed · squad control state preserved");
+      this.pendingCooperativeAttempts = [];
+      this.lastCooperativeActionOutcomes = [];
+      this.latestCooperativeEpisodeOutcome = "NONE";
+      this.cooperativeEpisode = next.cooperativeEpisode();
+      this.log(
+        `Field Lab world reconstructed · ${this.situation} · squad control state preserved`
+      );
       this.drawWorld(this.snapshotValue);
       this.updateUi(this.snapshotValue);
     } finally {
