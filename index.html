@@ -195,6 +195,32 @@
         grid-template-columns:repeat(4,minmax(0,1fr));
         gap:5px;
       }
+      .squad-lab-situation-grid {
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:5px;
+      }
+      .squad-lab-pressure-block {
+        display:grid;
+        gap:6px;
+        padding:8px;
+        border:1px solid #30363d;
+        border-radius:7px;
+        background:#11161d;
+      }
+      .squad-lab-pressure-block[hidden] { display:none; }
+      .squad-lab-pressure-block[data-tone="warning"] { border-color:rgba(227,179,65,.7); }
+      .squad-lab-pressure-block[data-tone="danger"] { border-color:rgba(255,93,102,.8); }
+      .squad-lab-pressure-block[data-tone="success"] { border-color:rgba(126,231,135,.65); }
+      .squad-lab-pressure-status {
+        color:#c9d1d9;
+        font:10px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      }
+      .squad-lab-pressure-actions {
+        display:grid;
+        grid-template-columns:1fr;
+        gap:5px;
+      }
       .squad-lab-roster {
         display:grid;
         grid-template-columns:repeat(5,minmax(0,1fr));
