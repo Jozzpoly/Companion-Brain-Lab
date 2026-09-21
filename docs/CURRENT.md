@@ -828,3 +828,37 @@ Canonical deployment record:
 
 Do not add another cognition/mechanism tranche before this Owner judgement unless a deployment/runtime defect is discovered.
 
+---
+
+## 14. Owner evidence retracts S7 promotion — 2026-09-21
+
+**This section supersedes section 13's “S7 — INTEGRATED OWNER JUDGEMENT” promotion.**
+
+Owner participant evidence from the public readiness specimen invalidated the gate design.
+
+The Owner reported that `E` and `Q` appeared to do nothing. Review confirms:
+
+- Q input was technically registered at least once, but produced no sufficiently legible material change;
+- E is only valid during hidden `WINDUP` and within intervention range;
+- `WINDUP` is 45 ticks at 60 Hz = **0.75 s**;
+- invalid/out-of-range E attempts are intentionally hidden from the participant surface;
+- the public smoke used hidden causal state as an oracle to time Q/E and therefore did not establish human usability.
+
+More importantly, the project controller's S5 multi-beat continuity gate was never earned before S7 was declared.
+
+Therefore:
+
+> **S7 PROMOTION RETRACTED · PUBLIC READINESS BUILD IS DIAGNOSTIC EVIDENCE, NOT THE CURRENT OWNER TEST**
+
+Readiness remains machine-qualified as a bounded mechanism.
+
+The active frontier is now:
+
+> **earn S5 through a continuous, game-like cooperative episode before another Owner gate is prepared.**
+
+Canonical reassessment:
+
+`docs/OWNER_GATE_REASSESSMENT_2026-09-21.md`
+
+Do not respond by merely making E/Q louder or by preparing another test wrapper. The missing work is experiential/world/behavioral composition.
+
