@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { SquadFieldLabHud, type FieldLabSituation } from "./squad-field-lab-hud";
+import { SquadFieldLabHud } from "./squad-field-lab-hud";
 import { SquadFieldLabPanel, type FieldLabMemberStatus } from "../debug/squad-field-lab-panel";
 import {
   FIELD_LAB_SQUAD_MEMBERS,
@@ -23,6 +23,8 @@ import { squadFieldLabScenario } from "../world/scenarios";
 import type {
   ActorSnapshot,
   ExperimentalSquadMotionIntent,
+  FieldLabLayout,
+  FieldLabSituation,
   MotionIntent,
   SquadMemberId,
   Vec2,
@@ -126,6 +128,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
   private transform: RenderTransform = { scale: 1, offsetX: 0, offsetY: 0 };
   private draggingSlot: SquadMemberId | null = null;
   private situation: FieldLabSituation = "TRAINING";
+  private layout: FieldLabLayout = "MIXED";
   private cooperativeEpisode: CooperativeEpisodeSnapshot | null = null;
   private latestCooperativeEpisodeOutcome: CooperativeEpisodeOutcome = "NONE";
   private lastCooperativeActionOutcomes: readonly CooperativeEpisodeActionOutcome[] = [];
@@ -175,6 +178,13 @@ export class SquadFieldLabScene extends Phaser.Scene {
         const before = this.situation;
         this.situation = situation;
         this.log(`situation ${before} -> ${situation} · preserving squad control state`);
+        void this.loadWorld();
+      },
+      onLayout: (layout) => {
+        if (this.layout === layout) return;
+        const before = this.layout;
+        this.layout = layout;
+        this.log(`layout ${before} -> ${layout} · preserving squad control state`);
         void this.loadWorld();
       },
       onSquadSize: (count) => {
@@ -698,6 +708,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
     this.hud.update({
       control: state,
       situation: this.situation,
+      layout: this.layout,
       episode: this.cooperativeEpisode,
       latestEpisodeOutcome: this.latestCooperativeEpisodeOutcome
     });
@@ -835,7 +846,11 @@ export class SquadFieldLabScene extends Phaser.Scene {
     const previous = this.world;
     try {
       const next = await LabWorld.createFromSpec(
-        squadFieldLabScenario(this.control.snapshot().activeMembers, this.situation)
+        squadFieldLabScenario(
+          this.control.snapshot().activeMembers,
+          this.situation,
+          this.layout
+        )
       );
       previous?.dispose();
       this.world = next;
@@ -848,7 +863,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       this.latestCooperativeEpisodeOutcome = "NONE";
       this.cooperativeEpisode = next.cooperativeEpisode();
       this.log(
-        `Field Lab world reconstructed · ${this.situation} · squad control state preserved`
+        `Field Lab world reconstructed · ${this.situation}/${this.layout} · squad control state preserved`
       );
       this.drawWorld(this.snapshotValue);
       this.updateUi(this.snapshotValue);
