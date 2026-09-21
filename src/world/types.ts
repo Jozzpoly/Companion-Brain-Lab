@@ -9,6 +9,8 @@ export type ActorId = "player" | "companion";
  */
 export type ExperimentalSquadMemberId = "squad-2" | "squad-3" | "squad-4";
 export type SquadMemberId = "companion" | ExperimentalSquadMemberId;
+export type FieldLabSituation = "TRAINING" | "PRESSURE";
+export type FieldLabLayout = "OPEN" | "DOORWAY" | "PILLAR" | "MIXED";
 export type WorldBodyId = ActorId | ExperimentalSquadMemberId | "hostile";
 export type ScenarioId =
   | "open"
