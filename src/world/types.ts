@@ -17,7 +17,8 @@ export type ScenarioId =
   | "head-on"
   | "shared-danger"
   | "cooperative-episode"
-  | "squad-field-lab";
+  | "squad-field-lab"
+  | "squad-field-lab-pressure";
 
 export interface Vec2 {
   x: number;
