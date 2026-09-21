@@ -7,6 +7,7 @@ import {
 import type { SquadMemberId } from "../world/types";
 
 export interface SquadFieldLabHudCallbacks {
+  onSquadSize(count: number): void;
   onSelect(memberId: SquadMemberId, additive: boolean): void;
   onSelectAll(): void;
   onCycleFocus(direction: 1 | -1): void;
@@ -83,6 +84,19 @@ export class SquadFieldLabHud {
     const heading = document.createElement("div");
     heading.className = "squad-lab-heading";
     heading.textContent = "Companion / Squad Field Lab";
+
+    const sizeHeading = document.createElement("div");
+    sizeHeading.className = "squad-lab-section-title";
+    sizeHeading.textContent = "Deployed squad";
+
+    const sizeRow = document.createElement("div");
+    sizeRow.className = "squad-lab-size-grid";
+    for (const count of [1, 2, 3, 4]) {
+      const sizeButton = button(String(count));
+      sizeButton.dataset.squadSize = String(count);
+      sizeButton.addEventListener("click", () => callbacks.onSquadSize(count));
+      sizeRow.append(sizeButton);
+    }
 
     const sub = document.createElement("div");
     sub.className = "squad-lab-sub";
@@ -161,6 +175,8 @@ export class SquadFieldLabHud {
 
     this.root.append(
       heading,
+      sizeHeading,
+      sizeRow,
       sub,
       roster,
       focusRow,
@@ -176,18 +192,26 @@ export class SquadFieldLabHud {
       this.orderStatus,
       footer
     );
-    gamePane.append(this.root);
+    gamePane.parentElement?.insertBefore(this.root, gamePane);
   }
 
   update(state: SquadFieldLabHudState): void {
     const { control } = state;
     for (const [memberId, entry] of this.rosterButtons) {
+      const active = control.activeMembers.includes(memberId);
       const selected = control.selected.includes(memberId);
       const focused = control.focused === memberId;
+      entry.disabled = !active;
+      entry.classList.toggle("is-inactive", !active);
       entry.classList.toggle("is-selected", selected);
       entry.classList.toggle("is-focused", focused);
       entry.setAttribute("aria-pressed", String(selected));
       entry.textContent = `${LABELS[memberId]}${focused ? " ★" : ""}`;
+    }
+
+    for (const sizeButton of this.root.querySelectorAll<HTMLButtonElement>("[data-squad-size]")) {
+      const count = Number(sizeButton.dataset.squadSize);
+      sizeButton.classList.toggle("is-active", count === control.activeMembers.length);
     }
 
     this.directButton.classList.toggle("is-active", control.directControl);
@@ -203,10 +227,10 @@ export class SquadFieldLabHud {
     this.tolerance.value.textContent = control.dynamics.slotTolerance.toFixed(2);
 
     this.status.textContent =
-      `Selected ${control.selected.map((id) => LABELS[id]).join(" + ")} · focus ${LABELS[control.focused]} · ` +
+      `Squad ${control.activeMembers.length} · selected ${control.selected.map((id) => LABELS[id]).join(" + ")} · focus ${LABELS[control.focused]} · ` +
       `orientation ${Math.round(control.orientationRadians * 180 / Math.PI)}°`;
 
-    this.orderStatus.textContent = FIELD_LAB_SQUAD_MEMBERS
+    this.orderStatus.textContent = control.activeMembers
       .map((memberId) => {
         const assignment = control.assignments.find((value) => value.memberId === memberId);
         return `${LABELS[memberId]} ${assignment?.mode ?? "?"}`;
