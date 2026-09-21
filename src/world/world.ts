@@ -12,6 +12,15 @@ import {
 } from "./authority-a0-step-evidence";
 import { movementCapabilityFromScenario, type MovementCapability } from "./movement-capability";
 import { scenario } from "./scenarios";
+import {
+  initialCooperativeEpisodeSnapshot,
+  resolveCooperativeEpisodeAfterPhysics,
+  type CooperativeEpisodeActionAttempt,
+  type CooperativeEpisodeActionOutcome,
+  type CooperativeEpisodeOutcome,
+  type CooperativeEpisodeRules,
+  type CooperativeEpisodeSnapshot
+} from "./cooperative-episode-contract";
 import { SharedPressureLoop, type SharedPressureSnapshot } from "./shared-pressure";
 import {
   initialSharedDangerSnapshot,
@@ -45,9 +54,21 @@ export const S1_SHARED_DANGER_RULES: SharedDangerRules = {
   recoveryTicks: 30
 };
 
+export const S5_COOPERATIVE_EPISODE_RULES: CooperativeEpisodeRules = {
+  repelRange: 1.15,
+  pressureRange: 0.82,
+  pressureBreakRange: 1.3,
+  pressureTicks: 60,
+  drivenBackTicks: 45,
+  calmTicks: 90,
+  home: { x: 10.4, y: 4 },
+  homeArrivalRange: 0.18
+};
+
 export interface WorldSituationStepInput {
   motionIntents: readonly MotionIntent[];
   actionAttempts?: readonly WorldActionAttempt[];
+  cooperativeEpisodeAttempts?: readonly CooperativeEpisodeActionAttempt[];
 }
 
 export interface WorldSituationStepResult {
@@ -55,6 +76,9 @@ export interface WorldSituationStepResult {
   actionOutcomes: readonly WorldActionOutcome[];
   sharedDanger: SharedDangerSnapshot | null;
   episodeOutcome: SharedDangerEpisodeOutcome;
+  cooperativeEpisodeActionOutcomes: readonly CooperativeEpisodeActionOutcome[];
+  cooperativeEpisode: CooperativeEpisodeSnapshot | null;
+  cooperativeEpisodeOutcome: CooperativeEpisodeOutcome;
 }
 
 /** Public World-boundary timebase truth. Coordination must not import Rapier internals directly. */
@@ -89,6 +113,7 @@ export class LabWorld {
   private tickValue = 0;
   private latestAuthorityA0EvidenceValue: AuthorityA0WorldStepEvidence | null = null;
   private sharedDangerValue: SharedDangerSnapshot | null;
+  private cooperativeEpisodeValue: CooperativeEpisodeSnapshot | null;
 
   private constructor(
     private readonly scenarioIdValue: ScenarioId,
@@ -97,6 +122,10 @@ export class LabWorld {
   ) {
     this.sharedDangerValue =
       scenarioIdValue === "shared-danger" ? initialSharedDangerSnapshot() : null;
+    this.cooperativeEpisodeValue =
+      scenarioIdValue === "cooperative-episode"
+        ? initialCooperativeEpisodeSnapshot(S5_COOPERATIVE_EPISODE_RULES)
+        : null;
   }
 
   static async create(id: ScenarioId): Promise<LabWorld> {
@@ -128,6 +157,18 @@ export class LabWorld {
   sharedDanger(): SharedDangerSnapshot | null {
     return this.sharedDangerValue
       ? { ...this.sharedDangerValue, interruptedBy: [...this.sharedDangerValue.interruptedBy] }
+      : null;
+  }
+
+  cooperativeEpisode(): CooperativeEpisodeSnapshot | null {
+    return this.cooperativeEpisodeValue
+      ? {
+          ...this.cooperativeEpisodeValue,
+          repelledBy: [...this.cooperativeEpisodeValue.repelledBy],
+          drivenBackDirection: this.cooperativeEpisodeValue.drivenBackDirection
+            ? { ...this.cooperativeEpisodeValue.drivenBackDirection }
+            : null
+        }
       : null;
   }
 
@@ -163,9 +204,16 @@ export class LabWorld {
     if (!this.sharedDangerValue && actionAttempts.length > 0) {
       throw new Error("World action attempts require an active shared-danger apparatus.");
     }
+    const cooperativeEpisodeAttempts = input.cooperativeEpisodeAttempts ?? [];
+    if (!this.cooperativeEpisodeValue && cooperativeEpisodeAttempts.length > 0) {
+      throw new Error("Cooperative episode actions require the cooperative-episode scenario.");
+    }
 
     const before = this.snapshot();
-    const worldDrivenIntents = this.sharedDangerWorldMotion(before);
+    const worldDrivenIntents = [
+      ...this.sharedDangerWorldMotion(before),
+      ...this.cooperativeEpisodeWorldMotion(before)
+    ];
     const actors = this.physical.step(input.motionIntents, worldDrivenIntents);
     this.tickValue += 1;
     const spec = scenario(this.scenarioIdValue);
@@ -200,6 +248,28 @@ export class LabWorld {
       episodeOutcome = resolved.episodeOutcome;
     }
 
+    let cooperativeEpisodeActionOutcomes: readonly CooperativeEpisodeActionOutcome[] = [];
+    let cooperativeEpisodeOutcome: CooperativeEpisodeOutcome = "NONE";
+    if (this.cooperativeEpisodeValue) {
+      const player = body(after, "player");
+      const companion = body(after, "companion");
+      const hostile = body(after, "hostile");
+      const resolved = resolveCooperativeEpisodeAfterPhysics({
+        observationTick: before.tick,
+        before: this.cooperativeEpisodeValue,
+        postPhysics: {
+          hostilePosition: hostile.position,
+          playerPosition: player.position,
+          companionPosition: companion.position
+        },
+        attempts: cooperativeEpisodeAttempts,
+        rules: S5_COOPERATIVE_EPISODE_RULES
+      });
+      this.cooperativeEpisodeValue = resolved.after;
+      cooperativeEpisodeActionOutcomes = resolved.actionOutcomes;
+      cooperativeEpisodeOutcome = resolved.episodeOutcome;
+    }
+
     // Legacy Stage B evidence remains world-owned but is disabled for the
     // shared-danger scenario. It must not become the new situation authority.
     this.sharedPressureLoop.observe(after);
@@ -218,7 +288,10 @@ export class LabWorld {
       snapshot: after,
       actionOutcomes,
       sharedDanger: this.sharedDanger(),
-      episodeOutcome
+      episodeOutcome,
+      cooperativeEpisodeActionOutcomes,
+      cooperativeEpisode: this.cooperativeEpisode(),
+      cooperativeEpisodeOutcome
     };
   }
 
@@ -235,6 +308,38 @@ export class LabWorld {
     const delta = {
       x: player.position.x - hostile.position.x,
       y: player.position.y - hostile.position.y
+    };
+    const length = Math.hypot(delta.x, delta.y);
+    const move = length > 1e-9
+      ? { x: delta.x / length, y: delta.y / length }
+      : { x: 0, y: 0 };
+    return [{ bodyId: "hostile", move }];
+  }
+
+  private cooperativeEpisodeWorldMotion(snapshot: WorldSnapshot): PhysicalWorldBodyMotionIntent[] {
+    const episode = this.cooperativeEpisodeValue;
+    if (!episode) return [];
+
+    if (episode.phase === "CALM" || episode.phase === "PRESSURING") {
+      return [{ bodyId: "hostile", move: { x: 0, y: 0 } }];
+    }
+
+    if (episode.phase === "DRIVEN_BACK") {
+      return [{
+        bodyId: "hostile",
+        move: episode.drivenBackDirection
+          ? { ...episode.drivenBackDirection }
+          : { x: 0, y: 0 }
+      }];
+    }
+
+    const hostile = body(snapshot, "hostile");
+    const target = episode.phase === "RESETTING"
+      ? S5_COOPERATIVE_EPISODE_RULES.home
+      : body(snapshot, "player").position;
+    const delta = {
+      x: target.x - hostile.position.x,
+      y: target.y - hostile.position.y
     };
     const length = Math.hypot(delta.x, delta.y);
     const move = length > 1e-9
