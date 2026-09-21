@@ -862,3 +862,33 @@ Canonical reassessment:
 
 Do not respond by merely making E/Q louder or by preparing another test wrapper. The missing work is experiential/world/behavioral composition.
 
+---
+
+## 15. Owner-confirmed squad-control research axis — 2026-09-21
+
+The Owner explicitly wants the lab to support substantially richer direct companion control:
+
+- manual companion control;
+- experimental addition of more companions;
+- clear selection and group control;
+- direct position / formation manipulation;
+- behavior control;
+- movement/dynamics control;
+- strong readability of both play and debug.
+
+This is now a **first-class research axis**, not deferred QoL.
+
+Strategic reason:
+
+> manual authored squad behavior can serve as the gold-standard evidence for what later autonomy should reproduce or improve upon.
+
+Do not respond by reviving the old F1/F2/F3 donor as final UX.
+
+The current runtime remains strongly single-companion. Multi-companion UI must not get ahead of embodied World support.
+
+Canonical research note:
+
+`docs/SQUAD_CONTROL_RESEARCH_2026-09-21.md`
+
+This runs alongside S5 continuous-episode work and should improve the manual-baseline methodology rather than replace it.
+
