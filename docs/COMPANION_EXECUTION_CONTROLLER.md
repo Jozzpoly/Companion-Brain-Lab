@@ -564,3 +564,46 @@ The next legitimate move is **not S5/S6/S8 feature expansion**. Agent-side falsi
 
 Owner FAIL is first-class evidence and may invalidate the situation, readiness representation, responsibility split, correction model or broader causal assumptions. Do not automatically respond with parameter tuning.
 
+---
+
+## 12. S7 retraction after Owner evidence — 2026-09-21
+
+**This section supersedes section 11's S7 activation.**
+
+The first public readiness Owner interaction falsified the promotion.
+
+The central error was not input plumbing. It was **gate composition**.
+
+The controller itself required S5 multi-beat continuity before S6/S7:
+
+`calm → awareness → readiness/preparation → contribution → changing situation → disengage/recovery → regroup`
+
+That gate was skipped.
+
+The published specimen instead exposed one apparatus episode with a hidden 0.75 s action-validity window and a mechanism-specific correction veto.
+
+Machine/browser smoke used hidden causal text to time those controls and cannot be treated as evidence of participant usability.
+
+Updated ledger:
+
+| Gate | Current status |
+| --- | --- |
+| S1 | MACHINE-QUALIFIED APPARATUS |
+| S2 | MACHINE-QUALIFIED BOUNDED SEAM |
+| S3 | MACHINE-QUALIFIED BOUNDED AUTONOMY |
+| S4 | MACHINE-QUALIFIED BOUNDED CORRECTION SEAM |
+| readiness | MACHINE-QUALIFIED BOUNDED DONOR |
+| S5 multi-beat continuity | **ACTIVE / NOT EARNED** |
+| S6 product falsification | OPEN |
+| S7 Owner teammate gate | **RETRACTED / PREMATURE** |
+
+Next legitimate work:
+
+- create one continuous cooperative gameplay episode;
+- preserve the valid S1–S4/readiness seams where they help;
+- allow them to be replaced if richer play falsifies their representation;
+- require natural player counterfactuals, world-readable consequences and regroup;
+- only after S5 survives agent-side continuous-play falsification reconsider S7.
+
+Do not spend the next tranche on a new Owner-test shell.
+
