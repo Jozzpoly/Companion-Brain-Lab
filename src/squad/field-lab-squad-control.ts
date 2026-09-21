@@ -9,6 +9,7 @@ export const FIELD_LAB_SQUAD_MEMBERS = [
 
 export type SquadOrderMode = "FOLLOW" | "HOLD" | "MOVE";
 export type SquadMemberAuthority = "FORMATION" | "DIRECT";
+export type FieldLabFormationPreset = "WEDGE" | "LINE" | "COLUMN" | "DIAMOND";
 
 export interface FieldLabFormationSlot {
   memberId: SquadMemberId;
@@ -51,6 +52,33 @@ const DEFAULT_SLOTS: Readonly<Record<SquadMemberId, Vec2>> = {
   "squad-2": { x: 1.25, y: -1.15 },
   "squad-3": { x: 1.25, y: 1.15 },
   "squad-4": { x: 2.55, y: 0 }
+};
+
+const PRESET_SLOTS: Readonly<Record<FieldLabFormationPreset, Readonly<Record<SquadMemberId, Vec2>>>> = {
+  WEDGE: {
+    companion: { x: 1.2, y: -0.65 },
+    "squad-2": { x: 1.2, y: 0.65 },
+    "squad-3": { x: 2.25, y: -1.35 },
+    "squad-4": { x: 2.25, y: 1.35 }
+  },
+  LINE: {
+    companion: { x: 1.5, y: -1.8 },
+    "squad-2": { x: 1.5, y: -0.6 },
+    "squad-3": { x: 1.5, y: 0.6 },
+    "squad-4": { x: 1.5, y: 1.8 }
+  },
+  COLUMN: {
+    companion: { x: 1.1, y: 0 },
+    "squad-2": { x: 2.15, y: 0 },
+    "squad-3": { x: 3.2, y: 0 },
+    "squad-4": { x: 4.25, y: 0 }
+  },
+  DIAMOND: {
+    companion: { x: 1.15, y: 0 },
+    "squad-2": { x: 2.15, y: -1.05 },
+    "squad-3": { x: 2.15, y: 1.05 },
+    "squad-4": { x: 3.15, y: 0 }
+  }
 };
 
 const MIN_SPACING = 0.45;
@@ -254,6 +282,18 @@ export class FieldLabSquadControl {
 
   rotateBy(radians: number): FieldLabSquadControlSnapshot {
     return this.setOrientationRadians(this.state.orientationRadians + radians);
+  }
+
+  applyFormationPreset(preset: FieldLabFormationPreset): FieldLabSquadControlSnapshot {
+    const generated = PRESET_SLOTS[preset];
+    this.state = {
+      ...this.state,
+      slots: FIELD_LAB_SQUAD_MEMBERS.map((memberId) => ({
+        memberId,
+        offset: { ...generated[memberId] }
+      }))
+    };
+    return this.snapshot();
   }
 
   setSlotOffset(memberId: SquadMemberId, offset: Vec2): FieldLabSquadControlSnapshot {
