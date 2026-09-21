@@ -95,12 +95,15 @@ describe("Companion / Squad Field Lab physical substrate", () => {
 
   it("exposes real companion-companion collision instead of UI-only roster membership", async () => {
     const world = await LabWorld.create("squad-field-lab");
-    let snapshot = world.snapshot();
+    let sawContact = false;
+    let maxMotionError = 0;
 
-    // Drive squad-2 toward the canonical companion while keeping every other
-    // body still. The members must negotiate real Rapier contact.
+    // Drive squad-2 through the canonical companion's occupied space while
+    // keeping every other body still. Contact is a temporal event: the test
+    // records whether Rapier materially constrained the traversal at any point,
+    // rather than incorrectly requiring both bodies to still touch at the final tick.
     for (let step = 0; step < 90; step += 1) {
-      snapshot = world.stepSituation({
+      const snapshot = world.stepSituation({
         motionIntents: [
           { actorId: "player", move: zero },
           { actorId: "companion", move: zero }
@@ -111,11 +114,13 @@ describe("Companion / Squad Field Lab physical substrate", () => {
           { bodyId: "squad-4", move: zero }
         ]
       }).snapshot;
+      const extra = body(snapshot, "squad-2");
+      sawContact ||= extra.contacts.some((contact) => contact.with === "companion");
+      maxMotionError = Math.max(maxMotionError, extra.motionError);
     }
 
-    const extra = body(snapshot, "squad-2");
-    expect(extra.contacts.some((contact) => contact.with === "companion")).toBe(true);
-    expect(extra.motionError).toBeGreaterThan(0.1);
+    expect(sawContact).toBe(true);
+    expect(maxMotionError).toBeGreaterThan(0.1);
     world.dispose();
   });
 });
