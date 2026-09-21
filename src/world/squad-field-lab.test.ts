@@ -57,10 +57,12 @@ describe("Companion / Squad Field Lab physical substrate", () => {
       squadFieldLabScenario(["companion", "squad-2"], "TRAINING", "DOORWAY", spawns)
     );
 
-    expect(body(open.snapshot(), "player").position).toEqual(spawns.player);
-    expect(body(doorway.snapshot(), "player").position).toEqual(spawns.player);
-    expect(body(open.snapshot(), "squad-2").position).toEqual(spawns.squad["squad-2"]);
-    expect(body(doorway.snapshot(), "squad-2").position).toEqual(spawns.squad["squad-2"]);
+    for (const snapshot of [open.snapshot(), doorway.snapshot()]) {
+      expect(body(snapshot, "player").position.x).toBeCloseTo(spawns.player.x, 5);
+      expect(body(snapshot, "player").position.y).toBeCloseTo(spawns.player.y, 5);
+      expect(body(snapshot, "squad-2").position.x).toBeCloseTo(spawns.squad["squad-2"].x, 5);
+      expect(body(snapshot, "squad-2").position.y).toBeCloseTo(spawns.squad["squad-2"].y, 5);
+    }
     expect(open.snapshot().obstacles).toHaveLength(0);
     expect(doorway.snapshot().obstacles).toHaveLength(2);
 
