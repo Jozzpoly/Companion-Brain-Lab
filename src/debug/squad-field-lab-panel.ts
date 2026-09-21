@@ -4,12 +4,20 @@ import type {
   CooperativeEpisodeOutcome,
   CooperativeEpisodeSnapshot
 } from "../world/cooperative-episode-contract";
-import type { ActorSnapshot, SquadMemberId, WorldSnapshot } from "../world/types";
+import type {
+  ActorSnapshot,
+  FieldLabLayout,
+  FieldLabSituation,
+  SquadMemberId,
+  WorldSnapshot
+} from "../world/types";
 
 export type FieldLabMemberStatus = "DIRECT" | "MOVING" | "ARRIVED" | "BLOCKED" | "INVALID_TARGET";
 
 export interface SquadFieldLabPanelState {
   snapshot: WorldSnapshot;
+  situation: FieldLabSituation;
+  layout: FieldLabLayout;
   control: FieldLabSquadControlSnapshot;
   focusedBody: ActorSnapshot;
   focusedTarget: FieldLabMemberTarget;
@@ -99,6 +107,7 @@ export class SquadFieldLabPanel {
         <h2>Group</h2>
         <div class="squad-field-debug-lines">
           <div>tick ${state.snapshot.tick} · scenario ${state.snapshot.scenarioId}</div>
+          <div>situation ${state.situation} · layout ${state.layout} · obstacles ${state.snapshot.obstacles.length}</div>
           <div>real squad bodies ${state.control.activeMembers.length} · ${state.control.activeMembers.map(memberLabel).join(", ")}</div>
           <div>selected ${selected}</div>
           <div>focus ${memberLabel(state.control.focused)} · direct ${state.control.directControl ? "ON" : "off"}</div>
