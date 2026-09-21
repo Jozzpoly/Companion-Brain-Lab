@@ -70,6 +70,12 @@ import {
 } from "../navigation/static-router";
 import { S0_STEP_SECONDS } from "../physics/rapier-physical-world";
 import { SCENARIOS } from "../world/scenarios";
+import type {
+  CooperativeEpisodeActionAttempt,
+  CooperativeEpisodeActionOutcome,
+  CooperativeEpisodeOutcome,
+  CooperativeEpisodeSnapshot
+} from "../world/cooperative-episode-contract";
 import type { SharedPressureSnapshot } from "../world/shared-pressure";
 import type {
   SharedDangerEpisodeOutcome,
@@ -86,7 +92,7 @@ import type {
   WorldSnapshot,
   WorldBodyId
 } from "../world/types";
-import { LabWorld, S1_SHARED_DANGER_RULES } from "../world/world";
+import { LabWorld, S1_SHARED_DANGER_RULES, S5_COOPERATIVE_EPISODE_RULES } from "../world/world";
 import { isOwnerReviewSearch, isTeammateReviewSearch, ownerReviewAllowsPanelAction } from "./owner-review-mode";
 import { PlayerCommandHud } from "./player-command-hud";
 import { SharedDangerApparatusHud } from "./shared-danger-apparatus-hud";
@@ -226,6 +232,7 @@ export class R1LabScene extends Phaser.Scene {
   private arbitrationDecision: CompanionArbitrationDecision | null = null;
   private sharedPressure: SharedPressureSnapshot | null = null;
   private sharedDanger: SharedDangerSnapshot | null = null;
+  private cooperativeEpisode: CooperativeEpisodeSnapshot | null = null;
   private situatedResponsibility: S2SituatedResponsibilityDecision | null = null;
   private s3AuthorityEnabled = false;
   private s3Contribution: S3MaterialContributionProposal | null = null;
@@ -236,6 +243,9 @@ export class R1LabScene extends Phaser.Scene {
   private pendingActionAttempts: WorldActionAttempt[] = [];
   private lastActionOutcomes: readonly WorldActionOutcome[] = [];
   private lastSharedDangerEpisodeOutcome: SharedDangerEpisodeOutcome = "NONE";
+  private pendingCooperativeEpisodeAttempts: CooperativeEpisodeActionAttempt[] = [];
+  private lastCooperativeEpisodeActionOutcomes: readonly CooperativeEpisodeActionOutcome[] = [];
+  private lastCooperativeEpisodeOutcome: CooperativeEpisodeOutcome = "NONE";
   private appliedLocalRetries = 0;
   private decisionRoutePlan: StaticRoutePlan | null = null;
   private postRoutePlan: StaticRoutePlan | null = null;
@@ -252,7 +262,7 @@ export class R1LabScene extends Phaser.Scene {
   private keys!: Record<
     "w" | "a" | "s" | "d" | "up" | "down" | "left" | "right" |
     "reset" | "pause" | "step" | "mode" | "incident" | "natural" | "time" |
-    "one" | "two" | "three" | "four" | "five" | "f1" | "f2" | "f3" |
+    "one" | "two" | "three" | "four" | "five" | "six" | "f1" | "f2" | "f3" |
     "playerAction" | "companionAction" | "withhold",
     Phaser.Input.Keyboard.Key
   >;
@@ -304,6 +314,7 @@ export class R1LabScene extends Phaser.Scene {
       three: Phaser.Input.Keyboard.KeyCodes.THREE,
       four: Phaser.Input.Keyboard.KeyCodes.FOUR,
       five: Phaser.Input.Keyboard.KeyCodes.FIVE,
+      six: Phaser.Input.Keyboard.KeyCodes.SIX,
       f1: Phaser.Input.Keyboard.KeyCodes.F1,
       f2: Phaser.Input.Keyboard.KeyCodes.F2,
       f3: Phaser.Input.Keyboard.KeyCodes.F3,
@@ -340,17 +351,23 @@ export class R1LabScene extends Phaser.Scene {
     if (!this.world || !this.snapshotValue) return;
     const evidence = this.computeIntents(this.snapshotValue);
     const beforeDanger = this.world.sharedDanger();
+    const beforeCooperativeEpisode = this.world.cooperativeEpisode();
     const actionAttempts = this.scenarioId === "shared-danger"
       ? this.pendingActionAttempts.splice(0)
       : [];
+    const cooperativeEpisodeAttempts = this.scenarioId === "cooperative-episode"
+      ? this.pendingCooperativeEpisodeAttempts.splice(0)
+      : [];
     const worldResult = this.world.stepSituation({
       motionIntents: evidence.intents,
-      actionAttempts
+      actionAttempts,
+      cooperativeEpisodeAttempts
     });
     const after = worldResult.snapshot;
     this.snapshotValue = after;
     this.sharedPressure = this.world.sharedPressure();
     this.sharedDanger = worldResult.sharedDanger;
+    this.cooperativeEpisode = worldResult.cooperativeEpisode;
     this.updateSituatedResponsibility(after);
     if (worldResult.actionOutcomes.length > 0) {
       this.lastActionOutcomes = worldResult.actionOutcomes;
@@ -358,8 +375,20 @@ export class R1LabScene extends Phaser.Scene {
     if (worldResult.episodeOutcome !== "NONE") {
       this.lastSharedDangerEpisodeOutcome = worldResult.episodeOutcome;
     }
+    if (worldResult.cooperativeEpisodeActionOutcomes.length > 0) {
+      this.lastCooperativeEpisodeActionOutcomes = worldResult.cooperativeEpisodeActionOutcomes;
+    }
+    if (worldResult.cooperativeEpisodeOutcome !== "NONE") {
+      this.lastCooperativeEpisodeOutcome = worldResult.cooperativeEpisodeOutcome;
+    }
     this.logSharedPressureTransition(evidence.pressureBefore, this.sharedPressure);
     this.logSharedDangerTransition(beforeDanger, this.sharedDanger, worldResult.actionOutcomes, worldResult.episodeOutcome);
+    this.logCooperativeEpisodeTransition(
+      beforeCooperativeEpisode,
+      this.cooperativeEpisode,
+      worldResult.cooperativeEpisodeActionOutcomes,
+      worldResult.cooperativeEpisodeOutcome
+    );
     this.updatePostEvidence(after, evidence.target);
 
     if (
@@ -989,6 +1018,33 @@ export class R1LabScene extends Phaser.Scene {
     }
   }
 
+  private logCooperativeEpisodeTransition(
+    before: CooperativeEpisodeSnapshot | null,
+    after: CooperativeEpisodeSnapshot | null,
+    actionOutcomes: readonly CooperativeEpisodeActionOutcome[],
+    episodeOutcome: CooperativeEpisodeOutcome
+  ): void {
+    if (!after) return;
+    if (
+      !before ||
+      before.phase !== after.phase ||
+      before.cycle !== after.cycle ||
+      before.lastOutcome !== after.lastOutcome
+    ) {
+      this.logEvent(
+        `S5 manual episode ${before?.phase ?? "NONE"} -> ${after.phase} · cycle ${after.cycle} · outcome ${after.lastOutcome}`
+      );
+    }
+    for (const outcome of actionOutcomes) {
+      this.logEvent(
+        `S5 ${outcome.actorId} ${outcome.kind} -> ${outcome.status} · ${compact(outcome.distance)}m · ${outcome.phaseObserved}`
+      );
+    }
+    if (episodeOutcome !== "NONE") {
+      this.logEvent(`S5 manual episode outcome ${episodeOutcome}`);
+    }
+  }
+
   private drawWorld(snapshot: WorldSnapshot): void {
     const scale = Math.min(VIEW_WIDTH / snapshot.width, VIEW_HEIGHT / snapshot.height);
     const offsetX = (VIEW_WIDTH - snapshot.width * scale) / 2;
@@ -1018,19 +1074,32 @@ export class R1LabScene extends Phaser.Scene {
         ? 0x63a8ff
         : value.id === "companion"
           ? 0xf2c15c
-          : this.sharedDanger?.phase === "WINDUP"
-            ? 0xff5d66
-            : this.sharedDanger?.phase === "RECOVERING"
-              ? 0x8b949e
-              : this.sharedDanger?.phase === "COMPLETE"
-                ? 0x484f58
-                : 0xff9b5e;
+          : this.cooperativeEpisode
+            ? this.cooperativeEpisode.phase === "PRESSURING"
+              ? 0xff5d66
+              : this.cooperativeEpisode.phase === "DRIVEN_BACK"
+                ? this.cooperativeEpisode.lastOutcome === "PLAYER_HIT"
+                  ? 0xff7b72
+                  : 0x7ee787
+                : this.cooperativeEpisode.phase === "RESETTING"
+                  ? 0x8b949e
+                  : this.cooperativeEpisode.phase === "CALM"
+                    ? 0x6e7681
+                    : 0xff9b5e
+            : this.sharedDanger?.phase === "WINDUP"
+              ? 0xff5d66
+              : this.sharedDanger?.phase === "RECOVERING"
+                ? 0x8b949e
+                : this.sharedDanger?.phase === "COMPLETE"
+                  ? 0x484f58
+                  : 0xff9b5e;
       this.graphics.fillStyle(fillColor, 1);
       this.graphics.fillCircle(sx(value.position.x), sy(value.position.y), value.radius * scale);
       this.graphics.lineStyle(3, contact && this.panel.layerVisible("contacts") ? 0xff5d66 : 0xe7e9ee, 0.95);
       this.graphics.strokeCircle(sx(value.position.x), sy(value.position.y), value.radius * scale);
       if (value.id === "hostile") {
         this.drawSharedDangerBody(value, snapshot, sx, sy, scale);
+        this.drawCooperativeEpisodeBody(value, snapshot, sx, sy, scale);
       }
       if (value.id === "companion") {
         this.drawSharedDangerReadinessGlyph(value, snapshot, sx, sy, scale);
@@ -1155,6 +1224,80 @@ export class R1LabScene extends Phaser.Scene {
     } else if (danger.lastOutcome === "ATTACK_MISSED") {
       this.graphics.lineStyle(3, 0xe3b341, 0.85);
       this.graphics.strokeCircle(x, y, hostile.radius * scale * 2.2);
+    }
+  }
+
+  private drawCooperativeEpisodeBody(
+    hostile: ActorSnapshot,
+    snapshot: WorldSnapshot,
+    sx: (x: number) => number,
+    sy: (y: number) => number,
+    scale: number
+  ): void {
+    const episode = this.cooperativeEpisode;
+    if (!episode) return;
+
+    const x = sx(hostile.position.x);
+    const y = sy(hostile.position.y);
+    const bodyR = hostile.radius * scale;
+    const threatColor = episode.phase === "PRESSURING" ? 0xff5d66 : 0xff9b5e;
+
+    if (episode.phase === "APPROACHING" || episode.phase === "PRESSURING") {
+      const spikeInner = bodyR * 1.12;
+      const spikeOuter = bodyR * 1.5;
+      this.graphics.lineStyle(3, threatColor, 0.9);
+      for (let index = 0; index < 8; index += 1) {
+        const angle = (Math.PI * 2 * index) / 8;
+        const dx = Math.cos(angle);
+        const dy = Math.sin(angle);
+        this.graphics.lineBetween(
+          x + dx * spikeInner,
+          y + dy * spikeInner,
+          x + dx * spikeOuter,
+          y + dy * spikeOuter
+        );
+      }
+    }
+
+    if (episode.phase === "PRESSURING") {
+      const player = actor(snapshot, "player");
+      this.graphics.lineStyle(4, 0xff5d66, 0.78);
+      this.graphics.lineBetween(x, y, sx(player.position.x), sy(player.position.y));
+      const progress = episode.phaseTicksRemaining / S5_COOPERATIVE_EPISODE_RULES.pressureTicks;
+      const pulse = bodyR * (1.8 + (1 - progress) * 1.6);
+      this.graphics.lineStyle(3, 0xff5d66, 0.7);
+      this.graphics.strokeCircle(x, y, pulse);
+    }
+
+    if (episode.phase === "DRIVEN_BACK" && episode.lastOutcome === "REPELLED") {
+      const r = bodyR * 1.65;
+      this.graphics.lineStyle(5, 0x7ee787, 0.95);
+      this.graphics.lineBetween(x - r, y - r, x + r, y + r);
+      this.graphics.lineBetween(x - r, y + r, x + r, y - r);
+      for (const actorId of episode.repelledBy) {
+        const source = actor(snapshot, actorId);
+        const sx0 = sx(source.position.x);
+        const sy0 = sy(source.position.y);
+        this.graphics.lineStyle(3, 0x7ee787, 0.92);
+        this.graphics.strokeCircle(sx0, sy0, source.radius * scale * 1.45);
+        this.graphics.lineBetween(sx0, sy0, x, y);
+      }
+    }
+
+    if (episode.phase === "DRIVEN_BACK" && episode.lastOutcome === "PLAYER_HIT") {
+      const player = actor(snapshot, "player");
+      const px = sx(player.position.x);
+      const py = sy(player.position.y);
+      const r = player.radius * scale * 2.2;
+      this.graphics.lineStyle(5, 0xff5d66, 0.95);
+      this.graphics.strokeCircle(px, py, r);
+      this.graphics.lineBetween(px - r, py, px + r, py);
+      this.graphics.lineBetween(px, py - r, px, py + r);
+    }
+
+    if (episode.phase === "CALM") {
+      this.graphics.lineStyle(2, 0x8b949e, 0.55);
+      this.graphics.strokeCircle(x, y, bodyR * 1.45);
     }
   }
 
@@ -1437,7 +1580,8 @@ export class R1LabScene extends Phaser.Scene {
     const arbitration = this.arbitrationDecision;
 
     const apparatusActive = snapshot.scenarioId === "shared-danger";
-    this.commandHud.setVisible(!apparatusActive);
+    const cooperativeEpisodeActive = snapshot.scenarioId === "cooperative-episode";
+    this.commandHud.setVisible(!apparatusActive && !cooperativeEpisodeActive);
     this.commandHud.update({ directive });
     this.apparatusHud.update({
       active: apparatusActive,
@@ -1450,6 +1594,29 @@ export class R1LabScene extends Phaser.Scene {
     });
 
     const sections: CausalPanelModel["sections"] = [
+      ...(cooperativeEpisodeActive && this.cooperativeEpisode ? [{
+        id: "s5-manual-episode",
+        title: "S5 manual baseline · continuous cooperative episode",
+        tone: this.cooperativeEpisode.phase === "PRESSURING"
+          ? "danger" as const
+          : this.cooperativeEpisode.phase === "DRIVEN_BACK"
+            ? this.cooperativeEpisode.lastOutcome === "PLAYER_HIT"
+              ? "danger" as const
+              : "success" as const
+            : this.cooperativeEpisode.phase === "CALM"
+              ? "normal" as const
+              : "warning" as const,
+        lines: [
+          `phase ${this.cooperativeEpisode.phase} · cycle ${this.cooperativeEpisode.cycle + 1} · remaining ${this.cooperativeEpisode.phaseTicksRemaining}t`,
+          `last world outcome ${this.cooperativeEpisode.lastOutcome} · outcome tick ${this.cooperativeEpisode.lastOutcomeTick ?? "none"}`,
+          `repelled by ${this.cooperativeEpisode.repelledBy.join(", ") || "none"}`,
+          this.lastCooperativeEpisodeActionOutcomes.length > 0
+            ? `latest attempts ${this.lastCooperativeEpisodeActionOutcomes.map((outcome) => `${outcome.actorId}:${outcome.status}@${compact(outcome.distance)}m`).join(" · ")}`
+            : "latest attempts none",
+          `REPEL range ${compact(S5_COOPERATIVE_EPISODE_RULES.repelRange)}m · valid throughout APPROACHING / PRESSURING`,
+          "MANUAL BASELINE ONLY · WASD + E player · arrows + Enter companion · no companion cognition authority"
+        ]
+      } satisfies CausalPanelSection] : []),
       ...(apparatusActive ? [{
         id: "s1-apparatus",
         title: "S1 apparatus · shared danger",
@@ -1829,11 +1996,25 @@ export class R1LabScene extends Phaser.Scene {
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.five)) void this.loadScenario("shared-danger");
+    if (Phaser.Input.Keyboard.JustDown(this.keys.six)) void this.loadScenario("cooperative-episode");
 
     if (this.scenarioId === "shared-danger") {
       if (Phaser.Input.Keyboard.JustDown(this.keys.playerAction)) this.queueWorldAction("player");
       if (!this.teammateSpecimenSurface && Phaser.Input.Keyboard.JustDown(this.keys.companionAction)) {
         this.queueWorldAction("companion");
+      }
+      if (Phaser.Input.Keyboard.JustDown(this.keys.pause)) this.togglePause();
+      if (Phaser.Input.Keyboard.JustDown(this.keys.step)) this.queueSingleStep();
+      if (Phaser.Input.Keyboard.JustDown(this.keys.time)) this.cycleTimeScale();
+      return;
+    }
+
+    if (this.scenarioId === "cooperative-episode") {
+      if (Phaser.Input.Keyboard.JustDown(this.keys.playerAction)) {
+        this.queueCooperativeEpisodeAction("player");
+      }
+      if (Phaser.Input.Keyboard.JustDown(this.keys.companionAction)) {
+        this.queueCooperativeEpisodeAction("companion");
       }
       if (Phaser.Input.Keyboard.JustDown(this.keys.pause)) this.togglePause();
       if (Phaser.Input.Keyboard.JustDown(this.keys.step)) this.queueSingleStep();
@@ -1876,6 +2057,7 @@ export class R1LabScene extends Phaser.Scene {
     else if (action === "scenario-doorway") void this.loadScenario("doorway");
     else if (action === "scenario-head-on") void this.loadScenario("head-on");
     else if (action === "scenario-shared-danger") void this.loadScenario("shared-danger");
+    else if (action === "scenario-cooperative-episode") void this.loadScenario("cooperative-episode");
     else if (action === "s1-player-intervene") this.queueWorldAction("player");
     else if (action === "s1-companion-intervene") this.queueWorldAction("companion");
     else if (action === "toggle-s3-authority") this.toggleS3Authority();
@@ -1893,6 +2075,19 @@ export class R1LabScene extends Phaser.Scene {
     }
     this.pendingActionAttempts.push({ actorId, kind: "INTERVENE", targetId: "hostile" });
     this.logEvent(`S1 INTERVENE queued · ${actorId}`);
+  }
+
+  private queueCooperativeEpisodeAction(actorId: "player" | "companion"): void {
+    if (this.scenarioId !== "cooperative-episode") {
+      this.logEvent(`S5 manual action ignored outside cooperative episode · ${actorId}`);
+      return;
+    }
+    if (this.pendingCooperativeEpisodeAttempts.some((attempt) => attempt.actorId === actorId)) {
+      this.logEvent(`S5 REPEL already queued this frame · ${actorId}`);
+      return;
+    }
+    this.pendingCooperativeEpisodeAttempts.push({ actorId, kind: "REPEL", targetId: "hostile" });
+    this.logEvent(`S5 manual REPEL queued · ${actorId}`);
   }
 
   private toggleS4Withhold(): void {
@@ -2094,11 +2289,12 @@ export class R1LabScene extends Phaser.Scene {
       this.snapshotValue = next.snapshot();
       this.sharedPressure = next.sharedPressure();
       this.sharedDanger = next.sharedDanger();
-      if (id === "shared-danger") {
+      this.cooperativeEpisode = next.cooperativeEpisode();
+      if (id === "shared-danger" || id === "cooperative-episode") {
         this.companionMode = "manual";
         this.a1Authority.setVariant("off");
       }
-      this.commandHud.setVisible(id !== "shared-danger");
+      this.commandHud.setVisible(id !== "shared-danger" && id !== "cooperative-episode");
       this.apparatusHud.setVisible(id === "shared-danger");
       this.autonomousProposalDecision = null;
       this.arbitrationDecision = null;
@@ -2108,6 +2304,9 @@ export class R1LabScene extends Phaser.Scene {
       this.pendingActionAttempts.length = 0;
       this.lastActionOutcomes = [];
       this.lastSharedDangerEpisodeOutcome = "NONE";
+      this.pendingCooperativeEpisodeAttempts.length = 0;
+      this.lastCooperativeEpisodeActionOutcomes = [];
+      this.lastCooperativeEpisodeOutcome = "NONE";
       this.s3AuthorityEnabled = this.teammateSpecimenSurface && id === "shared-danger";
       this.sharedDangerReadinessEnabled = this.teammateSpecimenSurface && id === "shared-danger";
       this.s3Contribution = null;
@@ -2128,6 +2327,9 @@ export class R1LabScene extends Phaser.Scene {
       this.logEvent(`scenario ${id} loaded`);
       if (this.teammateSpecimenSurface && id === "shared-danger") {
         this.logEvent("teammate specimen armed · S3 autonomy ON · hold Q to withhold execution");
+      }
+      if (id === "cooperative-episode") {
+        this.logEvent("S5 manual baseline armed · WASD+E player · arrows+Enter companion · no AI authority");
       }
       this.drawWorld(this.snapshotValue);
       this.updatePanel(this.snapshotValue);
