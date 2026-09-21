@@ -39,6 +39,7 @@ import type {
   MotionIntent,
   ScenarioId,
   ScenarioSpec,
+  SquadMemberId,
   StaticCircleOccupancyResult,
   StaticCircleTraversalResult,
   StaticTraversalOptions,
@@ -65,6 +66,17 @@ export const S5_COOPERATIVE_EPISODE_RULES: CooperativeEpisodeRules = {
   calmTicks: 90,
   home: { x: 10.4, y: 4 },
   homeArrivalRange: 0.18
+};
+
+export const SQUAD_FIELD_LAB_PRESSURE_RULES: CooperativeEpisodeRules = {
+  repelRange: 1.2,
+  pressureRange: 0.86,
+  pressureBreakRange: 1.38,
+  pressureTicks: 72,
+  drivenBackTicks: 48,
+  calmTicks: 120,
+  home: { x: 7.1, y: 5 },
+  homeArrivalRange: 0.2
 };
 
 export interface WorldSituationStepInput {
@@ -117,6 +129,7 @@ export class LabWorld {
   private latestAuthorityA0EvidenceValue: AuthorityA0WorldStepEvidence | null = null;
   private sharedDangerValue: SharedDangerSnapshot | null;
   private cooperativeEpisodeValue: CooperativeEpisodeSnapshot | null;
+  private readonly cooperativeEpisodeRulesValue: CooperativeEpisodeRules | null;
 
   private constructor(
     private readonly scenarioSpecValue: ScenarioSpec,
@@ -125,10 +138,15 @@ export class LabWorld {
   ) {
     this.sharedDangerValue =
       scenarioSpecValue.id === "shared-danger" ? initialSharedDangerSnapshot() : null;
-    this.cooperativeEpisodeValue =
+    this.cooperativeEpisodeRulesValue =
       scenarioSpecValue.id === "cooperative-episode"
-        ? initialCooperativeEpisodeSnapshot(S5_COOPERATIVE_EPISODE_RULES)
-        : null;
+        ? S5_COOPERATIVE_EPISODE_RULES
+        : scenarioSpecValue.id === "squad-field-lab-pressure"
+          ? SQUAD_FIELD_LAB_PRESSURE_RULES
+          : null;
+    this.cooperativeEpisodeValue = this.cooperativeEpisodeRulesValue
+      ? initialCooperativeEpisodeSnapshot(this.cooperativeEpisodeRulesValue)
+      : null;
   }
 
   static async create(id: ScenarioId): Promise<LabWorld> {
@@ -213,11 +231,15 @@ export class LabWorld {
     }
     const cooperativeEpisodeAttempts = input.cooperativeEpisodeAttempts ?? [];
     if (!this.cooperativeEpisodeValue && cooperativeEpisodeAttempts.length > 0) {
-      throw new Error("Cooperative episode actions require the cooperative-episode scenario.");
+      throw new Error("Cooperative episode actions require an active cooperative-pressure scenario.");
     }
     const experimentalSquadMotionIntents = input.experimentalSquadMotionIntents ?? [];
-    if (this.scenarioSpecValue.id !== "squad-field-lab" && experimentalSquadMotionIntents.length > 0) {
-      throw new Error("Experimental squad motion is confined to the squad-field-lab scenario.");
+    if (
+      this.scenarioSpecValue.id !== "squad-field-lab" &&
+      this.scenarioSpecValue.id !== "squad-field-lab-pressure" &&
+      experimentalSquadMotionIntents.length > 0
+    ) {
+      throw new Error("Experimental squad motion is confined to Squad Field Lab scenarios.");
     }
     for (const intent of experimentalSquadMotionIntents) {
       if (intent.bodyId !== "squad-2" && intent.bodyId !== "squad-3" && intent.bodyId !== "squad-4") {
@@ -270,20 +292,24 @@ export class LabWorld {
 
     let cooperativeEpisodeActionOutcomes: readonly CooperativeEpisodeActionOutcome[] = [];
     let cooperativeEpisodeOutcome: CooperativeEpisodeOutcome = "NONE";
-    if (this.cooperativeEpisodeValue) {
+    if (this.cooperativeEpisodeValue && this.cooperativeEpisodeRulesValue) {
       const player = body(after, "player");
-      const companion = body(after, "companion");
       const hostile = body(after, "hostile");
+      const squadPositions: Partial<Record<SquadMemberId, Vec2>> = {};
+      for (const memberId of ["companion", "squad-2", "squad-3", "squad-4"] as const) {
+        const member = after.actors.find((candidate) => candidate.id === memberId);
+        if (member) squadPositions[memberId] = { ...member.position };
+      }
       const resolved = resolveCooperativeEpisodeAfterPhysics({
         observationTick: before.tick,
         before: this.cooperativeEpisodeValue,
         postPhysics: {
           hostilePosition: hostile.position,
           playerPosition: player.position,
-          companionPosition: companion.position
+          squadPositions
         },
         attempts: cooperativeEpisodeAttempts,
-        rules: S5_COOPERATIVE_EPISODE_RULES
+        rules: this.cooperativeEpisodeRulesValue
       });
       this.cooperativeEpisodeValue = resolved.after;
       cooperativeEpisodeActionOutcomes = resolved.actionOutcomes;
@@ -355,7 +381,7 @@ export class LabWorld {
 
     const hostile = body(snapshot, "hostile");
     const target = episode.phase === "RESETTING"
-      ? S5_COOPERATIVE_EPISODE_RULES.home
+      ? this.cooperativeEpisodeRulesValue?.home ?? body(snapshot, "player").position
       : body(snapshot, "player").position;
     const delta = {
       x: target.x - hostile.position.x,
