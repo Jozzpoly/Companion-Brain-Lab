@@ -375,7 +375,9 @@ export class R1LabScene extends Phaser.Scene {
     if (worldResult.episodeOutcome !== "NONE") {
       this.lastSharedDangerEpisodeOutcome = worldResult.episodeOutcome;
     }
-    if (worldResult.cooperativeEpisodeActionOutcomes.length > 0) {
+    if (this.scenarioId === "cooperative-episode") {
+      // "latest attempts" is step-local evidence. Do not let a successful action
+      // from an earlier cycle survive visually into a later no-action consequence.
       this.lastCooperativeEpisodeActionOutcomes = worldResult.cooperativeEpisodeActionOutcomes;
     }
     if (worldResult.cooperativeEpisodeOutcome !== "NONE") {
