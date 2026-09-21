@@ -33,6 +33,24 @@ async function holdKey(page, key, ms) {
   await page.keyboard.up(key);
 }
 
+async function tapKey(page, key, holdMs = 55) {
+  await page.keyboard.down(key);
+  await page.waitForTimeout(holdMs);
+  await page.keyboard.up(key);
+}
+
+async function repeatTapUntil(page, key, predicate, timeout, label) {
+  const started = Date.now();
+  let latest = "";
+  while (Date.now() - started < timeout) {
+    await tapKey(page, key);
+    await page.waitForTimeout(100);
+    latest = await panelText(page);
+    if (predicate(latest)) return latest;
+  }
+  throw new Error(`${label} timed out. Latest panel: ${JSON.stringify(latest.slice(0, 5000))}`);
+}
+
 function focusedBody(textValue) {
   const match = textValue.match(/body (-?\d+\.\d+), (-?\d+\.\d+)/);
   return match ? { x: Number(match[1]), y: Number(match[2]) } : null;
@@ -275,6 +293,131 @@ try {
   invariant(afterMove && Math.hypot(afterMove.x - beforeMove.x, afterMove.y - beforeMove.y) > 0.45,
     "C4 did not materially respond to its world-space MOVE order.");
 
+  // The same control state must survive a switch from spatial training into
+  // continuous cooperative pressure. C4's independent MOVE assignment is a
+  // deliberate canary: switching situations must not reset squad semantics.
+  await page.getByRole("button", { name: "Pressure" }).click();
+  const pressureLoaded = await waitFor(
+    page,
+    (value) =>
+      value.includes("scenario squad-field-lab-pressure") &&
+      value.includes("Cooperative pressure") &&
+      value.includes("phase CALM") &&
+      value.includes("C4 MOVE"),
+    8_000,
+    "pressure situation preserving squad control state"
+  );
+  invariant(pressureLoaded.includes("spacing 1.50"), "Pressure rebuild lost live formation dynamics.");
+  await screenshot(page, "05-pressure-preserves-squad-state.png");
+
+  // Cycle 1: focused C2 gets the same material affordance as canonical C1.
+  await page.locator('.squad-lab-roster-button[data-member-id="squad-2"]').click();
+  await waitFor(
+    page,
+    (value) => value.includes("Focused · C2") && value.includes("phase APPROACHING"),
+    7_000,
+    "pressure cycle 1 approaching with C2 focused"
+  );
+  const c2Repel = await repeatTapUntil(
+    page,
+    "Enter",
+    (value) =>
+      value.includes("squad-2:SUCCEEDED") &&
+      value.includes("latest World outcome REPELLED") &&
+      value.includes("repelled by squad-2"),
+    7_000,
+    "C2 materially repels threat"
+  );
+  invariant(c2Repel.includes("squad-2:SUCCEEDED"), "C2 is still decorative in cooperative pressure.");
+  await screenshot(page, "06-c2-material-contribution.png");
+
+  // Cycle 2: cluster C1+C2 and issue one selected-group material response.
+  await waitFor(
+    page,
+    (value) => value.includes("phase CALM") && value.includes("cycle 2"),
+    9_000,
+    "pressure cycle 2 calm"
+  );
+  const spacingPressure = page.locator(".squad-lab-slider input").nth(0);
+  await spacingPressure.evaluate((element) => {
+    element.value = "0.65";
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await page.locator('.squad-lab-roster-button[data-member-id="companion"]').click();
+  await page.locator('.squad-lab-roster-button[data-member-id="squad-2"]').click({ modifiers: ["Shift"] });
+  await waitFor(
+    page,
+    (value) => value.includes("selected C1 + C2") && value.includes("phase APPROACHING"),
+    8_000,
+    "pressure cycle 2 approaching with C1+C2 selected"
+  );
+  const groupRepel = await repeatTapUntil(
+    page,
+    "Space",
+    (value) =>
+      value.includes("companion:SUCCEEDED") &&
+      value.includes("squad-2:SUCCEEDED") &&
+      value.includes("repelled by companion, squad-2"),
+    8_000,
+    "selected group jointly repels threat"
+  );
+  invariant(
+    groupRepel.includes("companion:SUCCEEDED") && groupRepel.includes("squad-2:SUCCEEDED"),
+    "Selected group action did not produce multi-member material contribution."
+  );
+  await screenshot(page, "07-selected-group-joint-contribution.png");
+
+  // Cycle 3: player can own the outcome even though the squad is present.
+  await waitFor(
+    page,
+    (value) => value.includes("phase APPROACHING") && value.includes("cycle 3"),
+    12_000,
+    "pressure cycle 3 approaching"
+  );
+  const playerRepel = await repeatTapUntil(
+    page,
+    "e",
+    (value) =>
+      value.includes("player:SUCCEEDED") &&
+      value.includes("repelled by player"),
+    8_000,
+    "player takeover under squad pressure"
+  );
+  invariant(playerRepel.includes("repelled by player"), "Player could not own cooperative-pressure outcome.");
+  await screenshot(page, "08-player-takes-pressure-outcome.png");
+
+  // Cycle 4: no one acts. The situation must have a real consequence, then
+  // recover into another calm beat without reloading or changing squad setup.
+  await waitFor(
+    page,
+    (value) => value.includes("phase APPROACHING") && value.includes("cycle 4"),
+    12_000,
+    "pressure cycle 4 approaching"
+  );
+  const hit = await waitFor(
+    page,
+    (value) =>
+      value.includes("latest World outcome PLAYER_HIT") &&
+      value.includes("phase DRIVEN_BACK") &&
+      value.includes("repelled by none"),
+    10_000,
+    "pressure no-action consequence"
+  );
+  invariant(hit.includes("PLAYER_HIT"), "Pressure has no material consequence when everyone abstains.");
+  await screenshot(page, "09-pressure-no-action-consequence.png");
+
+  const recovered = await waitFor(
+    page,
+    (value) =>
+      value.includes("phase CALM") &&
+      value.includes("cycle 5") &&
+      value.includes("C4 MOVE"),
+    10_000,
+    "pressure continuity after no-action consequence"
+  );
+  invariant(recovered.includes("C4 MOVE"), "Squad assignment state was lost across pressure cycles.");
+  await screenshot(page, "10-pressure-cycle-continuity.png");
+
   invariant(await page.locator("#runtime-fault-sentinel").count() === 0, "Runtime fault sentinel visible.");
   invariant(errors.page.length === 0, `Page errors: ${errors.page.join(" | ")}`);
   invariant(errors.console.length === 0, `Console errors: ${errors.console.join(" | ")}`);
@@ -292,7 +435,13 @@ try {
       liveSpacingChangesTargets: true,
       worldSpaceSlotDragEditsGeometry: true,
       worldSpaceMoveScopesToSelection: true,
-      formationMotorRespondsMaterially: true
+      formationMotorRespondsMaterially: true,
+      pressurePreservesSquadControlState: true,
+      extraSquadMemberCanMateriallyContribute: true,
+      selectedGroupCanJointlyContribute: true,
+      playerCanTakePressureOutcome: true,
+      noActionHasPressureConsequence: true,
+      pressureCyclesWithoutResettingSquadState: true
     },
     errors
   };
