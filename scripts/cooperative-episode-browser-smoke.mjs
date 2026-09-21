@@ -68,7 +68,13 @@ let browser;
 try {
   await mkdir(ROOT, { recursive: true });
   browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
+  const context = await browser.newContext({
+    viewport: { width: 1600, height: 1000 },
+    recordVideo: {
+      dir: `${ROOT}/video`,
+      size: { width: 1200, height: 750 }
+    }
+  });
   const page = await context.newPage();
   const errors = { page: [], console: [], requests: [] };
 
@@ -87,6 +93,18 @@ try {
     timeout: 30_000
   });
   await page.locator("#game-root canvas").waitFor({ state: "visible", timeout: 15_000 });
+
+  // Participant-first temporal red-team: remove research overlays and collapse
+  // the causal microscope. Assertions still read its DOM text, but the recorded
+  // video must stand on world behavior rather than explanatory instrumentation.
+  const layerToggles = page.locator(".debug-layer-toggle input");
+  for (let index = 0; index < await layerToggles.count(); index += 1) {
+    const toggle = layerToggles.nth(index);
+    if (await toggle.isChecked()) await toggle.uncheck();
+  }
+  if (!(await page.locator("#debug-panel").evaluate((node) => node.classList.contains("is-collapsed")))) {
+    await page.locator(".debug-collapse").click();
+  }
 
   await tapKey(page, "6");
   const initial = await waitForPanel(
