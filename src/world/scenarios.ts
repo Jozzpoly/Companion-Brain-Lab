@@ -81,6 +81,24 @@ export const SCENARIOS: Readonly<Record<ScenarioId, ScenarioSpec>> = {
       actor("hostile", 10.4, 4, { radius: 0.34, speed: 1.8, collisionMode: "sensor" })
     ],
     obstacles: []
+  },
+  "squad-field-lab": {
+    id: "squad-field-lab",
+    label: "Companion / Squad Field Lab",
+    width: 16,
+    height: 10,
+    actors: [
+      actor("player", 3, 5),
+      actor("companion", 4.6, 5),
+      actor("squad-2", 4.8, 3.8),
+      actor("squad-3", 4.8, 6.2),
+      actor("squad-4", 6.0, 5)
+    ],
+    obstacles: [
+      { id: "fieldlab.wall.top", x: 8, y: 0, width: 0.6, height: 3.9 },
+      { id: "fieldlab.wall.bottom", x: 8, y: 6.1, width: 0.6, height: 3.9 },
+      { id: "fieldlab.pillar", x: 11.4, y: 4.1, width: 1.2, height: 1.8 }
+    ]
   }
 };
 
