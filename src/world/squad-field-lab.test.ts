@@ -99,7 +99,7 @@ describe("Companion / Squad Field Lab physical substrate", () => {
           { bodyId: "squad-2" as ExperimentalSquadMemberId, move: { x: 1, y: 0 } }
         ]
       })
-    ).toThrow(/confined to the squad-field-lab/);
+    ).toThrow(/confined to Squad Field Lab scenarios/);
 
     expect(world.snapshot()).toEqual(before);
     world.dispose();
