@@ -1,6 +1,23 @@
 export type ActorId = "player" | "companion";
-export type WorldBodyId = ActorId | "hostile";
-export type ScenarioId = "open" | "pillar" | "doorway" | "head-on" | "shared-danger" | "cooperative-episode";
+
+/**
+ * Explicitly experimental squad identities.
+ *
+ * Historical single-companion evidence remains bound to ActorId/"companion".
+ * These bodies may exist and move in the Field Lab without silently widening
+ * S1-S4 or legacy brain claims to multi-companion cognition.
+ */
+export type ExperimentalSquadMemberId = "squad-2" | "squad-3" | "squad-4";
+export type SquadMemberId = "companion" | ExperimentalSquadMemberId;
+export type WorldBodyId = ActorId | ExperimentalSquadMemberId | "hostile";
+export type ScenarioId =
+  | "open"
+  | "pillar"
+  | "doorway"
+  | "head-on"
+  | "shared-danger"
+  | "cooperative-episode"
+  | "squad-field-lab";
 
 export interface Vec2 {
   x: number;
@@ -40,6 +57,16 @@ export interface ScenarioSpec {
 
 export interface MotionIntent {
   actorId: ActorId;
+  move: Vec2;
+}
+
+/**
+ * Field-Lab-only manual/order motion for additional embodied squad members.
+ * This is deliberately separate from canonical MotionIntent so Authority-A0
+ * and historical single-companion evidence keep their original contract.
+ */
+export interface ExperimentalSquadMotionIntent {
+  bodyId: ExperimentalSquadMemberId;
   move: Vec2;
 }
 
