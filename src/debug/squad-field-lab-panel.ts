@@ -59,6 +59,7 @@ export class SquadFieldLabPanel {
     if (this.collapsed) return;
     const selected = state.control.selected.map(memberLabel).join(" + ");
     const assignmentLines = state.control.assignments
+      .filter((assignment) => state.control.activeMembers.includes(assignment.memberId))
       .map((assignment) => {
         const anchor = assignment.worldAnchor
           ? `@${fmt(assignment.worldAnchor.x)},${fmt(assignment.worldAnchor.y)}`
@@ -87,6 +88,7 @@ export class SquadFieldLabPanel {
         <h2>Group</h2>
         <div class="squad-field-debug-lines">
           <div>tick ${state.snapshot.tick} · scenario ${state.snapshot.scenarioId}</div>
+          <div>real squad bodies ${state.control.activeMembers.length} · ${state.control.activeMembers.map(memberLabel).join(", ")}</div>
           <div>selected ${selected}</div>
           <div>focus ${memberLabel(state.control.focused)} · direct ${state.control.directControl ? "ON" : "off"}</div>
           <div>orientation ${Math.round(state.control.orientationRadians * 180 / Math.PI)}° · spacing ${fmt(state.control.dynamics.spacingScale)}</div>
