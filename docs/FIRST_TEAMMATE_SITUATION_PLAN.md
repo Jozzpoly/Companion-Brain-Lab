@@ -663,3 +663,46 @@ The revised bounded hypothesis is an **off-axis player-local intercept flank**:
 - reaching the flank becomes `HOLDING_READY` until the causal situation changes.
 
 This correction preserves the key S1 invariant `movement ≠ intervention` while making pre-contact preparation spatially distinct.
+
+---
+
+## 21. Readiness qualification and S7 promotion — 2026-09-21
+
+The off-axis readiness hypothesis has passed its bounded machine gate.
+
+Qualified behavior:
+
+`TRACKING / responsibility NONE → GUARDING → HOLDING_READY → player moves → player-local flank re-anchors → WINDUP → readiness NONE → S2/S3/S4 authority → factual World outcome`
+
+The rehearsal proves:
+
+- readiness is visible movement, not only a label;
+- it stays player-local instead of chasing the hostile;
+- flank side remains stable through player movement;
+- preparation emits no `INTERVENE`;
+- correction `Q` constrains intervention rather than globally freezing readiness;
+- release restores still-valid autonomous contribution;
+- the shared World remains final outcome authority.
+
+The corresponding immutable public candidate is:
+
+`cef9028c5cbc825ed43197da605c10e2251c53c1`
+
+Public deployment:
+
+`https://jozzpoly.github.io/Companion-Brain-Lab/teammate-readiness/?teammate=1`
+
+Run `35634004556` passed build, exact candidate checks, Pages deploy, historical-surface preservation and public candidate smoke with exact provenance.
+
+### Promotion
+
+S1–S4 plus readiness are now sufficient for the first integrated Owner teammate gate.
+
+This is **not** promotion to combat AI, tactical AI, final commands or product-ready teammate behavior.
+
+The next question is experiential:
+
+> **Does the integrated causal chain read and feel like a companion sharing the player's situation, or does it still collapse perceptually into an instrumented follower?**
+
+Until that judgement exists, do not expand the situation merely to accumulate more machine-qualified mechanisms.
+
