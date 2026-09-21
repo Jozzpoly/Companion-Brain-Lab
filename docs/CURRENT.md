@@ -762,3 +762,69 @@ The revised bounded hypothesis is an **off-axis player-local intercept flank**:
 - reaching the flank becomes `HOLDING_READY` until the causal situation changes.
 
 This correction preserves the key S1 invariant `movement ≠ intervention` while making pre-contact preparation spatially distinct.
+
+---
+
+## 13. Readiness qualification and public Owner gate — 2026-09-21
+
+**This section supersedes the earlier “Active gate — pre-contact readiness” wording above.**
+
+Pinned Owner candidate:
+
+`cef9028c5cbc825ed43197da605c10e2251c53c1`
+
+Public surface:
+
+`https://jozzpoly.github.io/Companion-Brain-Lab/teammate-readiness/?teammate=1`
+
+Deployment qualification:
+
+`deploy-pinned-research-preview · run 35634004556 · SUCCESS`
+
+### Readiness promotion
+
+Status:
+
+> **MACHINE-QUALIFIED BOUNDED PRE-CONTACT READINESS · OWNER/PRODUCT QUALIFICATION OPEN**
+
+Evidence now establishes that the companion can:
+
+- track the approaching shared problem while responsibility remains `NONE`;
+- move to an off-axis player-local intercept flank without issuing a World action;
+- settle into `HOLDING_READY`;
+- preserve flank side and re-anchor the target when the player moves;
+- remain action-free before hostile commitment;
+- yield readiness at `WINDUP` to the existing S2 → S3 → S4 chain;
+- complete a factual World intervention only through the existing action contract.
+
+The original on-axis representation remains rejected because it visually promised body-block authority the sensor hostile did not possess.
+
+### Integrated participant promotion
+
+The earlier participant path's **PRE-OWNER FAIL** remains valid evidence for the old presentation, but no longer describes the current Owner candidate.
+
+The current candidate adds participant-visible pre-contact preparation, player-motion re-anchoring and explicit action provenance. Agent-side artifact red-team no longer supports the explanation “same follower + new labels” strongly enough to justify withholding Owner judgement.
+
+This does **not** mean teammate feel has passed.
+
+### Active gate
+
+> **S7 — INTEGRATED OWNER JUDGEMENT**
+
+The engineering/delivery boundary is closed:
+
+- exact candidate full check — PASS;
+- exact readiness rehearsal — PASS;
+- exact participant rehearsal — PASS;
+- Pages deploy — PASS;
+- real public smoke + provenance — PASS;
+- historical public surfaces preserved — PASS.
+
+The next materially new evidence can only come from Owner experience.
+
+Canonical deployment record:
+
+`docs/TEAMMATE_READINESS_PUBLIC_OWNER_GATE_2026-09-21.md`
+
+Do not add another cognition/mechanism tranche before this Owner judgement unless a deployment/runtime defect is discovered.
+
