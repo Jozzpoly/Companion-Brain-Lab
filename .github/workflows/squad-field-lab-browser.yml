@@ -1,0 +1,67 @@
+name: squad-field-lab-browser
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/world/types.ts"
+      - "src/world/scenarios.ts"
+      - "src/world/world.ts"
+      - "src/world/squad-field-lab.test.ts"
+      - "src/physics/rapier-physical-world.ts"
+      - "src/squad/field-lab-squad-control.ts"
+      - "src/squad/field-lab-squad-control.test.ts"
+      - "src/app/squad-field-lab-scene.ts"
+      - "src/app/squad-field-lab-hud.ts"
+      - "src/debug/squad-field-lab-panel.ts"
+      - "src/main.ts"
+      - "index.html"
+      - "scripts/squad-field-lab-browser-smoke.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/squad-field-lab-browser.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: squad-field-lab-browser-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SOURCE_SHA: ${{ github.sha }}
+      GITHUB_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: |
+          if npm install; then
+            exit 0
+          fi
+          latest_log="$(ls -t "$HOME"/.npm/_logs/*-debug-0.log 2>/dev/null | head -n 1 || true)"
+          if [ -z "$latest_log" ] || ! grep -Fq "Cannot read properties of null (reading 'edgesOut')" "$latest_log"; then
+            if [ -n "$latest_log" ]; then cat "$latest_log"; fi
+            exit 1
+          fi
+          rm -rf node_modules
+          npm install --legacy-peer-deps
+      - name: Full compile unit and build gate
+        run: npm run check
+      - name: Broad Squad Field Lab browser rehearsal
+        run: npm run browser:squad-field-lab
+      - name: Upload Field Lab evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: squad-field-lab-browser-${{ github.sha }}
+          path: artifacts/squad-field-lab-browser/
+          if-no-files-found: warn
+          retention-days: 14
