@@ -9,12 +9,11 @@ import type {
   CooperativeEpisodePhase,
   CooperativeEpisodeSnapshot
 } from "../world/cooperative-episode-contract";
-import type { SquadMemberId } from "../world/types";
-
-export type FieldLabSituation = "TRAINING" | "PRESSURE";
+import type { FieldLabLayout, FieldLabSituation, SquadMemberId } from "../world/types";
 
 export interface SquadFieldLabHudCallbacks {
   onSituation(situation: FieldLabSituation): void;
+  onLayout(layout: FieldLabLayout): void;
   onSquadSize(count: number): void;
   onSelect(memberId: SquadMemberId, additive: boolean): void;
   onSelectAll(): void;
@@ -34,6 +33,7 @@ export interface SquadFieldLabHudCallbacks {
 export interface SquadFieldLabHudState {
   control: FieldLabSquadControlSnapshot;
   situation: FieldLabSituation;
+  layout: FieldLabLayout;
   episode: CooperativeEpisodeSnapshot | null;
   latestEpisodeOutcome: CooperativeEpisodeOutcome;
 }
@@ -92,6 +92,7 @@ export class SquadFieldLabHud {
   private readonly pressureBlock: HTMLElement;
   private readonly pressureStatus: HTMLElement;
   private readonly situationButtons = new Map<FieldLabSituation, HTMLButtonElement>();
+  private readonly layoutButtons = new Map<FieldLabLayout, HTMLButtonElement>();
   private readonly spacing: ReturnType<typeof slider>;
   private readonly responsiveness: ReturnType<typeof slider>;
   private readonly tolerance: ReturnType<typeof slider>;
@@ -121,6 +122,20 @@ export class SquadFieldLabHud {
       control.addEventListener("click", () => callbacks.onSituation(situation));
       situationRow.append(control);
       this.situationButtons.set(situation, control);
+    }
+
+    const layoutHeading = document.createElement("div");
+    layoutHeading.className = "squad-lab-section-title";
+    layoutHeading.textContent = "Spatial layout";
+
+    const layoutRow = document.createElement("div");
+    layoutRow.className = "squad-lab-layout-grid";
+    for (const layout of ["OPEN", "DOORWAY", "PILLAR", "MIXED"] as const) {
+      const control = button(layout.toLowerCase());
+      control.dataset.layout = layout;
+      control.addEventListener("click", () => callbacks.onLayout(layout));
+      layoutRow.append(control);
+      this.layoutButtons.set(layout, control);
     }
 
     const sizeHeading = document.createElement("div");
@@ -239,6 +254,8 @@ export class SquadFieldLabHud {
       heading,
       situationHeading,
       situationRow,
+      layoutHeading,
+      layoutRow,
       sizeHeading,
       sizeRow,
       sub,
@@ -264,6 +281,9 @@ export class SquadFieldLabHud {
     const { control } = state;
     for (const [situation, entry] of this.situationButtons) {
       entry.classList.toggle("is-active", state.situation === situation);
+    }
+    for (const [layout, entry] of this.layoutButtons) {
+      entry.classList.toggle("is-active", state.layout === layout);
     }
 
     for (const [memberId, entry] of this.rosterButtons) {
@@ -303,7 +323,7 @@ export class SquadFieldLabHud {
       : "pressure inactive";
 
     this.status.textContent =
-      `${state.situation} · squad ${control.activeMembers.length} · selected ${control.selected.map((id) => LABELS[id]).join(" + ")} · focus ${LABELS[control.focused]} · ` +
+      `${state.situation} / ${state.layout} · squad ${control.activeMembers.length} · selected ${control.selected.map((id) => LABELS[id]).join(" + ")} · focus ${LABELS[control.focused]} · ` +
       `orientation ${Math.round(control.orientationRadians * 180 / Math.PI)}°`;
 
     this.orderStatus.textContent = control.activeMembers
