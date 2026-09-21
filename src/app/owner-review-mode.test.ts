@@ -14,9 +14,10 @@ describe("Participant review boundaries", () => {
     expect(isOwnerReviewSearch("?owner=0")).toBe(false);
   });
 
-  it("retires the rejected teammate=1 hidden-debug contract on moving main", () => {
-    expect(isTeammateReviewSearch("?teammate=1")).toBe(false);
-    expect(participantReviewKind("?teammate=1")).toBeNull();
+  it("uses teammate=1 for the current full-workbench participant specimen", () => {
+    expect(isTeammateReviewSearch("?teammate=1")).toBe(true);
+    expect(isTeammateReviewSearch("?teammate=0")).toBe(false);
+    expect(participantReviewKind("?teammate=1")).toBe("teammate");
     expect(participantReviewKind("?owner=1&teammate=1")).toBe("owner");
   });
 
