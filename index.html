@@ -165,19 +165,19 @@
         min-height: 38px;
       }
       .squad-field-lab-hud {
-        position:absolute;
-        left:14px;
-        top:14px;
+        position:relative;
+        flex:0 0 330px;
+        width:330px;
+        min-width:0;
+        height:100vh;
+        overflow-y:auto;
         z-index:12;
-        width:min(430px,calc(100% - 28px));
         display:grid;
+        align-content:start;
         gap:8px;
         padding:12px;
-        border:1px solid rgba(88,166,255,.48);
-        border-radius:10px;
-        background:rgba(13,17,23,.91);
-        box-shadow:0 10px 30px rgba(0,0,0,.32);
-        backdrop-filter:blur(6px);
+        border-right:1px solid rgba(88,166,255,.38);
+        background:#0d1117;
         pointer-events:auto;
       }
       .squad-lab-heading {
@@ -189,6 +189,11 @@
       .squad-lab-sub,.squad-lab-footer,.squad-lab-inline-hint {
         color:#8b949e;
         font:10px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      }
+      .squad-lab-size-grid {
+        display:grid;
+        grid-template-columns:repeat(4,minmax(0,1fr));
+        gap:5px;
       }
       .squad-lab-roster {
         display:grid;
@@ -205,6 +210,11 @@
         font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
       }
       .squad-lab-roster-button:hover,.squad-lab-button:hover { background:#21262d; }
+      .squad-lab-roster-button:disabled {
+        opacity:.28;
+        cursor:not-allowed;
+        background:#0d1117;
+      }
       .squad-lab-roster-button.is-selected {
         border-color:#58a6ff;
         background:rgba(56,139,253,.14);
@@ -214,7 +224,8 @@
         box-shadow:0 0 0 2px rgba(255,255,255,.75) inset;
         color:#fff;
       }
-      .squad-lab-button.is-active {
+      .squad-lab-button.is-active,
+      .squad-lab-size-grid .squad-lab-button.is-active {
         border-color:#d2a8ff;
         color:#f4e7ff;
         background:rgba(163,113,247,.16);
