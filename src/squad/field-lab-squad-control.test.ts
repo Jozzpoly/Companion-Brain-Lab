@@ -80,6 +80,17 @@ describe("FieldLabSquadControl", () => {
     expect(held.worldAnchor).toEqual({ x: 8, y: 4 });
   });
 
+  it("treats formation presets as generators whose slots remain freely editable", () => {
+    const control = new FieldLabSquadControl();
+    control.applyFormationPreset("WEDGE");
+    const generated = control.snapshot().slots.find((slot) => slot.memberId === "squad-4");
+    expect(generated?.offset).toEqual({ x: 2.25, y: 1.35 });
+
+    control.setSlotOffset("squad-4", { x: -3.4, y: 0.2 });
+    const edited = control.snapshot().slots.find((slot) => slot.memberId === "squad-4");
+    expect(edited?.offset).toEqual({ x: -3.4, y: 0.2 });
+  });
+
   it("makes dynamics bounded and behaviorally meaningful inputs", () => {
     const control = new FieldLabSquadControl();
     control.setSpacingScale(99);
