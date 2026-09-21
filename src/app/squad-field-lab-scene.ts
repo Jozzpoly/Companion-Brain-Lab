@@ -740,6 +740,8 @@ export class SquadFieldLabScene extends Phaser.Scene {
     }
     this.panel.update({
       snapshot,
+      situation: this.situation,
+      layout: this.layout,
       control: state,
       focusedBody,
       focusedTarget,
