@@ -35,6 +35,7 @@ import {
 import type {
   ActorId,
   DirectTraversalResult,
+  ExperimentalSquadMotionIntent,
   MotionIntent,
   ScenarioId,
   StaticCircleOccupancyResult,
@@ -69,6 +70,7 @@ export interface WorldSituationStepInput {
   motionIntents: readonly MotionIntent[];
   actionAttempts?: readonly WorldActionAttempt[];
   cooperativeEpisodeAttempts?: readonly CooperativeEpisodeActionAttempt[];
+  experimentalSquadMotionIntents?: readonly ExperimentalSquadMotionIntent[];
 }
 
 export interface WorldSituationStepResult {
@@ -208,13 +210,26 @@ export class LabWorld {
     if (!this.cooperativeEpisodeValue && cooperativeEpisodeAttempts.length > 0) {
       throw new Error("Cooperative episode actions require the cooperative-episode scenario.");
     }
+    const experimentalSquadMotionIntents = input.experimentalSquadMotionIntents ?? [];
+    if (this.scenarioIdValue !== "squad-field-lab" && experimentalSquadMotionIntents.length > 0) {
+      throw new Error("Experimental squad motion is confined to the squad-field-lab scenario.");
+    }
+    for (const intent of experimentalSquadMotionIntents) {
+      if (intent.bodyId !== "squad-2" && intent.bodyId !== "squad-3" && intent.bodyId !== "squad-4") {
+        throw new Error(`Experimental squad motion cannot claim canonical body authority: ${String(intent.bodyId)}`);
+      }
+    }
 
     const before = this.snapshot();
     const worldDrivenIntents = [
       ...this.sharedDangerWorldMotion(before),
       ...this.cooperativeEpisodeWorldMotion(before)
     ];
-    const actors = this.physical.step(input.motionIntents, worldDrivenIntents);
+    const actors = this.physical.step(
+      input.motionIntents,
+      worldDrivenIntents,
+      experimentalSquadMotionIntents
+    );
     this.tickValue += 1;
     const spec = scenario(this.scenarioIdValue);
     const after: WorldSnapshot = {
