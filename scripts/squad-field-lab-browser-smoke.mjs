@@ -293,6 +293,30 @@ try {
   invariant(afterMove && Math.hypot(afterMove.x - beforeMove.x, afterMove.y - beforeMove.y) > 0.45,
     "C4 did not materially respond to its world-space MOVE order.");
 
+  // The same squad/control state must survive multiple physical layouts.
+  // These are real World rebuilds with different obstacle sets, not visual presets.
+  for (const [layout, obstacleCount] of [
+    ["OPEN", 0],
+    ["DOORWAY", 2],
+    ["PILLAR", 1],
+    ["MIXED", 3]
+  ]) {
+    await page.locator(`[data-layout="${layout}"]`).click();
+    const layoutState = await waitFor(
+      page,
+      (value) =>
+        value.includes(`layout ${layout} · obstacles ${obstacleCount}`) &&
+        value.includes("C4 MOVE"),
+      7_000,
+      `${layout} layout preserving squad state`
+    );
+    invariant(
+      layoutState.includes("C4 MOVE"),
+      `${layout} rebuild discarded the existing C4 assignment.`
+    );
+  }
+  await screenshot(page, "05-layout-matrix-preserves-squad-state.png");
+
   // The same control state must survive a switch from spatial training into
   // continuous cooperative pressure. C4's independent MOVE assignment is a
   // deliberate canary: switching situations must not reset squad semantics.
@@ -436,6 +460,7 @@ try {
       worldSpaceSlotDragEditsGeometry: true,
       worldSpaceMoveScopesToSelection: true,
       formationMotorRespondsMaterially: true,
+      layoutMatrixPreservesSquadControlState: true,
       pressurePreservesSquadControlState: true,
       extraSquadMemberCanMateriallyContribute: true,
       selectedGroupCanJointlyContribute: true,
