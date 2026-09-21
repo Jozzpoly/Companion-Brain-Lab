@@ -1,6 +1,6 @@
 export type ActorId = "player" | "companion";
 export type WorldBodyId = ActorId | "hostile";
-export type ScenarioId = "open" | "pillar" | "doorway" | "head-on" | "shared-danger";
+export type ScenarioId = "open" | "pillar" | "doorway" | "head-on" | "shared-danger" | "cooperative-episode";
 
 export interface Vec2 {
   x: number;
