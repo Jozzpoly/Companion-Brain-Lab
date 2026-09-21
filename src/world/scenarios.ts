@@ -99,6 +99,25 @@ export const SCENARIOS: Readonly<Record<ScenarioId, ScenarioSpec>> = {
       { id: "fieldlab.wall.bottom", x: 8, y: 6.1, width: 0.6, height: 3.9 },
       { id: "fieldlab.pillar", x: 11.4, y: 4.1, width: 1.2, height: 1.8 }
     ]
+  },
+  "squad-field-lab-pressure": {
+    id: "squad-field-lab-pressure",
+    label: "Companion / Squad Field Lab · cooperative pressure",
+    width: 16,
+    height: 10,
+    actors: [
+      actor("player", 3, 5),
+      actor("companion", 4.6, 5),
+      actor("squad-2", 4.8, 3.8),
+      actor("squad-3", 4.8, 6.2),
+      actor("squad-4", 6.0, 5),
+      actor("hostile", 7.1, 5, { radius: 0.34, speed: 1.65, collisionMode: "sensor" })
+    ],
+    obstacles: [
+      { id: "fieldlab.wall.top", x: 8, y: 0, width: 0.6, height: 3.9 },
+      { id: "fieldlab.wall.bottom", x: 8, y: 6.1, width: 0.6, height: 3.9 },
+      { id: "fieldlab.pillar", x: 11.4, y: 4.1, width: 1.2, height: 1.8 }
+    ]
   }
 };
 
@@ -118,13 +137,18 @@ const FIELD_LAB_MEMBER_SPAWNS: Readonly<Record<SquadMemberId, { x: number; y: nu
  * Missing members are absent from the ScenarioSpec and therefore absent from
  * Rapier; this is not a UI visibility trick.
  */
-export function squadFieldLabScenario(activeMembers: readonly SquadMemberId[]): ScenarioSpec {
+export function squadFieldLabScenario(
+  activeMembers: readonly SquadMemberId[],
+  situation: "TRAINING" | "PRESSURE" = "TRAINING"
+): ScenarioSpec {
   const unique = [...new Set(activeMembers)];
   if (unique.length < 1 || unique.length > 4 || !unique.includes("companion")) {
     throw new Error("Field Lab squad roster must contain canonical companion and 1-4 total members.");
   }
 
-  const base = SCENARIOS["squad-field-lab"];
+  const base = SCENARIOS[
+    situation === "PRESSURE" ? "squad-field-lab-pressure" : "squad-field-lab"
+  ];
   return {
     ...base,
     actors: [
@@ -132,7 +156,10 @@ export function squadFieldLabScenario(activeMembers: readonly SquadMemberId[]): 
       ...unique.map((memberId) => {
         const spawn = FIELD_LAB_MEMBER_SPAWNS[memberId];
         return actor(memberId, spawn.x, spawn.y);
-      })
+      }),
+      ...(situation === "PRESSURE"
+        ? [actor("hostile", 7.1, 5, { radius: 0.34, speed: 1.65, collisionMode: "sensor" })]
+        : [])
     ],
     obstacles: base.obstacles.map((obstacle) => ({ ...obstacle }))
   };
