@@ -1,4 +1,12 @@
-import type { ActorSpec, ObstacleSpec, ScenarioId, ScenarioSpec, SquadMemberId } from "./types";
+import type {
+  ActorSpec,
+  FieldLabLayout,
+  FieldLabSituation,
+  ObstacleSpec,
+  ScenarioId,
+  ScenarioSpec,
+  SquadMemberId
+} from "./types";
 
 const WIDTH = 12;
 const HEIGHT = 8;
@@ -24,6 +32,22 @@ const doorwayWalls: readonly ObstacleSpec[] = [
   { id: "door.wall.top", x: 5.7, y: 0, width: 0.6, height: 3.3 },
   { id: "door.wall.bottom", x: 5.7, y: 4.7, width: 0.6, height: 3.3 }
 ];
+
+const FIELD_LAB_DOORWAY_OBSTACLES: readonly ObstacleSpec[] = [
+  { id: "fieldlab.wall.top", x: 8, y: 0, width: 0.6, height: 3.9 },
+  { id: "fieldlab.wall.bottom", x: 8, y: 6.1, width: 0.6, height: 3.9 }
+];
+
+const FIELD_LAB_PILLAR_OBSTACLES: readonly ObstacleSpec[] = [
+  { id: "fieldlab.pillar", x: 11.4, y: 4.1, width: 1.2, height: 1.8 }
+];
+
+const FIELD_LAB_LAYOUT_OBSTACLES: Readonly<Record<FieldLabLayout, readonly ObstacleSpec[]>> = {
+  OPEN: [],
+  DOORWAY: FIELD_LAB_DOORWAY_OBSTACLES,
+  PILLAR: FIELD_LAB_PILLAR_OBSTACLES,
+  MIXED: [...FIELD_LAB_DOORWAY_OBSTACLES, ...FIELD_LAB_PILLAR_OBSTACLES]
+};
 
 export const SCENARIOS: Readonly<Record<ScenarioId, ScenarioSpec>> = {
   open: {
@@ -94,11 +118,7 @@ export const SCENARIOS: Readonly<Record<ScenarioId, ScenarioSpec>> = {
       actor("squad-3", 4.8, 6.2),
       actor("squad-4", 6.0, 5)
     ],
-    obstacles: [
-      { id: "fieldlab.wall.top", x: 8, y: 0, width: 0.6, height: 3.9 },
-      { id: "fieldlab.wall.bottom", x: 8, y: 6.1, width: 0.6, height: 3.9 },
-      { id: "fieldlab.pillar", x: 11.4, y: 4.1, width: 1.2, height: 1.8 }
-    ]
+    obstacles: FIELD_LAB_LAYOUT_OBSTACLES.MIXED
   },
   "squad-field-lab-pressure": {
     id: "squad-field-lab-pressure",
@@ -113,11 +133,7 @@ export const SCENARIOS: Readonly<Record<ScenarioId, ScenarioSpec>> = {
       actor("squad-4", 6.0, 5),
       actor("hostile", 7.1, 5, { radius: 0.34, speed: 1.65, collisionMode: "sensor" })
     ],
-    obstacles: [
-      { id: "fieldlab.wall.top", x: 8, y: 0, width: 0.6, height: 3.9 },
-      { id: "fieldlab.wall.bottom", x: 8, y: 6.1, width: 0.6, height: 3.9 },
-      { id: "fieldlab.pillar", x: 11.4, y: 4.1, width: 1.2, height: 1.8 }
-    ]
+    obstacles: FIELD_LAB_LAYOUT_OBSTACLES.MIXED
   }
 };
 
@@ -139,7 +155,8 @@ const FIELD_LAB_MEMBER_SPAWNS: Readonly<Record<SquadMemberId, { x: number; y: nu
  */
 export function squadFieldLabScenario(
   activeMembers: readonly SquadMemberId[],
-  situation: "TRAINING" | "PRESSURE" = "TRAINING"
+  situation: FieldLabSituation = "TRAINING",
+  layout: FieldLabLayout = "MIXED"
 ): ScenarioSpec {
   const unique = [...new Set(activeMembers)];
   if (unique.length < 1 || unique.length > 4 || !unique.includes("companion")) {
@@ -161,7 +178,7 @@ export function squadFieldLabScenario(
         ? [actor("hostile", 7.1, 5, { radius: 0.34, speed: 1.65, collisionMode: "sensor" })]
         : [])
     ],
-    obstacles: base.obstacles.map((obstacle) => ({ ...obstacle }))
+    obstacles: FIELD_LAB_LAYOUT_OBSTACLES[layout].map((obstacle) => ({ ...obstacle }))
   };
 }
 
