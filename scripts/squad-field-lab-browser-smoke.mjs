@@ -342,6 +342,7 @@ try {
   // The same control state must survive a switch from spatial training into
   // continuous cooperative pressure. C4's independent MOVE assignment is a
   // deliberate canary: switching situations must not reset squad semantics.
+  await tapKey(page, "p");
   await page.getByRole("button", { name: "Pressure" }).click();
   const pressureLoaded = await waitFor(
     page,
@@ -365,13 +366,27 @@ try {
   );
   await screenshot(page, "05-pressure-preserves-squad-state.png");
 
-  // Cycle 1: focused C2 gets the same material affordance as canonical C1.
+  // Cycle 1: author a real pre-contact responsibility for C2 through the
+  // existing world-space control surface. FOLLOW is not expected to magically
+  // place it inside REPEL range.
   await page.locator('.squad-lab-roster-button[data-member-id="squad-2"]').click();
+  const c2InterceptAnchor = internalCanvasPoint(box, { x: 4.2, y: 4.02 });
+  await page.mouse.click(c2InterceptAnchor.x, c2InterceptAnchor.y, { button: "right" });
+  await tapKey(page, "p");
+  await waitFor(
+    page,
+    (value) =>
+      value.includes("Focused · C2") &&
+      value.includes("C2 MOVE") &&
+      value.includes("ARRIVED"),
+    5_000,
+    "C2 reaches authored intercept slot"
+  );
   await waitFor(
     page,
     (value) => value.includes("Focused · C2") && value.includes("phase APPROACHING"),
     7_000,
-    "pressure cycle 1 approaching with C2 focused"
+    "pressure cycle 1 approaching with authored C2 intercept"
   );
   const c2Repel = await repeatTapUntil(
     page,
@@ -380,13 +395,14 @@ try {
       value.includes("REPEL squad-2 -> SUCCEEDED") &&
       value.includes("pressure outcome REPELLED · repelled by squad-2") &&
       value.includes("remembered REPELLED"),
-    7_000,
+    5_000,
     "C2 materially repels threat"
   );
   invariant(c2Repel.includes("REPEL squad-2 -> SUCCEEDED"), "C2 is still decorative in cooperative pressure.");
   await screenshot(page, "06-c2-material-contribution.png");
 
-  // Cycle 2: cluster C1+C2 and issue one selected-group material response.
+  // Cycle 2: put C1+C2 into two distinct authored slots near the threat path and
+  // require one selected-group action to produce two real World contributors.
   await waitFor(
     page,
     (value) => value.includes("phase CALM") && value.includes("cycle 2"),
@@ -400,9 +416,20 @@ try {
   });
   await page.locator('.squad-lab-roster-button[data-member-id="companion"]').click();
   await page.locator('.squad-lab-roster-button[data-member-id="squad-2"]').click({ modifiers: ["Shift"] });
+  const pairAnchor = internalCanvasPoint(box, { x: 5.2, y: 5.0 });
+  await page.mouse.click(pairAnchor.x, pairAnchor.y, { button: "right" });
   await waitFor(
     page,
-    (value) => value.includes("selected C1 + C2") && value.includes("phase APPROACHING"),
+    (value) =>
+      value.includes("selected C1 + C2") &&
+      value.includes("C1 MOVE") &&
+      value.includes("C2 MOVE"),
+    3_000,
+    "C1+C2 receive shared spatial responsibility"
+  );
+  await waitFor(
+    page,
+    (value) => value.includes("phase APPROACHING") && value.includes("cycle 2"),
     8_000,
     "pressure cycle 2 approaching with C1+C2 selected"
   );
@@ -413,7 +440,7 @@ try {
       value.includes("REPEL companion -> SUCCEEDED") &&
       value.includes("REPEL squad-2 -> SUCCEEDED") &&
       value.includes("pressure outcome REPELLED · repelled by companion, squad-2"),
-    8_000,
+    5_000,
     "selected group jointly repels threat"
   );
   invariant(
