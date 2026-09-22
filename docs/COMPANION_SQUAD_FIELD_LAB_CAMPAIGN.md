@@ -416,3 +416,18 @@ The benchmark is not "all controls work".
 The benchmark is:
 
 > **Does this feel like a laboratory in which the Owner can genuinely explore how a small companion squad should move, organize, respond and cooperate?**
+
+---
+
+## 18. Integrated machine checkpoint — 2026-09-22
+
+The campaign has crossed its first broad substrate boundary.
+
+Source `199c3d07d587660c5902b0fc3c7562d1850c545b` passed the full repository gate and the integrated `squad-field-lab-browser` rehearsal in run `35719945581`.
+
+The qualified surface now combines real 1–4-body roster control, direct/manual authority, selection-scoped orders, editable formations/dynamics, multiple physical layouts, preserved live spatial setup and continuous cooperative pressure in one runtime.
+
+This is deliberately **not** an Owner-test promotion.
+
+The next campaign objective is breadth of unscripted experimentation and reproducibility: make it cheap to author, perturb, capture, restore and compare meaningful squad configurations, then use repeated Owner-authored patterns as evidence for future autonomy.
+
