@@ -915,3 +915,44 @@ Canonical campaign:
 
 `docs/COMPANION_SQUAD_FIELD_LAB_CAMPAIGN.md`
 
+---
+
+## 17. Squad Field Lab integrated checkpoint — 2026-09-22
+
+The broad Field Lab direction is now materially implemented beyond the earlier planning stage.
+
+Qualified source:
+
+`199c3d07d587660c5902b0fc3c7562d1850c545b`
+
+Qualification:
+
+`squad-field-lab-browser · run 35719945581 · SUCCESS`
+
+Status:
+
+> **MACHINE-QUALIFIED BROAD MANUAL SQUAD SUBSTRATE · NOT OWNER-READY · AUTONOMY NOT PROMOTED**
+
+The same isolated `?fieldlab=1` runtime now carries:
+
+- 1–4 real embodied squad members;
+- selection / multi-selection / focus;
+- direct manual control;
+- selection-scoped spatial orders;
+- editable freeform formation geometry and live dynamics;
+- independent OPEN / DOORWAY / PILLAR / MIXED spatial layouts;
+- preservation of live squad state across experiment rebuilds;
+- TRAINING / PRESSURE situation switching;
+- continuous material cooperative pressure with real C2–C4 participation;
+- player-owned and group-owned outcomes;
+- no-action consequence and cycle continuity;
+- selection-aware causal debug.
+
+This does **not** reopen S7 and does not qualify teammate feel.
+
+The active object remains the broader Field Lab campaign. The next legitimate work is to increase its value as an unscripted research instrument, not to manufacture another small Owner gate.
+
+Canonical checkpoint:
+
+`docs/SQUAD_FIELD_LAB_INTEGRATED_CHECKPOINT_2026-09-22.md`
+
