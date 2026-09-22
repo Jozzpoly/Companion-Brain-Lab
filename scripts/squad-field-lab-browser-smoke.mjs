@@ -339,10 +339,24 @@ try {
   await screenshot(page, "05-layout-matrix-preserves-squad-state.png");
   await tapKey(page, "p");
 
+  // Let the training world resume normally, then freeze the *current* spatial
+  // truth immediately before the situation rebuild. C4 still has MOVE authority,
+  // so comparing against the older pre-layout coordinate would incorrectly call
+  // legitimate motion a rebuild reset.
+  await page.waitForTimeout(180);
+  await tapKey(page, "p");
+  const pausedBeforePressure = await waitFor(
+    page,
+    (value) => value.includes("PAUSED") && value.includes("Focused · C4"),
+    3_000,
+    "pause immediately before pressure switch"
+  );
+  const c4BeforePressure = focusedBody(pausedBeforePressure);
+  invariant(c4BeforePressure, "C4 position unavailable immediately before pressure switch.");
+
   // The same control state must survive a switch from spatial training into
   // continuous cooperative pressure. C4's independent MOVE assignment is a
   // deliberate canary: switching situations must not reset squad semantics.
-  await tapKey(page, "p");
   await page.getByRole("button", { name: "Pressure" }).click();
   const pressureLoaded = await waitFor(
     page,
@@ -359,8 +373,8 @@ try {
   invariant(c4InPressure, "C4 position unavailable after pressure rebuild.");
   invariant(
     Math.hypot(
-      c4InPressure.x - c4BeforeLayouts.x,
-      c4InPressure.y - c4BeforeLayouts.y
+      c4InPressure.x - c4BeforePressure.x,
+      c4InPressure.y - c4BeforePressure.y
     ) < 0.25,
     "TRAINING -> PRESSURE transition reset the existing live spatial setup."
   );
