@@ -16,6 +16,11 @@ import type {
   FieldLabExperimentDiff,
   FieldLabExperimentSlot
 } from "../squad/field-lab-experiment";
+import type {
+  FieldLabTrialComparison,
+  FieldLabTrialSlot,
+  FieldLabTrialSummary
+} from "../squad/field-lab-trial";
 
 type DynamicsScope = "GROUP" | "SELECTED";
 
@@ -38,6 +43,8 @@ export interface SquadFieldLabHudCallbacks {
   onRestoreExperiment(slot: FieldLabExperimentSlot): void;
   onRenameExperiment(slot: FieldLabExperimentSlot, label: string): void;
   onClearExperiment(slot: FieldLabExperimentSlot): void;
+  onToggleTrial(slot: FieldLabTrialSlot): void;
+  onClearTrial(slot: FieldLabTrialSlot): void;
   onPlayerRepel(): void;
   onFocusedRepel(): void;
   onSelectedRepel(): void;
@@ -54,6 +61,9 @@ export interface SquadFieldLabHudState {
     capturedAtTick: number;
   }>>>;
   experimentDiff: FieldLabExperimentDiff | null;
+  trials: Readonly<Partial<Record<FieldLabTrialSlot, FieldLabTrialSummary>>>;
+  activeTrial: { slot: FieldLabTrialSlot; frameCount: number } | null;
+  trialComparison: FieldLabTrialComparison | null;
 }
 
 const LABELS: Readonly<Record<SquadMemberId, string>> = {
@@ -144,6 +154,11 @@ function parameterEditor(
   };
 }
 
+function signed(value: number, digits = 2): string {
+  const rounded = value.toFixed(digits);
+  return value > 0 ? `+${rounded}` : rounded;
+}
+
 function phaseTone(phase: CooperativeEpisodePhase | null): string {
   if (phase === "PRESSURING") return "danger";
   if (phase === "APPROACHING") return "warning";
@@ -182,6 +197,9 @@ export class SquadFieldLabHud {
   private readonly experimentClearButtons = new Map<FieldLabExperimentSlot, HTMLButtonElement>();
   private readonly experimentMeta = new Map<FieldLabExperimentSlot, HTMLElement>();
   private readonly experimentDiffSummary: HTMLElement;
+  private readonly trialToggleButtons = new Map<FieldLabTrialSlot, HTMLButtonElement>();
+  private readonly trialClearButtons = new Map<FieldLabTrialSlot, HTMLButtonElement>();
+  private readonly trialDiffSummary: HTMLElement;
 
   constructor(callbacks: SquadFieldLabHudCallbacks) {
     const gamePane = document.querySelector<HTMLElement>("#game-pane");
@@ -423,7 +441,22 @@ export class SquadFieldLabHud {
       this.experimentClearButtons.set(slot, clear);
 
       actions.append(capture, restore, clear);
-      card.append(title, label, actions);
+
+      const trialActions = document.createElement("div");
+      trialActions.className = "squad-lab-trial-actions";
+      const trial = button(`Run trace ${slot}`);
+      trial.dataset.trialToggle = slot;
+      trial.disabled = true;
+      trial.addEventListener("click", () => callbacks.onToggleTrial(slot));
+      this.trialToggleButtons.set(slot, trial);
+      const clearTrial = button("Clear trace");
+      clearTrial.dataset.trialClear = slot;
+      clearTrial.disabled = true;
+      clearTrial.addEventListener("click", () => callbacks.onClearTrial(slot));
+      this.trialClearButtons.set(slot, clearTrial);
+      trialActions.append(trial, clearTrial);
+
+      card.append(title, label, actions, trialActions);
       experimentGrid.append(card);
     }
 
@@ -431,6 +464,12 @@ export class SquadFieldLabHud {
     this.experimentDiffSummary.className = "squad-lab-experiment-diff";
     this.experimentDiffSummary.dataset.experimentDiff = "true";
     this.experimentDiffSummary.textContent = "Capture A and B to compare exact authored setups.";
+
+    this.trialDiffSummary = document.createElement("div");
+    this.trialDiffSummary.className = "squad-lab-experiment-diff";
+    this.trialDiffSummary.dataset.trialDiff = "true";
+    this.trialDiffSummary.textContent =
+      "Run traces A and B to compare behavior over time from the captured setups.";
 
     this.pressureBlock = document.createElement("section");
     this.pressureBlock.className = "squad-lab-pressure-block";
@@ -491,6 +530,7 @@ export class SquadFieldLabHud {
       experimentHeading,
       experimentGrid,
       this.experimentDiffSummary,
+      this.trialDiffSummary,
       this.pressureBlock,
       this.status,
       this.orderStatus,
@@ -551,6 +591,23 @@ export class SquadFieldLabHud {
       if (restore) restore.disabled = !captured;
       if (clear) clear.disabled = !captured;
       if (meta) meta.textContent = captured ? `tick ${captured.capturedAtTick}` : "empty";
+
+      const trial = state.trials[slot];
+      const active = state.activeTrial?.slot === slot;
+      const trialToggle = this.trialToggleButtons.get(slot);
+      const trialClear = this.trialClearButtons.get(slot);
+      if (trialToggle) {
+        trialToggle.disabled = !captured || Boolean(state.activeTrial && !active);
+        trialToggle.classList.toggle("is-active", active);
+        trialToggle.textContent = active
+          ? `Stop trace ${slot} · ${state.activeTrial?.frameCount ?? 0}t`
+          : trial
+            ? `Rerun trace ${slot} · ${trial.frameCount}t`
+            : `Run trace ${slot}`;
+      }
+      if (trialClear) {
+        trialClear.disabled = !trial && !active;
+      }
     }
 
     if (!state.experiments.A || !state.experiments.B) {
@@ -565,6 +622,28 @@ export class SquadFieldLabHud {
         ? `A/B: ${diff.differences.length} differences · ${diff.categories.join(" · ")}`
         : "A/B diff unavailable.";
       this.experimentDiffSummary.dataset.state = "different";
+    }
+
+    if (!state.trials.A || !state.trials.B || !state.trialComparison) {
+      this.trialDiffSummary.textContent = state.activeTrial
+        ? `Trace ${state.activeTrial.slot} recording · ${state.activeTrial.frameCount} ticks`
+        : "Run traces A and B to compare behavior over time from the captured setups.";
+      this.trialDiffSummary.dataset.state = state.activeTrial ? "different" : "incomplete";
+    } else {
+      const memberDeltas = state.trialComparison.members.map((member) => {
+        const targetError = member.meanTargetErrorDelta === null
+          ? "n/a"
+          : `${signed(member.meanTargetErrorDelta)}m`;
+        return (
+          `${LABELS[member.memberId]} Δpath ${signed(member.pathDistanceDelta)}m · ` +
+          `Δtarget ${targetError} · blocked ${signed(member.blockedTicksDelta, 0)}t · ` +
+          `contacts ${signed(member.contactTicksDelta, 0)}t`
+        );
+      });
+      this.trialDiffSummary.textContent =
+        `Trace A ${state.trials.A.frameCount}t vs B ${state.trials.B.frameCount}t · ` +
+        memberDeltas.join(" | ");
+      this.trialDiffSummary.dataset.state = "different";
     }
 
     this.pressureBlock.hidden = state.situation !== "PRESSURE";
