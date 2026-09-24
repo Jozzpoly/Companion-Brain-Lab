@@ -68,8 +68,11 @@ try {
   });
 
   await page.addInitScript(({ keyA, keyB }) => {
+    const guard = "companion-field-lab-experiment-smoke-initialized";
+    if (sessionStorage.getItem(guard) === "1") return;
     localStorage.removeItem(keyA);
     localStorage.removeItem(keyB);
+    sessionStorage.setItem(guard, "1");
   }, { keyA: KEY_A, keyB: KEY_B });
 
   await page.goto("http://127.0.0.1:4174/?fieldlab=1", {
