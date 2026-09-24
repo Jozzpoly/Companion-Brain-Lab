@@ -1,5 +1,10 @@
 import type { FieldLabSquadControlSnapshot, FieldLabMemberTarget } from "../squad/field-lab-squad-control";
 import type {
+  FieldLabExperimentDiff,
+  FieldLabExperimentRecord,
+  FieldLabExperimentSlot
+} from "../squad/field-lab-experiment";
+import type {
   CooperativeEpisodeActionOutcome,
   CooperativeEpisodeOutcome,
   CooperativeEpisodeSnapshot
@@ -25,6 +30,8 @@ export interface SquadFieldLabPanelState {
   cooperativeEpisode: CooperativeEpisodeSnapshot | null;
   cooperativeEpisodeOutcome: CooperativeEpisodeOutcome;
   cooperativeActionOutcomes: readonly CooperativeEpisodeActionOutcome[];
+  experiments: Readonly<Partial<Record<FieldLabExperimentSlot, FieldLabExperimentRecord | null>>>;
+  experimentDiff: FieldLabExperimentDiff | null;
   recentEvents: readonly string[];
 }
 
@@ -37,6 +44,15 @@ function memberLabel(id: SquadMemberId): string {
   if (id === "squad-2") return "C2";
   if (id === "squad-3") return "C3";
   return "C4";
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 export class SquadFieldLabPanel {
@@ -113,6 +129,26 @@ export class SquadFieldLabPanel {
           <div>focus ${memberLabel(state.control.focused)} · direct ${state.control.directControl ? "ON" : "off"}</div>
           <div>orientation ${Math.round(state.control.orientationRadians * 180 / Math.PI)}° · spacing ${fmt(state.control.dynamics.spacingScale)}</div>
           <div>response ${fmt(state.control.dynamics.responsiveness)} · tolerance ${fmt(state.control.dynamics.slotTolerance)}m</div>
+        </div>
+      </section>
+      <section class="squad-field-debug-section">
+        <h2>Experiment A/B</h2>
+        <div class="squad-field-debug-lines">
+          <div>A ${state.experiments.A ? `${escapeHtml(state.experiments.A.label || "unlabelled")} · tick ${state.experiments.A.capturedAtTick}` : "empty"}</div>
+          <div>B ${state.experiments.B ? `${escapeHtml(state.experiments.B.label || "unlabelled")} · tick ${state.experiments.B.capturedAtTick}` : "empty"}</div>
+          <div>${state.experimentDiff
+            ? state.experimentDiff.equal
+              ? "A/B setup state identical"
+              : `${state.experimentDiff.differences.length} differences · ${state.experimentDiff.categories.join(" · ")}`
+            : "capture both setups for structural comparison"}</div>
+          ${state.experimentDiff && !state.experimentDiff.equal
+            ? state.experimentDiff.differences.slice(0, 14).map((difference) =>
+                `<div><strong>${difference.category}</strong> · ${escapeHtml(difference.path)} · A ${escapeHtml(difference.a)} → B ${escapeHtml(difference.b)}</div>`
+              ).join("")
+            : ""}
+          ${state.experimentDiff && state.experimentDiff.differences.length > 14
+            ? `<div>+${state.experimentDiff.differences.length - 14} more differences</div>`
+            : ""}
         </div>
       </section>
       ${state.cooperativeEpisode ? `
