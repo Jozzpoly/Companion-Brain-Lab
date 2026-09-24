@@ -20,14 +20,17 @@ That file outranks historical plans, old experiment names, closed PRs, deleted b
 - The repo still contains the full causal/debug workbench; the rejected participant surface hid it rather than deleting it.
 - Stage B is therefore retained only as donor/regression evidence.
 - Moving `main` contains a **post-FAIL command/autonomy spike**. Its separation of player directive, autonomous proposal, arbitration, execution and World outcome is useful donor evidence; its concrete `AT_WILL/FOLLOW_ME/HOLD_HERE`, F1/F2/F3 UI and autonomy radii are experimental, not roadmap authority.
-- The active frontier is **strategic recovery and selection of the first coherent teammate situation**. No specific next mechanic—commands, hostile exchange, combat slice or otherwise—is currently pre-authorized merely because code for it exists.
+- The active implementation/research object is now the **Companion / Squad Field Lab**: a broad manual 1–4 companion sandbox for selection, direct control, world-space orders, editable formations, dynamics, multiple spatial situations and causal debug.
+- Integrated source `199c3d07d587660c5902b0fc3c7562d1850c545b` is **MACHINE-QUALIFIED BROAD MANUAL SQUAD SUBSTRATE · NOT OWNER-READY · AUTONOMY NOT PROMOTED**.
+- The Owner reaffirmed on 2026-09-24 that this advanced, highly parametric laboratory is an important direction: broad freedom to author formations/behavior/dynamics should be used to discover repeatable patterns that later autonomy may earn responsibility for.
+- The Field Lab does **not** erase the still-open S5-style product debt: continuous game-like cooperative play / teammate outcome remains an important pressure through which discovered behavior must eventually prove value.
 - Foundation movement remains `PASS · REWORK-READY` and should not be reopened without a new gameplay falsifier.
 
 ## North star
 
 > During unscripted play, the Owner increasingly treats the companion as a teammate: can rely on it without babysitting, can predict enough to coordinate, notices meaningful initiative, and can correct or direct it quickly when desired.
 
-Near-term work should use the restored full workbench and existing donors to design the first coherent teammate situation before further behavior expansion. The next Owner test must expose a genuinely new, integrated teammate capability in the same debuggable runtime; another movement-only, marker-only or mechanism-only specimen is not sufficient.
+Near-term work should make the Field Lab increasingly valuable as an unscripted research instrument: faster authoring/perturbation/capture/restore/A-B comparison, richer meaningful dynamics, and formation behavior under geometric/cooperative pressure. Manual Owner-authored behavior is evidence for later autonomy, not a fallback. The next Owner test should emerge from real accumulated capability; another narrow movement/marker/mechanism gate is not sufficient.
 
 ## Repository discipline
 
