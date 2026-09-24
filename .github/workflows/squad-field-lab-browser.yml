@@ -14,12 +14,15 @@ on:
       - "src/physics/rapier-physical-world.ts"
       - "src/squad/field-lab-squad-control.ts"
       - "src/squad/field-lab-squad-control.test.ts"
+      - "src/squad/field-lab-experiment.ts"
+      - "src/squad/field-lab-experiment.test.ts"
       - "src/app/squad-field-lab-scene.ts"
       - "src/app/squad-field-lab-hud.ts"
       - "src/debug/squad-field-lab-panel.ts"
       - "src/main.ts"
       - "index.html"
       - "scripts/squad-field-lab-browser-smoke.mjs"
+      - "scripts/squad-field-lab-experiment-browser-smoke.mjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/squad-field-lab-browser.yml"
@@ -59,11 +62,15 @@ jobs:
         run: npm run check
       - name: Broad Squad Field Lab browser rehearsal
         run: npm run browser:squad-field-lab
+      - name: Persistent A-B experiment rehearsal
+        run: npm run browser:squad-field-lab-experiments
       - name: Upload Field Lab evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: squad-field-lab-browser-${{ github.sha }}
-          path: artifacts/squad-field-lab-browser/
+          path: |
+            artifacts/squad-field-lab-browser/
+            artifacts/squad-field-lab-experiment-browser/
           if-no-files-found: warn
           retention-days: 14
