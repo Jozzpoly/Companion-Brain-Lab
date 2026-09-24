@@ -120,4 +120,50 @@ describe("FieldLabSquadControl", () => {
       responsiveness: 0.15
     });
   });
+
+  it("restores a complete authored control snapshot after unrelated perturbations", () => {
+    const control = new FieldLabSquadControl();
+    control.setActiveCount(3);
+    control.selectOnly("squad-2");
+    control.toggleSelected("squad-3");
+    control.focus("squad-3");
+    control.setDirectControl(true);
+    control.issueSelected("MOVE", { x: 8.25, y: 6.5 });
+    control.applyFormationPreset("COLUMN");
+    control.setSlotOffset("squad-2", { x: -1.2, y: 0.75 });
+    control.setSpacingScale(1.7);
+    control.setSlotTolerance(0.35);
+    control.setResponsiveness(0.55);
+    control.setOrientationRadians(0.7);
+    const captured = control.snapshot();
+
+    control.setActiveCount(1);
+    control.selectOnly("companion");
+    control.setDirectControl(false);
+    control.issueSelected("FOLLOW");
+    control.applyFormationPreset("WEDGE");
+    control.setSpacingScale(0.6);
+    control.setSlotTolerance(0.1);
+    control.setResponsiveness(0.95);
+    control.setOrientationRadians(-1.1);
+
+    expect(control.restore(captured)).toEqual(captured);
+    expect(control.snapshot()).toEqual(captured);
+  });
+
+  it("fails closed when a captured snapshot would violate roster or selection invariants", () => {
+    const control = new FieldLabSquadControl();
+    const captured = control.snapshot();
+
+    expect(() => control.restore({
+      ...captured,
+      activeMembers: ["companion", "squad-3"]
+    })).toThrow(/canonical 1-4 roster prefix/);
+
+    expect(() => control.restore({
+      ...captured,
+      selected: ["squad-2"],
+      focused: "companion"
+    })).toThrow(/focus must belong/);
+  });
 });
