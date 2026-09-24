@@ -85,6 +85,8 @@ describe("Field Lab experiment state", () => {
     control.setResponsiveness(0.9);
     control.setSlowdownRadius(0.45);
     control.setSelectedDynamicsOverride("slotTolerance", 0.48);
+    control.selectOnly("squad-3");
+    control.setSelectedDynamicsOverride("responsiveness", 0.48);
     control.setSlotOffset("squad-2", { x: 2.2, y: -0.4 });
     control.selectOnly("squad-2");
     control.issueSelected("FOLLOW");
