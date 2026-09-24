@@ -1,6 +1,8 @@
 import {
+  FIELD_LAB_PARAMETER_RANGES,
   FIELD_LAB_SQUAD_MEMBERS,
   type FieldLabFormationPreset,
+  type FieldLabMemberDynamicsKey,
   type FieldLabSquadControlSnapshot,
   type SquadOrderMode
 } from "../squad/field-lab-squad-control";
@@ -15,6 +17,8 @@ import type {
   FieldLabExperimentSlot
 } from "../squad/field-lab-experiment";
 
+type DynamicsScope = "GROUP" | "SELECTED";
+
 export interface SquadFieldLabHudCallbacks {
   onSituation(situation: FieldLabSituation): void;
   onLayout(layout: FieldLabLayout): void;
@@ -27,8 +31,9 @@ export interface SquadFieldLabHudCallbacks {
   onPreset(preset: FieldLabFormationPreset): void;
   onRotate(deltaRadians: number): void;
   onSpacing(value: number): void;
-  onResponsiveness(value: number): void;
-  onTolerance(value: number): void;
+  onGroupDynamics(key: FieldLabMemberDynamicsKey, value: number): void;
+  onSelectedDynamicsOverride(key: FieldLabMemberDynamicsKey, value: number): void;
+  onClearSelectedDynamicsOverrides(): void;
   onCaptureExperiment(slot: FieldLabExperimentSlot): void;
   onRestoreExperiment(slot: FieldLabExperimentSlot): void;
   onRenameExperiment(slot: FieldLabExperimentSlot, label: string): void;
@@ -66,27 +71,77 @@ function button(label: string, className = "squad-lab-button"): HTMLButtonElemen
   return value;
 }
 
-function slider(
+interface ParameterEditor {
+  root: HTMLElement;
+  input: HTMLInputElement;
+  numeric: HTMLInputElement;
+  note: HTMLElement;
+  setValue(value: number): void;
+  setNote(value: string, state?: string): void;
+}
+
+function parameterEditor(
   label: string,
   min: number,
   max: number,
   step: number,
   onInput: (value: number) => void
-): { root: HTMLElement; input: HTMLInputElement; value: HTMLElement } {
+): ParameterEditor {
   const root = document.createElement("label");
   root.className = "squad-lab-slider";
+
   const heading = document.createElement("span");
+  heading.className = "squad-lab-slider-heading";
   heading.textContent = label;
-  const valueLabel = document.createElement("span");
-  valueLabel.className = "squad-lab-slider-value";
+  heading.title = `Supported range ${min}–${max}`;
+
   const input = document.createElement("input");
   input.type = "range";
   input.min = String(min);
   input.max = String(max);
   input.step = String(step);
-  input.addEventListener("input", () => onInput(Number(input.value)));
-  root.append(heading, valueLabel, input);
-  return { root, input, value: valueLabel };
+
+  const numeric = document.createElement("input");
+  numeric.type = "number";
+  numeric.min = String(min);
+  numeric.max = String(max);
+  numeric.step = String(step);
+  numeric.className = "squad-lab-number-input";
+  numeric.title = `Exact value · supported ${min}–${max}`;
+
+  const note = document.createElement("span");
+  note.className = "squad-lab-param-note";
+
+  const commit = (source: HTMLInputElement): void => {
+    if (!source.checkValidity()) {
+      source.reportValidity();
+      return;
+    }
+    const value = Number(source.value);
+    if (!Number.isFinite(value)) return;
+    input.value = String(value);
+    numeric.value = String(value);
+    onInput(value);
+  };
+
+  input.addEventListener("input", () => commit(input));
+  numeric.addEventListener("change", () => commit(numeric));
+
+  root.append(heading, input, numeric, note);
+  return {
+    root,
+    input,
+    numeric,
+    note,
+    setValue(value: number) {
+      if (document.activeElement !== input) input.value = String(value);
+      if (document.activeElement !== numeric) numeric.value = String(value);
+    },
+    setNote(value: string, state = "normal") {
+      note.textContent = value;
+      note.dataset.state = state;
+    }
+  };
 }
 
 function phaseTone(phase: CooperativeEpisodePhase | null): string {
@@ -94,6 +149,14 @@ function phaseTone(phase: CooperativeEpisodePhase | null): string {
   if (phase === "APPROACHING") return "warning";
   if (phase === "DRIVEN_BACK") return "success";
   return "normal";
+}
+
+function memberOverride(
+  control: FieldLabSquadControlSnapshot,
+  memberId: SquadMemberId,
+  key: FieldLabMemberDynamicsKey
+): number | null {
+  return control.memberDynamics.find((entry) => entry.memberId === memberId)?.[key] ?? null;
 }
 
 export class SquadFieldLabHud {
@@ -106,9 +169,14 @@ export class SquadFieldLabHud {
   private readonly pressureStatus: HTMLElement;
   private readonly situationButtons = new Map<FieldLabSituation, HTMLButtonElement>();
   private readonly layoutButtons = new Map<FieldLabLayout, HTMLButtonElement>();
-  private readonly spacing: ReturnType<typeof slider>;
-  private readonly responsiveness: ReturnType<typeof slider>;
-  private readonly tolerance: ReturnType<typeof slider>;
+  private readonly spacing: ParameterEditor;
+  private readonly responsiveness: ParameterEditor;
+  private readonly tolerance: ParameterEditor;
+  private readonly slowdownRadius: ParameterEditor;
+  private readonly dynamicsScopeButtons = new Map<DynamicsScope, HTMLButtonElement>();
+  private readonly dynamicsScopeStatus: HTMLElement;
+  private readonly clearSelectedOverrides: HTMLButtonElement;
+  private dynamicsScope: DynamicsScope = "GROUP";
   private readonly experimentLabelInputs = new Map<FieldLabExperimentSlot, HTMLInputElement>();
   private readonly experimentRestoreButtons = new Map<FieldLabExperimentSlot, HTMLButtonElement>();
   private readonly experimentClearButtons = new Map<FieldLabExperimentSlot, HTMLButtonElement>();
@@ -232,9 +300,78 @@ export class SquadFieldLabHud {
     rotateRight.addEventListener("click", () => callbacks.onRotate(Math.PI / 12));
     rotateRow.append(rotateLeft, rotateRight);
 
-    this.spacing = slider("Spacing", 0.45, 2.5, 0.05, callbacks.onSpacing);
-    this.responsiveness = slider("Response", 0.15, 1, 0.05, callbacks.onResponsiveness);
-    this.tolerance = slider("Slot tolerance", 0.05, 0.9, 0.05, callbacks.onTolerance);
+    const spacingRange = FIELD_LAB_PARAMETER_RANGES.spacingScale;
+    this.spacing = parameterEditor(
+      "Spacing",
+      spacingRange.min,
+      spacingRange.max,
+      spacingRange.step,
+      callbacks.onSpacing
+    );
+    this.spacing.root.dataset.parameter = "spacingScale";
+
+    const dynamicsHeading = document.createElement("div");
+    dynamicsHeading.className = "squad-lab-section-title";
+    dynamicsHeading.textContent = "Movement dynamics · explicit scope";
+
+    const dynamicsScopeRow = document.createElement("div");
+    dynamicsScopeRow.className = "squad-lab-dynamics-scope-grid";
+    for (const scope of ["GROUP", "SELECTED"] as const) {
+      const control = button(scope === "GROUP" ? "Group defaults" : "Selected overrides");
+      control.dataset.dynamicsScope = scope;
+      control.addEventListener("click", () => {
+        this.dynamicsScope = scope;
+        this.updateDynamicsScopeVisuals();
+      });
+      dynamicsScopeRow.append(control);
+      this.dynamicsScopeButtons.set(scope, control);
+    }
+
+    this.dynamicsScopeStatus = document.createElement("div");
+    this.dynamicsScopeStatus.className = "squad-lab-inline-hint";
+    this.dynamicsScopeStatus.dataset.dynamicsScopeStatus = "true";
+
+    const applyDynamics = (key: FieldLabMemberDynamicsKey, value: number): void => {
+      if (this.dynamicsScope === "GROUP") callbacks.onGroupDynamics(key, value);
+      else callbacks.onSelectedDynamicsOverride(key, value);
+    };
+
+    const responseRange = FIELD_LAB_PARAMETER_RANGES.responsiveness;
+    this.responsiveness = parameterEditor(
+      "Response",
+      responseRange.min,
+      responseRange.max,
+      responseRange.step,
+      (value) => applyDynamics("responsiveness", value)
+    );
+    this.responsiveness.root.dataset.parameter = "responsiveness";
+
+    const toleranceRange = FIELD_LAB_PARAMETER_RANGES.slotTolerance;
+    this.tolerance = parameterEditor(
+      "Slot tolerance",
+      toleranceRange.min,
+      toleranceRange.max,
+      toleranceRange.step,
+      (value) => applyDynamics("slotTolerance", value)
+    );
+    this.tolerance.root.dataset.parameter = "slotTolerance";
+
+    const slowdownRange = FIELD_LAB_PARAMETER_RANGES.slowdownRadius;
+    this.slowdownRadius = parameterEditor(
+      "Slowdown radius",
+      slowdownRange.min,
+      slowdownRange.max,
+      slowdownRange.step,
+      (value) => applyDynamics("slowdownRadius", value)
+    );
+    this.slowdownRadius.root.dataset.parameter = "slowdownRadius";
+
+    this.clearSelectedOverrides = button("Selected: inherit group defaults");
+    this.clearSelectedOverrides.dataset.clearDynamicsOverrides = "true";
+    this.clearSelectedOverrides.addEventListener(
+      "click",
+      () => callbacks.onClearSelectedDynamicsOverrides()
+    );
 
     const experimentHeading = document.createElement("div");
     experimentHeading.className = "squad-lab-section-title";
@@ -344,8 +481,13 @@ export class SquadFieldLabHud {
       presets,
       rotateRow,
       this.spacing.root,
+      dynamicsHeading,
+      dynamicsScopeRow,
+      this.dynamicsScopeStatus,
       this.responsiveness.root,
       this.tolerance.root,
+      this.slowdownRadius.root,
+      this.clearSelectedOverrides,
       experimentHeading,
       experimentGrid,
       this.experimentDiffSummary,
@@ -355,6 +497,7 @@ export class SquadFieldLabHud {
       footer
     );
     gamePane.parentElement?.insertBefore(this.root, gamePane);
+    this.updateDynamicsScopeVisuals();
   }
 
   update(state: SquadFieldLabHudState): void {
@@ -388,12 +531,12 @@ export class SquadFieldLabHud {
       ? `Direct ${LABELS[control.focused]}: ON`
       : "Direct: OFF";
 
-    this.spacing.input.value = String(control.dynamics.spacingScale);
-    this.spacing.value.textContent = control.dynamics.spacingScale.toFixed(2);
-    this.responsiveness.input.value = String(control.dynamics.responsiveness);
-    this.responsiveness.value.textContent = control.dynamics.responsiveness.toFixed(2);
-    this.tolerance.input.value = String(control.dynamics.slotTolerance);
-    this.tolerance.value.textContent = control.dynamics.slotTolerance.toFixed(2);
+    this.spacing.setValue(control.dynamics.spacingScale);
+    this.spacing.setNote(
+      `formation · ${FIELD_LAB_PARAMETER_RANGES.spacingScale.min}–${FIELD_LAB_PARAMETER_RANGES.spacingScale.max}`
+    );
+
+    this.updateDynamicsEditors(control);
 
     for (const slot of ["A", "B"] as const) {
       const captured = state.experiments[slot];
@@ -438,8 +581,64 @@ export class SquadFieldLabHud {
     this.orderStatus.textContent = control.activeMembers
       .map((memberId) => {
         const assignment = control.assignments.find((value) => value.memberId === memberId);
-        return `${LABELS[memberId]} ${assignment?.mode ?? "?"}`;
+        const override = control.memberDynamics.find((value) => value.memberId === memberId);
+        const overrideCount = override
+          ? [override.slotTolerance, override.responsiveness, override.slowdownRadius]
+              .filter((value) => value !== null).length
+          : 0;
+        return `${LABELS[memberId]} ${assignment?.mode ?? "?"}${overrideCount > 0 ? ` · dyn×${overrideCount}` : ""}`;
       })
       .join(" · ");
+  }
+
+  private updateDynamicsScopeVisuals(): void {
+    for (const [scope, entry] of this.dynamicsScopeButtons) {
+      entry.classList.toggle("is-active", this.dynamicsScope === scope);
+    }
+    this.clearSelectedOverrides.disabled = this.dynamicsScope !== "SELECTED";
+  }
+
+  private updateDynamicsEditors(control: FieldLabSquadControlSnapshot): void {
+    this.updateDynamicsScopeVisuals();
+    const focused = control.focused;
+    const selectedLabel = control.selected.map((id) => LABELS[id]).join(" + ");
+
+    if (this.dynamicsScope === "GROUP") {
+      this.dynamicsScopeStatus.textContent =
+        "Editing group defaults · member overrides remain explicit and take precedence.";
+      this.responsiveness.setValue(control.dynamics.responsiveness);
+      this.tolerance.setValue(control.dynamics.slotTolerance);
+      this.slowdownRadius.setValue(control.dynamics.slowdownRadius);
+      this.responsiveness.setNote("group default");
+      this.tolerance.setNote("group default");
+      this.slowdownRadius.setNote("group default");
+      return;
+    }
+
+    this.dynamicsScopeStatus.textContent =
+      `Editing selected overrides: ${selectedLabel} · unset values inherit group defaults.`;
+
+    const editors: Readonly<Record<FieldLabMemberDynamicsKey, ParameterEditor>> = {
+      responsiveness: this.responsiveness,
+      slotTolerance: this.tolerance,
+      slowdownRadius: this.slowdownRadius
+    };
+
+    for (const key of ["responsiveness", "slotTolerance", "slowdownRadius"] as const) {
+      const selectedValues = control.selected.map((memberId) => memberOverride(control, memberId, key));
+      const first = selectedValues[0] ?? null;
+      const same = selectedValues.every((value) => value === first);
+      const focusedOverride = memberOverride(control, focused, key);
+      const effective = focusedOverride ?? control.dynamics[key];
+      editors[key].setValue(effective);
+
+      if (!same) {
+        editors[key].setNote(`mixed · focus ${LABELS[focused]}=${effective.toFixed(2)}`, "mixed");
+      } else if (first === null) {
+        editors[key].setNote(`inherit ${control.dynamics[key].toFixed(2)}`, "inherit");
+      } else {
+        editors[key].setNote(`override ${first.toFixed(2)}`, "override");
+      }
+    }
   }
 }
