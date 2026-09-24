@@ -431,3 +431,84 @@ This is deliberately **not** an Owner-test promotion.
 
 The next campaign objective is breadth of unscripted experimentation and reproducibility: make it cheap to author, perturb, capture, restore and compare meaningful squad configurations, then use repeated Owner-authored patterns as evidence for future autonomy.
 
+
+
+---
+
+## 19. Owner-reaffirmed advanced authoring doctrine — 2026-09-24
+
+The Owner reaffirmed that the Field Lab should grow into an **advanced, highly manipulable behavior laboratory**, not merely a command demo with a fixed handful of sliders.
+
+This sharpens the campaign in four ways.
+
+### 19.1 Parameters are an experimental surface, not UI decoration
+
+The lab should expose a broad set of **causally meaningful** variables when they exist, including per-member and group-level movement, formation, responsiveness, authority and behavior parameters.
+
+The goal is not maximal slider count. The goal is that the Owner can deliberately perturb the mechanisms that actually shape behavior and immediately observe the consequence.
+
+Prefer:
+- coherent parameter groups;
+- exact numeric editing where useful;
+- direct manipulation where spatial meaning is clearer;
+- live inspection of the currently effective value;
+- explicit scope: member / selection / group / formation / scenario;
+- permissive ranges unless a value would make the runtime unstable rather than merely strange.
+
+Avoid:
+- decorative controls with weak/no observable effect;
+- hidden clamping that makes experiments look valid while silently changing the authored value;
+- exposing low-level implementation constants with no intelligible behavioral meaning.
+
+### 19.2 Authoring must become reproducible evidence
+
+A useful experiment should not disappear when the Owner changes scenario or reloads.
+
+The Field Lab should progressively support a reproducible experiment description containing, where applicable:
+
+`roster + body/setup state + selection/focus + formation geometry + orders + behavior/dynamics parameters + scenario + authority mode`.
+
+The representation should be cheap to:
+- capture;
+- restore;
+- duplicate;
+- perturb;
+- compare A/B;
+- label with the observation/question being investigated.
+
+This is more important than polishing a final-facing UX.
+
+### 19.3 Manual behavior is a gold-standard generator
+
+Manual/direct control and authored formations are not temporary fallbacks to be removed once AI exists.
+
+Repeated Owner-authored solutions are research data about:
+- useful geometry;
+- timing;
+- regroup/recovery;
+- when formation should be preserved or broken;
+- how much local deviation is desirable;
+- how fast responsibility should transfer;
+- which variables actually matter to perceived cooperation.
+
+A candidate autonomous behavior should be able to reproduce, generalize or improve a useful authored pattern under changing conditions before it earns more responsibility.
+
+The comparison should preserve the distinction between:
+- exact replay of an authored solution;
+- intent/constraint inferred from that solution;
+- autonomous generalization.
+
+### 19.4 The lab should support discovery beyond current vocabulary
+
+Do not let today's FOLLOW/HOLD/MOVE, current formation policy or current dynamics vocabulary become the ceiling of the laboratory.
+
+The Field Lab succeeds when it allows the Owner to discover:
+- a useful behavior we did not pre-name;
+- an interaction between parameters we did not predict;
+- a formation or recovery pattern that suggests a new semantic primitive;
+- a repeated manual intervention that reveals what autonomy is missing.
+
+Therefore future authoring infrastructure should be judged partly by **expressive reach**:
+can the Owner create materially different squad behavior without needing a new hard-coded mode for every experiment?
+
+This strengthens, rather than replaces, the existing rule that every exposed variable must produce interpretable runtime consequences.
