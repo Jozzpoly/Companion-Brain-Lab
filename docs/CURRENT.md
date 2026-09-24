@@ -981,3 +981,48 @@ This **strengthens** the authority of `docs/COMPANION_SQUAD_FIELD_LAB_CAMPAIGN.m
 The Field Lab and S5-style experiential pressure are complementary:
 
 > the Field Lab is the broad instrument for discovering and controlling behavior; continuous cooperative play is one of the important pressures through which those behaviors must eventually prove product value.
+
+---
+
+## 20. Advanced Field Lab experiment-authoring checkpoint — 2026-09-24
+
+Latest Owner intent confirms that Advanced Companion / Squad Field Lab is a major research direction in its own right, not merely scaffolding for the next autonomy gate.
+
+Fresh live-state recovery also found that the short 2026-09-24 Feniks-context A/B implementation sequence had been fully reverted by `3a17f13b...`. No reverted implementation was treated as live Companion truth.
+
+The Companion-authorized implementation now qualifies:
+
+> **PERSISTENT COMPARABLE EXPERIMENT SETUPS + EXACT SCOPED DYNAMICS · MACHINE PASS**
+
+Qualified source:
+
+`969a6bf90db67f6fedf48627fba092870b641fb5`
+
+Qualification:
+
+`squad-field-lab-browser · run 36060223003 · SUCCESS`
+
+Evidence includes:
+
+- 187/187 test files and 741/741 tests PASS;
+- production build PASS;
+- broad Field Lab rehearsal PASS;
+- persistent A/B experiment rehearsal PASS;
+- A/B survives reload and restores exact authored body/setup state;
+- structural diff covers situation/roster/selection/authority/formation/orders/dynamics/positions;
+- group defaults + selected-member dynamics overrides;
+- exact numeric editing;
+- explicit supported ranges rather than silent clamping;
+- independently authored slowdown radius;
+- scoped responsiveness proven to change real physical requested velocity.
+
+This does **not** promote an Owner test.
+
+The active object remains Advanced Field Lab as an authoring/research instrument.
+
+The next highest-value gap is temporal trial evidence: setup comparison is now strong enough that the lab should learn to compare *behavioral runs over time* before aggressively expanding the parameter count.
+
+Canonical checkpoint:
+
+`docs/FIELD_LAB_EXPERIMENT_AUTHORING_CHECKPOINT_2026-09-24.md`
+
