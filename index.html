@@ -271,6 +271,65 @@
         grid-template-columns:repeat(4,minmax(0,1fr));
         gap:5px;
       }
+      .squad-lab-experiment-grid {
+        display:grid;
+        gap:6px;
+      }
+      .squad-lab-experiment-card {
+        display:grid;
+        gap:5px;
+        padding:7px;
+        border:1px solid #30363d;
+        border-radius:7px;
+        background:#11161d;
+      }
+      .squad-lab-experiment-title {
+        display:flex;
+        justify-content:space-between;
+        gap:8px;
+        color:#c9d1d9;
+        font:700 10px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      }
+      .squad-lab-experiment-meta {
+        color:#6e7681;
+        font-weight:500;
+      }
+      .squad-lab-experiment-label {
+        width:100%;
+        min-width:0;
+        box-sizing:border-box;
+        border:1px solid #30363d;
+        border-radius:5px;
+        background:#0d1117;
+        color:#c9d1d9;
+        padding:6px 7px;
+        font:10px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      }
+      .squad-lab-experiment-label:disabled {
+        color:#6e7681;
+        opacity:.7;
+      }
+      .squad-lab-experiment-actions {
+        display:grid;
+        grid-template-columns:1fr 1fr .7fr;
+        gap:5px;
+      }
+      .squad-lab-experiment-diff {
+        padding:7px;
+        border:1px solid #30363d;
+        border-radius:6px;
+        background:#11161d;
+        color:#8b949e;
+        font:10px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      }
+      .squad-lab-experiment-diff[data-state="equal"] {
+        border-color:rgba(126,231,135,.55);
+        color:#b7f0bd;
+      }
+      .squad-lab-experiment-diff[data-state="different"] {
+        border-color:rgba(210,168,255,.55);
+        color:#d9c3f8;
+      }
       .squad-lab-section-title {
         margin-top:2px;
         color:#c9d1d9;
