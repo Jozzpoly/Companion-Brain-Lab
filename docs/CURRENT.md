@@ -1026,3 +1026,71 @@ Canonical checkpoint:
 
 `docs/FIELD_LAB_EXPERIMENT_AUTHORING_CHECKPOINT_2026-09-24.md`
 
+---
+
+## 21. Temporal Trial / Trace v1 — 2026-09-25
+
+The setup-to-behavior evidence gap is now materially narrower.
+
+Qualified runtime:
+
+`01bc4d1f2239c0c7608662e8881147e878a3862a`
+
+Qualification:
+
+`squad-field-lab-browser · run 36068333146 · SUCCESS`
+
+Machine evidence:
+
+- 188/188 test files and 744/744 tests PASS;
+- production build PASS;
+- broad Squad Field Lab browser rehearsal PASS;
+- persistent experiment-authoring + temporal-trial browser rehearsal PASS;
+- generated browser evidence contains no page, console or request errors.
+
+The Field Lab can now run a bounded temporal trace directly from either captured persistent setup A or B. Trial start restores the exact authored setup before recording. Each real World tick can retain:
+
+- per-member position and current target;
+- target error;
+- formation/direct authority and order mode;
+- requested and actual velocity;
+- physical motion error;
+- contact count;
+- temporal status such as MOVING / ARRIVED / BLOCKED / DIRECT / INVALID_TARGET;
+- player position;
+- cooperative outcome.
+
+A completed trial exposes per-member temporal summaries including path distance, mean/max target error, mean motion error, blocked ticks + longest blocked run, contact ticks, direct ticks and authority/order transitions. A/B comparison reports descriptive B-minus-A deltas; it does **not** choose a winner or promote a behavior.
+
+The browser qualification deliberately went beyond a static smoke test. It constructed a controlled A/B in OPEN space with the same embodied start, MOVE target and group dynamics. The only authored difference was C2 responsiveness:
+
+`A: inherited group response 0.82`
+`B: C2 response override 0.27`
+
+Across matched 24-tick trials the slower C2 produced:
+
+- `Δpath = -0.63 m`;
+- `Δtarget error = +0.34 m`.
+
+So the new layer is proven to expose a real causal behavioral consequence over time rather than merely serialize a trace.
+
+### Current boundary
+
+This is still **research instrumentation**, not an Owner-ready experiment UX and not autonomy.
+
+In v1:
+
+- persistent A/B **setups** survive reload, but raw trial traces are deliberately session-local;
+- there is no timeline scrubber or replay;
+- there is no automatic temporal event alignment between unequal trials;
+- there is no scalar quality score, behavior ranking or autonomous policy extraction;
+- the 7,200-frame bound prevents an accidental unbounded recorder.
+
+Do not expand trace telemetry indiscriminately next.
+
+The highest-value follow-up is to use this layer on genuinely dynamic Field Lab questions — formation recovery, doorway pressure, moving-player follow behavior, contact/blocking and cooperative situations — and see which temporal evidence repeatedly changes our understanding. New metrics or visualization should be earned by those experiments.
+
+Status remains:
+
+> **MACHINE-QUALIFIED ADVANCED FIELD LAB + TEMPORAL TRIAL EVIDENCE · NOT OWNER-READY · AUTONOMY NOT PROMOTED**
+
