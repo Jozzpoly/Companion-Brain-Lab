@@ -25,6 +25,7 @@ on:
       - "index.html"
       - "scripts/squad-field-lab-browser-smoke.mjs"
       - "scripts/squad-field-lab-experiment-browser-smoke.mjs"
+      - "scripts/squad-field-lab-doorway-discovery.mjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/squad-field-lab-browser.yml"
@@ -66,6 +67,8 @@ jobs:
         run: npm run browser:squad-field-lab
       - name: Persistent A-B experiment rehearsal
         run: npm run browser:squad-field-lab-experiments
+      - name: Doorway geometry discovery campaign
+        run: npm run browser:squad-field-lab-doorway-discovery
       - name: Upload Field Lab evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -74,5 +77,6 @@ jobs:
           path: |
             artifacts/squad-field-lab-browser/
             artifacts/squad-field-lab-experiment-browser/
+            artifacts/squad-field-lab-doorway-discovery/
           if-no-files-found: warn
           retention-days: 14
