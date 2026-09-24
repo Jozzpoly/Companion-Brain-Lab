@@ -956,3 +956,28 @@ Canonical checkpoint:
 
 `docs/SQUAD_FIELD_LAB_INTEGRATED_CHECKPOINT_2026-09-22.md`
 
+
+
+---
+
+## 18. Owner reaffirmation of the advanced Field Lab direction — 2026-09-24
+
+The Owner explicitly reaffirmed that the **advanced Companion / Squad Field Lab is an important project direction**, not temporary apparatus.
+
+The desired laboratory should support unusually broad and direct experimentation with companion behavior:
+
+- freely authoring and changing formations rather than selecting only fixed presets;
+- strong control over movement / dynamics / behavior variables where changes produce real observable consequences;
+- rapid modification of squad setup and per-member behavior;
+- enough freedom to discover useful patterns rather than merely exercise prewritten behaviors;
+- using repeated Owner-authored configurations and interventions as evidence for behaviors that later local autonomy may reproduce, generalize or improve.
+
+The attractive long-term loop is therefore:
+
+`Owner freely authors behavior → observes consequences → identifies useful/repeated patterns → makes them reproducible evidence → local autonomy progressively earns responsibility for those patterns`.
+
+This **strengthens** the authority of `docs/COMPANION_SQUAD_FIELD_LAB_CAMPAIGN.md`. It does not promote the current machine-qualified substrate to Owner PASS, does not freeze today's controls or parameters as final design, and does not erase the still-open need for a continuous game-like cooperative episode / teammate outcome.
+
+The Field Lab and S5-style experiential pressure are complementary:
+
+> the Field Lab is the broad instrument for discovering and controlling behavior; continuous cooperative play is one of the important pressures through which those behaviors must eventually prove product value.
