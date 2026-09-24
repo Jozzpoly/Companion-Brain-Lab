@@ -5,6 +5,12 @@ import type {
   FieldLabExperimentSlot
 } from "../squad/field-lab-experiment";
 import type {
+  FieldLabTrialComparison,
+  FieldLabTrialMemberStatus,
+  FieldLabTrialSlot,
+  FieldLabTrialSummary
+} from "../squad/field-lab-trial";
+import type {
   CooperativeEpisodeActionOutcome,
   CooperativeEpisodeOutcome,
   CooperativeEpisodeSnapshot
@@ -17,7 +23,7 @@ import type {
   WorldSnapshot
 } from "../world/types";
 
-export type FieldLabMemberStatus = "DIRECT" | "MOVING" | "ARRIVED" | "BLOCKED" | "INVALID_TARGET";
+export type FieldLabMemberStatus = FieldLabTrialMemberStatus;
 
 export interface SquadFieldLabPanelState {
   snapshot: WorldSnapshot;
@@ -32,11 +38,19 @@ export interface SquadFieldLabPanelState {
   cooperativeActionOutcomes: readonly CooperativeEpisodeActionOutcome[];
   experiments: Readonly<Partial<Record<FieldLabExperimentSlot, FieldLabExperimentRecord | null>>>;
   experimentDiff: FieldLabExperimentDiff | null;
+  trials: Readonly<Partial<Record<FieldLabTrialSlot, FieldLabTrialSummary>>>;
+  activeTrial: { slot: FieldLabTrialSlot; frameCount: number } | null;
+  trialComparison: FieldLabTrialComparison | null;
   recentEvents: readonly string[];
 }
 
 function fmt(value: number): string {
   return Number.isFinite(value) ? value.toFixed(2) : "n/a";
+}
+
+function signed(value: number, digits = 2): string {
+  const rounded = value.toFixed(digits);
+  return value > 0 ? `+${rounded}` : rounded;
 }
 
 function memberLabel(id: SquadMemberId): string {
@@ -164,6 +178,21 @@ export class SquadFieldLabPanel {
           ${state.experimentDiff && state.experimentDiff.differences.length > 14
             ? `<div>+${state.experimentDiff.differences.length - 14} more differences</div>`
             : ""}
+        </div>
+      </section>
+      <section class="squad-field-debug-section">
+        <h2>Trial / Trace A/B</h2>
+        <div class="squad-field-debug-lines">
+          <div>A ${state.trials.A ? `${escapeHtml(state.trials.A.label)} · ${state.trials.A.frameCount}t` : "empty"} · B ${state.trials.B ? `${escapeHtml(state.trials.B.label)} · ${state.trials.B.frameCount}t` : "empty"}</div>
+          <div>${state.activeTrial ? `recording ${state.activeTrial.slot} · ${state.activeTrial.frameCount} ticks` : "not recording"}</div>
+          ${state.trialComparison
+            ? state.trialComparison.members.map((member) => {
+                const targetDelta = member.meanTargetErrorDelta === null
+                  ? "n/a"
+                  : `${signed(member.meanTargetErrorDelta)}m`;
+                return `<div><strong>${memberLabel(member.memberId)}</strong> · Δpath ${signed(member.pathDistanceDelta)}m · Δtarget ${targetDelta} · ΔmotionErr ${signed(member.meanMotionErrorDelta)} · blocked ${signed(member.blockedTicksDelta, 0)}t / longest ${signed(member.longestBlockedRunDelta, 0)}t · contacts ${signed(member.contactTicksDelta, 0)}t · authority transitions ${signed(member.authorityTransitionsDelta, 0)} · order transitions ${signed(member.orderTransitionsDelta, 0)}</div>`;
+              }).join("")
+            : "<div>run both traces to compare temporal outcomes</div>"}
         </div>
       </section>
       ${state.cooperativeEpisode ? `
