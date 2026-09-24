@@ -10,6 +10,10 @@ import type {
   CooperativeEpisodeSnapshot
 } from "../world/cooperative-episode-contract";
 import type { FieldLabLayout, FieldLabSituation, SquadMemberId } from "../world/types";
+import type {
+  FieldLabExperimentDiff,
+  FieldLabExperimentSlot
+} from "../squad/field-lab-experiment";
 
 export interface SquadFieldLabHudCallbacks {
   onSituation(situation: FieldLabSituation): void;
@@ -25,6 +29,10 @@ export interface SquadFieldLabHudCallbacks {
   onSpacing(value: number): void;
   onResponsiveness(value: number): void;
   onTolerance(value: number): void;
+  onCaptureExperiment(slot: FieldLabExperimentSlot): void;
+  onRestoreExperiment(slot: FieldLabExperimentSlot): void;
+  onRenameExperiment(slot: FieldLabExperimentSlot, label: string): void;
+  onClearExperiment(slot: FieldLabExperimentSlot): void;
   onPlayerRepel(): void;
   onFocusedRepel(): void;
   onSelectedRepel(): void;
@@ -36,6 +44,11 @@ export interface SquadFieldLabHudState {
   layout: FieldLabLayout;
   episode: CooperativeEpisodeSnapshot | null;
   latestEpisodeOutcome: CooperativeEpisodeOutcome;
+  experiments: Readonly<Partial<Record<FieldLabExperimentSlot, {
+    label: string;
+    capturedAtTick: number;
+  }>>>;
+  experimentDiff: FieldLabExperimentDiff | null;
 }
 
 const LABELS: Readonly<Record<SquadMemberId, string>> = {
@@ -96,6 +109,11 @@ export class SquadFieldLabHud {
   private readonly spacing: ReturnType<typeof slider>;
   private readonly responsiveness: ReturnType<typeof slider>;
   private readonly tolerance: ReturnType<typeof slider>;
+  private readonly experimentLabelInputs = new Map<FieldLabExperimentSlot, HTMLInputElement>();
+  private readonly experimentRestoreButtons = new Map<FieldLabExperimentSlot, HTMLButtonElement>();
+  private readonly experimentClearButtons = new Map<FieldLabExperimentSlot, HTMLButtonElement>();
+  private readonly experimentMeta = new Map<FieldLabExperimentSlot, HTMLElement>();
+  private readonly experimentDiffSummary: HTMLElement;
 
   constructor(callbacks: SquadFieldLabHudCallbacks) {
     const gamePane = document.querySelector<HTMLElement>("#game-pane");
@@ -218,6 +236,65 @@ export class SquadFieldLabHud {
     this.responsiveness = slider("Response", 0.15, 1, 0.05, callbacks.onResponsiveness);
     this.tolerance = slider("Slot tolerance", 0.05, 0.9, 0.05, callbacks.onTolerance);
 
+    const experimentHeading = document.createElement("div");
+    experimentHeading.className = "squad-lab-section-title";
+    experimentHeading.textContent = "Experiment setups · persistent A/B";
+
+    const experimentGrid = document.createElement("div");
+    experimentGrid.className = "squad-lab-experiment-grid";
+    for (const slot of ["A", "B"] as const) {
+      const card = document.createElement("section");
+      card.className = "squad-lab-experiment-card";
+      card.dataset.experimentSlot = slot;
+
+      const title = document.createElement("div");
+      title.className = "squad-lab-experiment-title";
+      title.textContent = `Setup ${slot}`;
+
+      const meta = document.createElement("span");
+      meta.className = "squad-lab-experiment-meta";
+      meta.textContent = "empty";
+      this.experimentMeta.set(slot, meta);
+      title.append(meta);
+
+      const label = document.createElement("input");
+      label.type = "text";
+      label.maxLength = 80;
+      label.placeholder = `Label setup ${slot}`;
+      label.className = "squad-lab-experiment-label";
+      label.disabled = true;
+      label.addEventListener("change", () => callbacks.onRenameExperiment(slot, label.value));
+      this.experimentLabelInputs.set(slot, label);
+
+      const actions = document.createElement("div");
+      actions.className = "squad-lab-experiment-actions";
+
+      const capture = button(`Capture ${slot}`);
+      capture.dataset.experimentCapture = slot;
+      capture.addEventListener("click", () => callbacks.onCaptureExperiment(slot));
+
+      const restore = button(`Restore ${slot}`);
+      restore.dataset.experimentRestore = slot;
+      restore.disabled = true;
+      restore.addEventListener("click", () => callbacks.onRestoreExperiment(slot));
+      this.experimentRestoreButtons.set(slot, restore);
+
+      const clear = button("Clear");
+      clear.dataset.experimentClear = slot;
+      clear.disabled = true;
+      clear.addEventListener("click", () => callbacks.onClearExperiment(slot));
+      this.experimentClearButtons.set(slot, clear);
+
+      actions.append(capture, restore, clear);
+      card.append(title, label, actions);
+      experimentGrid.append(card);
+    }
+
+    this.experimentDiffSummary = document.createElement("div");
+    this.experimentDiffSummary.className = "squad-lab-experiment-diff";
+    this.experimentDiffSummary.dataset.experimentDiff = "true";
+    this.experimentDiffSummary.textContent = "Capture A and B to compare exact authored setups.";
+
     this.pressureBlock = document.createElement("section");
     this.pressureBlock.className = "squad-lab-pressure-block";
     const pressureHeading = document.createElement("div");
@@ -269,6 +346,9 @@ export class SquadFieldLabHud {
       this.spacing.root,
       this.responsiveness.root,
       this.tolerance.root,
+      experimentHeading,
+      experimentGrid,
+      this.experimentDiffSummary,
       this.pressureBlock,
       this.status,
       this.orderStatus,
@@ -314,6 +394,35 @@ export class SquadFieldLabHud {
     this.responsiveness.value.textContent = control.dynamics.responsiveness.toFixed(2);
     this.tolerance.input.value = String(control.dynamics.slotTolerance);
     this.tolerance.value.textContent = control.dynamics.slotTolerance.toFixed(2);
+
+    for (const slot of ["A", "B"] as const) {
+      const captured = state.experiments[slot];
+      const label = this.experimentLabelInputs.get(slot);
+      const restore = this.experimentRestoreButtons.get(slot);
+      const clear = this.experimentClearButtons.get(slot);
+      const meta = this.experimentMeta.get(slot);
+      if (label) {
+        label.disabled = !captured;
+        if (document.activeElement !== label) label.value = captured?.label ?? "";
+      }
+      if (restore) restore.disabled = !captured;
+      if (clear) clear.disabled = !captured;
+      if (meta) meta.textContent = captured ? `tick ${captured.capturedAtTick}` : "empty";
+    }
+
+    if (!state.experiments.A || !state.experiments.B) {
+      this.experimentDiffSummary.textContent = "Capture A and B to compare exact authored setups.";
+      this.experimentDiffSummary.dataset.state = "incomplete";
+    } else if (state.experimentDiff?.equal) {
+      this.experimentDiffSummary.textContent = "A/B: identical setup state.";
+      this.experimentDiffSummary.dataset.state = "equal";
+    } else {
+      const diff = state.experimentDiff;
+      this.experimentDiffSummary.textContent = diff
+        ? `A/B: ${diff.differences.length} differences · ${diff.categories.join(" · ")}`
+        : "A/B diff unavailable.";
+      this.experimentDiffSummary.dataset.state = "different";
+    }
 
     this.pressureBlock.hidden = state.situation !== "PRESSURE";
     const phase = state.episode?.phase ?? null;
