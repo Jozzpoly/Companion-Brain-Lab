@@ -1,5 +1,15 @@
 import Phaser from "phaser";
 import { SquadFieldLabHud } from "./squad-field-lab-hud";
+import {
+  createFieldLabExperiment,
+  decodeFieldLabExperiment,
+  diffFieldLabExperiments,
+  encodeFieldLabExperiment,
+  fieldLabExperimentStorageKey,
+  renameFieldLabExperiment,
+  type FieldLabExperimentRecord,
+  type FieldLabExperimentSlot
+} from "../squad/field-lab-experiment";
 import { SquadFieldLabPanel, type FieldLabMemberStatus } from "../debug/squad-field-lab-panel";
 import {
   FIELD_LAB_SQUAD_MEMBERS,
@@ -46,6 +56,17 @@ interface RenderTransform {
   scale: number;
   offsetX: number;
   offsetY: number;
+}
+
+function cloneSpawnOverrides(value: FieldLabSpawnOverrides): FieldLabSpawnOverrides {
+  const squad: Partial<Record<SquadMemberId, Vec2>> = {};
+  for (const memberId of FIELD_LAB_SQUAD_MEMBERS) {
+    const position = value.squad?.[memberId];
+    if (position) squad[memberId] = { ...position };
+  }
+  return value.player
+    ? { player: { ...value.player }, squad }
+    : { squad };
 }
 
 function axis(negative: Phaser.Input.Keyboard.Key, positive: Phaser.Input.Keyboard.Key): number {
@@ -134,6 +155,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
   private lastCooperativeActionOutcomes: readonly CooperativeEpisodeActionOutcome[] = [];
   private pendingCooperativeAttempts: CooperativeEpisodeActionAttempt[] = [];
   private positionMemory: FieldLabSpawnOverrides = { squad: {} };
+  private readonly experiments = new Map<FieldLabExperimentSlot, FieldLabExperimentRecord>();
   private readonly eventLog: string[] = [];
 
   private keys!: Record<
@@ -221,6 +243,10 @@ export class SquadFieldLabScene extends Phaser.Scene {
       onSpacing: (value) => this.control.setSpacingScale(value),
       onResponsiveness: (value) => this.control.setResponsiveness(value),
       onTolerance: (value) => this.control.setSlotTolerance(value),
+      onCaptureExperiment: (slot) => this.captureExperiment(slot),
+      onRestoreExperiment: (slot) => this.restoreExperiment(slot),
+      onRenameExperiment: (slot, label) => this.renameExperiment(slot, label),
+      onClearExperiment: (slot) => this.clearExperiment(slot),
       onPlayerRepel: () => this.queueCooperativeAttempt("player"),
       onFocusedRepel: () => this.queueCooperativeAttempt(this.control.snapshot().focused),
       onSelectedRepel: () => {
@@ -275,6 +301,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       this.draggingSlot = null;
     });
 
+    this.loadPersistedExperiments();
     void this.loadWorld(false);
   }
 
@@ -707,12 +734,33 @@ export class SquadFieldLabScene extends Phaser.Scene {
 
   private updateUi(snapshot: WorldSnapshot): void {
     const state = this.control.snapshot();
+    const experimentA = this.experiments.get("A") ?? null;
+    const experimentB = this.experiments.get("B") ?? null;
+    const experimentDiff = experimentA && experimentB
+      ? diffFieldLabExperiments(experimentA, experimentB)
+      : null;
+    const experimentSummaries: Partial<Record<FieldLabExperimentSlot, {
+      label: string;
+      capturedAtTick: number;
+    }>> = {};
+    for (const slot of ["A", "B"] as const) {
+      const record = this.experiments.get(slot);
+      if (record) {
+        experimentSummaries[slot] = {
+          label: record.label,
+          capturedAtTick: record.capturedAtTick
+        };
+      }
+    }
+
     this.hud.update({
       control: state,
       situation: this.situation,
       layout: this.layout,
       episode: this.cooperativeEpisode,
-      latestEpisodeOutcome: this.latestCooperativeEpisodeOutcome
+      latestEpisodeOutcome: this.latestCooperativeEpisodeOutcome,
+      experiments: experimentSummaries,
+      experimentDiff
     });
     const focusedBody = actor(snapshot, state.focused);
     const player = actor(snapshot, "player");
@@ -751,6 +799,8 @@ export class SquadFieldLabScene extends Phaser.Scene {
       cooperativeEpisode: this.cooperativeEpisode,
       cooperativeEpisodeOutcome: this.latestCooperativeEpisodeOutcome,
       cooperativeActionOutcomes: this.lastCooperativeActionOutcomes,
+      experiments: { A: experimentA, B: experimentB },
+      experimentDiff,
       recentEvents: this.eventLog
     });
   }
@@ -838,20 +888,104 @@ export class SquadFieldLabScene extends Phaser.Scene {
     }
   }
 
-  private rememberCurrentPositions(): void {
-    if (!this.snapshotValue) return;
-    const rememberedSquad: Partial<Record<SquadMemberId, Vec2>> = {
-      ...(this.positionMemory.squad ?? {})
-    };
-    const playerBody = this.snapshotValue.actors.find((entry) => entry.id === "player");
+  private currentPositions(): FieldLabSpawnOverrides {
+    if (!this.snapshotValue) return cloneSpawnOverrides(this.positionMemory);
+    const squad: Partial<Record<SquadMemberId, Vec2>> = {};
     for (const memberId of FIELD_LAB_SQUAD_MEMBERS) {
       const body = this.snapshotValue.actors.find((entry) => entry.id === memberId);
-      if (body) rememberedSquad[memberId] = { ...body.position };
+      if (body) squad[memberId] = { ...body.position };
     }
-    this.positionMemory = {
-      player: playerBody ? { ...playerBody.position } : this.positionMemory.player,
-      squad: rememberedSquad
-    };
+    const playerBody = this.snapshotValue.actors.find((entry) => entry.id === "player");
+    return playerBody
+      ? { player: { ...playerBody.position }, squad }
+      : { squad };
+  }
+
+  private rememberCurrentPositions(): void {
+    this.positionMemory = this.currentPositions();
+  }
+
+  private loadPersistedExperiments(): void {
+    for (const slot of ["A", "B"] as const) {
+      const raw = window.localStorage.getItem(fieldLabExperimentStorageKey(slot));
+      if (!raw) continue;
+      try {
+        const record = decodeFieldLabExperiment(raw);
+        this.experiments.set(slot, record);
+        this.log(`loaded persistent setup ${slot} · ${record.label || "unlabelled"}`);
+      } catch (error) {
+        window.localStorage.removeItem(fieldLabExperimentStorageKey(slot));
+        this.log(
+          `discarded invalid persistent setup ${slot} · ` +
+          `${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
+  }
+
+  private persistExperiment(slot: FieldLabExperimentSlot): void {
+    const record = this.experiments.get(slot);
+    if (!record) {
+      window.localStorage.removeItem(fieldLabExperimentStorageKey(slot));
+      return;
+    }
+    window.localStorage.setItem(
+      fieldLabExperimentStorageKey(slot),
+      encodeFieldLabExperiment(record)
+    );
+  }
+
+  private captureExperiment(slot: FieldLabExperimentSlot): void {
+    if (!this.snapshotValue || this.loading) {
+      this.log(`capture ${slot} ignored · World unavailable`);
+      return;
+    }
+    const existing = this.experiments.get(slot);
+    const record = createFieldLabExperiment({
+      label: existing?.label || `Setup ${slot}`,
+      capturedAtTick: this.snapshotValue.tick,
+      situation: this.situation,
+      layout: this.layout,
+      control: this.control.snapshot(),
+      positions: this.currentPositions()
+    });
+    this.experiments.set(slot, record);
+    this.persistExperiment(slot);
+    this.log(
+      `captured persistent setup ${slot} · ${record.setup.situation}/${record.setup.layout} · ` +
+      `squad ${record.setup.control.activeMembers.length} · tick ${record.capturedAtTick}`
+    );
+  }
+
+  private renameExperiment(slot: FieldLabExperimentSlot, label: string): void {
+    const existing = this.experiments.get(slot);
+    if (!existing) return;
+    const renamed = renameFieldLabExperiment(existing, label);
+    this.experiments.set(slot, renamed);
+    this.persistExperiment(slot);
+    this.log(`renamed setup ${slot} · ${renamed.label || "unlabelled"}`);
+  }
+
+  private clearExperiment(slot: FieldLabExperimentSlot): void {
+    if (!this.experiments.delete(slot)) return;
+    this.persistExperiment(slot);
+    this.log(`cleared persistent setup ${slot}`);
+  }
+
+  private restoreExperiment(slot: FieldLabExperimentSlot): void {
+    const record = this.experiments.get(slot);
+    if (!record || this.loading) {
+      this.log(`restore ${slot} ignored · setup unavailable`);
+      return;
+    }
+    this.control.restore(record.setup.control);
+    this.situation = record.setup.situation;
+    this.layout = record.setup.layout;
+    this.log(
+      `restore persistent setup ${slot} · ${record.label || "unlabelled"} · ` +
+      `${record.setup.situation}/${record.setup.layout}`
+    );
+    void this.loadWorld(false, record.setup.positions);
   }
 
   private log(value: string): void {
@@ -860,9 +994,14 @@ export class SquadFieldLabScene extends Phaser.Scene {
     if (this.eventLog.length > 80) this.eventLog.splice(0, this.eventLog.length - 80);
   }
 
-  private async loadWorld(preservePositions: boolean): Promise<void> {
+  private async loadWorld(
+    preservePositions: boolean,
+    restoredPositions?: FieldLabSpawnOverrides
+  ): Promise<void> {
     if (this.loading) return;
-    if (preservePositions) {
+    if (restoredPositions) {
+      this.positionMemory = cloneSpawnOverrides(restoredPositions);
+    } else if (preservePositions) {
       this.rememberCurrentPositions();
     } else {
       this.positionMemory = { squad: {} };
@@ -890,7 +1029,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       this.cooperativeEpisode = next.cooperativeEpisode();
       this.log(
         `Field Lab world reconstructed · ${this.situation}/${this.layout} · ` +
-        `${preservePositions ? "positions + control preserved" : "authored default positions"}`
+        `${restoredPositions ? "persistent experiment setup restored" : preservePositions ? "positions + control preserved" : "authored default positions"}`
       );
       this.drawWorld(this.snapshotValue);
       this.updateUi(this.snapshotValue);
