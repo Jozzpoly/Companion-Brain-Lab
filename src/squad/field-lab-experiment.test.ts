@@ -81,7 +81,7 @@ describe("Field Lab experiment state", () => {
     control.setSpacingScale(0.8);
     control.setResponsiveness(0.9);
     control.setSlotOffset("squad-2", { x: 2.2, y: -0.4 });
-    control.selectOnly("companion");
+    control.selectOnly("squad-2");
     control.issueSelected("FOLLOW");
 
     const b = createFieldLabExperiment({
