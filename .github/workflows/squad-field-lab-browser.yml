@@ -16,6 +16,8 @@ on:
       - "src/squad/field-lab-squad-control.test.ts"
       - "src/squad/field-lab-experiment.ts"
       - "src/squad/field-lab-experiment.test.ts"
+      - "src/squad/field-lab-trial.ts"
+      - "src/squad/field-lab-trial.test.ts"
       - "src/app/squad-field-lab-scene.ts"
       - "src/app/squad-field-lab-hud.ts"
       - "src/debug/squad-field-lab-panel.ts"
