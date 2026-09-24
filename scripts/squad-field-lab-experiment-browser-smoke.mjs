@@ -331,6 +331,75 @@ try {
   await tap(page, "p");
   await shot(page, "04-scoped-dynamics-physical-delta.png");
 
+  // Temporal evidence: each trial must restore its captured setup, then record
+  // real World ticks rather than comparing only static setup state.
+  const traceAButton = page.locator('[data-trial-toggle="A"]');
+  const traceBButton = page.locator('[data-trial-toggle="B"]');
+  invariant(await traceAButton.isEnabled(), "Trace A is unavailable despite captured setup A.");
+  invariant(await traceBButton.isEnabled(), "Trace B is unavailable despite captured setup B.");
+
+  await traceAButton.click();
+  await waitFor(
+    page,
+    (value) => value.includes("recording A"),
+    8_000,
+    "trace A starts from restored setup"
+  );
+  for (let index = 0; index < 12; index += 1) {
+    await tap(page, "o", 20);
+    await page.waitForTimeout(20);
+  }
+  await waitFor(
+    page,
+    (value) => /recording A · 1[0-2] ticks/.test(value),
+    4_000,
+    "trace A accumulates World ticks"
+  );
+  await traceAButton.click();
+  await waitFor(
+    page,
+    (value) => value.includes("A baseline mixed ·") && value.includes("not recording"),
+    4_000,
+    "trace A captured"
+  );
+
+  await traceBButton.click();
+  await waitFor(
+    page,
+    (value) => value.includes("recording B"),
+    8_000,
+    "trace B starts from restored setup"
+  );
+  for (let index = 0; index < 12; index += 1) {
+    await tap(page, "o", 20);
+    await page.waitForTimeout(20);
+  }
+  await waitFor(
+    page,
+    (value) => /recording B · 1[0-2] ticks/.test(value),
+    4_000,
+    "trace B accumulates World ticks"
+  );
+  await traceBButton.click();
+
+  const tracePanel = await waitFor(
+    page,
+    (value) =>
+      value.includes("Trial / Trace A/B") &&
+      value.includes("A baseline mixed ·") &&
+      value.includes("B pillar C2 hold ·") &&
+      value.includes("Δpath") &&
+      value.includes("blocked"),
+    5_000,
+    "temporal A/B comparison"
+  );
+  invariant(tracePanel.includes("ΔmotionErr"), "Temporal comparison omitted physical motion error.");
+  invariant(tracePanel.includes("authority transitions"), "Temporal comparison omitted authority transitions.");
+  const traceSummary = (await page.locator('[data-trial-diff="true"]').textContent()) ?? "";
+  invariant(traceSummary.includes("Trace A"), `HUD temporal comparison unavailable: ${traceSummary}`);
+  invariant(traceSummary.includes("Δtarget"), `HUD temporal comparison omitted target error: ${traceSummary}`);
+  await shot(page, "05-trial-trace-ab.png");
+
   // Clearing is also persistent; reload must not resurrect stale evidence.
   await page.locator('[data-experiment-clear="B"]').click();
   invariant(
@@ -362,7 +431,9 @@ try {
       clearingSlotIsPersistent: true,
       exactNumericDynamicsAuthoring: true,
       selectedOverridesAreCapturedByDiff: true,
-      scopedResponseChangesPhysicalRequestedVelocity: true
+      scopedResponseChangesPhysicalRequestedVelocity: true,
+      temporalTrialsRestoreCapturedSetups: true,
+      temporalTrialComparisonExposesTrajectoryAndBlockedEvidence: true
     },
     errors
   };
