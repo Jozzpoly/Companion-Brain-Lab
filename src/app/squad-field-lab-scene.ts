@@ -92,14 +92,15 @@ function clampMoveToward(
   from: Vec2,
   target: Vec2,
   tolerance: number,
-  responsiveness: number
+  responsiveness: number,
+  slowdownRadius: number
 ): Vec2 {
   const delta = { x: target.x - from.x, y: target.y - from.y };
   const d = Math.hypot(delta.x, delta.y);
   if (d <= tolerance) return { x: 0, y: 0 };
   const direction = { x: delta.x / d, y: delta.y / d };
-  const slowdownRadius = Math.max(tolerance * 4, 0.6);
-  const proximityThrottle = Math.min(1, d / slowdownRadius);
+  const effectiveSlowdownRadius = Math.max(tolerance, slowdownRadius);
+  const proximityThrottle = Math.min(1, d / effectiveSlowdownRadius);
   const throttle = Math.max(0.08, proximityThrottle * responsiveness);
   return {
     x: direction.x * throttle,
@@ -347,13 +348,15 @@ export class SquadFieldLabScene extends Phaser.Scene {
       if (target.authority === "DIRECT") {
         memberMoves.set(memberId, directMove);
       } else if (target.target) {
+        const dynamics = this.control.effectiveDynamicsFor(memberId);
         memberMoves.set(
           memberId,
           clampMoveToward(
             body.position,
             target.target,
-            control.dynamics.slotTolerance,
-            control.dynamics.responsiveness
+            dynamics.slotTolerance,
+            dynamics.responsiveness,
+            dynamics.slowdownRadius
           )
         );
       } else {
@@ -780,8 +783,9 @@ export class SquadFieldLabScene extends Phaser.Scene {
       } else {
         const d = distance(body.position, target.target);
         const requestedSpeed = Math.hypot(body.requestedVelocity.x, body.requestedVelocity.y);
+        const dynamics = this.control.effectiveDynamicsFor(memberId);
         memberStatuses[memberId] =
-          d <= state.dynamics.slotTolerance * 1.35
+          d <= dynamics.slotTolerance * 1.35
             ? "ARRIVED"
             : body.motionError > 0.45 && requestedSpeed > 0.2
               ? "BLOCKED"
