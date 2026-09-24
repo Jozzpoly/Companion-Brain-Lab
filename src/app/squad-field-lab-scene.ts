@@ -12,6 +12,19 @@ import {
 } from "../squad/field-lab-experiment";
 import { SquadFieldLabPanel, type FieldLabMemberStatus } from "../debug/squad-field-lab-panel";
 import {
+  FIELD_LAB_TRIAL_MAX_FRAMES,
+  classifyFieldLabTrialMember,
+  compareFieldLabTrials,
+  createFieldLabTrialFrame,
+  createFieldLabTrialRecord,
+  summarizeFieldLabTrial,
+  type FieldLabTrialComparison,
+  type FieldLabTrialFrame,
+  type FieldLabTrialRecord,
+  type FieldLabTrialSlot,
+  type FieldLabTrialSummary
+} from "../squad/field-lab-trial";
+import {
   FIELD_LAB_SQUAD_MEMBERS,
   FieldLabSquadControl,
   inverseRotateFieldLabVector,
@@ -157,6 +170,15 @@ export class SquadFieldLabScene extends Phaser.Scene {
   private pendingCooperativeAttempts: CooperativeEpisodeActionAttempt[] = [];
   private positionMemory: FieldLabSpawnOverrides = { squad: {} };
   private readonly experiments = new Map<FieldLabExperimentSlot, FieldLabExperimentRecord>();
+  private readonly trials = new Map<FieldLabTrialSlot, FieldLabTrialRecord>();
+  private readonly trialSummaries = new Map<FieldLabTrialSlot, FieldLabTrialSummary>();
+  private trialComparison: FieldLabTrialComparison | null = null;
+  private activeTrial: {
+    slot: FieldLabTrialSlot;
+    label: string;
+    startedAtTick: number;
+    frames: FieldLabTrialFrame[];
+  } | null = null;
   private readonly eventLog: string[] = [];
 
   private keys!: Record<
@@ -262,6 +284,8 @@ export class SquadFieldLabScene extends Phaser.Scene {
       onRestoreExperiment: (slot) => this.restoreExperiment(slot),
       onRenameExperiment: (slot, label) => this.renameExperiment(slot, label),
       onClearExperiment: (slot) => this.clearExperiment(slot),
+      onToggleTrial: (slot) => void this.toggleTrial(slot),
+      onClearTrial: (slot) => this.clearTrial(slot),
       onPlayerRepel: () => this.queueCooperativeAttempt("player"),
       onFocusedRepel: () => this.queueCooperativeAttempt(this.control.snapshot().focused),
       onSelectedRepel: () => {
@@ -400,6 +424,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
     this.cooperativeEpisode = result.cooperativeEpisode;
     this.lastCooperativeActionOutcomes = result.cooperativeEpisodeActionOutcomes;
     this.latestCooperativeEpisodeOutcome = result.cooperativeEpisodeOutcome;
+    this.recordActiveTrialFrame();
 
     for (const outcome of result.cooperativeEpisodeActionOutcomes) {
       this.log(
@@ -777,7 +802,15 @@ export class SquadFieldLabScene extends Phaser.Scene {
       episode: this.cooperativeEpisode,
       latestEpisodeOutcome: this.latestCooperativeEpisodeOutcome,
       experiments: experimentSummaries,
-      experimentDiff
+      experimentDiff,
+      trials: {
+        A: this.trialSummaries.get("A"),
+        B: this.trialSummaries.get("B")
+      },
+      activeTrial: this.activeTrial
+        ? { slot: this.activeTrial.slot, frameCount: this.activeTrial.frames.length }
+        : null,
+      trialComparison: this.trialComparison
     });
     const focusedBody = actor(snapshot, state.focused);
     const player = actor(snapshot, "player");
@@ -790,21 +823,13 @@ export class SquadFieldLabScene extends Phaser.Scene {
       }
       const body = actor(snapshot, memberId);
       const target = this.control.targetFor(memberId, player.position);
-      if (target.authority === "DIRECT") {
-        memberStatuses[memberId] = "DIRECT";
-      } else if (!target.target || !targetInsideWorld(snapshot, body, target.target)) {
-        memberStatuses[memberId] = "INVALID_TARGET";
-      } else {
-        const d = distance(body.position, target.target);
-        const requestedSpeed = Math.hypot(body.requestedVelocity.x, body.requestedVelocity.y);
-        const dynamics = this.control.effectiveDynamicsFor(memberId);
-        memberStatuses[memberId] =
-          d <= dynamics.slotTolerance * 1.35
-            ? "ARRIVED"
-            : body.motionError > 0.45 && requestedSpeed > 0.2
-              ? "BLOCKED"
-              : "MOVING";
-      }
+      const dynamics = this.control.effectiveDynamicsFor(memberId);
+      memberStatuses[memberId] = classifyFieldLabTrialMember({
+        body,
+        target,
+        targetValid: Boolean(target.target && targetInsideWorld(snapshot, body, target.target)),
+        slotTolerance: dynamics.slotTolerance
+      });
     }
     this.panel.update({
       snapshot,
@@ -819,6 +844,14 @@ export class SquadFieldLabScene extends Phaser.Scene {
       cooperativeActionOutcomes: this.lastCooperativeActionOutcomes,
       experiments: { A: experimentA, B: experimentB },
       experimentDiff,
+      trials: {
+        A: this.trialSummaries.get("A"),
+        B: this.trialSummaries.get("B")
+      },
+      activeTrial: this.activeTrial
+        ? { slot: this.activeTrial.slot, frameCount: this.activeTrial.frames.length }
+        : null,
+      trialComparison: this.trialComparison,
       recentEvents: this.eventLog
     });
   }
@@ -1006,6 +1039,117 @@ export class SquadFieldLabScene extends Phaser.Scene {
     void this.loadWorld(false, record.setup.positions);
   }
 
+  private async toggleTrial(slot: FieldLabTrialSlot): Promise<void> {
+    if (this.activeTrial?.slot === slot) {
+      this.stopTrial("manual stop");
+      return;
+    }
+    if (this.loading) {
+      this.log(`trial ${slot} ignored · World loading`);
+      return;
+    }
+    if (this.activeTrial) {
+      this.stopTrial(`switch to ${slot}`);
+    }
+
+    const setup = this.experiments.get(slot);
+    if (!setup) {
+      this.log(`trial ${slot} ignored · capture setup ${slot} first`);
+      return;
+    }
+
+    this.control.restore(setup.setup.control);
+    this.situation = setup.setup.situation;
+    this.layout = setup.setup.layout;
+    await this.loadWorld(false, setup.setup.positions);
+    if (!this.snapshotValue) {
+      this.log(`trial ${slot} ignored · restored World unavailable`);
+      return;
+    }
+
+    this.activeTrial = {
+      slot,
+      label: setup.label || `Setup ${slot}`,
+      startedAtTick: this.snapshotValue.tick,
+      frames: []
+    };
+    this.log(
+      `trial ${slot} recording started · restored ${setup.label || "unlabelled"} · ` +
+      `${setup.setup.situation}/${setup.setup.layout}`
+    );
+  }
+
+  private stopTrial(reason: string): void {
+    const active = this.activeTrial;
+    if (!active) return;
+    this.activeTrial = null;
+    if (active.frames.length === 0) {
+      this.log(`trial ${active.slot} discarded empty · ${reason}`);
+      return;
+    }
+
+    const record = createFieldLabTrialRecord({
+      slot: active.slot,
+      label: active.label,
+      startedAtTick: active.startedAtTick,
+      frames: active.frames
+    });
+    this.trials.set(active.slot, record);
+    this.trialSummaries.set(active.slot, summarizeFieldLabTrial(record));
+    const a = this.trials.get("A");
+    const b = this.trials.get("B");
+    this.trialComparison = a && b ? compareFieldLabTrials(a, b) : null;
+    this.log(
+      `trial ${active.slot} captured · ${record.frames.length} ticks · ${reason}`
+    );
+  }
+
+  private clearTrial(slot: FieldLabTrialSlot): void {
+    if (this.activeTrial?.slot === slot) {
+      this.activeTrial = null;
+    }
+    this.trials.delete(slot);
+    this.trialSummaries.delete(slot);
+    const a = this.trials.get("A");
+    const b = this.trials.get("B");
+    this.trialComparison = a && b ? compareFieldLabTrials(a, b) : null;
+    this.log(`cleared trial trace ${slot}`);
+  }
+
+  private recordActiveTrialFrame(): void {
+    const active = this.activeTrial;
+    const snapshot = this.snapshotValue;
+    if (!active || !snapshot) return;
+
+    const control = this.control.snapshot();
+    const player = actor(snapshot, "player");
+    const members = control.activeMembers.map((memberId) => {
+      const body = actor(snapshot, memberId);
+      const target = this.control.targetFor(memberId, player.position);
+      const dynamics = this.control.effectiveDynamicsFor(memberId);
+      return {
+        memberId,
+        body,
+        target,
+        targetValid: Boolean(
+          target.target && targetInsideWorld(snapshot, body, target.target)
+        ),
+        slotTolerance: dynamics.slotTolerance
+      };
+    });
+
+    active.frames.push(createFieldLabTrialFrame({
+      tick: snapshot.tick,
+      playerPosition: player.position,
+      cooperativeOutcome: this.latestCooperativeEpisodeOutcome,
+      members
+    }));
+
+    if (active.frames.length >= FIELD_LAB_TRIAL_MAX_FRAMES) {
+      this.stopTrial(`automatic ${FIELD_LAB_TRIAL_MAX_FRAMES}-tick bound`);
+    }
+  }
+
   private log(value: string): void {
     const tick = this.snapshotValue?.tick ?? 0;
     this.eventLog.push(`t${tick} · ${value}`);
@@ -1017,6 +1161,9 @@ export class SquadFieldLabScene extends Phaser.Scene {
     restoredPositions?: FieldLabSpawnOverrides
   ): Promise<void> {
     if (this.loading) return;
+    if (this.activeTrial) {
+      this.stopTrial("World reconstruction");
+    }
     if (restoredPositions) {
       this.positionMemory = cloneSpawnOverrides(restoredPositions);
     } else if (preservePositions) {
