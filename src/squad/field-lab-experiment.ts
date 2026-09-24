@@ -267,6 +267,20 @@ export function diffFieldLabExperiments(
   numberDiff(differences, "DYNAMICS", "spacingScale", ac.dynamics.spacingScale, bc.dynamics.spacingScale);
   numberDiff(differences, "DYNAMICS", "slotTolerance", ac.dynamics.slotTolerance, bc.dynamics.slotTolerance);
   numberDiff(differences, "DYNAMICS", "responsiveness", ac.dynamics.responsiveness, bc.dynamics.responsiveness);
+  numberDiff(differences, "DYNAMICS", "slowdownRadius", ac.dynamics.slowdownRadius, bc.dynamics.slowdownRadius);
+  for (const memberId of FIELD_LAB_SQUAD_MEMBERS) {
+    const ad = ac.memberDynamics.find((entry) => entry.memberId === memberId);
+    const bd = bc.memberDynamics.find((entry) => entry.memberId === memberId);
+    for (const key of ["slotTolerance", "responsiveness", "slowdownRadius"] as const) {
+      add(
+        differences,
+        "DYNAMICS",
+        `memberDynamics.${memberId}.${key}`,
+        ad?.[key] === null || ad?.[key] === undefined ? "inherit" : fmtNumber(ad[key]!),
+        bd?.[key] === null || bd?.[key] === undefined ? "inherit" : fmtNumber(bd[key]!)
+      );
+    }
+  }
 
   vecDiff(differences, "POSITIONS", "positions.player", left.setup.positions.player, right.setup.positions.player);
   for (const memberId of FIELD_LAB_SQUAD_MEMBERS) {
