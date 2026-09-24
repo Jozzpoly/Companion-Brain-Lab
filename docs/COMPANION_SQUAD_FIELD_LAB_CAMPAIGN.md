@@ -512,3 +512,34 @@ Therefore future authoring infrastructure should be judged partly by **expressiv
 can the Owner create materially different squad behavior without needing a new hard-coded mode for every experiment?
 
 This strengthens, rather than replaces, the existing rule that every exposed variable must produce interpretable runtime consequences.
+
+---
+
+## 20. Reproducible experiment substrate + scoped dynamics — 2026-09-24
+
+The campaign now has a stronger experimental backbone.
+
+Qualified source `969a6bf90db67f6fedf48627fba092870b641fb5` passed full repository, broad Field Lab and persistent A/B browser gates in run `36060223003`.
+
+Newly earned capabilities:
+
+- versioned persistent experiment setups;
+- exact restore of physical and authoring state;
+- structural A/B diff;
+- labels that survive reload;
+- exact numeric parameter editing;
+- group defaults versus selection-scoped member overrides;
+- independent slowdown-radius authoring;
+- explicit rejection of unsupported values rather than hidden clamping;
+- material proof that scoped responsiveness changes Rapier requested velocity.
+
+This changes the campaign sequencing.
+
+Do not maximize parameter count next.
+
+The next leverage point is temporal trial capture/comparison so new variables can be judged by their actual behavioral consequences, not merely by their existence in the control surface.
+
+Target research loop:
+
+`setup A/B → run traces → outcome/trajectory/error comparison → perturb → recurring Owner solution → candidate autonomy semantic`.
+
