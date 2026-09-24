@@ -336,52 +336,88 @@ try {
   await tap(page, "p");
   await page.waitForTimeout(80);
 
-  // Temporal evidence: each trial must restore its captured setup, then record
-  // real World ticks rather than comparing only static setup state.
+  // Build a controlled temporal A/B rather than merely recording two settled
+  // states. A and B share the same OPEN layout, embodied start, C2 MOVE target
+  // and group dynamics; only C2 responsiveness differs.
+  await page.locator('[data-layout="OPEN"]').click();
+  await waitFor(
+    page,
+    (value) => value.includes("layout OPEN · obstacles 0"),
+    5_000,
+    "open layout for controlled trial"
+  );
+  await page.locator('[data-clear-dynamics-overrides="true"]').click();
+  await page.mouse.click(farTarget.x, farTarget.y, { button: "right" });
+  await page.waitForTimeout(60);
+
+  await page.locator('[data-experiment-capture="A"]').click();
+  await inputA.fill("trace fast C2");
+  await inputA.blur();
+  await page.waitForTimeout(60);
+
+  const responseNumeric = page.locator(
+    '[data-parameter="responsiveness"] .squad-lab-number-input'
+  );
+  await responseNumeric.fill("0.27");
+  await responseNumeric.press("Enter");
+  await responseNumeric.blur();
+  await waitFor(
+    page,
+    (value) =>
+      value.includes("Focused · C2") &&
+      value.includes("dynamics response 0.27") &&
+      value.includes("override: response"),
+    4_000,
+    "controlled C2 slow response"
+  );
+  await page.locator('[data-experiment-capture="B"]').click();
+  await inputB.fill("trace slow C2");
+  await inputB.blur();
+  await page.waitForTimeout(60);
+
+  const controlledDiff = (await page.locator('[data-experiment-diff="true"]').textContent()) ?? "";
+  invariant(
+    controlledDiff.includes("DYNAMICS") && !controlledDiff.includes("POSITIONS"),
+    `Controlled trial setups are not position-matched: ${controlledDiff}`
+  );
+
+  // Temporal evidence: each trial restores its exact captured setup and records
+  // real World ticks. This must reveal the causal physical consequence of the
+  // one authored responsiveness perturbation.
   const traceAButton = page.locator('[data-trial-toggle="A"]');
   const traceBButton = page.locator('[data-trial-toggle="B"]');
   invariant(await traceAButton.isEnabled(), "Trace A is unavailable despite captured setup A.");
   invariant(await traceBButton.isEnabled(), "Trace B is unavailable despite captured setup B.");
 
   await traceAButton.click();
-  await waitFor(
-    page,
-    (value) => value.includes("recording A"),
-    8_000,
-    "trace A starts from restored setup"
-  );
-  for (let index = 0; index < 12; index += 1) {
+  await waitFor(page, (value) => value.includes("recording A"), 8_000, "trace A starts");
+  for (let index = 0; index < 24; index += 1) {
     await tap(page, "o", 20);
     await page.waitForTimeout(20);
   }
   await waitFor(
     page,
-    (value) => /recording A · 1[0-2] ticks/.test(value),
+    (value) => /recording A · 2[0-4] ticks/.test(value),
     4_000,
     "trace A accumulates World ticks"
   );
   await traceAButton.click();
   await waitFor(
     page,
-    (value) => value.includes("A baseline mixed ·") && value.includes("not recording"),
+    (value) => value.includes("A trace fast C2 ·") && value.includes("not recording"),
     4_000,
     "trace A captured"
   );
 
   await traceBButton.click();
-  await waitFor(
-    page,
-    (value) => value.includes("recording B"),
-    8_000,
-    "trace B starts from restored setup"
-  );
-  for (let index = 0; index < 12; index += 1) {
+  await waitFor(page, (value) => value.includes("recording B"), 8_000, "trace B starts");
+  for (let index = 0; index < 24; index += 1) {
     await tap(page, "o", 20);
     await page.waitForTimeout(20);
   }
   await waitFor(
     page,
-    (value) => /recording B · 1[0-2] ticks/.test(value),
+    (value) => /recording B · 2[0-4] ticks/.test(value),
     4_000,
     "trace B accumulates World ticks"
   );
@@ -391,8 +427,8 @@ try {
     page,
     (value) =>
       value.includes("Trial / Trace A/B") &&
-      value.includes("A baseline mixed ·") &&
-      value.includes("B pillar C2 hold ·") &&
+      value.includes("A trace fast C2 ·") &&
+      value.includes("B trace slow C2 ·") &&
       value.includes("Δpath") &&
       value.includes("blocked"),
     5_000,
@@ -400,9 +436,22 @@ try {
   );
   invariant(tracePanel.includes("ΔmotionErr"), "Temporal comparison omitted physical motion error.");
   invariant(tracePanel.includes("authority transitions"), "Temporal comparison omitted authority transitions.");
+
   const traceSummary = (await page.locator('[data-trial-diff="true"]').textContent()) ?? "";
-  invariant(traceSummary.includes("Trace A"), `HUD temporal comparison unavailable: ${traceSummary}`);
-  invariant(traceSummary.includes("Δtarget"), `HUD temporal comparison omitted target error: ${traceSummary}`);
+  const c2Temporal = traceSummary.match(
+    /C2 Δpath ([+-]?\d+\.\d+)m · Δtarget ([+-]?\d+\.\d+)m/
+  );
+  invariant(c2Temporal, `C2 temporal deltas unavailable: ${traceSummary}`);
+  const c2PathDelta = Number(c2Temporal[1]);
+  const c2TargetDelta = Number(c2Temporal[2]);
+  invariant(
+    c2PathDelta < -0.08,
+    `Slow C2 did not travel materially less than fast C2: Δpath=${c2PathDelta}`
+  );
+  invariant(
+    c2TargetDelta > 0.08,
+    `Slow C2 did not retain materially more target error: Δtarget=${c2TargetDelta}`
+  );
   await shot(page, "05-trial-trace-ab.png");
 
   // Clearing is also persistent; reload must not resurrect stale evidence.
