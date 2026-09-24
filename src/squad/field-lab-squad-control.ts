@@ -169,6 +169,108 @@ export class FieldLabSquadControl {
     return cloneSnapshot(this.state);
   }
 
+  restore(snapshot: FieldLabSquadControlSnapshot): FieldLabSquadControlSnapshot {
+    const activeMembers = [...snapshot.activeMembers];
+    const expectedActive = FIELD_LAB_SQUAD_MEMBERS.slice(0, activeMembers.length);
+    if (
+      activeMembers.length < 1 ||
+      activeMembers.length > FIELD_LAB_SQUAD_MEMBERS.length ||
+      activeMembers.some((memberId, index) => memberId !== expectedActive[index])
+    ) {
+      throw new Error("Field Lab snapshot activeMembers must be the canonical 1-4 roster prefix.");
+    }
+
+    const active = new Set(activeMembers);
+    const selected = [...snapshot.selected];
+    if (
+      selected.length < 1 ||
+      new Set(selected).size !== selected.length ||
+      selected.some((memberId) => !active.has(memberId))
+    ) {
+      throw new Error("Field Lab snapshot selection must contain unique active members.");
+    }
+    if (!selected.includes(snapshot.focused)) {
+      throw new Error("Field Lab snapshot focus must belong to the current selection.");
+    }
+
+    const slots = snapshot.slots.map((slot) => ({
+      memberId: slot.memberId,
+      offset: finiteVec(slot.offset, `snapshot slot ${slot.memberId}`)
+    }));
+    const slotIds = slots.map((slot) => slot.memberId);
+    if (
+      slots.length !== FIELD_LAB_SQUAD_MEMBERS.length ||
+      new Set(slotIds).size !== FIELD_LAB_SQUAD_MEMBERS.length ||
+      FIELD_LAB_SQUAD_MEMBERS.some((memberId) => !slotIds.includes(memberId))
+    ) {
+      throw new Error("Field Lab snapshot must contain exactly one formation slot per squad member.");
+    }
+
+    const assignments = snapshot.assignments.map((assignment) => {
+      if (!FIELD_LAB_SQUAD_MEMBERS.includes(assignment.memberId)) {
+        throw new Error(`Unknown Field Lab snapshot assignment member: ${String(assignment.memberId)}`);
+      }
+      if (!["FOLLOW", "HOLD", "MOVE"].includes(assignment.mode)) {
+        throw new Error(`Unknown Field Lab snapshot order mode: ${String(assignment.mode)}`);
+      }
+      if (assignment.mode === "FOLLOW") {
+        return {
+          memberId: assignment.memberId,
+          mode: assignment.mode,
+          worldAnchor: null
+        };
+      }
+      if (!assignment.worldAnchor) {
+        throw new Error(`Field Lab snapshot ${assignment.mode} assignment requires a world anchor.`);
+      }
+      return {
+        memberId: assignment.memberId,
+        mode: assignment.mode,
+        worldAnchor: finiteVec(
+          assignment.worldAnchor,
+          `snapshot assignment ${assignment.memberId}`
+        )
+      };
+    });
+    const assignmentIds = assignments.map((assignment) => assignment.memberId);
+    if (
+      assignments.length !== FIELD_LAB_SQUAD_MEMBERS.length ||
+      new Set(assignmentIds).size !== FIELD_LAB_SQUAD_MEMBERS.length ||
+      FIELD_LAB_SQUAD_MEMBERS.some((memberId) => !assignmentIds.includes(memberId))
+    ) {
+      throw new Error("Field Lab snapshot must contain exactly one assignment per squad member.");
+    }
+
+    const spacingScale = finite(snapshot.dynamics.spacingScale, "snapshot spacing scale");
+    const slotTolerance = finite(snapshot.dynamics.slotTolerance, "snapshot slot tolerance");
+    const responsiveness = finite(snapshot.dynamics.responsiveness, "snapshot responsiveness");
+    if (spacingScale < MIN_SPACING || spacingScale > MAX_SPACING) {
+      throw new Error("Field Lab snapshot spacing scale is outside the supported range.");
+    }
+    if (slotTolerance < MIN_TOLERANCE || slotTolerance > MAX_TOLERANCE) {
+      throw new Error("Field Lab snapshot slot tolerance is outside the supported range.");
+    }
+    if (responsiveness < MIN_RESPONSIVENESS || responsiveness > MAX_RESPONSIVENESS) {
+      throw new Error("Field Lab snapshot responsiveness is outside the supported range.");
+    }
+
+    this.state = {
+      activeMembers,
+      selected,
+      focused: snapshot.focused,
+      directControl: Boolean(snapshot.directControl),
+      orientationRadians: finite(snapshot.orientationRadians, "snapshot formation orientation"),
+      slots,
+      assignments,
+      dynamics: {
+        spacingScale,
+        slotTolerance,
+        responsiveness
+      }
+    };
+    return this.snapshot();
+  }
+
   setActiveCount(count: number): FieldLabSquadControlSnapshot {
     if (!Number.isInteger(count) || count < 1 || count > FIELD_LAB_SQUAD_MEMBERS.length) {
       throw new Error("Field Lab active squad count must be an integer from 1 to 4.");
