@@ -13,6 +13,17 @@ describe("FieldLabSquadControl", () => {
     expect(state.focused).toBe("companion");
     expect(state.slots.map((slot) => slot.memberId)).toEqual(FIELD_LAB_SQUAD_MEMBERS);
     expect(state.assignments.every((assignment) => assignment.mode === "FOLLOW")).toBe(true);
+    expect(state.dynamics).toEqual({
+      spacingScale: 1,
+      slotTolerance: 0.18,
+      responsiveness: 0.82,
+      slowdownRadius: 0.72
+    });
+    expect(state.memberDynamics.every((entry) =>
+      entry.slotTolerance === null &&
+      entry.responsiveness === null &&
+      entry.slowdownRadius === null
+    )).toBe(true);
   });
 
   it("deploys a bounded 1-4 roster and repairs selection/focus when members leave", () => {
@@ -121,6 +132,9 @@ describe("FieldLabSquadControl", () => {
     control.setSpacingScale(1.7);
     control.setSlotTolerance(0.35);
     control.setResponsiveness(0.55);
+    control.setSlowdownRadius(1.4);
+    control.setSelectedDynamicsOverride("responsiveness", 0.35);
+    control.setSelectedDynamicsOverride("slowdownRadius", 2.2);
     control.setOrientationRadians(0.7);
     const captured = control.snapshot();
 
@@ -132,6 +146,8 @@ describe("FieldLabSquadControl", () => {
     control.setSpacingScale(0.6);
     control.setSlotTolerance(0.1);
     control.setResponsiveness(0.95);
+    control.setSlowdownRadius(0.25);
+    control.clearSelectedDynamicsOverrides();
     control.setOrientationRadians(-1.1);
 
     expect(control.restore(captured)).toEqual(captured);
@@ -154,16 +170,52 @@ describe("FieldLabSquadControl", () => {
     })).toThrow(/focus must belong/);
   });
 
-  it("makes dynamics bounded and behaviorally meaningful inputs", () => {
+  it("rejects out-of-range dynamics instead of silently clamping authored values", () => {
     const control = new FieldLabSquadControl();
-    control.setSpacingScale(99);
-    control.setSlotTolerance(-10);
-    control.setResponsiveness(0);
+
+    expect(() => control.setSpacingScale(99)).toThrow(/within/);
+    expect(() => control.setSlotTolerance(-10)).toThrow(/within/);
+    expect(() => control.setResponsiveness(2)).toThrow(/within/);
+    expect(() => control.setSlowdownRadius(0)).toThrow(/within/);
 
     expect(control.snapshot().dynamics).toEqual({
-      spacingScale: 2.5,
-      slotTolerance: 0.05,
-      responsiveness: 0.15
+      spacingScale: 1,
+      slotTolerance: 0.18,
+      responsiveness: 0.82,
+      slowdownRadius: 0.72
     });
+  });
+
+  it("applies selection-scoped dynamics overrides without changing group defaults", () => {
+    const control = new FieldLabSquadControl();
+    control.selectOnly("squad-2");
+    control.toggleSelected("squad-3");
+    control.setSelectedDynamicsOverride("responsiveness", 0.31);
+    control.setSelectedDynamicsOverride("slotTolerance", 0.42);
+    control.setSelectedDynamicsOverride("slowdownRadius", 2.4);
+
+    expect(control.effectiveDynamicsFor("companion")).toEqual({
+      slotTolerance: 0.18,
+      responsiveness: 0.82,
+      slowdownRadius: 0.72,
+      overridden: []
+    });
+    expect(control.effectiveDynamicsFor("squad-2")).toEqual({
+      slotTolerance: 0.42,
+      responsiveness: 0.31,
+      slowdownRadius: 2.4,
+      overridden: ["slotTolerance", "responsiveness", "slowdownRadius"]
+    });
+    expect(control.effectiveDynamicsFor("squad-3")).toEqual(
+      control.effectiveDynamicsFor("squad-2")
+    );
+
+    control.setGroupDynamics("responsiveness", 0.6);
+    expect(control.effectiveDynamicsFor("companion").responsiveness).toBe(0.6);
+    expect(control.effectiveDynamicsFor("squad-2").responsiveness).toBe(0.31);
+
+    control.clearSelectedDynamicsOverrides();
+    expect(control.effectiveDynamicsFor("squad-2").overridden).toEqual([]);
+    expect(control.effectiveDynamicsFor("squad-2").responsiveness).toBe(0.6);
   });
 });
