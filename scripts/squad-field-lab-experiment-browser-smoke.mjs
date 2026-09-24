@@ -331,6 +331,11 @@ try {
   await tap(page, "p");
   await shot(page, "04-scoped-dynamics-physical-delta.png");
 
+  // The reload earlier reset the scene to RUNNING. The dynamics proof leaves it
+  // running again, so explicitly pause before deterministic tick-by-tick traces.
+  await tap(page, "p");
+  await page.waitForTimeout(80);
+
   // Temporal evidence: each trial must restore its captured setup, then record
   // real World ticks rather than comparing only static setup state.
   const traceAButton = page.locator('[data-trial-toggle="A"]');
