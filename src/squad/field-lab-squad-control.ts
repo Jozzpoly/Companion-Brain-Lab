@@ -10,6 +10,7 @@ export const FIELD_LAB_SQUAD_MEMBERS = [
 export type SquadOrderMode = "FOLLOW" | "HOLD" | "MOVE";
 export type SquadMemberAuthority = "FORMATION" | "DIRECT";
 export type FieldLabFormationPreset = "WEDGE" | "LINE" | "COLUMN" | "DIAMOND";
+export type FieldLabMemberDynamicsKey = "slotTolerance" | "responsiveness" | "slowdownRadius";
 
 export interface FieldLabFormationSlot {
   memberId: SquadMemberId;
@@ -26,6 +27,21 @@ export interface FieldLabDynamics {
   spacingScale: number;
   slotTolerance: number;
   responsiveness: number;
+  slowdownRadius: number;
+}
+
+export interface FieldLabMemberDynamicsOverride {
+  memberId: SquadMemberId;
+  slotTolerance: number | null;
+  responsiveness: number | null;
+  slowdownRadius: number | null;
+}
+
+export interface EffectiveFieldLabMemberDynamics {
+  slotTolerance: number;
+  responsiveness: number;
+  slowdownRadius: number;
+  overridden: readonly FieldLabMemberDynamicsKey[];
 }
 
 export interface FieldLabSquadControlSnapshot {
@@ -37,6 +53,7 @@ export interface FieldLabSquadControlSnapshot {
   slots: readonly FieldLabFormationSlot[];
   assignments: readonly FieldLabMemberAssignment[];
   dynamics: FieldLabDynamics;
+  memberDynamics: readonly FieldLabMemberDynamicsOverride[];
 }
 
 export interface FieldLabMemberTarget {
@@ -47,6 +64,13 @@ export interface FieldLabMemberTarget {
   localSlot: Vec2;
   worldAnchor: Vec2;
 }
+
+export const FIELD_LAB_PARAMETER_RANGES = {
+  spacingScale: { min: 0.25, max: 5, step: 0.05 },
+  slotTolerance: { min: 0.02, max: 1.5, step: 0.01 },
+  responsiveness: { min: 0.05, max: 1, step: 0.01 },
+  slowdownRadius: { min: 0.1, max: 5, step: 0.05 }
+} as const;
 
 const DEFAULT_SLOTS: Readonly<Record<SquadMemberId, Vec2>> = {
   companion: { x: 1.55, y: 0 },
@@ -82,13 +106,6 @@ const PRESET_SLOTS: Readonly<Record<FieldLabFormationPreset, Readonly<Record<Squ
   }
 };
 
-const MIN_SPACING = 0.45;
-const MAX_SPACING = 2.5;
-const MIN_TOLERANCE = 0.05;
-const MAX_TOLERANCE = 0.9;
-const MIN_RESPONSIVENESS = 0.15;
-const MAX_RESPONSIVENESS = 1;
-
 function finite(value: number, label: string): number {
   if (!Number.isFinite(value)) throw new Error(`${label} must be finite.`);
   return value;
@@ -101,8 +118,18 @@ function finiteVec(value: Vec2, label: string): Vec2 {
   };
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
+function bounded(
+  value: number,
+  range: { min: number; max: number },
+  label: string
+): number {
+  const candidate = finite(value, label);
+  if (candidate < range.min || candidate > range.max) {
+    throw new Error(
+      `${label} must be within [${range.min}, ${range.max}], received ${candidate}.`
+    );
+  }
+  return candidate;
 }
 
 function memberOrder(a: SquadMemberId, b: SquadMemberId): number {
@@ -138,7 +165,17 @@ function cloneSnapshot(value: FieldLabSquadControlSnapshot): FieldLabSquadContro
       mode: assignment.mode,
       worldAnchor: assignment.worldAnchor ? { ...assignment.worldAnchor } : null
     })),
-    dynamics: { ...value.dynamics }
+    dynamics: { ...value.dynamics },
+    memberDynamics: value.memberDynamics.map((entry) => ({ ...entry }))
+  };
+}
+
+function emptyMemberDynamics(memberId: SquadMemberId): FieldLabMemberDynamicsOverride {
+  return {
+    memberId,
+    slotTolerance: null,
+    responsiveness: null,
+    slowdownRadius: null
   };
 }
 
@@ -161,8 +198,10 @@ export class FieldLabSquadControl {
     dynamics: {
       spacingScale: 1,
       slotTolerance: 0.18,
-      responsiveness: 0.82
-    }
+      responsiveness: 0.82,
+      slowdownRadius: 0.72
+    },
+    memberDynamics: FIELD_LAB_SQUAD_MEMBERS.map(emptyMemberDynamics)
   };
 
   snapshot(): FieldLabSquadControlSnapshot {
@@ -241,17 +280,68 @@ export class FieldLabSquadControl {
       throw new Error("Field Lab snapshot must contain exactly one assignment per squad member.");
     }
 
-    const spacingScale = finite(snapshot.dynamics.spacingScale, "snapshot spacing scale");
-    const slotTolerance = finite(snapshot.dynamics.slotTolerance, "snapshot slot tolerance");
-    const responsiveness = finite(snapshot.dynamics.responsiveness, "snapshot responsiveness");
-    if (spacingScale < MIN_SPACING || spacingScale > MAX_SPACING) {
-      throw new Error("Field Lab snapshot spacing scale is outside the supported range.");
-    }
-    if (slotTolerance < MIN_TOLERANCE || slotTolerance > MAX_TOLERANCE) {
-      throw new Error("Field Lab snapshot slot tolerance is outside the supported range.");
-    }
-    if (responsiveness < MIN_RESPONSIVENESS || responsiveness > MAX_RESPONSIVENESS) {
-      throw new Error("Field Lab snapshot responsiveness is outside the supported range.");
+    const dynamics: FieldLabDynamics = {
+      spacingScale: bounded(
+        snapshot.dynamics.spacingScale,
+        FIELD_LAB_PARAMETER_RANGES.spacingScale,
+        "snapshot spacing scale"
+      ),
+      slotTolerance: bounded(
+        snapshot.dynamics.slotTolerance,
+        FIELD_LAB_PARAMETER_RANGES.slotTolerance,
+        "snapshot slot tolerance"
+      ),
+      responsiveness: bounded(
+        snapshot.dynamics.responsiveness,
+        FIELD_LAB_PARAMETER_RANGES.responsiveness,
+        "snapshot responsiveness"
+      ),
+      slowdownRadius: bounded(
+        snapshot.dynamics.slowdownRadius,
+        FIELD_LAB_PARAMETER_RANGES.slowdownRadius,
+        "snapshot slowdown radius"
+      )
+    };
+
+    const memberDynamics = snapshot.memberDynamics.map((entry) => {
+      if (!FIELD_LAB_SQUAD_MEMBERS.includes(entry.memberId)) {
+        throw new Error(`Unknown Field Lab member-dynamics identity: ${String(entry.memberId)}`);
+      }
+      return {
+        memberId: entry.memberId,
+        slotTolerance:
+          entry.slotTolerance === null
+            ? null
+            : bounded(
+                entry.slotTolerance,
+                FIELD_LAB_PARAMETER_RANGES.slotTolerance,
+                `snapshot ${entry.memberId} slot tolerance`
+              ),
+        responsiveness:
+          entry.responsiveness === null
+            ? null
+            : bounded(
+                entry.responsiveness,
+                FIELD_LAB_PARAMETER_RANGES.responsiveness,
+                `snapshot ${entry.memberId} responsiveness`
+              ),
+        slowdownRadius:
+          entry.slowdownRadius === null
+            ? null
+            : bounded(
+                entry.slowdownRadius,
+                FIELD_LAB_PARAMETER_RANGES.slowdownRadius,
+                `snapshot ${entry.memberId} slowdown radius`
+              )
+      };
+    });
+    const memberDynamicsIds = memberDynamics.map((entry) => entry.memberId);
+    if (
+      memberDynamics.length !== FIELD_LAB_SQUAD_MEMBERS.length ||
+      new Set(memberDynamicsIds).size !== FIELD_LAB_SQUAD_MEMBERS.length ||
+      FIELD_LAB_SQUAD_MEMBERS.some((memberId) => !memberDynamicsIds.includes(memberId))
+    ) {
+      throw new Error("Field Lab snapshot must contain one dynamics override record per squad member.");
     }
 
     this.state = {
@@ -262,11 +352,8 @@ export class FieldLabSquadControl {
       orientationRadians: finite(snapshot.orientationRadians, "snapshot formation orientation"),
       slots,
       assignments,
-      dynamics: {
-        spacingScale,
-        slotTolerance,
-        responsiveness
-      }
+      dynamics,
+      memberDynamics
     };
     return this.snapshot();
   }
@@ -439,32 +526,87 @@ export class FieldLabSquadControl {
       ...this.state,
       dynamics: {
         ...this.state.dynamics,
-        spacingScale: clamp(finite(value, "spacing scale"), MIN_SPACING, MAX_SPACING)
+        spacingScale: bounded(
+          value,
+          FIELD_LAB_PARAMETER_RANGES.spacingScale,
+          "spacing scale"
+        )
       }
     };
     return this.snapshot();
   }
 
   setSlotTolerance(value: number): FieldLabSquadControlSnapshot {
+    return this.setGroupDynamics("slotTolerance", value);
+  }
+
+  setResponsiveness(value: number): FieldLabSquadControlSnapshot {
+    return this.setGroupDynamics("responsiveness", value);
+  }
+
+  setSlowdownRadius(value: number): FieldLabSquadControlSnapshot {
+    return this.setGroupDynamics("slowdownRadius", value);
+  }
+
+  setGroupDynamics(
+    key: FieldLabMemberDynamicsKey,
+    value: number
+  ): FieldLabSquadControlSnapshot {
+    const next = bounded(value, FIELD_LAB_PARAMETER_RANGES[key], key);
     this.state = {
       ...this.state,
       dynamics: {
         ...this.state.dynamics,
-        slotTolerance: clamp(finite(value, "slot tolerance"), MIN_TOLERANCE, MAX_TOLERANCE)
+        [key]: next
       }
     };
     return this.snapshot();
   }
 
-  setResponsiveness(value: number): FieldLabSquadControlSnapshot {
+  setSelectedDynamicsOverride(
+    key: FieldLabMemberDynamicsKey,
+    value: number | null
+  ): FieldLabSquadControlSnapshot {
+    const next =
+      value === null ? null : bounded(value, FIELD_LAB_PARAMETER_RANGES[key], `selected ${key}`);
+    const selected = new Set(this.state.selected);
     this.state = {
       ...this.state,
-      dynamics: {
-        ...this.state.dynamics,
-        responsiveness: clamp(finite(value, "responsiveness"), MIN_RESPONSIVENESS, MAX_RESPONSIVENESS)
-      }
+      memberDynamics: this.state.memberDynamics.map((entry) =>
+        selected.has(entry.memberId)
+          ? { ...entry, [key]: next }
+          : { ...entry }
+      )
     };
     return this.snapshot();
+  }
+
+  clearSelectedDynamicsOverrides(): FieldLabSquadControlSnapshot {
+    const selected = new Set(this.state.selected);
+    this.state = {
+      ...this.state,
+      memberDynamics: this.state.memberDynamics.map((entry) =>
+        selected.has(entry.memberId) ? emptyMemberDynamics(entry.memberId) : { ...entry }
+      )
+    };
+    return this.snapshot();
+  }
+
+  effectiveDynamicsFor(memberId: SquadMemberId): EffectiveFieldLabMemberDynamics {
+    this.assertMember(memberId);
+    const override = this.state.memberDynamics.find((entry) => entry.memberId === memberId);
+    if (!override) throw new Error(`Missing member dynamics for ${memberId}.`);
+    const overridden: FieldLabMemberDynamicsKey[] = [];
+    const slotTolerance =
+      override.slotTolerance ?? this.state.dynamics.slotTolerance;
+    if (override.slotTolerance !== null) overridden.push("slotTolerance");
+    const responsiveness =
+      override.responsiveness ?? this.state.dynamics.responsiveness;
+    if (override.responsiveness !== null) overridden.push("responsiveness");
+    const slowdownRadius =
+      override.slowdownRadius ?? this.state.dynamics.slowdownRadius;
+    if (override.slowdownRadius !== null) overridden.push("slowdownRadius");
+    return { slotTolerance, responsiveness, slowdownRadius, overridden };
   }
 
   targetFor(memberId: SquadMemberId, playerPosition: Vec2): FieldLabMemberTarget {
