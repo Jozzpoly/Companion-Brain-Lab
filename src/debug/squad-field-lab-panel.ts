@@ -118,6 +118,21 @@ export class SquadFieldLabPanel {
         )
       : null;
 
+    const focusedDynamics = state.control.memberDynamics.find(
+      (entry) => entry.memberId === state.control.focused
+    );
+    const effectiveResponse =
+      focusedDynamics?.responsiveness ?? state.control.dynamics.responsiveness;
+    const effectiveTolerance =
+      focusedDynamics?.slotTolerance ?? state.control.dynamics.slotTolerance;
+    const effectiveSlowdown =
+      focusedDynamics?.slowdownRadius ?? state.control.dynamics.slowdownRadius;
+    const dynamicsOverrides = [
+      focusedDynamics?.responsiveness !== null ? "response" : null,
+      focusedDynamics?.slotTolerance !== null ? "tolerance" : null,
+      focusedDynamics?.slowdownRadius !== null ? "slowdown" : null
+    ].filter((value): value is string => Boolean(value));
+
     this.content.innerHTML = `
       <section class="squad-field-debug-section">
         <h2>Group</h2>
@@ -128,7 +143,7 @@ export class SquadFieldLabPanel {
           <div>selected ${selected}</div>
           <div>focus ${memberLabel(state.control.focused)} · direct ${state.control.directControl ? "ON" : "off"}</div>
           <div>orientation ${Math.round(state.control.orientationRadians * 180 / Math.PI)}° · spacing ${fmt(state.control.dynamics.spacingScale)}</div>
-          <div>response ${fmt(state.control.dynamics.responsiveness)} · tolerance ${fmt(state.control.dynamics.slotTolerance)}m</div>
+          <div>group response ${fmt(state.control.dynamics.responsiveness)} · tolerance ${fmt(state.control.dynamics.slotTolerance)}m · slowdown ${fmt(state.control.dynamics.slowdownRadius)}m</div>
         </div>
       </section>
       <section class="squad-field-debug-section">
@@ -175,6 +190,8 @@ export class SquadFieldLabPanel {
           <div>body ${fmt(state.focusedBody.position.x)}, ${fmt(state.focusedBody.position.y)}</div>
           <div>target ${target}${distance === null ? "" : ` · distance ${fmt(distance)}m`}</div>
           <div>slot local ${fmt(state.focusedTarget.localSlot.x)}, ${fmt(state.focusedTarget.localSlot.y)}</div>
+          <div>dynamics response ${fmt(effectiveResponse)} · tolerance ${fmt(effectiveTolerance)}m · slowdown ${fmt(effectiveSlowdown)}m</div>
+          <div>dynamics scope ${dynamicsOverrides.length > 0 ? `override: ${dynamicsOverrides.join(", ")}` : "inherit group defaults"}</div>
           <div>requested ${fmt(state.focusedBody.requestedVelocity.x)}, ${fmt(state.focusedBody.requestedVelocity.y)}</div>
           <div>actual ${fmt(state.focusedBody.actualVelocity.x)}, ${fmt(state.focusedBody.actualVelocity.y)}</div>
           <div>motion error ${fmt(state.focusedBody.motionError)} · contacts ${contacts}</div>
