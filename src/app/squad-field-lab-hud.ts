@@ -11,6 +11,8 @@ import type {
 } from "../world/cooperative-episode-contract";
 import type { FieldLabLayout, FieldLabSituation, SquadMemberId } from "../world/types";
 
+export type FieldLabExperimentSlot = "A" | "B";
+
 export interface SquadFieldLabHudCallbacks {
   onSituation(situation: FieldLabSituation): void;
   onLayout(layout: FieldLabLayout): void;
@@ -25,6 +27,8 @@ export interface SquadFieldLabHudCallbacks {
   onSpacing(value: number): void;
   onResponsiveness(value: number): void;
   onTolerance(value: number): void;
+  onCaptureExperiment(slot: FieldLabExperimentSlot): void;
+  onRestoreExperiment(slot: FieldLabExperimentSlot): void;
   onPlayerRepel(): void;
   onFocusedRepel(): void;
   onSelectedRepel(): void;
@@ -36,6 +40,7 @@ export interface SquadFieldLabHudState {
   layout: FieldLabLayout;
   episode: CooperativeEpisodeSnapshot | null;
   latestEpisodeOutcome: CooperativeEpisodeOutcome;
+  capturedExperimentSlots: readonly FieldLabExperimentSlot[];
 }
 
 const LABELS: Readonly<Record<SquadMemberId, string>> = {
@@ -96,6 +101,8 @@ export class SquadFieldLabHud {
   private readonly spacing: ReturnType<typeof slider>;
   private readonly responsiveness: ReturnType<typeof slider>;
   private readonly tolerance: ReturnType<typeof slider>;
+  private readonly experimentStatus: HTMLElement;
+  private readonly restoreExperimentButtons = new Map<FieldLabExperimentSlot, HTMLButtonElement>();
 
   constructor(callbacks: SquadFieldLabHudCallbacks) {
     const gamePane = document.querySelector<HTMLElement>("#game-pane");
@@ -218,6 +225,30 @@ export class SquadFieldLabHud {
     this.responsiveness = slider("Response", 0.15, 1, 0.05, callbacks.onResponsiveness);
     this.tolerance = slider("Slot tolerance", 0.05, 0.9, 0.05, callbacks.onTolerance);
 
+    const experimentHeading = document.createElement("div");
+    experimentHeading.className = "squad-lab-section-title";
+    experimentHeading.textContent = "A/B experiment setup";
+
+    const experimentRows = document.createElement("div");
+    experimentRows.className = "squad-lab-preset-grid";
+    for (const slot of ["A", "B"] as const) {
+      const capture = button(`Capture ${slot}`);
+      capture.dataset.experimentCapture = slot;
+      capture.addEventListener("click", () => callbacks.onCaptureExperiment(slot));
+
+      const restore = button(`Restore ${slot}`);
+      restore.dataset.experimentRestore = slot;
+      restore.disabled = true;
+      restore.addEventListener("click", () => callbacks.onRestoreExperiment(slot));
+      this.restoreExperimentButtons.set(slot, restore);
+
+      experimentRows.append(capture, restore);
+    }
+
+    this.experimentStatus = document.createElement("div");
+    this.experimentStatus.className = "squad-lab-inline-hint";
+    this.experimentStatus.textContent = "No setup snapshots captured";
+
     this.pressureBlock = document.createElement("section");
     this.pressureBlock.className = "squad-lab-pressure-block";
     const pressureHeading = document.createElement("div");
@@ -269,6 +300,9 @@ export class SquadFieldLabHud {
       this.spacing.root,
       this.responsiveness.root,
       this.tolerance.root,
+      experimentHeading,
+      experimentRows,
+      this.experimentStatus,
       this.pressureBlock,
       this.status,
       this.orderStatus,
@@ -314,6 +348,15 @@ export class SquadFieldLabHud {
     this.responsiveness.value.textContent = control.dynamics.responsiveness.toFixed(2);
     this.tolerance.input.value = String(control.dynamics.slotTolerance);
     this.tolerance.value.textContent = control.dynamics.slotTolerance.toFixed(2);
+
+    for (const slot of ["A", "B"] as const) {
+      const captured = state.capturedExperimentSlots.includes(slot);
+      const restore = this.restoreExperimentButtons.get(slot);
+      if (restore) restore.disabled = !captured;
+    }
+    this.experimentStatus.textContent = state.capturedExperimentSlots.length > 0
+      ? `Captured setup: ${state.capturedExperimentSlots.join(" + ")}`
+      : "No setup snapshots captured";
 
     this.pressureBlock.hidden = state.situation !== "PRESSURE";
     const phase = state.episode?.phase ?? null;
