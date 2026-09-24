@@ -64,10 +64,9 @@ function cloneSpawnOverrides(value: FieldLabSpawnOverrides): FieldLabSpawnOverri
     const position = value.squad?.[memberId];
     if (position) squad[memberId] = { ...position };
   }
-  return {
-    player: value.player ? { ...value.player } : undefined,
-    squad
-  };
+  return value.player
+    ? { player: { ...value.player }, squad }
+    : { squad };
 }
 
 function axis(negative: Phaser.Input.Keyboard.Key, positive: Phaser.Input.Keyboard.Key): number {
@@ -874,12 +873,14 @@ export class SquadFieldLabScene extends Phaser.Scene {
       const body = this.snapshotValue.actors.find((entry) => entry.id === memberId);
       if (body) rememberedSquad[memberId] = { ...body.position };
     }
-    return {
-      player: playerBody ? { ...playerBody.position } : this.positionMemory.player
+    const player = playerBody
+      ? { ...playerBody.position }
+      : this.positionMemory.player
         ? { ...this.positionMemory.player }
-        : undefined,
-      squad: rememberedSquad
-    };
+        : null;
+    return player
+      ? { player, squad: rememberedSquad }
+      : { squad: rememberedSquad };
   }
 
   private rememberCurrentPositions(): void {
