@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { SquadFieldLabHud, type FieldLabExperimentSlot } from "./squad-field-lab-hud";
+import { SquadFieldLabHud } from "./squad-field-lab-hud";
 import { SquadFieldLabPanel, type FieldLabMemberStatus } from "../debug/squad-field-lab-panel";
 import {
   FIELD_LAB_SQUAD_MEMBERS,
@@ -8,7 +8,6 @@ import {
   rotateFieldLabVector,
   type FieldLabFormationPreset,
   type FieldLabMemberTarget,
-  type FieldLabSquadControlSnapshot,
   type SquadOrderMode
 } from "../squad/field-lab-squad-control";
 import { S0_STEP_SECONDS } from "../physics/rapier-physical-world";
@@ -47,26 +46,6 @@ interface RenderTransform {
   scale: number;
   offsetX: number;
   offsetY: number;
-}
-
-interface FieldLabExperimentSetupSnapshot {
-  schema: "companion-field-lab-setup-v1";
-  capturedAtTick: number;
-  situation: FieldLabSituation;
-  layout: FieldLabLayout;
-  control: FieldLabSquadControlSnapshot;
-  positions: FieldLabSpawnOverrides;
-}
-
-function cloneSpawnOverrides(value: FieldLabSpawnOverrides): FieldLabSpawnOverrides {
-  const squad: Partial<Record<SquadMemberId, Vec2>> = {};
-  for (const memberId of FIELD_LAB_SQUAD_MEMBERS) {
-    const position = value.squad?.[memberId];
-    if (position) squad[memberId] = { ...position };
-  }
-  return value.player
-    ? { player: { ...value.player }, squad }
-    : { squad };
 }
 
 function axis(negative: Phaser.Input.Keyboard.Key, positive: Phaser.Input.Keyboard.Key): number {
@@ -155,7 +134,6 @@ export class SquadFieldLabScene extends Phaser.Scene {
   private lastCooperativeActionOutcomes: readonly CooperativeEpisodeActionOutcome[] = [];
   private pendingCooperativeAttempts: CooperativeEpisodeActionAttempt[] = [];
   private positionMemory: FieldLabSpawnOverrides = { squad: {} };
-  private readonly experimentSetups = new Map<FieldLabExperimentSlot, FieldLabExperimentSetupSnapshot>();
   private readonly eventLog: string[] = [];
 
   private keys!: Record<
@@ -243,8 +221,6 @@ export class SquadFieldLabScene extends Phaser.Scene {
       onSpacing: (value) => this.control.setSpacingScale(value),
       onResponsiveness: (value) => this.control.setResponsiveness(value),
       onTolerance: (value) => this.control.setSlotTolerance(value),
-      onCaptureExperiment: (slot) => this.captureExperimentSetup(slot),
-      onRestoreExperiment: (slot) => this.restoreExperimentSetup(slot),
       onPlayerRepel: () => this.queueCooperativeAttempt("player"),
       onFocusedRepel: () => this.queueCooperativeAttempt(this.control.snapshot().focused),
       onSelectedRepel: () => {
@@ -736,8 +712,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       situation: this.situation,
       layout: this.layout,
       episode: this.cooperativeEpisode,
-      latestEpisodeOutcome: this.latestCooperativeEpisodeOutcome,
-      capturedExperimentSlots: [...this.experimentSetups.keys()]
+      latestEpisodeOutcome: this.latestCooperativeEpisodeOutcome
     });
     const focusedBody = actor(snapshot, state.focused);
     const player = actor(snapshot, "player");
@@ -863,8 +838,8 @@ export class SquadFieldLabScene extends Phaser.Scene {
     }
   }
 
-  private currentPositions(): FieldLabSpawnOverrides {
-    if (!this.snapshotValue) return cloneSpawnOverrides(this.positionMemory);
+  private rememberCurrentPositions(): void {
+    if (!this.snapshotValue) return;
     const rememberedSquad: Partial<Record<SquadMemberId, Vec2>> = {
       ...(this.positionMemory.squad ?? {})
     };
@@ -873,54 +848,10 @@ export class SquadFieldLabScene extends Phaser.Scene {
       const body = this.snapshotValue.actors.find((entry) => entry.id === memberId);
       if (body) rememberedSquad[memberId] = { ...body.position };
     }
-    const player = playerBody
-      ? { ...playerBody.position }
-      : this.positionMemory.player
-        ? { ...this.positionMemory.player }
-        : null;
-    return player
-      ? { player, squad: rememberedSquad }
-      : { squad: rememberedSquad };
-  }
-
-  private rememberCurrentPositions(): void {
-    this.positionMemory = this.currentPositions();
-  }
-
-  private captureExperimentSetup(slot: FieldLabExperimentSlot): void {
-    if (!this.snapshotValue || this.loading) {
-      this.log(`capture ${slot} ignored · World unavailable`);
-      return;
-    }
-    const setup: FieldLabExperimentSetupSnapshot = {
-      schema: "companion-field-lab-setup-v1",
-      capturedAtTick: this.snapshotValue.tick,
-      situation: this.situation,
-      layout: this.layout,
-      control: this.control.snapshot(),
-      positions: this.currentPositions()
+    this.positionMemory = {
+      player: playerBody ? { ...playerBody.position } : this.positionMemory.player,
+      squad: rememberedSquad
     };
-    this.experimentSetups.set(slot, setup);
-    this.log(
-      `captured setup ${slot} · ${setup.situation}/${setup.layout} · ` +
-      `squad ${setup.control.activeMembers.length} · tick ${setup.capturedAtTick}`
-    );
-  }
-
-  private restoreExperimentSetup(slot: FieldLabExperimentSlot): void {
-    const setup = this.experimentSetups.get(slot);
-    if (!setup) {
-      this.log(`restore ${slot} ignored · no captured setup`);
-      return;
-    }
-    this.control.restore(setup.control);
-    this.situation = setup.situation;
-    this.layout = setup.layout;
-    this.log(
-      `restore setup ${slot} · ${setup.situation}/${setup.layout} · ` +
-      `captured tick ${setup.capturedAtTick}`
-    );
-    void this.loadWorld(false, setup.positions);
   }
 
   private log(value: string): void {
@@ -929,14 +860,9 @@ export class SquadFieldLabScene extends Phaser.Scene {
     if (this.eventLog.length > 80) this.eventLog.splice(0, this.eventLog.length - 80);
   }
 
-  private async loadWorld(
-    preservePositions: boolean,
-    restoredPositions?: FieldLabSpawnOverrides
-  ): Promise<void> {
+  private async loadWorld(preservePositions: boolean): Promise<void> {
     if (this.loading) return;
-    if (restoredPositions) {
-      this.positionMemory = cloneSpawnOverrides(restoredPositions);
-    } else if (preservePositions) {
+    if (preservePositions) {
       this.rememberCurrentPositions();
     } else {
       this.positionMemory = { squad: {} };
@@ -964,7 +890,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       this.cooperativeEpisode = next.cooperativeEpisode();
       this.log(
         `Field Lab world reconstructed · ${this.situation}/${this.layout} · ` +
-        `${restoredPositions ? "captured setup positions restored" : preservePositions ? "positions + control preserved" : "authored default positions"}`
+        `${preservePositions ? "positions + control preserved" : "authored default positions"}`
       );
       this.drawWorld(this.snapshotValue);
       this.updateUi(this.snapshotValue);
