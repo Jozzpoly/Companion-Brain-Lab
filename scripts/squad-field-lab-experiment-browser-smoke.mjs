@@ -42,6 +42,20 @@ function bodyPosition(text) {
   return match ? { x: Number(match[1]), y: Number(match[2]) } : null;
 }
 
+function requestedVelocity(text) {
+  const match = text.match(/requested (-?\d+\.\d+), (-?\d+\.\d+)/);
+  return match ? { x: Number(match[1]), y: Number(match[2]) } : null;
+}
+
+function internalCanvasPoint(box, world) {
+  const internalX = world.x * 75;
+  const internalY = 25 + world.y * 75;
+  return {
+    x: box.x + (internalX / 1200) * box.width,
+    y: box.y + (internalY / 800) * box.height
+  };
+}
+
 async function shot(page, name) {
   await page.screenshot({ path: `${ROOT}/${name}.png`, type: "png", fullPage: true });
 }
@@ -216,6 +230,107 @@ try {
   );
   await shot(page, "03-restored-b.png");
 
+  // Scoped exact dynamics are not decorative. Author three exact C2 overrides,
+  // capture them into B, then prove the response override changes Rapier's
+  // requested velocity for the same far MOVE responsibility.
+  await page.locator('[data-dynamics-scope="SELECTED"]').click();
+
+  for (const [parameter, value] of [
+    ["responsiveness", "0.27"],
+    ["slotTolerance", "0.41"],
+    ["slowdownRadius", "2.35"]
+  ]) {
+    const numeric = page.locator(
+      `[data-parameter="${parameter}"] .squad-lab-number-input`
+    );
+    await numeric.fill(value);
+    await numeric.press("Enter");
+    await numeric.blur();
+  }
+
+  const scoped = await waitFor(
+    page,
+    (value) =>
+      value.includes("Focused · C2") &&
+      value.includes("dynamics response 0.27") &&
+      value.includes("tolerance 0.41m") &&
+      value.includes("slowdown 2.35m") &&
+      value.includes("override: response, tolerance, slowdown"),
+    4_000,
+    "exact selected dynamics overrides"
+  );
+  invariant(scoped.includes("dynamics response 0.27"), "C2 response override not visible in causal truth.");
+
+  await page.locator('[data-experiment-capture="B"]').click();
+  const scopedDiff = await waitFor(
+    page,
+    (value) =>
+      value.includes("memberDynamics.squad-2.responsiveness") &&
+      value.includes("memberDynamics.squad-2.slotTolerance") &&
+      value.includes("memberDynamics.squad-2.slowdownRadius"),
+    4_000,
+    "A/B diff captures scoped member dynamics"
+  );
+  invariant(scopedDiff.includes("memberDynamics.squad-2.responsiveness"), "A/B diff lost C2 dynamics provenance.");
+
+  const canvas = page.locator("#game-root canvas");
+  const box = await canvas.boundingBox();
+  invariant(box, "Canvas bounding box unavailable for dynamics motor proof.");
+  const farTarget = internalCanvasPoint(box, { x: 12.3, y: 7.0 });
+  await page.mouse.click(farTarget.x, farTarget.y, { button: "right" });
+  await tap(page, "p");
+
+  const slowMotion = await waitFor(
+    page,
+    (value) => {
+      if (!value.includes("Focused · C2")) return false;
+      const requested = requestedVelocity(value);
+      return Boolean(requested && Math.hypot(requested.x, requested.y) > 0.5);
+    },
+    4_000,
+    "C2 moves with scoped response override"
+  );
+  const slowRequested = requestedVelocity(slowMotion);
+  invariant(slowRequested, "Scoped C2 requested velocity unavailable.");
+  const slowMagnitude = Math.hypot(slowRequested.x, slowRequested.y);
+  invariant(
+    slowMagnitude > 0.65 && slowMagnitude < 0.95,
+    `C2 response 0.27 did not materially constrain requested speed: ${slowMagnitude}`
+  );
+  await tap(page, "p");
+
+  await page.locator('[data-clear-dynamics-overrides="true"]').click();
+  const inherited = await waitFor(
+    page,
+    (value) =>
+      value.includes("Focused · C2") &&
+      value.includes("dynamics response 0.82") &&
+      value.includes("inherit group defaults"),
+    4_000,
+    "C2 returns to group dynamics"
+  );
+  invariant(inherited.includes("dynamics response 0.82"), "C2 did not return to group response.");
+
+  await tap(page, "p");
+  const fastMotion = await waitFor(
+    page,
+    (value) => {
+      const requested = requestedVelocity(value);
+      return Boolean(requested && Math.hypot(requested.x, requested.y) > 2.0);
+    },
+    4_000,
+    "C2 moves with inherited group response"
+  );
+  const fastRequested = requestedVelocity(fastMotion);
+  invariant(fastRequested, "Inherited C2 requested velocity unavailable.");
+  const fastMagnitude = Math.hypot(fastRequested.x, fastRequested.y);
+  invariant(
+    fastMagnitude > slowMagnitude * 2.4,
+    `Scoped response did not create a strong physical delta: slow=${slowMagnitude} fast=${fastMagnitude}`
+  );
+  await tap(page, "p");
+  await shot(page, "04-scoped-dynamics-physical-delta.png");
+
   // Clearing is also persistent; reload must not resurrect stale evidence.
   await page.locator('[data-experiment-clear="B"]').click();
   invariant(
@@ -244,7 +359,10 @@ try {
       restoreARecoversAuthoredSetup: true,
       restoreBRecoversAuthoredSetup: true,
       restoreRecoversEmbodiedPosition: true,
-      clearingSlotIsPersistent: true
+      clearingSlotIsPersistent: true,
+      exactNumericDynamicsAuthoring: true,
+      selectedOverridesAreCapturedByDiff: true,
+      scopedResponseChangesPhysicalRequestedVelocity: true
     },
     errors
   };
