@@ -242,8 +242,22 @@ export class SquadFieldLabScene extends Phaser.Scene {
         this.log(`formation rotate ${Math.round(delta * 180 / Math.PI)}°`);
       },
       onSpacing: (value) => this.control.setSpacingScale(value),
-      onResponsiveness: (value) => this.control.setResponsiveness(value),
-      onTolerance: (value) => this.control.setSlotTolerance(value),
+      onGroupDynamics: (key, value) => {
+        this.control.setGroupDynamics(key, value);
+        this.log(`group dynamics ${key}=${value.toFixed(2)}`);
+      },
+      onSelectedDynamicsOverride: (key, value) => {
+        this.control.setSelectedDynamicsOverride(key, value);
+        this.log(
+          `selected dynamics ${key}=${value.toFixed(2)} · ` +
+          `${this.control.snapshot().selected.map(memberLabel).join("+")}`
+        );
+      },
+      onClearSelectedDynamicsOverrides: () => {
+        const selected = this.control.snapshot().selected.map(memberLabel).join("+");
+        this.control.clearSelectedDynamicsOverrides();
+        this.log(`selected dynamics inherit group · ${selected}`);
+      },
       onCaptureExperiment: (slot) => this.captureExperiment(slot),
       onRestoreExperiment: (slot) => this.restoreExperiment(slot),
       onRenameExperiment: (slot, label) => this.renameExperiment(slot, label),
