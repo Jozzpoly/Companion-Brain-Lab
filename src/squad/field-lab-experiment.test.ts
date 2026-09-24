@@ -22,6 +22,9 @@ function sample(label = "baseline") {
   control.setSpacingScale(1.7);
   control.setSlotTolerance(0.35);
   control.setResponsiveness(0.55);
+  control.setSlowdownRadius(1.4);
+  control.setSelectedDynamicsOverride("responsiveness", 0.35);
+  control.setSelectedDynamicsOverride("slowdownRadius", 2.2);
   control.setOrientationRadians(0.7);
 
   return createFieldLabExperiment({
@@ -80,6 +83,8 @@ describe("Field Lab experiment state", () => {
     control.restore(a.setup.control);
     control.setSpacingScale(0.8);
     control.setResponsiveness(0.9);
+    control.setSlowdownRadius(0.45);
+    control.setSelectedDynamicsOverride("slotTolerance", 0.48);
     control.setSlotOffset("squad-2", { x: 2.2, y: -0.4 });
     control.selectOnly("squad-2");
     control.issueSelected("FOLLOW");
@@ -110,6 +115,12 @@ describe("Field Lab experiment state", () => {
       "POSITIONS"
     ]));
     expect(diff.differences.some((entry) => entry.path === "spacingScale")).toBe(true);
+    expect(diff.differences.some((entry) =>
+      entry.path === "memberDynamics.squad-2.slotTolerance"
+    )).toBe(true);
+    expect(diff.differences.some((entry) =>
+      entry.path === "memberDynamics.squad-3.responsiveness"
+    )).toBe(true);
     expect(diff.differences.some((entry) => entry.path === "slots.squad-2")).toBe(true);
     expect(diff.differences.some((entry) => entry.path === "positions.squad-2")).toBe(true);
   });
