@@ -1110,41 +1110,60 @@ export class SquadFieldLabScene extends Phaser.Scene {
     }
 
     const rules = SQUAD_FIELD_LAB_TASK_PRESSURE_RULES;
-    const centerX = sx(rules.taskCenter.x);
-    const centerY = sy(rules.taskCenter.y);
     const taskRadius = rules.taskRadius * scale;
     const progress = task.progressTicks / Math.max(1, task.requiredProgressTicks);
 
-    const taskColor = task.phase === "COMPLETED" || task.phase === "SETTLED"
-      ? 0x7ee787
-      : task.contested
-        ? 0xff5d66
-        : task.playerCommitted
-          ? 0x58a6ff
-          : 0xd29922;
+    for (const [index, center] of rules.taskCenters.entries()) {
+      const active = index === task.stageIndex && task.phase !== "COMPLETED" && task.phase !== "SETTLED";
+      const complete = index < task.stageCompletionTicks.length;
+      const color = complete
+        ? 0x7ee787
+        : active
+          ? task.contested
+            ? 0xff5d66
+            : task.playerCommitted
+              ? 0x58a6ff
+              : 0xd29922
+          : 0x6e7681;
+      const x = sx(center.x);
+      const y = sy(center.y);
 
-    this.graphics.fillStyle(taskColor, 0.13);
-    this.graphics.fillCircle(centerX, centerY, taskRadius);
-    this.graphics.lineStyle(4, taskColor, 0.9);
-    this.graphics.strokeCircle(centerX, centerY, taskRadius);
+      this.graphics.fillStyle(color, active ? 0.15 : 0.07);
+      this.graphics.fillCircle(x, y, taskRadius);
+      this.graphics.lineStyle(active ? 4 : 2, color, active ? 0.95 : 0.45);
+      this.graphics.strokeCircle(x, y, taskRadius);
 
-    const barWidth = taskRadius * 2.2;
-    const barHeight = 10;
-    const barX = centerX - barWidth / 2;
-    const barY = centerY - taskRadius - 20;
-    this.graphics.fillStyle(0x161b22, 0.95);
-    this.graphics.fillRect(barX, barY, barWidth, barHeight);
-    this.graphics.fillStyle(taskColor, 0.95);
-    this.graphics.fillRect(barX, barY, barWidth * Math.max(0, Math.min(1, progress)), barHeight);
-    this.graphics.lineStyle(2, 0xf0f6fc, 0.72);
-    this.graphics.strokeRect(barX, barY, barWidth, barHeight);
+      if (active) {
+        const barWidth = taskRadius * 2.2;
+        const barHeight = 10;
+        const barX = x - barWidth / 2;
+        const barY = y - taskRadius - 20;
+        this.graphics.fillStyle(0x161b22, 0.95);
+        this.graphics.fillRect(barX, barY, barWidth, barHeight);
+        this.graphics.fillStyle(color, 0.95);
+        this.graphics.fillRect(
+          barX,
+          barY,
+          barWidth * Math.max(0, Math.min(1, progress)),
+          barHeight
+        );
+        this.graphics.lineStyle(2, 0xf0f6fc, 0.72);
+        this.graphics.strokeRect(barX, barY, barWidth, barHeight);
+      }
+    }
 
+    const activeCenter =
+      rules.taskCenters[Math.max(0, Math.min(rules.taskCenters.length - 1, task.stageIndex))]!;
     const hostile = actor(snapshot, "hostile");
     const hx = sx(hostile.position.x);
     const hy = sy(hostile.position.y);
     const bodyR = hostile.radius * scale;
     this.hostileLabel.setVisible(true);
-    this.hostileLabel.setText(task.phase === "COMPLETED" || task.phase === "SETTLED" ? "THREAT ↩" : "THREAT");
+    this.hostileLabel.setText(
+      task.phase === "COMPLETED" || task.phase === "SETTLED"
+        ? "THREAT ↩"
+        : `THREAT → S${task.stageIndex + 1}`
+    );
     this.hostileLabel.setPosition(hx, hy);
     this.hostileLabel.setColor(task.contested ? "#ff7b72" : "#ffb07a");
     this.graphics.fillStyle(0xff7b72, 1);
@@ -1154,7 +1173,12 @@ export class SquadFieldLabScene extends Phaser.Scene {
 
     if (task.phase === "ACTIVE") {
       this.graphics.lineStyle(2, 0xff7b72, 0.35);
-      this.graphics.lineBetween(hx, hy, centerX, centerY);
+      this.graphics.lineBetween(
+        hx,
+        hy,
+        sx(activeCenter.x),
+        sy(activeCenter.y)
+      );
     }
   }
 
