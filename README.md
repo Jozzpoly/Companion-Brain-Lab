@@ -12,8 +12,9 @@ That file outranks historical plans, old experiment names, closed PRs, deleted b
 
 ## Current project truth
 
-- **Foundation / movement survival:** `PASS · REWORK-READY`.
-- The Owner already accepted that the movement foundation is good enough to **move on**. Do not reopen that gate without a new concrete falsification.
+- **Owner truth precedence:** later explicit Owner feedback and Owner-observed behavior outrank machine PASS, internal state, debug evidence, older documentation and agent-authored promotion language for product-level claims. A green mechanism can remain valid diagnostic evidence while the user-facing function is FAIL.
+- **Movement / foundation:** `CLOSED-ENOUGH FOR CURRENT RESEARCH · OWNER PERMISSION TO MOVE ON · NOT PRODUCT-QUALIFIED`.
+- The older `PASS · REWORK-READY` label is now read narrowly: the Owner allowed movement-only research to stop blocking richer teammate work. It is not a product/gameplay PASS and cannot override later Owner-observed failures.
 - The 2026-09-20 OS-PREP-5 movement review was rejected as a **redundant Owner gate**: ordinary live behavior was still too similar to the previously accepted movement organism.
 - Stage B Slice 1 (`295452947e5936b79a7e3c40a79f6fdb3f239836`) remains machine-qualified as a narrow live-authority experiment, but the 2026-09-20 Owner test **rejected it as a product/Owner milestone**.
 - Owner feedback: it felt like a regression toward day-one capability; visible change was essentially red/green threat circles; there was no meaningful player command/control layer; hiding the accumulated debug/workbench made prior progress feel discarded.
@@ -24,7 +25,7 @@ That file outranks historical plans, old experiment names, closed PRs, deleted b
 - Qualified Field Lab runtime `d1664f1e996fd287d1d032d6b6fcff1faaa484e2` is **MACHINE-QUALIFIED ADVANCED FIELD LAB + TEMPORAL DISCOVERY INSTRUMENT · NOT OWNER-READY · AUTONOMY NOT PROMOTED**. A controlled doorway campaign used real Trial/Trace evidence to show that formation geometry and deformation timing materially change bottleneck recovery, while responsiveness alone does not establish a solution. Trace instrumentation grew only where the experiments demanded it: obstruction timing/terminal state and authored intervention provenance.
 - The Owner reaffirmed on 2026-09-24 that this advanced, highly parametric laboratory is an important direction: broad freedom to author formations/behavior/dynamics should be used to discover repeatable patterns that later autonomy may earn responsibility for.
 - The Field Lab does **not** erase the still-open S5-style product debt: continuous game-like cooperative play / teammate outcome remains an important pressure through which discovered behavior must eventually prove value.
-- Foundation movement remains `PASS · REWORK-READY` and should not be reopened without a new gameplay falsifier.
+- Movement-only qualification should remain closed unless richer gameplay exposes a concrete substrate failure; this scoped closure must not be described as teammate/product PASS.
 
 ## North star
 
