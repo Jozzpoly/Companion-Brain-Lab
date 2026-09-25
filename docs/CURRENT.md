@@ -1291,4 +1291,79 @@ The next tranche should compare candidate situations by:
 
 That situation choice is now the highest-value unresolved strategic question. It is intentionally left open rather than filled by roadmap inertia.
 
+---
+
+## 25. Next continuation plan — Shared Task Under Pressure — 2026-09-25
+
+The strategic boundary from section 24 has now been converted into an explicit next situation hypothesis.
+
+Canonical planning document:
+
+`docs/FIELD_LAB_SHARED_TASK_PRESSURE_PLAN.md`
+
+Current status:
+
+> **STP-0 CONTRACT RED-TEAM COMPLETE · STP-1 MANUAL APPARATUS AUTHORIZED AS HYPOTHESIS · NO AUTONOMY PROMOTION · NOT AN OWNER GATE**
+
+### Why this route
+
+The Field Lab can already preserve a manually authored multi-beat causal chain. The limiting factor is no longer trace fidelity or formation instrumentation; it is the poverty of meaningful World affordances outside movement plus REPEL.
+
+Three situation families were compared:
+
+- protected transit / escape — cheap but too likely to collapse back into another movement problem;
+- shared task under pressure — selected because it makes the player materially occupied while companion positioning can help/interfere;
+- carry/rescue/escort — rich but too expensive in new interaction/carry semantics for the next bounded experiment.
+
+### Selected situation hypothesis
+
+A visible task zone requires player commitment over time.
+
+When the player first commits:
+
+- a real **solid** hostile begins advancing toward the task zone, not chasing the player;
+- player presence advances visible task progress while the task is uncontested;
+- leaving the zone pauses progress;
+- hostile pressure in the task region pauses progress;
+- companion/player bodies can physically screen because contact is materially true;
+- task completion makes the hostile recover/retreat while the squad remains in the same World for regroup.
+
+The first apparatus deliberately uses **pause**, not reset/decay, for interrupted progress. This avoids creating a tuning problem before situation value is known.
+
+REPEL may remain available as a bounded donor, but the situation must be meaningful without hidden timing and must support manual strategies that do not depend on REPEL.
+
+### STP-0 live substrate result
+
+No broad prerequisite framework was discovered.
+
+Existing substrate already provides:
+
+- solid/sensor collision mode;
+- dynamic Rapier bodies;
+- counterpart-aware contact records;
+- bounded experimental squad motion;
+- World-owned action/outcome seams;
+- setup placement;
+- manual order/action Trial provenance.
+
+Therefore STP-1 may be attempted as one small reversible World/situation extension.
+
+### Authorized STP-1 scope
+
+Only:
+
+1. bounded TaskPressure contract;
+2. one Field Lab situation;
+3. visible task zone + progress;
+4. one solid hostile moving toward the zone;
+5. contest/completion/recovery semantics;
+6. evidence required to interpret the manual strategies actually run.
+
+No autonomy, bodyguard mode, HP/damage, generic combat, second hostile, carry system, broad command grammar or speculative telemetry.
+
+Primary STP-1 question:
+
+> **With the same initial task/threat setup, can different manual companion positioning strategies materially change how continuously the player can remain committed to the task, with participant-visible and World-owned causality?**
+
+If the answer is no, reject/rework the situation before expanding it.
 
