@@ -67,7 +67,7 @@ function taskState(text) {
   };
 }
 
-async function runStrategy(page, canvas, slot, dynamicReposition) {
+async function runStrategy(page, canvas, slot, anticipatoryReposition) {
   const button = page.locator(`[data-trial-toggle="${slot}"]`);
   await button.click();
   await waitFor(page, (value) => value.includes(`recording ${slot}`), 8_000, `trace ${slot} starts`);
@@ -75,6 +75,8 @@ async function runStrategy(page, canvas, slot, dynamicReposition) {
   let tick = 0;
   let stage2Tick = null;
   let playerCommittedToStage2Tick = null;
+  let repositionIssuedTick = null;
+  let repositionArrivalTick = null;
   let completionTick = null;
   let settledTick = null;
   let contestedStage2Ticks = 0;
@@ -105,12 +107,25 @@ async function runStrategy(page, canvas, slot, dynamicReposition) {
     return { text, state: latest };
   };
 
-  while (tick < 190 && stage2Tick === null) await step();
-  invariant(stage2Tick !== null, `${slot} never completed Station A`);
+  if (anticipatoryReposition) {
+    while (
+      tick < 150 &&
+      (latest === null || latest.station === 1) &&
+      (latest === null || latest.progress < 100)
+    ) {
+      await step();
+    }
+    invariant(
+      latest?.station === 1 && latest.progress >= 100,
+      `B never reached visible Station A handoff cue: ${JSON.stringify(latest)}`
+    );
 
-  let repositionArrivalTick = null;
-  if (dynamicReposition) {
-    await rightClickWorld(page, canvas, { x: 10.15, y: 5.25 });
+    await rightClickWorld(page, canvas, { x: 9.8, y: 5.15 });
+    repositionIssuedTick = tick;
+
+    while (tick < 190 && stage2Tick === null) await step();
+    invariant(stage2Tick !== null, "B never completed Station A after anticipatory reposition.");
+
     for (let index = 0; index < 90 && tick < MAX_TICKS; index += 1) {
       const { text } = await step();
       if (text.includes("C1 MOVE") && text.includes("ARRIVED")) {
@@ -118,9 +133,12 @@ async function runStrategy(page, canvas, slot, dynamicReposition) {
         break;
       }
     }
-    invariant(repositionArrivalTick !== null, "Dynamic C1 reposition did not arrive before Station B commitment.");
+    invariant(repositionArrivalTick !== null, "Anticipatory C1 reposition did not arrive before Station B commitment.");
     await page.locator('[data-order-mode="HOLD"]').click();
     await waitFor(page, (value) => value.includes("C1 HOLD"), 3_000, "C1 holds second screen");
+  } else {
+    while (tick < 190 && stage2Tick === null) await step();
+    invariant(stage2Tick !== null, `${slot} never completed Station A`);
   }
 
   await page.keyboard.down("s");
@@ -139,10 +157,11 @@ async function runStrategy(page, canvas, slot, dynamicReposition) {
   await button.click();
   await waitFor(page, (value) => value.includes("not recording"), 5_000, `trace ${slot} stops`);
 
-  return {
+  const result = {
     totalTicks: tick,
     stage2Tick,
     playerCommittedToStage2Tick,
+    repositionIssuedTick,
     repositionArrivalTick,
     maxStage2Progress,
     contestedStage2Ticks,
@@ -151,6 +170,8 @@ async function runStrategy(page, canvas, slot, dynamicReposition) {
     settledTick,
     final: latest
   };
+  console.log(`[FIELD_LAB_TASK_PRESSURE_PARTIAL_${slot}]`, JSON.stringify(result));
+  return result;
 }
 
 const server = await preview({
@@ -223,10 +244,10 @@ try {
   invariant(diff.includes("identical setup state"), `A/B two-stage starts drifted: ${diff}`);
 
   const staticScreen = await runStrategy(page, canvas, "A", false);
-  const dynamicScreen = await runStrategy(page, canvas, "B", true);
+  const anticipatoryScreen = await runStrategy(page, canvas, "B", true);
 
   invariant(
-    staticScreen.stage2Tick !== null && dynamicScreen.stage2Tick !== null,
+    staticScreen.stage2Tick !== null && anticipatoryScreen.stage2Tick !== null,
     "Both strategies must complete Station A before the responsibility transfer."
   );
   invariant(
@@ -238,16 +259,16 @@ try {
     `Static screen did not expose material Station B pressure: ${JSON.stringify(staticScreen)}`
   );
   invariant(
-    dynamicScreen.completionTick !== null,
-    `Manual reposition did not restore full two-stage completion: ${JSON.stringify(dynamicScreen)}`
+    anticipatoryScreen.completionTick !== null,
+    `Anticipatory reposition did not restore full two-stage completion: ${JSON.stringify(anticipatoryScreen)}`
   );
   invariant(
-    dynamicScreen.maxStage2Progress >= staticScreen.maxStage2Progress + 25,
-    `Manual reposition did not materially improve Station B continuity: static=${staticScreen.maxStage2Progress} dynamic=${dynamicScreen.maxStage2Progress}`
+    anticipatoryScreen.maxStage2Progress >= staticScreen.maxStage2Progress + 25,
+    `Anticipatory reposition did not materially improve Station B continuity: static=${staticScreen.maxStage2Progress} anticipatory=${anticipatoryScreen.maxStage2Progress}`
   );
   invariant(
-    dynamicScreen.settledTick !== null,
-    `Completed two-stage task did not recover to same-world SETTLED: ${JSON.stringify(dynamicScreen)}`
+    anticipatoryScreen.settledTick !== null,
+    `Completed two-stage task did not recover to same-world SETTLED: ${JSON.stringify(anticipatoryScreen)}`
   );
 
   const comparison = await waitFor(
@@ -286,20 +307,21 @@ try {
     schema: "companion-brain-lab-field-lab-task-pressure-v2",
     sourceSha: process.env.GITHUB_SHA ?? process.env.VITE_SOURCE_SHA ?? null,
     question:
-      "Does visible task responsibility transfer break the one-static-screen solution while an explicit manual C1 reposition restores task continuity?",
+      "Does visible task responsibility transfer break the one-static-screen solution while an anticipatory manual C1 reposition at a visible Station A progress cue restores Station B continuity?",
     staticScreen,
-    dynamicScreen,
+    anticipatoryScreen,
     outcomes: {
       bothStrategiesCompleteStationA: true,
       staticScreenFailsAfterVisibleTransfer: true,
-      manualRepositionMateriallyImprovesStationB: true,
-      manualRepositionCompletesBothStations: true,
+      reactivePostTransferRepositionWasPreviouslyFalsified: true,
+      anticipatoryRepositionMateriallyImprovesStationB: true,
+      anticipatoryRepositionCompletesBothStations: true,
       sameWorldRecoverySettles: true,
       repositionProvenanceSurvivesTrial: true,
       noRepelRequiredForDifference: true
     },
     interpretationBoundary:
-      "Machine evidence for one manually authored two-stage situation only. No autonomous screening, teammate feel, general behavior semantic, or Owner qualification.",
+      "Machine evidence for one manually authored two-stage situation only. The anticipatory cue is visible task progress, not hidden timing. No autonomous screening, teammate feel, general behavior semantic, or Owner qualification.",
     errors
   };
   await writeFile(`${ROOT}/summary.json`, JSON.stringify(summary, null, 2), "utf8");
