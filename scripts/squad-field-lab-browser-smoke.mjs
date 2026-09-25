@@ -357,7 +357,7 @@ try {
   // The same control state must survive a switch from spatial training into
   // continuous cooperative pressure. C4's independent MOVE assignment is a
   // deliberate canary: switching situations must not reset squad semantics.
-  await page.getByRole("button", { name: "Pressure" }).click();
+  await page.locator('[data-situation="PRESSURE"]').click();
   const pressureLoaded = await waitFor(
     page,
     (value) =>
