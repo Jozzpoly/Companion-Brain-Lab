@@ -19,6 +19,8 @@ import {
   createFieldLabTrialRecord,
   summarizeFieldLabTrial,
   type FieldLabTrialComparison,
+  type FieldLabTrialEvent,
+  type FieldLabTrialEventCategory,
   type FieldLabTrialFrame,
   type FieldLabTrialRecord,
   type FieldLabTrialSlot,
@@ -178,6 +180,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
     label: string;
     startedAtTick: number;
     frames: FieldLabTrialFrame[];
+    events: FieldLabTrialEvent[];
   } | null = null;
   private readonly eventLog: string[] = [];
 
@@ -255,21 +258,65 @@ export class SquadFieldLabScene extends Phaser.Scene {
       onToggleDirect: () => {
         const before = this.control.snapshot().directControl;
         const next = this.control.setDirectControl(!before);
+        this.recordTrialIntervention(
+          "AUTHORITY",
+          memberLabel(next.focused),
+          "directControl",
+          String(before),
+          String(next.directControl)
+        );
         this.log(`direct ${memberLabel(next.focused)} ${next.directControl ? "ON" : "off"}`);
       },
       onOrder: (mode) => this.issueOrderFromHud(mode),
       onPreset: (preset) => this.applyPreset(preset),
       onRotate: (delta) => {
-        this.control.rotateBy(delta);
+        const before = this.control.snapshot().orientationRadians;
+        const next = this.control.rotateBy(delta);
+        this.recordTrialIntervention(
+          "FORMATION",
+          "GROUP",
+          "orientationRadians",
+          before.toFixed(4),
+          next.orientationRadians.toFixed(4)
+        );
         this.log(`formation rotate ${Math.round(delta * 180 / Math.PI)}°`);
       },
-      onSpacing: (value) => this.control.setSpacingScale(value),
+      onSpacing: (value) => {
+        const before = this.control.snapshot().dynamics.spacingScale;
+        this.control.setSpacingScale(value);
+        this.recordTrialIntervention(
+          "FORMATION",
+          "GROUP",
+          "spacingScale",
+          before.toFixed(2),
+          value.toFixed(2)
+        );
+      },
       onGroupDynamics: (key, value) => {
+        const before = this.control.snapshot().dynamics[key];
         this.control.setGroupDynamics(key, value);
+        this.recordTrialIntervention(
+          "DYNAMICS",
+          "GROUP",
+          key,
+          before.toFixed(2),
+          value.toFixed(2)
+        );
         this.log(`group dynamics ${key}=${value.toFixed(2)}`);
       },
       onSelectedDynamicsOverride: (key, value) => {
+        const selected = this.control.snapshot().selected;
+        const before = selected
+          .map((memberId) => this.control.effectiveDynamicsFor(memberId)[key].toFixed(2))
+          .join(",");
         this.control.setSelectedDynamicsOverride(key, value);
+        this.recordTrialIntervention(
+          "DYNAMICS",
+          selected.map(memberLabel).join("+"),
+          key,
+          before,
+          value.toFixed(2)
+        );
         this.log(
           `selected dynamics ${key}=${value.toFixed(2)} · ` +
           `${this.control.snapshot().selected.map(memberLabel).join("+")}`
@@ -1071,7 +1118,8 @@ export class SquadFieldLabScene extends Phaser.Scene {
       slot,
       label: setup.label || `Setup ${slot}`,
       startedAtTick: this.snapshotValue.tick,
-      frames: []
+      frames: [],
+      events: []
     };
     this.log(
       `trial ${slot} recording started · restored ${setup.label || "unlabelled"} · ` +
@@ -1092,7 +1140,8 @@ export class SquadFieldLabScene extends Phaser.Scene {
       slot: active.slot,
       label: active.label,
       startedAtTick: active.startedAtTick,
-      frames: active.frames
+      frames: active.frames,
+      events: active.events
     });
     this.trials.set(active.slot, record);
     this.trialSummaries.set(active.slot, summarizeFieldLabTrial(record));
@@ -1114,6 +1163,22 @@ export class SquadFieldLabScene extends Phaser.Scene {
     const b = this.trials.get("B");
     this.trialComparison = a && b ? compareFieldLabTrials(a, b) : null;
     this.log(`cleared trial trace ${slot}`);
+  }
+
+  private recordTrialIntervention(
+    category: FieldLabTrialEventCategory,
+    scope: string,
+    path: string,
+    before: string,
+    after: string
+  ): void {
+    const active = this.activeTrial;
+    if (!active || before === after) return;
+    const tick = this.snapshotValue?.tick ?? active.startedAtTick;
+    active.events.push({ tick, category, scope, path, before, after });
+    this.log(
+      `trial intervention ${category} · ${scope} · ${path} · ${before} -> ${after}`
+    );
   }
 
   private recordActiveTrialFrame(): void {
