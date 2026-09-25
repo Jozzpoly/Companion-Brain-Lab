@@ -1,6 +1,6 @@
 # Field Lab — Shared Task Under Pressure Situation Contract
 
-Status: **STP-0 CONTRACT RED-TEAM COMPLETE · STP-1 MANUAL APPARATUS AUTHORIZED AS HYPOTHESIS · NO AUTONOMY PROMOTION · NOT AN OWNER GATE**
+Status: **STP-1 MANUAL APPARATUS MACHINE PASS · STP-2 MANUAL STRATEGY FALSIFICATION ACTIVE · SITUATION NOT QUALIFIED · NO AUTONOMY PROMOTION · NOT AN OWNER GATE**
 
 Date: **2026-09-25**
 
@@ -385,4 +385,77 @@ Still prohibited:
 - convenience instrumentation not demanded by observed ambiguity.
 
 If this bounded apparatus cannot already produce several distinct manual cooperative strategies, stop at STP-1 and reject/rework before expanding it.
+
+## 12. STP-1 result — manual physical screening
+
+Qualified source:
+
+`7186c888001d5efcd885eb7915b33e8c9a69980c`
+
+Qualification:
+
+`squad-field-lab-browser #112 · run 36171126061 · SUCCESS`
+
+Regression gate:
+
+- 189/189 test files PASS;
+- 747/747 tests PASS;
+- production build PASS;
+- broad Field Lab rehearsal PASS;
+- persistent A/B + Trial rehearsal PASS;
+- doorway discovery regression PASS;
+- prior manual multi-beat authoring research PASS.
+
+### Controlled task-pressure result
+
+The browser falsifier held task/threat rules constant and changed the manually authored C1 physical responsibility.
+
+**A — C1 parked away / no screen**
+
+- maximum task progress: `122/180`;
+- task never completed;
+- `178` ticks contested;
+- `162` ticks of material player↔hostile contact;
+- final state: `ACTIVE · 122/180 · CONTESTED`.
+
+**B — C1 physically screening the threat lane with HOLD**
+
+- task reached `180/180` at `t180`;
+- zero contested ticks inside the task run;
+- zero player↔hostile contact ticks;
+- no REPEL action was required for the causal difference;
+- after task completion, hostile retreat/recovery reached `SETTLED` at `t274`;
+- no reset/teleport was used to manufacture regroup state.
+
+This establishes the narrow apparatus claim:
+
+> **manual companion physical positioning can materially change how continuously the player can remain committed to one World-owned shared task.**
+
+It does **not** establish a behavior semantic, teammate feel, useful autonomy or situation generality.
+
+### Participant artifact boundary
+
+The final captured artifact visibly exposes task-zone geometry, progress, player commitment/clear state, solid hostile and the same-world settled result.
+
+However the current artifact set does not yet contain a deliberately reviewed participant screenshot at the moment of active contest. Therefore do not promote full participant-legibility of the pressure transition from the final-state artifact alone.
+
+### STP-1 falsifier that remains open
+
+A single central HOLD position may trivially solve this exact straight-line specimen.
+
+Therefore the situation itself is **not machine-qualified yet**.
+
+STP-2 must use the existing apparatus without new behavior features to test at least:
+
+- parked-away/no-help;
+- correct pre-screen;
+- plausible but wrong/off-axis screen;
+- late manual intercept from the same poor starting position;
+- at least one live correction/change-of-plan sequence if the first four remain informative.
+
+The question is not which strategy wins. It is:
+
+> **does this situation expose several distinct, causally legible manual responsibilities, or does it collapse to one magic body placement?**
+
+If it collapses, REWORK or REJECT before adding autonomy.
 
