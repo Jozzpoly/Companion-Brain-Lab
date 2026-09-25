@@ -22,6 +22,7 @@ import {
   type CooperativeEpisodeSnapshot
 } from "./cooperative-episode-contract";
 import {
+  activeTaskPressureCenter,
   initialTaskPressureSnapshot,
   resolveTaskPressureAfterPhysics,
   type TaskPressureRules,
@@ -86,10 +87,13 @@ export const SQUAD_FIELD_LAB_PRESSURE_RULES: CooperativeEpisodeRules = {
 };
 
 export const SQUAD_FIELD_LAB_TASK_PRESSURE_RULES: TaskPressureRules = {
-  taskCenter: { x: 9, y: 5 },
-  taskRadius: 0.85,
-  contestRadius: 1.05,
-  requiredProgressTicks: 180,
+  taskCenters: [
+    { x: 9, y: 3.2 },
+    { x: 9, y: 6.8 }
+  ],
+  taskRadius: 0.78,
+  contestRadius: 1.0,
+  requiredProgressTicks: 120,
   hostileHome: { x: 13.4, y: 5 },
   hostileHomeArrivalRange: 0.22
 };
@@ -223,7 +227,12 @@ export class LabWorld {
   }
 
   taskPressure(): TaskPressureSnapshot | null {
-    return this.taskPressureValue ? { ...this.taskPressureValue } : null;
+    return this.taskPressureValue
+      ? {
+          ...this.taskPressureValue,
+          stageCompletionTicks: [...this.taskPressureValue.stageCompletionTicks]
+        }
+      : null;
   }
 
   directTraversal(actorId: ActorId, target: Vec2): DirectTraversalResult {
@@ -417,7 +426,9 @@ export class LabWorld {
     }
 
     const hostile = body(snapshot, "hostile");
-    const target = state.phase === "COMPLETED" ? rules.hostileHome : rules.taskCenter;
+    const target = state.phase === "COMPLETED"
+      ? rules.hostileHome
+      : activeTaskPressureCenter(state, rules);
     const delta = {
       x: target.x - hostile.position.x,
       y: target.y - hostile.position.y
