@@ -15,6 +15,7 @@ import type {
   CooperativeEpisodeOutcome,
   CooperativeEpisodeSnapshot
 } from "../world/cooperative-episode-contract";
+import type { TaskPressureSnapshot } from "../world/task-pressure-contract";
 import type {
   ActorSnapshot,
   FieldLabLayout,
@@ -35,6 +36,7 @@ export interface SquadFieldLabPanelState {
   memberStatuses: Readonly<Record<SquadMemberId, FieldLabMemberStatus>>;
   cooperativeEpisode: CooperativeEpisodeSnapshot | null;
   cooperativeEpisodeOutcome: CooperativeEpisodeOutcome;
+  taskPressure: TaskPressureSnapshot | null;
   cooperativeActionOutcomes: readonly CooperativeEpisodeActionOutcome[];
   experiments: Readonly<Partial<Record<FieldLabExperimentSlot, FieldLabExperimentRecord | null>>>;
   experimentDiff: FieldLabExperimentDiff | null;
@@ -227,6 +229,17 @@ export class SquadFieldLabPanel {
           <div>attempts ${state.cooperativeActionOutcomes.length > 0
             ? state.cooperativeActionOutcomes.map((outcome) => `${outcome.actorId}:${outcome.status}@${fmt(outcome.distance)}m`).join(" · ")
             : "none this step"}</div>
+        </div>
+      </section>
+      ` : ""}
+      ${state.taskPressure ? `
+      <section class="squad-field-debug-section" data-tone="${state.taskPressure.phase === "COMPLETED" || state.taskPressure.phase === "SETTLED" ? "success" : state.taskPressure.contested ? "danger" : state.taskPressure.phase === "ACTIVE" ? "warning" : "normal"}">
+        <h2>Shared task pressure</h2>
+        <div class="squad-field-debug-lines">
+          <div>phase ${state.taskPressure.phase} · progress ${state.taskPressure.progressTicks}/${state.taskPressure.requiredProgressTicks}t</div>
+          <div>player ${state.taskPressure.playerCommitted ? "COMMITTED" : "outside"} · task ${state.taskPressure.contested ? "CONTESTED" : "clear"}</div>
+          <div>player↔hostile contact ${state.taskPressure.playerHostileContact ? "YES" : "no"}</div>
+          <div>last progress ${state.taskPressure.lastProgressTick ?? "none"} · completion ${state.taskPressure.completionTick ?? "none"}</div>
         </div>
       </section>
       ` : ""}
