@@ -611,3 +611,148 @@ Status remains:
 
 > **MACHINE-QUALIFIED ADVANCED FIELD LAB + TEMPORAL TRIAL EVIDENCE · NOT OWNER-READY · AUTONOMY NOT PROMOTED**
 
+---
+
+## 22. Doorway discovery campaign — formation geometry and recovery timing — 2026-09-25
+
+Trial / Trace has now been used as a **discovery instrument**, not merely extended in advance.
+
+Qualified source:
+
+`d1664f1e996fd287d1d032d6b6fcff1faaa484e2`
+
+Qualification:
+
+`squad-field-lab-browser · run 36133404762 · SUCCESS`
+
+Machine gate:
+
+- 188/188 test files and 744/744 tests PASS;
+- production build PASS;
+- broad Squad Field Lab rehearsal PASS;
+- persistent A/B + temporal trial rehearsal PASS;
+- controlled doorway discovery campaign PASS;
+- no browser page / console / request errors in the discovery result.
+
+### Question
+
+For one fixed four-member `DIAMOND` MOVE through the Field Lab doorway, is the material failure primarily changed by formation geometry/spacing or by movement responsiveness?
+
+Controlled baseline:
+
+- TRAINING / DOORWAY;
+- four real squad bodies, all selected;
+- DIAMOND;
+- spacing `1.00`;
+- responsiveness `0.82`;
+- tolerance `0.18 m`;
+- slowdown `0.72 m`;
+- one fixed MOVE anchor;
+- matched 150-tick trials.
+
+Baseline C2 and C3 first contact and become BLOCKED at `t74`, remain blocked through `t150`, and finish with `5.24 m` target error.
+
+### Discovery 1 — responsiveness changes exposure, not the geometric failure
+
+`responsiveness 1.00` makes C2/C3 reach the obstruction earlier (`t61`) and remain blocked through the horizon. Their terminal target error remains `5.24 m`.
+
+`responsiveness 0.27` produces zero blocked/contact ticks inside the 150-tick horizon, but this is **not improvement evidence**: C2/C3 simply have not reached the doorway and finish about `6.20 m` from target.
+
+Therefore cumulative blocked/contact counts alone were a misleading metric for this question.
+
+This evidence justified the new temporal provenance already added during the campaign:
+
+- first + last blocked tick;
+- first contact tick;
+- blocked episode count;
+- terminal status;
+- terminal target error.
+
+### Discovery 2 — formation width materially changes recovery
+
+Holding the rest of the baseline fixed and changing only DIAMOND spacing produced:
+
+| spacing | C2/C3 first blocked | C2/C3 last blocked | terminal state | terminal target error |
+| ---: | ---: | ---: | --- | ---: |
+| 1.00 baseline | 74 | 150 | BLOCKED | 5.24 m |
+| 0.90 | 74 | 142 | MOVING | 4.38 m |
+| 0.85 | 74 | 102 | MOVING | 2.68 m |
+| 0.80 | 74 | 95 | MOVING | 2.25 m |
+| 0.75 | 74 | 90 | MOVING | 1.98 m |
+| 0.65 | 75 | 86 | MOVING | 1.57 m |
+| 0.50 | 76 | 81 | MOVING | 1.11 m |
+
+The important result is not a magic scalar threshold. The transition is steep and physical.
+
+A geometry sanity check explains part of it: the doorway opening is `2.20 m`; with `0.30 m` body radius, the direct center-line half-clearance is `0.80 m`. DIAMOND side slots are `±1.05 × spacing`, so an ideal straight center-line fit would require approximately `spacing <= 0.762`.
+
+Runtime recovery is not binary at that comparator because real bodies slide, contact and approach the opening dynamically. Do **not** promote `0.762` or any tested spacing into a general policy.
+
+### Discovery 3 — timing/path history matters, not only final geometry
+
+A and B were then captured as **identical spacing-1.00 setups**. Only B received an authored live intervention to compress to `0.80`.
+
+Trial events now preserve that intervention with tick/category/scope/path/before/after provenance.
+
+Results for C2/C3:
+
+| authored compression | last blocked | terminal state | terminal target error |
+| --- | ---: | --- | ---: |
+| static 0.80 from start | 95 | MOVING | 2.25 m |
+| 1.00 → 0.80 at t75 | 130 | MOVING | 3.72 / 3.71 m |
+| 1.00 → 0.80 at t90 | 141 | MOVING | 4.17 m |
+| 1.00 → 0.80 at t110 | 150 | BLOCKED | 4.72 m |
+
+So the same final geometry has strongly different consequences depending on **when the squad begins adapting**.
+
+Even intervention at `t75`, essentially at first obstruction exposure, recovers much later than starting compressed. That makes a purely reactive rule such as “wait until blocked, then shrink formation” a weak explanation of the successful authored pattern.
+
+The stronger current hypothesis is:
+
+> bottleneck traversal may require **approach shaping / anticipatory formation deformation**, not merely motor tuning or post-stall recovery.
+
+This remains a hypothesis from one controlled doorway family, not a general formation law.
+
+### Discovery 4 — topology matters, but COLUMN is not a winner
+
+Changing DIAMOND to COLUMN materially redistributes contact/blocking:
+
+- C3 avoids a BLOCKED episode in the horizon;
+- C2's first block is delayed to `t134`;
+- contact is redistributed onto other members;
+- terminal target errors and progress trade off differently.
+
+This is evidence that formation topology matters. It is **not** evidence that COLUMN should replace DIAMOND or that one preset is generally superior.
+
+### Evidence-driven Trace evolution
+
+The campaign forced only the instrumentation that was needed to interpret real results:
+
+1. cumulative blocked/contact counts looked falsely favorable for a slow motor → add obstruction timing + terminal state;
+2. recovery intervention changed the run after trial start → preserve authored intervention provenance;
+3. recovery timing became the question → surface last-blocked timing already derivable from the trace.
+
+No timeline scrubber, replay engine, scalar behavior score or autonomous selector was added.
+
+### Candidate semantic pressure — not promoted behavior
+
+A useful candidate for future experiments is:
+
+**formation as a deformable relational envelope** — preserve formation intent, but allow temporary compression/re-shaping before constrained transit, with later recovery/re-expansion.
+
+What is *not* established:
+
+- how to detect a bottleneck;
+- what should trigger deformation;
+- what geometry is appropriate outside this doorway specimen;
+- when/how to re-expand;
+- whether the same pattern survives moving-player FOLLOW, pressure, different body counts or asymmetric obstacles;
+- whether the Owner likes the resulting feel;
+- any autonomous authority to perform it.
+
+The next discovery should therefore test the **manual authored pattern itself** under changed conditions before turning it into autonomy.
+
+Status:
+
+> **DOORWAY DISCOVERY MACHINE PASS · GEOMETRY + TIMING ARE MATERIAL · GENERALIZATION UNPROVEN · NOT OWNER-READY · AUTONOMY NOT PROMOTED**
+
