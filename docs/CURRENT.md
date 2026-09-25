@@ -1367,3 +1367,24 @@ Primary STP-1 question:
 
 If the answer is no, reject/rework the situation before expanding it.
 
+---
+
+## 26. STP-1 manual shared-task apparatus result — 2026-09-25
+
+Source `7186c888001d5efcd885eb7915b33e8c9a69980c` passed `squad-field-lab-browser #112` / run `36171126061` with 189/189 test files, 747/747 tests, production build and all existing Field Lab regressions.
+
+Narrow causal result:
+
+- no-screen baseline stalled at `122/180` progress with `178` contested ticks and `162` player↔hostile contact ticks;
+- manual C1 physical screen reached `180/180` at `t180`, produced zero task-contested and player-contact ticks, used no REPEL, then settled in the same World at `t274`.
+
+This proves only that manual companion physical positioning can materially change one shared task.
+
+It does **not** qualify the situation as a broad behavior laboratory specimen. A single ideal HOLD location may still trivialize it.
+
+Current status:
+
+> **STP-1 MANUAL APPARATUS MACHINE PASS · STP-2 MANUAL STRATEGY FALSIFICATION ACTIVE · SITUATION NOT QUALIFIED · NOT OWNER-QUALIFIED · AUTONOMY NOT PROMOTED**
+
+Next work must use the existing apparatus to test qualitatively different manual strategies and wrong/corrected plans before adding any new behavior feature.
+
