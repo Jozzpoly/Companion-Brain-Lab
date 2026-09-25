@@ -27,6 +27,7 @@ on:
       - "scripts/squad-field-lab-experiment-browser-smoke.mjs"
       - "scripts/squad-field-lab-doorway-discovery.mjs"
       - "scripts/squad-field-lab-manual-episode-authoring.mjs"
+      - "scripts/squad-field-lab-task-pressure.mjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/squad-field-lab-browser.yml"
@@ -72,6 +73,8 @@ jobs:
         run: npm run browser:squad-field-lab-doorway-discovery
       - name: Manual cooperative authoring research
         run: npm run browser:squad-field-lab-manual-episode
+      - name: Shared task pressure manual apparatus
+        run: npm run browser:squad-field-lab-task-pressure
       - name: Upload Field Lab evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -82,5 +85,6 @@ jobs:
             artifacts/squad-field-lab-experiment-browser/
             artifacts/squad-field-lab-doorway-discovery/
             artifacts/squad-field-lab-manual-episode-authoring/
+            artifacts/squad-field-lab-task-pressure/
           if-no-files-found: warn
           retention-days: 14
