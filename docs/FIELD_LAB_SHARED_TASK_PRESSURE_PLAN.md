@@ -459,3 +459,63 @@ The question is not which strategy wins. It is:
 
 If it collapses, REWORK or REJECT before adding autonomy.
 
+## 12. STP-1 result — apparatus PASS, situation REWORK
+
+Qualified runtime:
+
+`7186c888001d5efcd885eb7915b33e8c9a69980c`
+
+Workflow:
+
+`squad-field-lab-browser #112 · run 36171126061 · SUCCESS`
+
+Gate:
+
+- 189/189 test files PASS;
+- 747/747 tests PASS;
+- production build PASS;
+- broad Field Lab, persistent A/B, doorway campaign and manual-episode regression PASS;
+- shared-task browser specimen PASS with no page / console / request errors.
+
+The bounded apparatus worked as designed.
+
+Matched 300-tick trials produced:
+
+| strategy | max progress | contested ticks | player↔hostile contact | completion | settle |
+| --- | ---: | ---: | ---: | --- | --- |
+| C1 parked away | 122/180 | 178 | 162 | none | none |
+| C1 static physical screen | 180/180 | 0 | 0 | t180 | t274 |
+
+This proves only that a real solid companion body can materially preserve player task continuity in one visible World-owned shared task, without REPEL.
+
+### Situation verdict: REWORK
+
+The result also hits a planned falsifier pressure.
+
+One authored static HOLD on the single direct approach line completely eliminates contest for the whole task. The specimen therefore does not yet create the desired multi-beat responsibility problem; it can collapse into placing one physical plug and waiting.
+
+Do not promote **screening** as a behavior semantic from this result. The stronger evidence is that:
+
+- physical body placement can matter enormously;
+- the current single-zone situation under-constrains the problem;
+- richer behavior requires the situation itself to change over time in participant-visible ways.
+
+### STP-1b rework hypothesis — two visible task stations
+
+Keep one hostile and the same physical/action substrate, but make the task explicitly sequential:
+
+1. visible Station A is active;
+2. completing A activates visible Station B at a materially different position;
+3. the player must physically relocate and commit to B;
+4. hostile pressure always targets the **currently active visible station**;
+5. no hidden timing determines the retarget;
+6. one static C1 HOLD should no longer solve the complete episode;
+7. manual reposition / handoff / player takeover can then become materially distinct authored strategies;
+8. after B completion the hostile returns home and the squad remains in-world.
+
+The specific next falsifier is:
+
+> **Does a static screen that solves Station A fail to protect Station B, while an explicit manual C1 reposition between stages restores materially more task continuity?**
+
+This is still manual-first and does not authorize protect/intercept autonomy.
+
