@@ -37,7 +37,8 @@
     "browser:cooperative-episode-choreography": "node scripts/cooperative-episode-manual-choreography.mjs",
     "browser:squad-field-lab": "node scripts/squad-field-lab-browser-smoke.mjs",
     "browser:squad-field-lab-experiments": "node scripts/squad-field-lab-experiment-browser-smoke.mjs",
-    "browser:squad-field-lab-doorway-discovery": "node scripts/squad-field-lab-doorway-discovery.mjs"
+    "browser:squad-field-lab-doorway-discovery": "node scripts/squad-field-lab-doorway-discovery.mjs",
+    "browser:squad-field-lab-manual-episode": "node scripts/squad-field-lab-manual-episode-authoring.mjs"
   },
   "dependencies": {
     "@dimforge/rapier2d-deterministic-compat": "0.20.0",
