@@ -1388,3 +1388,23 @@ Current status:
 
 Next work must use the existing apparatus to test qualitatively different manual strategies and wrong/corrected plans before adding any new behavior feature.
 
+---
+
+## 26. STP-1 verdict — shared-task apparatus works, first situation is under-constrained — 2026-09-25
+
+Runtime `7186c888001d5efcd885eb7915b33e8c9a69980c` passed workflow `#112 / 36171126061` with 189/189 test files, 747/747 tests, build and all Field Lab browser regressions.
+
+Narrow evidence:
+
+- no-help task trial reached only `122/180` progress, with 178 contested ticks and 162 player↔hostile contact ticks;
+- one manually authored static C1 physical screen reached `180/180`, zero contested ticks and zero player↔hostile contact, then same-world recovery settled at t274;
+- REPEL was not required.
+
+Canonical interpretation:
+
+> **TASK-PRESSURE APPARATUS MACHINE PASS · SINGLE-ZONE SITUATION REWORK · NOT OWNER-QUALIFIED · NO BEHAVIOR/AUTONOMY PROMOTION**
+
+The machine result establishes that companion body placement can materially protect player commitment. It does not establish useful teammate behavior. The first situation is too easy to saturate with one static HOLD.
+
+Next bounded falsifier is **STP-1b two visible task stations**. Station completion visibly moves responsibility to a second location and hostile pressure retargets that active station. The test is whether static screening fails across the stage transition while explicit manual companion reposition materially restores continuity.
+
