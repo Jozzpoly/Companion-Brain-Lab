@@ -10,7 +10,7 @@ import type { ActorSnapshot, SquadMemberId, Vec2 } from "../world/types";
 export const FIELD_LAB_TRIAL_SCHEMA = "companion-field-lab-trial-v1" as const;
 export const FIELD_LAB_TRIAL_MAX_FRAMES = 7_200;
 export type FieldLabTrialSlot = "A" | "B";
-export type FieldLabTrialEventCategory = "FORMATION" | "DYNAMICS" | "ORDERS" | "AUTHORITY";
+export type FieldLabTrialEventCategory = "FORMATION" | "DYNAMICS" | "ORDERS" | "AUTHORITY" | "ACTION";
 export type FieldLabTrialMemberStatus =
   | "DIRECT"
   | "MOVING"
