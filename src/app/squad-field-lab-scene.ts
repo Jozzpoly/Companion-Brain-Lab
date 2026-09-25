@@ -475,6 +475,13 @@ export class SquadFieldLabScene extends Phaser.Scene {
     this.recordActiveTrialFrame();
 
     for (const outcome of result.cooperativeEpisodeActionOutcomes) {
+      this.recordTrialIntervention(
+        "ACTION",
+        outcome.actorId === "player" ? "YOU" : memberLabel(outcome.actorId),
+        "REPEL outcome",
+        "queued",
+        `${outcome.status}@${outcome.distance.toFixed(2)}m/${outcome.phaseObserved}`
+      );
       this.log(
         `REPEL ${String(outcome.actorId)} -> ${outcome.status} @ ${outcome.distance.toFixed(2)}m`
       );
@@ -590,19 +597,56 @@ export class SquadFieldLabScene extends Phaser.Scene {
       kind: "REPEL",
       targetId: "hostile"
     });
+    this.recordTrialIntervention(
+      "ACTION",
+      actorId === "player" ? "YOU" : memberLabel(actorId),
+      "REPEL",
+      "idle",
+      "queued@hostile"
+    );
     this.log(`REPEL queued · ${String(actorId)}`);
+  }
+
+  private selectedOrderSummary(): string {
+    return this.control.snapshot().selected.map((memberId) => {
+      const assignment = this.control.assignmentFor(memberId);
+      const anchor = assignment.worldAnchor
+        ? `@${assignment.worldAnchor.x.toFixed(2)},${assignment.worldAnchor.y.toFixed(2)}`
+        : "";
+      return `${memberLabel(memberId)}:${assignment.mode}${anchor}`;
+    }).join("|");
+  }
+
+  private selectedScopeLabel(): string {
+    return this.control.snapshot().selected.map(memberLabel).join("+");
   }
 
   private issueOrderFromHud(mode: SquadOrderMode): void {
     if (!this.snapshotValue) return;
+    const before = this.selectedOrderSummary();
+    const scope = this.selectedScopeLabel();
     if (mode === "FOLLOW") {
       this.control.issueSelected("FOLLOW");
+      this.recordTrialIntervention(
+        "ORDERS",
+        scope,
+        "assignment",
+        before,
+        this.selectedOrderSummary()
+      );
       this.log(`selected → FOLLOW`);
       return;
     }
     if (mode === "HOLD") {
       const anchor = this.anchorThatPreservesSelectedCurrentPositions(this.snapshotValue);
       this.control.issueSelected("HOLD", anchor);
+      this.recordTrialIntervention(
+        "ORDERS",
+        scope,
+        "assignment",
+        before,
+        this.selectedOrderSummary()
+      );
       this.log(`selected → HOLD @ ${anchor.x.toFixed(2)},${anchor.y.toFixed(2)}`);
     }
   }
@@ -652,7 +696,16 @@ export class SquadFieldLabScene extends Phaser.Scene {
     }
 
     if (pointer.rightButtonDown()) {
+      const before = this.selectedOrderSummary();
+      const scope = this.selectedScopeLabel();
       this.control.issueSelected("MOVE", worldPoint);
+      this.recordTrialIntervention(
+        "ORDERS",
+        scope,
+        "assignment",
+        before,
+        this.selectedOrderSummary()
+      );
       this.log(`selected → MOVE @ ${worldPoint.x.toFixed(2)},${worldPoint.y.toFixed(2)}`);
       return;
     }
