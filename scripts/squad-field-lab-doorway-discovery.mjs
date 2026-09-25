@@ -282,6 +282,7 @@ try {
           await setNumeric(page, "spacingScale", 0.80);
         }
       },
+      interventionTick: 75,
       interventionDescription: "spacingScale 1.00 → 0.80 after tick 75"
     },
     {
@@ -294,6 +295,7 @@ try {
           await setNumeric(page, "spacingScale", 0.80);
         }
       },
+      interventionTick: 90,
       interventionDescription: "spacingScale 1.00 → 0.80 after tick 90"
     },
     {
@@ -306,6 +308,7 @@ try {
           await setNumeric(page, "spacingScale", 0.80);
         }
       },
+      interventionTick: 110,
       interventionDescription: "spacingScale 1.00 → 0.80 after tick 110"
     },
     {
@@ -416,7 +419,9 @@ try {
         `${variant.id} trace did not expose intervention count: ${comparisonText.slice(0, 3500)}`
       );
       invariant(
-        comparisonText.includes("B t90 · FORMATION · GROUP · spacingScale · 1.00 → 0.80"),
+        comparisonText.includes(
+          `B t${variant.interventionTick} · FORMATION · GROUP · spacingScale · 1.00 → 0.80`
+        ),
         `${variant.id} trace lost authored spacing intervention provenance`
       );
     }
