@@ -44,7 +44,15 @@ describe("Field Lab trial traces", () => {
         frame(12, 1, 4, "BLOCKED", 1),
         frame(13, 1, 4, "BLOCKED", 2),
         frame(14, 2, 3, "MOVING")
-      ]
+      ],
+      events: [{
+        tick: 12,
+        category: "FORMATION",
+        scope: "GROUP",
+        path: "spacingScale",
+        before: "1.00",
+        after: "0.80"
+      }]
     });
 
     const summary = summarizeFieldLabTrial(trial);
@@ -52,6 +60,14 @@ describe("Field Lab trial traces", () => {
 
     expect(summary.frameCount).toBe(4);
     expect(summary.endedAtTick).toBe(14);
+    expect(summary.events).toEqual([{
+      tick: 12,
+      category: "FORMATION",
+      scope: "GROUP",
+      path: "spacingScale",
+      before: "1.00",
+      after: "0.80"
+    }]);
     expect(companion.pathDistance).toBeCloseTo(2);
     expect(companion.meanTargetError).toBeCloseTo(4);
     expect(companion.maxTargetError).toBeCloseTo(5);
