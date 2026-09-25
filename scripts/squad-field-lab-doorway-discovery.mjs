@@ -78,21 +78,23 @@ function parseMeters(value) {
 
 function parseExposure(text) {
   const rows = [];
-  const pattern = /(C[1-4]) exposure · first blocked A (none|\d+t) → B (none|\d+t) · first contact A (none|\d+t) → B (none|\d+t) · block episodes A (\d+) → B (\d+) · final A (DIRECT|MOVING|ARRIVED|BLOCKED|INVALID_TARGET|n\/a) \/ (n\/a|\d+\.\d+m) → B (DIRECT|MOVING|ARRIVED|BLOCKED|INVALID_TARGET|n\/a) \/ (n\/a|\d+\.\d+m)/g;
+  const pattern = /(C[1-4]) exposure · first\/last blocked A (none|\d+t)\/(none|\d+t) → B (none|\d+t)\/(none|\d+t) · first contact A (none|\d+t) → B (none|\d+t) · block episodes A (\d+) → B (\d+) · final A (DIRECT|MOVING|ARRIVED|BLOCKED|INVALID_TARGET|n\/a) \/ (n\/a|\d+\.\d+m) → B (DIRECT|MOVING|ARRIVED|BLOCKED|INVALID_TARGET|n\/a) \/ (n\/a|\d+\.\d+m)/g;
   let match;
   while ((match = pattern.exec(text))) {
     rows.push({
       member: match[1],
       firstBlockedA: parseTick(match[2]),
-      firstBlockedB: parseTick(match[3]),
-      firstContactA: parseTick(match[4]),
-      firstContactB: parseTick(match[5]),
-      blockedEpisodesA: Number(match[6]),
-      blockedEpisodesB: Number(match[7]),
-      finalStatusA: match[8],
-      finalTargetErrorA: parseMeters(match[9]),
-      finalStatusB: match[10],
-      finalTargetErrorB: parseMeters(match[11])
+      lastBlockedA: parseTick(match[3]),
+      firstBlockedB: parseTick(match[4]),
+      lastBlockedB: parseTick(match[5]),
+      firstContactA: parseTick(match[6]),
+      firstContactB: parseTick(match[7]),
+      blockedEpisodesA: Number(match[8]),
+      blockedEpisodesB: Number(match[9]),
+      finalStatusA: match[10],
+      finalTargetErrorA: parseMeters(match[11]),
+      finalStatusB: match[12],
+      finalTargetErrorB: parseMeters(match[13])
     });
   }
   return rows;
@@ -255,12 +257,32 @@ try {
       expectedDiff: "DYNAMICS"
     },
     {
+      id: "spacing-085",
+      label: "diamond spacing 0.85",
+      apply: async () => {
+        await setNumeric(page, "spacingScale", 0.85);
+      },
+      expectedDiff: "DYNAMICS"
+    },
+    {
       id: "spacing-090",
       label: "diamond spacing 0.90",
       apply: async () => {
         await setNumeric(page, "spacingScale", 0.90);
       },
       expectedDiff: "DYNAMICS"
+    },
+    {
+      id: "post-contact-compress-075",
+      label: "diamond 1.00 then 0.80 at t75",
+      apply: async () => {},
+      expectedDiff: null,
+      intervention: async (tick) => {
+        if (tick === 75) {
+          await setNumeric(page, "spacingScale", 0.80);
+        }
+      },
+      interventionDescription: "spacingScale 1.00 → 0.80 after tick 75"
     },
     {
       id: "post-contact-compress",
@@ -273,6 +295,18 @@ try {
         }
       },
       interventionDescription: "spacingScale 1.00 → 0.80 after tick 90"
+    },
+    {
+      id: "post-contact-compress-110",
+      label: "diamond 1.00 then 0.80 at t110",
+      apply: async () => {},
+      expectedDiff: null,
+      intervention: async (tick) => {
+        if (tick === 110) {
+          await setNumeric(page, "spacingScale", 0.80);
+        }
+      },
+      interventionDescription: "spacingScale 1.00 → 0.80 after tick 110"
     },
     {
       id: "expanded-spacing",
