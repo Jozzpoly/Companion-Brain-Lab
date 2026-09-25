@@ -164,6 +164,9 @@ export class SquadFieldLabScene extends Phaser.Scene {
   private timeScaleIndex = 1;
   private transform: RenderTransform = { scale: 1, offsetX: 0, offsetY: 0 };
   private draggingSlot: SquadMemberId | null = null;
+  private setupPlacement = false;
+  private draggingSetupBody: SquadMemberId | "player" | null = null;
+  private setupDragPoint: Vec2 | null = null;
   private situation: FieldLabSituation = "TRAINING";
   private layout: FieldLabLayout = "MIXED";
   private cooperativeEpisode: CooperativeEpisodeSnapshot | null = null;
@@ -236,6 +239,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
         this.log(`layout ${before} -> ${layout} · preserving squad control state`);
         void this.loadWorld(true);
       },
+      onToggleSetupPlacement: () => this.toggleSetupPlacement(),
       onSquadSize: (count) => {
         const before = this.control.snapshot().activeMembers.length;
         if (before === count) return;
@@ -382,10 +386,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
     this.input.mouse?.disableContextMenu();
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.onPointerDown(pointer));
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => this.onPointerMove(pointer));
-    this.input.on("pointerup", () => {
-      if (this.draggingSlot) this.log(`slot edit end ${memberLabel(this.draggingSlot)}`);
-      this.draggingSlot = null;
-    });
+    this.input.on("pointerup", (pointer: Phaser.Input.Pointer) => this.onPointerUp(pointer));
 
     this.loadPersistedExperiments();
     void this.loadWorld(false);
@@ -527,7 +528,14 @@ export class SquadFieldLabScene extends Phaser.Scene {
       }
     }
     if (Phaser.Input.Keyboard.JustDown(this.keys.pause)) {
-      this.paused = !this.paused;
+      const nextPaused = !this.paused;
+      if (!nextPaused && this.setupPlacement) {
+        this.setupPlacement = false;
+        this.draggingSetupBody = null;
+        this.setupDragPoint = null;
+        this.log("setup placement OFF · leaving setup plane");
+      }
+      this.paused = nextPaused;
       this.accumulator = 0;
       this.log(this.paused ? "PAUSED" : "RUNNING");
     }
@@ -541,6 +549,24 @@ export class SquadFieldLabScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keys.reset)) {
       this.log("authored position reset requested");
       void this.loadWorld(false);
+    }
+  }
+
+  private toggleSetupPlacement(): void {
+    if (this.activeTrial) {
+      this.log("setup placement ignored · stop active trial first");
+      return;
+    }
+    this.setupPlacement = !this.setupPlacement;
+    this.draggingSetupBody = null;
+    this.setupDragPoint = null;
+    if (this.setupPlacement) {
+      this.paused = true;
+      this.accumulator = 0;
+      this.singleStepQueued = false;
+      this.log("setup placement ON · World paused · body drag edits initial condition");
+    } else {
+      this.log("setup placement OFF");
     }
   }
 
@@ -614,6 +640,17 @@ export class SquadFieldLabScene extends Phaser.Scene {
     const worldPoint = this.pointerToWorld(pointer);
     if (!worldPoint) return;
 
+    if (this.setupPlacement) {
+      if (!this.paused || !pointer.leftButtonDown()) return;
+      const bodyId = this.setupBodyAt(worldPoint);
+      if (!bodyId) return;
+      this.draggingSetupBody = bodyId;
+      this.setupDragPoint = this.clampSetupPosition(bodyId, worldPoint);
+      if (bodyId !== "player") this.control.focus(bodyId);
+      this.log(`setup drag begin ${bodyId === "player" ? "YOU" : memberLabel(bodyId)}`);
+      return;
+    }
+
     if (pointer.rightButtonDown()) {
       this.control.issueSelected("MOVE", worldPoint);
       this.log(`selected → MOVE @ ${worldPoint.x.toFixed(2)},${worldPoint.y.toFixed(2)}`);
@@ -637,6 +674,14 @@ export class SquadFieldLabScene extends Phaser.Scene {
   }
 
   private onPointerMove(pointer: Phaser.Input.Pointer): void {
+    if (this.setupPlacement && this.draggingSetupBody && pointer.leftButtonDown()) {
+      const point = this.pointerToWorld(pointer);
+      if (point) {
+        this.setupDragPoint = this.clampSetupPosition(this.draggingSetupBody, point);
+      }
+      return;
+    }
+
     if (!this.draggingSlot || !pointer.leftButtonDown() || !this.snapshotValue) return;
     const point = this.pointerToWorld(pointer);
     if (!point) return;
@@ -654,6 +699,69 @@ export class SquadFieldLabScene extends Phaser.Scene {
       x: localScaled.x / spacing,
       y: localScaled.y / spacing
     });
+  }
+
+  private onPointerUp(pointer: Phaser.Input.Pointer): void {
+    if (this.draggingSetupBody) {
+      const bodyId = this.draggingSetupBody;
+      const point = this.pointerToWorld(pointer);
+      const target = point
+        ? this.clampSetupPosition(bodyId, point)
+        : this.setupDragPoint;
+      this.draggingSetupBody = null;
+      this.setupDragPoint = null;
+      if (target) void this.commitSetupPlacement(bodyId, target);
+      return;
+    }
+
+    if (this.draggingSlot) this.log(`slot edit end ${memberLabel(this.draggingSlot)}`);
+    this.draggingSlot = null;
+  }
+
+  private setupBodyAt(point: Vec2): SquadMemberId | "player" | null {
+    if (!this.snapshotValue) return null;
+    const candidates: Array<SquadMemberId | "player"> = [
+      "player",
+      ...this.control.snapshot().activeMembers
+    ];
+    let best: { id: SquadMemberId | "player"; distance: number } | null = null;
+    for (const id of candidates) {
+      const body = actor(this.snapshotValue, id);
+      const d = distance(point, body.position);
+      if (d <= body.radius + 0.18 && (!best || d < best.distance)) {
+        best = { id, distance: d };
+      }
+    }
+    return best?.id ?? null;
+  }
+
+  private clampSetupPosition(bodyId: SquadMemberId | "player", point: Vec2): Vec2 {
+    if (!this.snapshotValue) return { ...point };
+    const body = actor(this.snapshotValue, bodyId);
+    return {
+      x: Math.max(body.radius, Math.min(this.snapshotValue.width - body.radius, point.x)),
+      y: Math.max(body.radius, Math.min(this.snapshotValue.height - body.radius, point.y))
+    };
+  }
+
+  private async commitSetupPlacement(
+    bodyId: SquadMemberId | "player",
+    position: Vec2
+  ): Promise<void> {
+    if (!this.snapshotValue || this.loading || !this.setupPlacement || !this.paused) return;
+    const positions = this.currentPositions();
+    if (bodyId === "player") {
+      positions.player = { ...position };
+    } else {
+      const squad = { ...(positions.squad ?? {}) };
+      squad[bodyId] = { ...position };
+      positions.squad = squad;
+    }
+    this.log(
+      `setup place ${bodyId === "player" ? "YOU" : memberLabel(bodyId)} @ ` +
+      `${position.x.toFixed(2)},${position.y.toFixed(2)}`
+    );
+    await this.loadWorld(false, positions);
   }
 
   private memberAt(point: Vec2): SquadMemberId | null {
@@ -716,6 +824,19 @@ export class SquadFieldLabScene extends Phaser.Scene {
         obstacle.width * scale,
         obstacle.height * scale
       );
+    }
+
+    if (this.setupPlacement && this.draggingSetupBody && this.setupDragPoint) {
+      const body = actor(snapshot, this.draggingSetupBody);
+      const x = sx(this.setupDragPoint.x);
+      const y = sy(this.setupDragPoint.y);
+      const r = body.radius * scale;
+      this.graphics.fillStyle(0x58a6ff, 0.22);
+      this.graphics.fillCircle(x, y, r);
+      this.graphics.lineStyle(3, 0x58a6ff, 0.9);
+      this.graphics.strokeCircle(x, y, r);
+      this.graphics.lineBetween(x - r, y, x + r, y);
+      this.graphics.lineBetween(x, y - r, x, y + r);
     }
 
     this.drawCooperativePressure(snapshot, sx, sy, scale);
@@ -846,6 +967,8 @@ export class SquadFieldLabScene extends Phaser.Scene {
       control: state,
       situation: this.situation,
       layout: this.layout,
+      paused: this.paused,
+      setupPlacement: this.setupPlacement,
       episode: this.cooperativeEpisode,
       latestEpisodeOutcome: this.latestCooperativeEpisodeOutcome,
       experiments: experimentSummaries,
@@ -1253,6 +1376,8 @@ export class SquadFieldLabScene extends Phaser.Scene {
       this.accumulator = 0;
       this.singleStepQueued = false;
       this.draggingSlot = null;
+      this.draggingSetupBody = null;
+      this.setupDragPoint = null;
       this.pendingCooperativeAttempts = [];
       this.lastCooperativeActionOutcomes = [];
       this.latestCooperativeEpisodeOutcome = "NONE";
