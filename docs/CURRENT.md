@@ -1221,3 +1221,74 @@ Prefer manual authoring and changed-condition situations over inventing autonomo
 
 The next research pressure should use the broader setup/authoring substrate to attempt a manually authored **multi-beat cooperative behavior** and discover what the lab cannot yet express. This is not an Owner gate.
 
+---
+
+## 24. Manual multi-beat authoring pressure — 2026-09-25
+
+The first post-recovery use of the wider authoring substrate was deliberately manual. No autonomous behavior was added.
+
+Qualified source:
+
+`d5649b547ccd1fd5b1f3c87e0b95ea18d9d28fc1`
+
+Qualification:
+
+`squad-field-lab-browser #101 · run 36144788908 · SUCCESS`
+
+The controlled B trial authored this sequence from an initial condition identical to A:
+
+`setup C1 within material action range → HOLD during CALM → wait for APPROACHING → manual C1 REPEL → FOLLOW/regroup`.
+
+Machine evidence established only the following narrow facts:
+
+- setup placement can define the embodied initial condition;
+- live HOLD/FOLLOW order transitions can be preserved in Trial provenance;
+- a manual cooperative action attempt and its World outcome can be preserved in Trial provenance;
+- the C1 REPEL materially produced the same episode's `REPELLED` outcome;
+- the sequence can be reconstructed as an authored causal chain.
+
+To make that evidence possible, Trial provenance was extended minimally where the use case exposed a real blind spot:
+
+- `ORDERS` now records live assignment transitions including world-space MOVE;
+- `ACTION` records manual REPEL attempt and resolved outcome.
+
+This is instrumentation earned by the experiment, not a behavior-system promotion.
+
+### More important negative result
+
+The sequence itself is still behaviorally thin.
+
+It requires the author to construct behavior mostly through spatial micromanagement plus the single coarse `REPEL` verb. Passing this specimen therefore does **not** mean the Field Lab has become the broad behavior laboratory described by Owner intent.
+
+The current limiting question has shifted from:
+
+> can the lab preserve an authored multi-beat sequence?
+
+to:
+
+> **does the World/situation expose enough qualitatively meaningful affordances that the Owner can discover rich companion behavior rather than merely choreograph movement around one action button?**
+
+### Donor constraint
+
+The repo contains the older shared-danger `INTERVENE` action seam. Do not promote it as the obvious next behavior verb.
+
+That mechanism underpinned the public Owner FAIL where E could be internally valid only in a hidden WINDUP window and narrow range. Its attempt→World-outcome separation remains a useful donor. Its interaction semantics and participant affordance do not.
+
+### Next strategic boundary
+
+Do not implement another behavior verb merely to increase count.
+
+Before the next material implementation, choose a **situation contract** that can naturally create several meaningful player/companion choices across preparation, contribution/takeover, changing conditions and recovery/regroup, without hidden timing-oracle play.
+
+The next tranche should compare candidate situations by:
+
+- player-visible teammate information gain;
+- ability to author several distinct manual solutions;
+- material World consequences;
+- preservation of player agency;
+- compatibility with current movement/formation/setup substrate;
+- low scope relative to a broad combat framework.
+
+That situation choice is now the highest-value unresolved strategic question. It is intentionally left open rather than filled by roadmap inertia.
+
+
