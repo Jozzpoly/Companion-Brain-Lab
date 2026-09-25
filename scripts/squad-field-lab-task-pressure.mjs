@@ -3,7 +3,9 @@ import { chromium } from "playwright-chromium";
 import { preview } from "vite";
 
 const ROOT = "artifacts/squad-field-lab-task-pressure";
-const TRACE_TICKS = 300;
+const MAX_TICKS = 520;
+const KEY_A = "companion-brain-lab.field-lab.experiment.A.v1";
+const KEY_B = "companion-brain-lab.field-lab.experiment.B.v1";
 
 function invariant(condition, message) {
   if (!condition) throw new Error(message);
@@ -21,10 +23,10 @@ async function waitFor(page, predicate, timeout = 10_000, label = "condition") {
     if (predicate(latest)) return latest;
     await page.waitForTimeout(25);
   }
-  throw new Error(`${label} timed out. Latest panel: ${JSON.stringify(latest.slice(0, 6500))}`);
+  throw new Error(`${label} timed out. Latest panel: ${JSON.stringify(latest.slice(0, 7000))}`);
 }
 
-async function tap(page, key, holdMs = 16) {
+async function tap(page, key, holdMs = 14) {
   await page.keyboard.down(key);
   await page.waitForTimeout(holdMs);
   await page.keyboard.up(key);
@@ -40,62 +42,115 @@ function internalCanvasPoint(box, world) {
   };
 }
 
-async function dragWorld(page, canvas, from, to) {
+async function rightClickWorld(page, canvas, world) {
   const box = await canvas.boundingBox();
   invariant(box, "Canvas bounding box unavailable.");
-  const start = internalCanvasPoint(box, from);
-  const end = internalCanvasPoint(box, to);
-  await page.mouse.move(start.x, start.y);
-  await page.mouse.down();
-  await page.mouse.move(end.x, end.y, { steps: 8 });
-  await page.mouse.up();
-  await page.waitForTimeout(80);
+  const point = internalCanvasPoint(box, world);
+  await page.mouse.click(point.x, point.y, { button: "right" });
+  await page.waitForTimeout(35);
 }
 
 function taskState(text) {
   const match = text.match(
-    /phase (IDLE|ACTIVE|COMPLETED|SETTLED) · progress (\d+)\/(\d+)t[\s\S]*?player (COMMITTED|outside) · task (CONTESTED|clear)[\s\S]*?player↔hostile contact (YES|no)/
+    /phase (IDLE|ACTIVE|COMPLETED|SETTLED) · station (\d+)\/(\d+) · progress (\d+)\/(\d+)t[\s\S]*?player (COMMITTED|outside) · task (CONTESTED|clear)[\s\S]*?player↔hostile contact (YES|no)/
   );
   if (!match) return null;
   return {
     phase: match[1],
-    progress: Number(match[2]),
-    required: Number(match[3]),
-    committed: match[4] === "COMMITTED",
-    contested: match[5] === "CONTESTED",
-    playerHostileContact: match[6] === "YES"
+    station: Number(match[2]),
+    stationCount: Number(match[3]),
+    progress: Number(match[4]),
+    required: Number(match[5]),
+    committed: match[6] === "COMMITTED",
+    contested: match[7] === "CONTESTED",
+    playerHostileContact: match[8] === "YES"
   };
 }
 
-async function runTrace(page, slot) {
+async function runStrategy(page, canvas, slot, dynamicReposition) {
   const button = page.locator(`[data-trial-toggle="${slot}"]`);
   await button.click();
   await waitFor(page, (value) => value.includes(`recording ${slot}`), 8_000, `trace ${slot} starts`);
 
-  let maxProgress = 0;
-  let contestedTicks = 0;
-  let playerContactTicks = 0;
+  let tick = 0;
+  let stage2Tick = null;
+  let playerCommittedToStage2Tick = null;
   let completionTick = null;
   let settledTick = null;
+  let contestedStage2Ticks = 0;
+  let playerContactStage2Ticks = 0;
+  let maxStage2Progress = 0;
   let latest = null;
 
-  for (let tick = 1; tick <= TRACE_TICKS; tick += 1) {
+  const step = async () => {
     await tap(page, "o");
+    tick += 1;
     const text = await panelText(page);
     latest = taskState(text);
     invariant(latest, `task state missing during trace ${slot} tick ${tick}`);
-    maxProgress = Math.max(maxProgress, latest.progress);
-    if (latest.contested) contestedTicks += 1;
-    if (latest.playerHostileContact) playerContactTicks += 1;
+
+    if (latest.station === 2) {
+      if (stage2Tick === null) stage2Tick = tick;
+      maxStage2Progress = Math.max(maxStage2Progress, latest.progress);
+      if (latest.contested) contestedStage2Ticks += 1;
+      if (latest.playerHostileContact) playerContactStage2Ticks += 1;
+      if (playerCommittedToStage2Tick === null && latest.committed) {
+        playerCommittedToStage2Tick = tick;
+      }
+    }
     if (completionTick === null && (latest.phase === "COMPLETED" || latest.phase === "SETTLED")) {
       completionTick = tick;
     }
     if (settledTick === null && latest.phase === "SETTLED") settledTick = tick;
+    return { text, state: latest };
+  };
+
+  while (tick < 190 && stage2Tick === null) await step();
+  invariant(stage2Tick !== null, `${slot} never completed Station A`);
+
+  let repositionArrivalTick = null;
+  if (dynamicReposition) {
+    await rightClickWorld(page, canvas, { x: 10.15, y: 5.25 });
+    for (let index = 0; index < 90 && tick < MAX_TICKS; index += 1) {
+      const { text } = await step();
+      if (text.includes("C1 MOVE") && text.includes("ARRIVED")) {
+        repositionArrivalTick = tick;
+        break;
+      }
+    }
+    invariant(repositionArrivalTick !== null, "Dynamic C1 reposition did not arrive before Station B commitment.");
+    await page.locator('[data-order-mode="HOLD"]').click();
+    await waitFor(page, (value) => value.includes("C1 HOLD"), 3_000, "C1 holds second screen");
   }
+
+  await page.keyboard.down("s");
+  for (let index = 0; index < 105 && tick < MAX_TICKS; index += 1) {
+    const { state } = await step();
+    if (state.station === 2 && state.committed) break;
+  }
+  await page.keyboard.up("s");
+  invariant(
+    latest?.station === 2 && latest.committed,
+    `${slot} player failed to commit to Station B: ${JSON.stringify(latest)}`
+  );
+
+  while (tick < MAX_TICKS && settledTick === null) await step();
 
   await button.click();
   await waitFor(page, (value) => value.includes("not recording"), 5_000, `trace ${slot} stops`);
-  return { maxProgress, contestedTicks, playerContactTicks, completionTick, settledTick, final: latest };
+
+  return {
+    totalTicks: tick,
+    stage2Tick,
+    playerCommittedToStage2Tick,
+    repositionArrivalTick,
+    maxStage2Progress,
+    contestedStage2Ticks,
+    playerContactStage2Ticks,
+    completionTick,
+    settledTick,
+    final: latest
+  };
 }
 
 const server = await preview({
@@ -117,6 +172,11 @@ try {
   page.on("requestfailed", (request) => {
     errors.requests.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText ?? "failed"}`);
   });
+
+  await page.addInitScript(({ keyA, keyB }) => {
+    localStorage.removeItem(keyA);
+    localStorage.removeItem(keyB);
+  }, { keyA: KEY_A, keyB: KEY_B });
 
   await page.goto("http://127.0.0.1:4179/?fieldlab=1", {
     waitUntil: "domcontentloaded",
@@ -144,72 +204,75 @@ try {
     page,
     (value) =>
       value.includes("scenario squad-field-lab-task-pressure") &&
-      value.includes("phase IDLE · progress 0/180t"),
+      value.includes("phase IDLE · station 1/2 · progress 0/120t"),
     8_000,
-    "authored task defaults"
+    "two-stage task defaults"
   );
 
-  // A: same task and threat, companion deliberately parked away from the lane.
-  const setup = page.locator('[data-setup-placement="true"]');
-  await setup.click();
-  await dragWorld(page, canvas, { x: 8.2, y: 5 }, { x: 9.0, y: 5.0 });
-  await dragWorld(page, canvas, { x: 10.4, y: 5 }, { x: 7.0, y: 2.0 });
-  await setup.click();
+  await page.locator('[data-order-mode="HOLD"]').click();
+  await waitFor(page, (value) => value.includes("C1 HOLD"), 4_000, "C1 initial screen HOLD");
 
-  await page.getByRole("button", { name: /Hold here/ }).click();
-  await waitFor(page, (value) => value.includes("C1 HOLD"), 4_000, "baseline C1 hold away");
-  await page.locator('[data-experiment-capture="A"]').click();
-  const labelA = page.locator('[data-experiment-slot="A"] .squad-lab-experiment-label');
-  await labelA.fill("task · C1 parked away");
-  await labelA.blur();
-
-  // B: task/threat/player are unchanged. Only C1 is manually authored into a
-  // physical screen position and HOLDs that real body against the approach.
-  await page.locator('[data-experiment-restore="A"]').click();
-  await waitFor(page, (value) => value.includes("phase IDLE · progress 0/180t"), 8_000, "restore A before B");
-  await setup.click();
-  await dragWorld(page, canvas, { x: 7.0, y: 2.0 }, { x: 10.55, y: 5.0 });
-  await setup.click();
-  await page.getByRole("button", { name: /Hold here/ }).click();
-  await waitFor(page, (value) => value.includes("C1 HOLD"), 4_000, "screen C1 hold");
-  await page.locator('[data-experiment-capture="B"]').click();
-  const labelB = page.locator('[data-experiment-slot="B"] .squad-lab-experiment-label');
-  await labelB.fill("task · C1 physical screen");
-  await labelB.blur();
+  for (const slot of ["A", "B"]) {
+    await page.locator(`[data-experiment-capture="${slot}"]`).click();
+    const label = page.locator(`[data-experiment-slot="${slot}"] .squad-lab-experiment-label`);
+    await label.fill(slot === "A" ? "two-stage · static screen" : "two-stage · manual reposition");
+    await label.blur();
+  }
 
   const diff = (await page.locator('[data-experiment-diff="true"]').textContent()) ?? "";
-  invariant(diff.includes("POSITIONS"), `screen strategy did not preserve position delta: ${diff}`);
-  invariant(!diff.includes("SITUATION"), `task/threat situation drifted across A/B: ${diff}`);
+  invariant(diff.includes("identical setup state"), `A/B two-stage starts drifted: ${diff}`);
 
-  const baseline = await runTrace(page, "A");
-  const screen = await runTrace(page, "B");
+  const staticScreen = await runStrategy(page, canvas, "A", false);
+  const dynamicScreen = await runStrategy(page, canvas, "B", true);
 
   invariant(
-    baseline.maxProgress < 180,
-    `No-help baseline unexpectedly completed task: ${JSON.stringify(baseline)}`
+    staticScreen.stage2Tick !== null && dynamicScreen.stage2Tick !== null,
+    "Both strategies must complete Station A before the responsibility transfer."
   );
   invariant(
-    baseline.contestedTicks > 20,
-    `No-help baseline never developed sustained task pressure: ${JSON.stringify(baseline)}`
+    staticScreen.completionTick === null,
+    `Static screen still solved the entire two-stage episode: ${JSON.stringify(staticScreen)}`
   );
   invariant(
-    screen.maxProgress === 180 && screen.completionTick !== null,
-    `Physical screen did not allow task completion: ${JSON.stringify(screen)}`
+    staticScreen.contestedStage2Ticks > 20,
+    `Static screen did not expose material Station B pressure: ${JSON.stringify(staticScreen)}`
   );
   invariant(
-    screen.maxProgress >= baseline.maxProgress + 25,
-    `Screen did not materially change task continuity: A=${baseline.maxProgress} B=${screen.maxProgress}`
+    dynamicScreen.completionTick !== null,
+    `Manual reposition did not restore full two-stage completion: ${JSON.stringify(dynamicScreen)}`
   );
   invariant(
-    screen.settledTick !== null,
-    `Task completed but same-world recovery did not settle inside horizon: ${JSON.stringify(screen)}`
+    dynamicScreen.maxStage2Progress >= staticScreen.maxStage2Progress + 25,
+    `Manual reposition did not materially improve Station B continuity: static=${staticScreen.maxStage2Progress} dynamic=${dynamicScreen.maxStage2Progress}`
+  );
+  invariant(
+    dynamicScreen.settledTick !== null,
+    `Completed two-stage task did not recover to same-world SETTLED: ${JSON.stringify(dynamicScreen)}`
+  );
+
+  const comparison = await waitFor(
+    page,
+    (value) =>
+      value.includes("Trial / Trace A/B") &&
+      value.includes("ORDERS") &&
+      value.includes("C1:MOVE") &&
+      value.includes("C1:HOLD"),
+    5_000,
+    "manual responsibility transfer preserved in trace"
+  );
+  invariant(
+    comparison.includes("C1:MOVE") && comparison.includes("C1:HOLD"),
+    "Trace lost the explicit C1 reposition/handoff chain."
   );
 
   const status = (await page.locator('[data-task-pressure-status="true"]').textContent()) ?? "";
-  invariant(status.includes("SETTLED") && status.includes("progress 100%"), `participant task status not legible: ${status}`);
+  invariant(
+    status.includes("SETTLED") && status.includes("station 2/2") && status.includes("progress 100%"),
+    `participant two-stage task status not legible: ${status}`
+  );
 
   await page.screenshot({
-    path: `${ROOT}/task-pressure-screening.png`,
+    path: `${ROOT}/two-stage-responsibility-transfer.png`,
     type: "png",
     fullPage: true
   });
@@ -220,22 +283,23 @@ try {
   invariant(errors.requests.length === 0, `Request failures: ${errors.requests.join(" | ")}`);
 
   const summary = {
-    schema: "companion-brain-lab-field-lab-task-pressure-v1",
+    schema: "companion-brain-lab-field-lab-task-pressure-v2",
     sourceSha: process.env.GITHUB_SHA ?? process.env.VITE_SOURCE_SHA ?? null,
     question:
-      "Can manual companion physical screening materially change player task continuity under the same visible task/threat problem?",
-    baseline,
-    screen,
+      "Does visible task responsibility transfer break the one-static-screen solution while an explicit manual C1 reposition restores task continuity?",
+    staticScreen,
+    dynamicScreen,
     outcomes: {
-      visibleWorldOwnedTaskProgress: true,
-      baselineDevelopsSustainedContest: true,
-      physicalScreenMateriallyChangesContinuity: true,
-      screenAllowsTaskCompletion: true,
+      bothStrategiesCompleteStationA: true,
+      staticScreenFailsAfterVisibleTransfer: true,
+      manualRepositionMateriallyImprovesStationB: true,
+      manualRepositionCompletesBothStations: true,
       sameWorldRecoverySettles: true,
+      repositionProvenanceSurvivesTrial: true,
       noRepelRequiredForDifference: true
     },
     interpretationBoundary:
-      "Machine evidence for one manual shared-task apparatus only. No teammate feel, behavior-semantic, Owner, or autonomy claim.",
+      "Machine evidence for one manually authored two-stage situation only. No autonomous screening, teammate feel, general behavior semantic, or Owner qualification.",
     errors
   };
   await writeFile(`${ROOT}/summary.json`, JSON.stringify(summary, null, 2), "utf8");
