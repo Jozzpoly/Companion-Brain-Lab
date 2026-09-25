@@ -120,12 +120,13 @@ function aggregate(rows) {
   });
 }
 
-async function recordTrace(page, slot) {
+async function recordTrace(page, slot, onTick = null) {
   const button = page.locator(`[data-trial-toggle="${slot}"]`);
   await button.click();
   await waitFor(page, (value) => value.includes(`recording ${slot}`), 8_000, `trace ${slot} starts`);
   for (let index = 0; index < TRACE_TICKS; index += 1) {
     await tap(page, "o");
+    if (onTick) await onTick(index + 1);
   }
   await waitFor(
     page,
@@ -262,6 +263,18 @@ try {
       expectedDiff: "DYNAMICS"
     },
     {
+      id: "post-contact-compress",
+      label: "diamond 1.00 then 0.80 at t90",
+      apply: async () => {},
+      expectedDiff: null,
+      intervention: async (tick) => {
+        if (tick === 90) {
+          await setNumeric(page, "spacingScale", 0.80);
+        }
+      },
+      interventionDescription: "spacingScale 1.00 → 0.80 after tick 90"
+    },
+    {
       id: "expanded-spacing",
       label: "diamond spacing 1.50",
       apply: async () => {
@@ -328,10 +341,17 @@ try {
     await page.waitForTimeout(70);
 
     const setupDiff = (await page.locator('[data-experiment-diff="true"]').textContent()) ?? "";
-    invariant(
-      setupDiff.includes(variant.expectedDiff),
-      `${variant.id} setup diff missing ${variant.expectedDiff}: ${setupDiff}`
-    );
+    if (variant.expectedDiff) {
+      invariant(
+        setupDiff.includes(variant.expectedDiff),
+        `${variant.id} setup diff missing ${variant.expectedDiff}: ${setupDiff}`
+      );
+    } else {
+      invariant(
+        setupDiff.includes("identical setup state"),
+        `${variant.id} should begin from identical A/B setup state: ${setupDiff}`
+      );
+    }
     invariant(
       !setupDiff.includes("POSITIONS"),
       `${variant.id} changed embodied starting positions: ${setupDiff}`
@@ -344,7 +364,7 @@ try {
     await recordTrace(page, "A");
     const baselineFinal = await panelText(page);
 
-    await recordTrace(page, "B");
+    await recordTrace(page, "B", variant.intervention ?? null);
     const comparisonText = await waitFor(
       page,
       (value) =>
@@ -374,6 +394,7 @@ try {
       id: variant.id,
       label: variant.label,
       setupDiff,
+      intervention: variant.interventionDescription ?? null,
       members: rows,
       exposure,
       totals,
