@@ -57,7 +57,14 @@ describe("Field Lab trial traces", () => {
     expect(companion.maxTargetError).toBeCloseTo(5);
     expect(companion.blockedTicks).toBe(2);
     expect(companion.longestBlockedRun).toBe(2);
+    expect(companion.blockedEpisodes).toBe(1);
+    expect(companion.firstBlockedTickOffset).toBe(2);
+    expect(companion.lastBlockedTickOffset).toBe(3);
     expect(companion.contactTicks).toBe(2);
+    expect(companion.firstContactTickOffset).toBe(2);
+    expect(companion.firstArrivedTickOffset).toBeNull();
+    expect(companion.finalStatus).toBe("MOVING");
+    expect(companion.finalTargetError).toBeCloseTo(3);
   });
 
   it("compares B against A without assigning a winner", () => {
@@ -89,6 +96,14 @@ describe("Field Lab trial traces", () => {
     expect(companion.meanTargetErrorDelta).toBeCloseTo(-4 / 3);
     expect(companion.blockedTicksDelta).toBe(-2);
     expect(companion.longestBlockedRunDelta).toBe(-2);
+    const aSummary = comparison.a.members[0]!;
+    const bSummary = comparison.b.members[0]!;
+    expect(aSummary.firstBlockedTickOffset).toBe(2);
+    expect(aSummary.finalStatus).toBe("BLOCKED");
+    expect(bSummary.firstBlockedTickOffset).toBeNull();
+    expect(bSummary.firstArrivedTickOffset).toBe(3);
+    expect(bSummary.finalStatus).toBe("ARRIVED");
+    expect(bSummary.finalTargetError).toBeCloseTo(1);
   });
 
   it("rejects empty traces rather than manufacturing evidence", () => {
