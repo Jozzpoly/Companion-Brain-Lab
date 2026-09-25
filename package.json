@@ -39,7 +39,8 @@
     "browser:squad-field-lab-experiments": "node scripts/squad-field-lab-experiment-browser-smoke.mjs",
     "browser:squad-field-lab-doorway-discovery": "node scripts/squad-field-lab-doorway-discovery.mjs",
     "browser:squad-field-lab-manual-episode": "node scripts/squad-field-lab-manual-episode-authoring.mjs",
-    "browser:squad-field-lab-task-pressure": "node scripts/squad-field-lab-task-pressure.mjs"
+    "browser:squad-field-lab-task-pressure": "node scripts/squad-field-lab-task-pressure.mjs",
+    "browser:squad-field-lab-task-pressure-strategies": "node scripts/squad-field-lab-task-pressure-strategies.mjs"
   },
   "dependencies": {
     "@dimforge/rapier2d-deterministic-compat": "0.20.0",
