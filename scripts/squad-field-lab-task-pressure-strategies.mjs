@@ -238,16 +238,21 @@ try {
       c1Start: { x: 10.55, y: 6.0 }
     },
     {
+      id: "reachable-poor-hold",
+      description: "C1 begins near the task but off the threat lane and receives no correction.",
+      c1Start: { x: 7.7, y: 4.2 }
+    },
+    {
       id: "early-intercept",
-      description: "C1 starts poorly positioned and receives a MOVE to the screen at t20.",
-      c1Start: { x: 7.0, y: 2.0 },
-      interventions: [{ tick: 20, target: { x: 10.55, y: 5.0 } }]
+      description: "C1 starts at the same reachable poor position and receives MOVE to the screen at t10.",
+      c1Start: { x: 7.7, y: 4.2 },
+      interventions: [{ tick: 10, target: { x: 10.55, y: 5.0 } }]
     },
     {
       id: "late-intercept",
-      description: "C1 starts poorly positioned and receives the same MOVE only at t80.",
-      c1Start: { x: 7.0, y: 2.0 },
-      interventions: [{ tick: 80, target: { x: 10.55, y: 5.0 } }]
+      description: "C1 starts at the same reachable poor position and receives the same MOVE only at t60.",
+      c1Start: { x: 7.7, y: 4.2 },
+      interventions: [{ tick: 60, target: { x: 10.55, y: 5.0 } }]
     }
   ];
 
@@ -260,6 +265,7 @@ try {
   const parked = byId["parked-away"];
   const pre = byId["pre-screen"];
   const off = byId["off-axis-screen"];
+  const reachable = byId["reachable-poor-hold"];
   const early = byId["early-intercept"];
   const late = byId["late-intercept"];
 
@@ -268,8 +274,9 @@ try {
   invariant(pre.c1HostileContactTicks > 20, "pre-screen completion was not supported by material C1↔hostile contact.");
   invariant(off.maxProgress < pre.maxProgress - 20, "off-axis placement was not materially worse than the physical screen.");
   invariant(off.c1HostileContactTicks < pre.c1HostileContactTicks / 4, "off-axis placement still behaved like the central screen.");
-  invariant(early.interventionTicks.includes(20), "early intercept intervention was not issued.");
-  invariant(late.interventionTicks.includes(80), "late intercept intervention was not issued.");
+  invariant(reachable.maxProgress < 180, "reachable poor-position control unexpectedly completed without correction.");
+  invariant(early.interventionTicks.includes(10), "early intercept intervention was not issued.");
+  invariant(late.interventionTicks.includes(60), "late intercept intervention was not issued.");
 
   invariant(await page.locator("#runtime-fault-sentinel").count() === 0, "Runtime fault sentinel visible.");
   invariant(errors.page.length === 0, `Page errors: ${errors.page.join(" | ")}`);
