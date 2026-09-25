@@ -376,6 +376,17 @@ try {
       `${variant.id} temporal comparison`
     );
 
+    if (variant.interventionDescription) {
+      invariant(
+        comparisonText.includes("authored interventions · A 0 · B 1"),
+        `${variant.id} trace did not expose intervention count: ${comparisonText.slice(0, 3500)}`
+      );
+      invariant(
+        comparisonText.includes("B t90 · FORMATION · GROUP · spacingScale · 1.00 → 0.80"),
+        `${variant.id} trace lost authored spacing intervention provenance`
+      );
+    }
+
     const rows = parseComparison(comparisonText);
     invariant(rows.length === 4, `${variant.id} expected four member deltas, got ${rows.length}`);
     const exposure = parseExposure(comparisonText);
