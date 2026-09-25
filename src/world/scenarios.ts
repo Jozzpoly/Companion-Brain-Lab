@@ -143,8 +143,8 @@ export const SCENARIOS: Readonly<Record<ScenarioId, ScenarioSpec>> = {
     width: 16,
     height: 10,
     actors: [
-      actor("player", 8.2, 5),
-      actor("companion", 10.4, 5),
+      actor("player", 9, 3.2),
+      actor("companion", 10.6, 3.9),
       actor("squad-2", 7.4, 3.8),
       actor("squad-3", 7.4, 6.2),
       actor("squad-4", 6.0, 5),
