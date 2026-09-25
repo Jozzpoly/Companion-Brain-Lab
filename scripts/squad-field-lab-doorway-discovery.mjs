@@ -68,6 +68,36 @@ function parseComparison(text) {
   return rows;
 }
 
+function parseTick(value) {
+  return value === "none" ? null : Number(value.slice(0, -1));
+}
+
+function parseMeters(value) {
+  return value === "n/a" ? null : Number(value.slice(0, -1));
+}
+
+function parseExposure(text) {
+  const rows = [];
+  const pattern = /(C[1-4]) exposure · first blocked A (none|\d+t) → B (none|\d+t) · first contact A (none|\d+t) → B (none|\d+t) · block episodes A (\d+) → B (\d+) · final A (DIRECT|MOVING|ARRIVED|BLOCKED|INVALID_TARGET|n\/a) \/ (n\/a|\d+\.\d+m) → B (DIRECT|MOVING|ARRIVED|BLOCKED|INVALID_TARGET|n\/a) \/ (n\/a|\d+\.\d+m)/g;
+  let match;
+  while ((match = pattern.exec(text))) {
+    rows.push({
+      member: match[1],
+      firstBlockedA: parseTick(match[2]),
+      firstBlockedB: parseTick(match[3]),
+      firstContactA: parseTick(match[4]),
+      firstContactB: parseTick(match[5]),
+      blockedEpisodesA: Number(match[6]),
+      blockedEpisodesB: Number(match[7]),
+      finalStatusA: match[8],
+      finalTargetErrorA: parseMeters(match[9]),
+      finalStatusB: match[10],
+      finalTargetErrorB: parseMeters(match[11])
+    });
+  }
+  return rows;
+}
+
 function aggregate(rows) {
   return rows.reduce((result, row) => ({
     pathDelta: result.pathDelta + row.pathDelta,
@@ -296,6 +326,11 @@ try {
 
     const rows = parseComparison(comparisonText);
     invariant(rows.length === 4, `${variant.id} expected four member deltas, got ${rows.length}`);
+    const exposure = parseExposure(comparisonText);
+    invariant(
+      exposure.length === 4,
+      `${variant.id} expected four exposure timing rows, got ${exposure.length}`
+    );
     const totals = aggregate(rows);
     const finalStatuses = {};
     for (const member of ["C1", "C2", "C3", "C4"]) {
@@ -308,6 +343,7 @@ try {
       label: variant.label,
       setupDiff,
       members: rows,
+      exposure,
       totals,
       finalStatuses,
       baselineFinalHadBlocked: baselineFinal.includes("· BLOCKED")
