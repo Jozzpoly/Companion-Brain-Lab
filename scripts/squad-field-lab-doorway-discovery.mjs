@@ -234,8 +234,12 @@ try {
   const results = [];
 
   for (const variant of variants) {
-    await page.locator('[data-trial-clear="A"]').click().catch(() => {});
-    await page.locator('[data-trial-clear="B"]').click().catch(() => {});
+    for (const slot of ["A", "B"]) {
+      const clearTrace = page.locator(`[data-trial-clear="${slot}"]`);
+      if (await clearTrace.isEnabled()) {
+        await clearTrace.click();
+      }
+    }
 
     await page.locator('[data-experiment-restore="A"]').click();
     await waitFor(
