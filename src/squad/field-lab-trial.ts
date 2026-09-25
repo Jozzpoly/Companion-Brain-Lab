@@ -56,7 +56,14 @@ export interface FieldLabTrialMemberSummary {
   meanMotionError: number;
   blockedTicks: number;
   longestBlockedRun: number;
+  blockedEpisodes: number;
+  firstBlockedTickOffset: number | null;
+  lastBlockedTickOffset: number | null;
   contactTicks: number;
+  firstContactTickOffset: number | null;
+  firstArrivedTickOffset: number | null;
+  finalStatus: FieldLabTrialMemberStatus;
+  finalTargetError: number | null;
   directTicks: number;
   authorityTransitions: number;
   orderTransitions: number;
@@ -204,11 +211,17 @@ export function summarizeFieldLabTrial(record: FieldLabTrialRecord): FieldLabTri
 
   const members: FieldLabTrialMemberSummary[] = [];
   for (const memberId of FIELD_LAB_SQUAD_MEMBERS) {
-    const samples = record.frames
-      .map((frame) => frame.members.find((member) => member.memberId === memberId))
-      .filter((sample): sample is FieldLabTrialMemberSample => Boolean(sample));
-    if (samples.length === 0) continue;
+    const timedSamples = record.frames
+      .map((frame) => ({
+        tick: frame.tick,
+        sample: frame.members.find((member) => member.memberId === memberId)
+      }))
+      .filter((entry): entry is { tick: number; sample: FieldLabTrialMemberSample } =>
+        Boolean(entry.sample)
+      );
+    if (timedSamples.length === 0) continue;
 
+    const samples = timedSamples.map((entry) => entry.sample);
     let pathDistance = 0;
     let targetErrorTotal = 0;
     let targetErrorCount = 0;
@@ -217,13 +230,20 @@ export function summarizeFieldLabTrial(record: FieldLabTrialRecord): FieldLabTri
     let blockedTicks = 0;
     let longestBlockedRun = 0;
     let currentBlockedRun = 0;
+    let blockedEpisodes = 0;
+    let firstBlockedTickOffset: number | null = null;
+    let lastBlockedTickOffset: number | null = null;
     let contactTicks = 0;
+    let firstContactTickOffset: number | null = null;
+    let firstArrivedTickOffset: number | null = null;
     let directTicks = 0;
     let authorityTransitions = 0;
     let orderTransitions = 0;
 
     for (let index = 0; index < samples.length; index += 1) {
       const sample = samples[index]!;
+      const sampleTick = timedSamples[index]!.tick;
+      const tickOffset = sampleTick - record.startedAtTick;
       const previous = index > 0 ? samples[index - 1]! : null;
       if (previous) {
         pathDistance += distance(previous.position, sample.position);
@@ -240,12 +260,21 @@ export function summarizeFieldLabTrial(record: FieldLabTrialRecord): FieldLabTri
       motionErrorTotal += sample.motionError;
       if (sample.status === "BLOCKED") {
         blockedTicks += 1;
+        if (currentBlockedRun === 0) blockedEpisodes += 1;
         currentBlockedRun += 1;
         longestBlockedRun = Math.max(longestBlockedRun, currentBlockedRun);
+        if (firstBlockedTickOffset === null) firstBlockedTickOffset = tickOffset;
+        lastBlockedTickOffset = tickOffset;
       } else {
         currentBlockedRun = 0;
       }
-      if (sample.contactCount > 0) contactTicks += 1;
+      if (sample.contactCount > 0) {
+        contactTicks += 1;
+        if (firstContactTickOffset === null) firstContactTickOffset = tickOffset;
+      }
+      if (sample.status === "ARRIVED" && firstArrivedTickOffset === null) {
+        firstArrivedTickOffset = tickOffset;
+      }
       if (sample.authority === "DIRECT") directTicks += 1;
     }
 
@@ -258,7 +287,14 @@ export function summarizeFieldLabTrial(record: FieldLabTrialRecord): FieldLabTri
       meanMotionError: mean(motionErrorTotal, samples.length),
       blockedTicks,
       longestBlockedRun,
+      blockedEpisodes,
+      firstBlockedTickOffset,
+      lastBlockedTickOffset,
       contactTicks,
+      firstContactTickOffset,
+      firstArrivedTickOffset,
+      finalStatus: samples[samples.length - 1]!.status,
+      finalTargetError: samples[samples.length - 1]!.targetError,
       directTicks,
       authorityTransitions,
       orderTransitions
