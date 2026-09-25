@@ -236,10 +236,10 @@ export class SquadFieldLabPanel {
       <section class="squad-field-debug-section" data-tone="${state.taskPressure.phase === "COMPLETED" || state.taskPressure.phase === "SETTLED" ? "success" : state.taskPressure.contested ? "danger" : state.taskPressure.phase === "ACTIVE" ? "warning" : "normal"}">
         <h2>Shared task pressure</h2>
         <div class="squad-field-debug-lines">
-          <div>phase ${state.taskPressure.phase} · progress ${state.taskPressure.progressTicks}/${state.taskPressure.requiredProgressTicks}t</div>
+          <div>phase ${state.taskPressure.phase} · station ${state.taskPressure.stageIndex + 1}/${state.taskPressure.stageCount} · progress ${state.taskPressure.progressTicks}/${state.taskPressure.requiredProgressTicks}t</div>
           <div>player ${state.taskPressure.playerCommitted ? "COMMITTED" : "outside"} · task ${state.taskPressure.contested ? "CONTESTED" : "clear"}</div>
           <div>player↔hostile contact ${state.taskPressure.playerHostileContact ? "YES" : "no"}</div>
-          <div>last progress ${state.taskPressure.lastProgressTick ?? "none"} · completion ${state.taskPressure.completionTick ?? "none"}</div>
+          <div>stage completions ${state.taskPressure.stageCompletionTicks.join(", ") || "none"} · last progress ${state.taskPressure.lastProgressTick ?? "none"} · completion ${state.taskPressure.completionTick ?? "none"}</div>
         </div>
       </section>
       ` : ""}
