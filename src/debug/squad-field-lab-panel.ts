@@ -186,6 +186,15 @@ export class SquadFieldLabPanel {
           <div>A ${state.trials.A ? `${escapeHtml(state.trials.A.label)} · ${state.trials.A.frameCount}t` : "empty"} · B ${state.trials.B ? `${escapeHtml(state.trials.B.label)} · ${state.trials.B.frameCount}t` : "empty"}</div>
           <div>${state.activeTrial ? `recording ${state.activeTrial.slot} · ${state.activeTrial.frameCount} ticks` : "not recording"}</div>
           ${state.trialComparison
+            ? `<div>authored interventions · A ${state.trialComparison.a.events.length} · B ${state.trialComparison.b.events.length}</div>` +
+              [...state.trialComparison.a.events.map((event) => ({ slot: "A", event })),
+               ...state.trialComparison.b.events.map((event) => ({ slot: "B", event }))]
+                .slice(-8)
+                .map(({ slot, event }) =>
+                  `<div class="squad-field-debug-subline">${slot} t${event.tick} · ${event.category} · ${escapeHtml(event.scope)} · ${escapeHtml(event.path)} · ${escapeHtml(event.before)} → ${escapeHtml(event.after)}</div>`
+                ).join("")
+            : ""}
+          ${state.trialComparison
             ? state.trialComparison.members.map((member) => {
                 const targetDelta = member.meanTargetErrorDelta === null
                   ? "n/a"
