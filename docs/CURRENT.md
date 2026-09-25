@@ -1,11 +1,27 @@
 # Companion Brain Lab — CURRENT
 
 Status: **CANONICAL EXECUTION ENTRYPOINT · STRATEGIC RECOVERY / QUESTION-DRIVEN EXECUTION**
-Date: **2026-09-20**
+Date: **2026-09-25**
 
 Read this first before continuing the project.
 
 This file records current Owner intent and execution authority after the 2026-09 retrospective and repository cleanup. Historical plans, deleted branch names, closed PRs and old handoffs remain evidence, but they do not outrank this file or newer explicit Owner feedback.
+
+### Truth precedence — non-negotiable
+
+For product-level, experiential and usability claims, evidence authority is:
+
+`newer explicit Owner feedback / Owner-observed behavior > older Owner interpretation > participant-visible runtime evidence > controlled machine evidence > internal state / documentation / roadmap`.
+
+Consequences:
+
+- a machine PASS may establish only the bounded mechanism it actually measured;
+- internal state, input registration, debug text or causal plumbing cannot upgrade a function the Owner experienced as ineffective;
+- an Owner FAIL remains the product-level status until later Owner evidence evaluates a materially changed experience;
+- later Owner corrections supersede older agent-authored labels, including labels that used the word `PASS`;
+- a local permission to stop investigating one substrate question must not be semantically widened into product acceptance.
+
+This rule exists because the project already produced green mechanisms whose participant experience failed: most clearly the public readiness specimen where `E` and `Q` could register internally while feeling functionally dead to the Owner.
 
 ---
 
@@ -30,27 +46,30 @@ Experiential north star:
 
 ---
 
-## 2. Owner decisions that are CLOSED unless new evidence falsifies them
+## 2. Owner decisions and scoped permissions
 
-### Foundation / movement survival
+### Movement / foundation — scoped closure, not product PASS
 
-Canonical historical verdict:
+Later Owner correction narrows the older `FOUNDATION PASS · REWORK-READY` wording.
 
-> **FOUNDATION PASS · REWORK-READY**
+Canonical current meaning:
 
-The Owner accepted that the movement/foundation substrate was good enough to stop blocking the next stage.
+> **MOVEMENT SUBSTRATE CLOSED-ENOUGH FOR CURRENT RESEARCH · OWNER PERMISSION TO MOVE ON · NOT A PRODUCT/TEAMMATE PASS**
 
-This does **not** mean locomotion is final or sacred. It means the question:
+The Owner had allowed the project to stop spending attention on movement-only qualification and continue toward richer teammate behavior. That historical permission remains useful and should not be reopened casually.
 
-> “is movement good enough that we may move on?”
+It does **not** establish that:
 
-must not be reopened merely because later research generated more instrumentation or more confidence.
+- locomotion/foundation is product-qualified in isolation;
+- current companion behavior is good;
+- the project has delivered the intended teammate;
+- later Owner-observed movement problems must be discounted because an older document said `PASS`.
 
-Reopen it only if a **new concrete failure in richer teammate gameplay** demonstrates that the movement substrate is blocking the next behavior.
+Reopen movement work when a **new concrete failure in richer teammate gameplay** shows that the substrate is materially blocking the active behavior question. Do not reopen it merely to accumulate more movement evidence.
 
 ### Architecture freedom
 
-Foundation PASS bought a known, observable, survivable substrate. It did not freeze:
+The foundation campaign bought a known, observable, survivable substrate. It did not freeze:
 
 - the legacy eight-slot relationship objective;
 - current routing;
@@ -84,7 +103,8 @@ The public OS-PREP-5 movement review was therefore rejected by the Owner as redu
 
 **Interpretation:**
 
-- this is **not** evidence that Foundation PASS was invalid;
+- this does **not** invalidate the scoped historical permission to stop blocking on movement-only research;
+- it **does** invalidate any broader reading of that permission as product/teammate acceptance;
 - this **is** evidence that the project chose the wrong next experimental question;
 - Owner attention must not be spent re-approving already closed decisions without new falsifying evidence.
 
@@ -338,7 +358,7 @@ Only after C1 closes, build the smallest integrated specimen that answers the ch
 
 Rules:
 
-- reuse earned Foundation competence rather than reopening movement by default;
+- reuse earned movement-substrate competence rather than reopening movement by default;
 - transplant donors only when the situation exposes a need;
 - keep World factual authority;
 - keep full causal/debug observability available in the same runtime;
