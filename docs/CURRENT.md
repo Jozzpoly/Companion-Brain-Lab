@@ -1148,3 +1148,76 @@ Status:
 
 > **DOORWAY DISCOVERY MACHINE PASS · GENERALIZATION UNPROVEN · NOT OWNER-READY · AUTONOMY NOT PROMOTED**
 
+---
+
+## 23. Owner-truth recovery and Field Lab scope audit — 2026-09-25
+
+This section supersedes any broader product interpretation of the machine-qualified Field Lab wording above.
+
+### Owner truth
+
+The north star remains a genuinely embodied teammate, not a movement/formations workbench: useful local autonomy without babysitting, continuing embodied intention/history, player agency and cheap correction/direction, combat and pre-combat cooperation, one companion first and later a few, with higher cognition only where it materially improves the live organism.
+
+The Advanced Companion / Squad Field Lab is Owner-confirmed as an important **research direction**. That is not an Owner PASS on the current implementation.
+
+The public readiness specimen's Owner FAIL remains product truth. Machine evidence that E/Q input or internal state existed did not make those controls useful or perceptible. The same evidence rule applies to every Field Lab claim.
+
+### Current implementation truth
+
+The current runtime is materially stronger than a narrow command demo, but its expressive center is still mostly **movement / formation / spatial authoring**:
+
+- real 1–4 embodied squad bodies;
+- selection, focus and direct puppeteering;
+- FOLLOW / HOLD / world-space MOVE;
+- editable slot geometry, presets, spacing and orientation;
+- group/per-selected slot tolerance, responsiveness and slowdown radius;
+- OPEN / DOORWAY / PILLAR / MIXED layouts plus the coarse PRESSURE apparatus;
+- persistent setup A/B, structural diff and exact restore;
+- bounded temporal Trial / Trace with intervention provenance;
+- selection-aware causal debug.
+
+Materially under the Owner-confirmed Advanced Field Lab vision remain broader behavior authoring, richer intent/constraint dimensions, a genuinely game-like multi-beat cooperative situation, broader world/situation authoring, and enough expressive reach to discover non-pre-named squad behavior routinely.
+
+Canonical implementation status:
+
+> **MACHINE-QUALIFIED SQUAD MOVEMENT / FORMATION AUTHORING + EXPERIMENT SUBSTRATE · BROAD BEHAVIOR LAB INCOMPLETE · NOT OWNER-QUALIFIED**
+
+### Recovery action: explicit setup / authoring plane
+
+The audit found a direct mismatch with the existing Field Lab doctrine: the campaign specified authoring actor starting positions while paused/setup mode, but the live surface had no direct setup-placement interaction.
+
+Source `6e8a8d4eea8e3122d83a739892536ceffe5ee4e7` closes that specific gap:
+
+- explicit **Setup placement** plane;
+- enabling it pauses the World;
+- the player or any active squad body can be dragged to an authored starting position;
+- release reconstructs the same Rapier World with that position as an initial condition rather than adding a runtime teleport authority;
+- existing A/B setup capture already stores and restores those positions;
+- leaving pause exits setup placement, keeping setup authoring separate from live orders/direct control.
+
+Diagnostic machine evidence:
+
+`squad-field-lab-browser #97 · run 36143274530 · SUCCESS`
+
+- 188/188 test files and 744/744 tests PASS;
+- production build PASS;
+- broad Field Lab rehearsal PASS;
+- persistent A/B + temporal-trial rehearsal PASS;
+- doorway discovery regression PASS;
+- browser evidence reports `pausedSetupPlacementAuthorsRealBodyStart: true`;
+- no page / console / request errors.
+
+This establishes only that the mechanism works and composes with the existing substrate. It does **not** establish good UX, Owner usefulness or product quality.
+
+### Strategic correction
+
+Do not continue the doorway/deformable-envelope hypothesis merely because it has accumulated machine evidence. It remains a local donor/hypothesis.
+
+Near-term Field Lab work should be selected by:
+
+> **What missing expressive capability most prevents the Owner from freely constructing and comparing meaningful companion/squad behavior?**
+
+Prefer manual authoring and changed-condition situations over inventing autonomous states. Let recurring Owner-authored patterns earn candidate semantics.
+
+The next research pressure should use the broader setup/authoring substrate to attempt a manually authored **multi-beat cooperative behavior** and discover what the lab cannot yet express. This is not an Owner gate.
+
