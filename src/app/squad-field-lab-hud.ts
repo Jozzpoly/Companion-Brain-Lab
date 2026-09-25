@@ -27,6 +27,7 @@ type DynamicsScope = "GROUP" | "SELECTED";
 export interface SquadFieldLabHudCallbacks {
   onSituation(situation: FieldLabSituation): void;
   onLayout(layout: FieldLabLayout): void;
+  onToggleSetupPlacement(): void;
   onSquadSize(count: number): void;
   onSelect(memberId: SquadMemberId, additive: boolean): void;
   onSelectAll(): void;
@@ -54,6 +55,8 @@ export interface SquadFieldLabHudState {
   control: FieldLabSquadControlSnapshot;
   situation: FieldLabSituation;
   layout: FieldLabLayout;
+  paused: boolean;
+  setupPlacement: boolean;
   episode: CooperativeEpisodeSnapshot | null;
   latestEpisodeOutcome: CooperativeEpisodeOutcome;
   experiments: Readonly<Partial<Record<FieldLabExperimentSlot, {
@@ -184,6 +187,8 @@ export class SquadFieldLabHud {
   private readonly pressureStatus: HTMLElement;
   private readonly situationButtons = new Map<FieldLabSituation, HTMLButtonElement>();
   private readonly layoutButtons = new Map<FieldLabLayout, HTMLButtonElement>();
+  private readonly setupPlacementButton: HTMLButtonElement;
+  private readonly setupPlacementHint: HTMLElement;
   private readonly spacing: ParameterEditor;
   private readonly responsiveness: ParameterEditor;
   private readonly tolerance: ParameterEditor;
@@ -241,6 +246,20 @@ export class SquadFieldLabHud {
       layoutRow.append(control);
       this.layoutButtons.set(layout, control);
     }
+
+    const setupHeading = document.createElement("div");
+    setupHeading.className = "squad-lab-section-title";
+    setupHeading.textContent = "Setup authoring";
+
+    this.setupPlacementButton = button("Setup placement: OFF");
+    this.setupPlacementButton.dataset.setupPlacement = "true";
+    this.setupPlacementButton.addEventListener("click", () => callbacks.onToggleSetupPlacement());
+
+    this.setupPlacementHint = document.createElement("div");
+    this.setupPlacementHint.className = "squad-lab-inline-hint";
+    this.setupPlacementHint.dataset.setupPlacementHint = "true";
+    this.setupPlacementHint.textContent =
+      "Enable to pause World and drag YOU / squad bodies into authored starting positions.";
 
     const sizeHeading = document.createElement("div");
     sizeHeading.className = "squad-lab-section-title";
@@ -509,6 +528,9 @@ export class SquadFieldLabHud {
       situationRow,
       layoutHeading,
       layoutRow,
+      setupHeading,
+      this.setupPlacementButton,
+      this.setupPlacementHint,
       sizeHeading,
       sizeRow,
       sub,
@@ -548,6 +570,16 @@ export class SquadFieldLabHud {
     for (const [layout, entry] of this.layoutButtons) {
       entry.classList.toggle("is-active", state.layout === layout);
     }
+
+    this.setupPlacementButton.classList.toggle("is-active", state.setupPlacement);
+    this.setupPlacementButton.textContent = state.setupPlacement
+      ? "Setup placement: ON"
+      : "Setup placement: OFF";
+    this.setupPlacementHint.textContent = state.setupPlacement
+      ? "SETUP plane · World paused · drag YOU / squad bodies; release commits the authored start."
+      : state.paused
+        ? "World paused · enable setup placement to author starting body positions."
+        : "Enable setup placement to pause World and author starting body positions.";
 
     for (const [memberId, entry] of this.rosterButtons) {
       const active = control.activeMembers.includes(memberId);
