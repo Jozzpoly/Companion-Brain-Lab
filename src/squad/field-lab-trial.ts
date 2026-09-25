@@ -10,6 +10,7 @@ import type { ActorSnapshot, SquadMemberId, Vec2 } from "../world/types";
 export const FIELD_LAB_TRIAL_SCHEMA = "companion-field-lab-trial-v1" as const;
 export const FIELD_LAB_TRIAL_MAX_FRAMES = 7_200;
 export type FieldLabTrialSlot = "A" | "B";
+export type FieldLabTrialEventCategory = "FORMATION" | "DYNAMICS" | "ORDERS" | "AUTHORITY";
 export type FieldLabTrialMemberStatus =
   | "DIRECT"
   | "MOVING"
@@ -31,6 +32,15 @@ export interface FieldLabTrialMemberSample {
   status: FieldLabTrialMemberStatus;
 }
 
+export interface FieldLabTrialEvent {
+  tick: number;
+  category: FieldLabTrialEventCategory;
+  scope: string;
+  path: string;
+  before: string;
+  after: string;
+}
+
 export interface FieldLabTrialFrame {
   tick: number;
   playerPosition: Vec2;
@@ -45,6 +55,7 @@ export interface FieldLabTrialRecord {
   startedAtTick: number;
   endedAtTick: number;
   frames: readonly FieldLabTrialFrame[];
+  events: readonly FieldLabTrialEvent[];
 }
 
 export interface FieldLabTrialMemberSummary {
@@ -75,6 +86,7 @@ export interface FieldLabTrialSummary {
   startedAtTick: number;
   endedAtTick: number;
   frameCount: number;
+  events: readonly FieldLabTrialEvent[];
   members: readonly FieldLabTrialMemberSummary[];
   cooperativeOutcomes: Readonly<Partial<Record<CooperativeEpisodeOutcome, number>>>;
 }
@@ -181,6 +193,7 @@ export function createFieldLabTrialRecord(input: {
   label: string;
   startedAtTick: number;
   frames: readonly FieldLabTrialFrame[];
+  events?: readonly FieldLabTrialEvent[];
 }): FieldLabTrialRecord {
   if (input.frames.length === 0) {
     throw new Error("Field Lab trial requires at least one recorded frame.");
@@ -192,7 +205,8 @@ export function createFieldLabTrialRecord(input: {
     label: input.label,
     startedAtTick: input.startedAtTick,
     endedAtTick: frames[frames.length - 1]!.tick,
-    frames
+    frames,
+    events: (input.events ?? []).map((event) => ({ ...event }))
   };
 }
 
@@ -307,6 +321,7 @@ export function summarizeFieldLabTrial(record: FieldLabTrialRecord): FieldLabTri
     startedAtTick: record.startedAtTick,
     endedAtTick: record.endedAtTick,
     frameCount: record.frames.length,
+    events: record.events.map((event) => ({ ...event })),
     members,
     cooperativeOutcomes
   };
