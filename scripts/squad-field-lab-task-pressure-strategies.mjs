@@ -1,3 +1,7 @@
+// HISTORICAL SINGLE-ZONE FALSIFIER.
+// Qualified at 4f468882a18f47c25c78c12fe781196862a752c6 / workflow #115.
+// Retained as donor evidence only; current task-pressure contract is two-stage and this script is not an active gate.
+
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium } from "playwright-chromium";
 import { preview } from "vite";
