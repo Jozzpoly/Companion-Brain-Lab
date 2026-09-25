@@ -163,7 +163,10 @@ try {
   await setNumeric(page, "responsiveness", 0.82);
   await setNumeric(page, "slotTolerance", 0.18);
   await setNumeric(page, "slowdownRadius", 0.72);
-  await page.locator('[data-clear-dynamics-overrides="true"]').click();
+  const clearOverrides = page.locator('[data-clear-dynamics-overrides="true"]');
+  if (await clearOverrides.isEnabled()) {
+    await clearOverrides.click();
+  }
 
   const box = await canvas.boundingBox();
   invariant(box, "Canvas bounding box unavailable.");
