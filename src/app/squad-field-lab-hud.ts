@@ -720,7 +720,7 @@ export class SquadFieldLabHud {
           ? "warning"
           : "normal";
     this.taskStatus.textContent = task
-      ? `${task.phase} · progress ${taskProgress}% · ${task.playerCommitted ? "YOU committed" : "YOU outside"} · ${task.contested ? "CONTESTED" : "clear"}`
+      ? `${task.phase} · station ${task.stageIndex + 1}/${task.stageCount} · progress ${taskProgress}% · ${task.playerCommitted ? "YOU committed" : "YOU outside"} · ${task.contested ? "CONTESTED" : "clear"}`
       : "task pressure inactive";
 
     this.status.textContent =
