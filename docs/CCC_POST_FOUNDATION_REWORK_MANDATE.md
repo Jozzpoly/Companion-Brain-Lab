@@ -4,6 +4,8 @@ Status: **PLANNING CORRECTION · APPLIES TO THE CCC CAMPAIGN**
 
 Foundation checkpoint:
 
+> **Historical vocabulary note (2026-09-25):** this document preserves the period term `Foundation PASS`, but canonical current truth reads it narrowly as **movement substrate closed-enough / Owner permission to move on**, not as product, teammate-feel or general gameplay qualification. Later explicit Owner feedback and Owner-observed behavior outrank this historical label.
+
 `681c8fd3c2fd9b460d59a65148fe066dd65ca2cb`
 
 ## Why this clarification exists
