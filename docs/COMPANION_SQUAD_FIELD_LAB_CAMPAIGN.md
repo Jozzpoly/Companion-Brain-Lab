@@ -756,3 +756,56 @@ Status:
 
 > **DOORWAY DISCOVERY MACHINE PASS · GEOMETRY + TIMING ARE MATERIAL · GENERALIZATION UNPROVEN · NOT OWNER-READY · AUTONOMY NOT PROMOTED**
 
+---
+
+## 23. Post-recovery scope audit — 2026-09-25
+
+Later Owner correction makes the evidence hierarchy explicit: product/experiential truth comes from Owner-observed behavior and later explicit Owner feedback, not from the quantity of green machine evidence. Existing machine-qualified Field Lab claims below therefore remain bounded diagnostic claims only.
+
+The Owner-confirmed direction is still the broad Advanced Companion / Squad Field Lab described in sections 2–17. Current implementation has not yet reached that full expressive target.
+
+### Current live scope
+
+Machine-qualified runtime `6e8a8d4eea8e3122d83a739892536ceffe5ee4e7` currently provides:
+
+- real 1–4 squad bodies;
+- selection/focus/direct puppeteering;
+- FOLLOW / HOLD / world-space MOVE;
+- editable formation slots, spacing and orientation;
+- three scoped movement-dynamics variables;
+- several spatial layouts plus coarse cooperative pressure;
+- persistent A/B setup capture/restore;
+- Trial / Trace and authored intervention provenance;
+- causal debug;
+- an explicit paused **Setup placement** plane for authoring real player/squad starting positions.
+
+The setup plane was added because it was already part of the campaign's intended authoring model but missing from the actual surface. Browser evidence verifies that dragging C2 in setup mode reconstructs the real World body at the authored start and that the position composes with the existing experiment workflow. Full run `36143274530` is green with 188/188 test files and 744/744 tests.
+
+This is machine evidence for the authoring seam only.
+
+### Scope gap
+
+Despite the breadth above, the current surface remains predominantly a **movement / formation laboratory**. It does not yet justify the broader product-sounding interpretation “advanced behavior lab”.
+
+In particular, the live vocabulary is still thin outside spatial motion:
+
+- behavior/intent authoring beyond FOLLOW/HOLD/MOVE is largely absent;
+- the existing dynamics controls are motor/slot controls, not a rich behavioral vocabulary;
+- PRESSURE/REPEL remains apparatus-like compared with the desired continuous cooperative episode;
+- several candidate behavior dimensions in section 8 are still only hypotheses;
+- the Owner has not yet judged the current instrument as useful/fun/expressive enough for broad exploration.
+
+Therefore current implementation status is:
+
+> **MACHINE-QUALIFIED SQUAD MOVEMENT / FORMATION AUTHORING + EXPERIMENT SUBSTRATE · BROAD BEHAVIOR LAB INCOMPLETE · NOT OWNER-QUALIFIED · AUTONOMY NOT PROMOTED**
+
+### Strategy after recovery
+
+Do not deepen Trial/Trace, doorway compression or any candidate autonomous formation semantic by inertia.
+
+Use the Field Lab as intended: let manual authorship expose the missing vocabulary.
+
+The next high-information pressure is to try constructing a **manual multi-beat cooperative behavior** with the existing setup, squad, orders, direct control and experiment tooling. Observe where the Owner-authored sequence cannot be expressed cleanly. Those failures should determine whether the next addition is a new intent primitive, scenario affordance, behavior parameter, temporal authoring mechanism or something else.
+
+Only repeated useful authored patterns become candidates for later autonomy. No new Owner gate is justified by this machine qualification.
+
