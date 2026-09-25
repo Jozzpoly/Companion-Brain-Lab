@@ -93,7 +93,8 @@ try {
     waitUntil: "domcontentloaded",
     timeout: 30_000
   });
-  await page.locator("#game-root canvas").waitFor({ state: "visible", timeout: 15_000 });
+  const canvas = page.locator("#game-root canvas");
+  await canvas.waitFor({ state: "visible", timeout: 15_000 });
   await waitFor(
     page,
     (value) => value.includes("scenario squad-field-lab") && value.includes("layout MIXED"),
@@ -116,6 +117,49 @@ try {
   const storedA = await page.evaluate((key) => localStorage.getItem(key), KEY_A);
   invariant(storedA && storedA.includes("baseline mixed"), "Setup A was not persisted to localStorage.");
   await shot(page, "00-captured-a.png");
+
+  // Setup / authoring is a distinct control plane. Without stepping the World,
+  // drag a real C2 body into a new authored starting position and prove the
+  // reconstructed Rapier body actually uses it.
+  const setupPlacement = page.locator('[data-setup-placement="true"]');
+  await setupPlacement.click();
+  invariant(
+    (await setupPlacement.textContent())?.includes("ON"),
+    "Setup placement did not become active."
+  );
+  const setupBox = await canvas.boundingBox();
+  invariant(setupBox, "Canvas bounding box unavailable for setup placement.");
+  const setupFrom = internalCanvasPoint(setupBox, { x: 4.8, y: 3.8 });
+  const setupToWorld = { x: 5.55, y: 3.25 };
+  const setupTo = internalCanvasPoint(setupBox, setupToWorld);
+  await page.mouse.move(setupFrom.x, setupFrom.y);
+  await page.mouse.down();
+  await page.mouse.move(setupTo.x, setupTo.y, { steps: 8 });
+  await page.mouse.up();
+
+  const setupPlaced = await waitFor(
+    page,
+    (value) =>
+      value.includes("setup place C2") &&
+      value.includes("Focused · C2") &&
+      value.includes("PAUSED"),
+    6_000,
+    "paused setup body placement"
+  );
+  const setupPlacedPosition = bodyPosition(setupPlaced);
+  invariant(setupPlacedPosition, "C2 body position unavailable after setup placement.");
+  invariant(
+    Math.hypot(
+      setupPlacedPosition.x - setupToWorld.x,
+      setupPlacedPosition.y - setupToWorld.y
+    ) < 0.14,
+    `Setup placement did not author the real C2 start: ${JSON.stringify(setupPlacedPosition)}`
+  );
+  await setupPlacement.click();
+  invariant(
+    (await setupPlacement.textContent())?.includes("OFF"),
+    "Setup placement did not exit cleanly."
+  );
 
   // Perturb multiple independent experimental axes before capturing B:
   // selection/focus, physical position, order, layout and formation dynamics.
@@ -273,7 +317,6 @@ try {
   );
   invariant(scopedDiff.includes("memberDynamics.squad-2.responsiveness"), "A/B diff lost C2 dynamics provenance.");
 
-  const canvas = page.locator("#game-root canvas");
   const box = await canvas.boundingBox();
   invariant(box, "Canvas bounding box unavailable for dynamics motor proof.");
   const farTarget = internalCanvasPoint(box, { x: 12.3, y: 7.0 });
@@ -477,6 +520,7 @@ try {
     outcomes: {
       capturePersistsAcrossReload: true,
       labelsPersistAcrossReload: true,
+      pausedSetupPlacementAuthorsRealBodyStart: true,
       structuralDiffIsVisible: true,
       diffSeparatesMultipleExperimentalAxes: true,
       restoreARecoversAuthoredSetup: true,
