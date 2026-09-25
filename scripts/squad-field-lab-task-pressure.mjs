@@ -259,16 +259,16 @@ try {
     `Static screen did not expose material Station B pressure: ${JSON.stringify(staticScreen)}`
   );
   invariant(
-    anticipatoryScreen.completionTick !== null,
-    `Anticipatory reposition did not restore full two-stage completion: ${JSON.stringify(anticipatoryScreen)}`
+    anticipatoryScreen.completionTick === null,
+    `Anticipatory reposition unexpectedly solved the two-stage episode: ${JSON.stringify(anticipatoryScreen)}`
   );
   invariant(
-    anticipatoryScreen.maxStage2Progress >= staticScreen.maxStage2Progress + 25,
-    `Anticipatory reposition did not materially improve Station B continuity: static=${staticScreen.maxStage2Progress} anticipatory=${anticipatoryScreen.maxStage2Progress}`
+    anticipatoryScreen.contestedStage2Ticks > 20,
+    `Anticipatory reposition did not expose sustained Station B pressure: ${JSON.stringify(anticipatoryScreen)}`
   );
   invariant(
-    anticipatoryScreen.settledTick !== null,
-    `Completed two-stage task did not recover to same-world SETTLED: ${JSON.stringify(anticipatoryScreen)}`
+    anticipatoryScreen.maxStage2Progress <= staticScreen.maxStage2Progress + 10,
+    `Anticipatory reposition materially escaped the geometry failure and needs a new interpretation: static=${staticScreen.maxStage2Progress} anticipatory=${anticipatoryScreen.maxStage2Progress}`
   );
 
   const comparison = await waitFor(
@@ -288,8 +288,8 @@ try {
 
   const status = (await page.locator('[data-task-pressure-status="true"]').textContent()) ?? "";
   invariant(
-    status.includes("SETTLED") && status.includes("station 2/2") && status.includes("progress 100%"),
-    `participant two-stage task status not legible: ${status}`
+    status.includes("ACTIVE") && status.includes("station 2/2") && status.includes("CONTESTED"),
+    `participant two-stage rejection state not legible: ${status}`
   );
 
   await page.screenshot({
@@ -307,21 +307,21 @@ try {
     schema: "companion-brain-lab-field-lab-task-pressure-v2",
     sourceSha: process.env.GITHUB_SHA ?? process.env.VITE_SOURCE_SHA ?? null,
     question:
-      "Does visible task responsibility transfer break the one-static-screen solution while an anticipatory manual C1 reposition at a visible Station A progress cue restores Station B continuity?",
+      "Does visible task responsibility transfer create a robust manual one-companion handoff, or does Shared Task Under Pressure remain dominated by brittle collision geometry?",
     staticScreen,
     anticipatoryScreen,
     outcomes: {
       bothStrategiesCompleteStationA: true,
       staticScreenFailsAfterVisibleTransfer: true,
       reactivePostTransferRepositionWasPreviouslyFalsified: true,
-      anticipatoryRepositionMateriallyImprovesStationB: true,
-      anticipatoryRepositionCompletesBothStations: true,
-      sameWorldRecoverySettles: true,
+      anticipatoryVisibleCueRepositionAlsoFails: true,
+      bothManualHandoffAttemptsRemainSustainedContest: true,
+      twoStageSituationRejectedForBehaviorDiscovery: true,
       repositionProvenanceSurvivesTrial: true,
       noRepelRequiredForDifference: true
     },
     interpretationBoundary:
-      "Machine evidence for one manually authored two-stage situation only. The anticipatory cue is visible task progress, not hidden timing. No autonomous screening, teammate feel, general behavior semantic, or Owner qualification.",
+      "Negative machine evidence: the two-stage rework breaks the single static-screen trick but both reactive and visible-cue anticipatory one-companion handoffs fail to restore Station B. Treat this situation as geometry-dominated and rejected for current behavior-discovery purposes. No behavior semantic, teammate feel, autonomy, or Owner qualification.",
     errors
   };
   await writeFile(`${ROOT}/summary.json`, JSON.stringify(summary, null, 2), "utf8");
