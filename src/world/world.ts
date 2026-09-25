@@ -21,6 +21,12 @@ import {
   type CooperativeEpisodeRules,
   type CooperativeEpisodeSnapshot
 } from "./cooperative-episode-contract";
+import {
+  initialTaskPressureSnapshot,
+  resolveTaskPressureAfterPhysics,
+  type TaskPressureRules,
+  type TaskPressureSnapshot
+} from "./task-pressure-contract";
 import { SharedPressureLoop, type SharedPressureSnapshot } from "./shared-pressure";
 import {
   initialSharedDangerSnapshot,
@@ -79,6 +85,15 @@ export const SQUAD_FIELD_LAB_PRESSURE_RULES: CooperativeEpisodeRules = {
   homeArrivalRange: 0.2
 };
 
+export const SQUAD_FIELD_LAB_TASK_PRESSURE_RULES: TaskPressureRules = {
+  taskCenter: { x: 9, y: 5 },
+  taskRadius: 0.85,
+  contestRadius: 1.05,
+  requiredProgressTicks: 180,
+  hostileHome: { x: 13.4, y: 5 },
+  hostileHomeArrivalRange: 0.22
+};
+
 export interface WorldSituationStepInput {
   motionIntents: readonly MotionIntent[];
   actionAttempts?: readonly WorldActionAttempt[];
@@ -94,6 +109,7 @@ export interface WorldSituationStepResult {
   cooperativeEpisodeActionOutcomes: readonly CooperativeEpisodeActionOutcome[];
   cooperativeEpisode: CooperativeEpisodeSnapshot | null;
   cooperativeEpisodeOutcome: CooperativeEpisodeOutcome;
+  taskPressure: TaskPressureSnapshot | null;
 }
 
 /** Public World-boundary timebase truth. Coordination must not import Rapier internals directly. */
@@ -130,6 +146,8 @@ export class LabWorld {
   private sharedDangerValue: SharedDangerSnapshot | null;
   private cooperativeEpisodeValue: CooperativeEpisodeSnapshot | null;
   private readonly cooperativeEpisodeRulesValue: CooperativeEpisodeRules | null;
+  private taskPressureValue: TaskPressureSnapshot | null;
+  private readonly taskPressureRulesValue: TaskPressureRules | null;
 
   private constructor(
     private readonly scenarioSpecValue: ScenarioSpec,
@@ -146,6 +164,13 @@ export class LabWorld {
           : null;
     this.cooperativeEpisodeValue = this.cooperativeEpisodeRulesValue
       ? initialCooperativeEpisodeSnapshot(this.cooperativeEpisodeRulesValue)
+      : null;
+    this.taskPressureRulesValue =
+      scenarioSpecValue.id === "squad-field-lab-task-pressure"
+        ? SQUAD_FIELD_LAB_TASK_PRESSURE_RULES
+        : null;
+    this.taskPressureValue = this.taskPressureRulesValue
+      ? initialTaskPressureSnapshot(this.taskPressureRulesValue)
       : null;
   }
 
@@ -197,6 +222,10 @@ export class LabWorld {
       : null;
   }
 
+  taskPressure(): TaskPressureSnapshot | null {
+    return this.taskPressureValue ? { ...this.taskPressureValue } : null;
+  }
+
   directTraversal(actorId: ActorId, target: Vec2): DirectTraversalResult {
     return this.physical.directTraversal(actorId, target);
   }
@@ -237,6 +266,7 @@ export class LabWorld {
     if (
       this.scenarioSpecValue.id !== "squad-field-lab" &&
       this.scenarioSpecValue.id !== "squad-field-lab-pressure" &&
+      this.scenarioSpecValue.id !== "squad-field-lab-task-pressure" &&
       experimentalSquadMotionIntents.length > 0
     ) {
       throw new Error("Experimental squad motion is confined to Squad Field Lab scenarios.");
@@ -250,7 +280,8 @@ export class LabWorld {
     const before = this.snapshot();
     const worldDrivenIntents = [
       ...this.sharedDangerWorldMotion(before),
-      ...this.cooperativeEpisodeWorldMotion(before)
+      ...this.cooperativeEpisodeWorldMotion(before),
+      ...this.taskPressureWorldMotion(before)
     ];
     const actors = this.physical.step(
       input.motionIntents,
@@ -316,6 +347,19 @@ export class LabWorld {
       cooperativeEpisodeOutcome = resolved.episodeOutcome;
     }
 
+    if (this.taskPressureValue && this.taskPressureRulesValue) {
+      const player = body(after, "player");
+      const hostile = body(after, "hostile");
+      this.taskPressureValue = resolveTaskPressureAfterPhysics({
+        observationTick: before.tick,
+        before: this.taskPressureValue,
+        playerPosition: player.position,
+        hostilePosition: hostile.position,
+        playerContacts: player.contacts,
+        rules: this.taskPressureRulesValue
+      });
+    }
+
     // Legacy Stage B evidence remains world-owned but is disabled for the
     // shared-danger scenario. It must not become the new situation authority.
     this.sharedPressureLoop.observe(after);
@@ -337,7 +381,8 @@ export class LabWorld {
       episodeOutcome,
       cooperativeEpisodeActionOutcomes,
       cooperativeEpisode: this.cooperativeEpisode(),
-      cooperativeEpisodeOutcome
+      cooperativeEpisodeOutcome,
+      taskPressure: this.taskPressure()
     };
   }
 
@@ -360,6 +405,30 @@ export class LabWorld {
       ? { x: delta.x / length, y: delta.y / length }
       : { x: 0, y: 0 };
     return [{ bodyId: "hostile", move }];
+  }
+
+  private taskPressureWorldMotion(snapshot: WorldSnapshot): PhysicalWorldBodyMotionIntent[] {
+    const state = this.taskPressureValue;
+    const rules = this.taskPressureRulesValue;
+    if (!state || !rules) return [];
+
+    if (state.phase === "IDLE" || state.phase === "SETTLED") {
+      return [{ bodyId: "hostile", move: { x: 0, y: 0 } }];
+    }
+
+    const hostile = body(snapshot, "hostile");
+    const target = state.phase === "COMPLETED" ? rules.hostileHome : rules.taskCenter;
+    const delta = {
+      x: target.x - hostile.position.x,
+      y: target.y - hostile.position.y
+    };
+    const length = Math.hypot(delta.x, delta.y);
+    return [{
+      bodyId: "hostile",
+      move: length > 1e-9
+        ? { x: delta.x / length, y: delta.y / length }
+        : { x: 0, y: 0 }
+    }];
   }
 
   private cooperativeEpisodeWorldMotion(snapshot: WorldSnapshot): PhysicalWorldBodyMotionIntent[] {
