@@ -190,7 +190,20 @@ export class SquadFieldLabPanel {
                 const targetDelta = member.meanTargetErrorDelta === null
                   ? "n/a"
                   : `${signed(member.meanTargetErrorDelta)}m`;
-                return `<div><strong>${memberLabel(member.memberId)}</strong> · Δpath ${signed(member.pathDistanceDelta)}m · Δtarget ${targetDelta} · ΔmotionErr ${signed(member.meanMotionErrorDelta)} · blocked ${signed(member.blockedTicksDelta, 0)}t / longest ${signed(member.longestBlockedRunDelta, 0)}t · contacts ${signed(member.contactTicksDelta, 0)}t · authority transitions ${signed(member.authorityTransitionsDelta, 0)} · order transitions ${signed(member.orderTransitionsDelta, 0)}</div>`;
+                const a = state.trialComparison!.a.members.find(
+                  (summary) => summary.memberId === member.memberId
+                );
+                const b = state.trialComparison!.b.members.find(
+                  (summary) => summary.memberId === member.memberId
+                );
+                const eventTick = (value: number | null | undefined) =>
+                  value === null || value === undefined ? "none" : `${value}t`;
+                const targetError = (value: number | null | undefined) =>
+                  value === null || value === undefined ? "n/a" : `${fmt(value)}m`;
+                return (
+                  `<div><strong>${memberLabel(member.memberId)}</strong> · Δpath ${signed(member.pathDistanceDelta)}m · Δtarget ${targetDelta} · ΔmotionErr ${signed(member.meanMotionErrorDelta)} · blocked ${signed(member.blockedTicksDelta, 0)}t / longest ${signed(member.longestBlockedRunDelta, 0)}t · contacts ${signed(member.contactTicksDelta, 0)}t · authority transitions ${signed(member.authorityTransitionsDelta, 0)} · order transitions ${signed(member.orderTransitionsDelta, 0)}</div>` +
+                  `<div class="squad-field-debug-subline">${memberLabel(member.memberId)} exposure · first blocked A ${eventTick(a?.firstBlockedTickOffset)} → B ${eventTick(b?.firstBlockedTickOffset)} · first contact A ${eventTick(a?.firstContactTickOffset)} → B ${eventTick(b?.firstContactTickOffset)} · block episodes A ${a?.blockedEpisodes ?? 0} → B ${b?.blockedEpisodes ?? 0} · final A ${a?.finalStatus ?? "n/a"} / ${targetError(a?.finalTargetError)} → B ${b?.finalStatus ?? "n/a"} / ${targetError(b?.finalTargetError)}</div>`
+                );
               }).join("")
             : "<div>run both traces to compare temporal outcomes</div>"}
         </div>
