@@ -49,7 +49,7 @@ export interface FieldLabExperimentDiff {
   categories: readonly FieldLabExperimentDiffCategory[];
 }
 
-const SITUATIONS = ["TRAINING", "PRESSURE"] as const;
+const SITUATIONS = ["TRAINING", "PRESSURE", "TASK_PRESSURE"] as const;
 const LAYOUTS = ["OPEN", "DOORWAY", "PILLAR", "MIXED"] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
