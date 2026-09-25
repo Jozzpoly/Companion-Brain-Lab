@@ -152,7 +152,7 @@ export const SCENARIOS: Readonly<Record<ScenarioId, ScenarioSpec>> = {
     ],
     obstacles: FIELD_LAB_LAYOUT_OBSTACLES.MIXED
   }
-};};
+};
 
 export function scenario(id: ScenarioId): ScenarioSpec {
   return SCENARIOS[id];
@@ -193,12 +193,25 @@ export function squadFieldLabScenario(
         ? "squad-field-lab-pressure"
         : "squad-field-lab"
   ];
+  const authoredDefaultPosition = (id: SquadMemberId | "player"): Vec2 => {
+    const baseActor = base.actors.find((candidate) => candidate.id === id);
+    if (!baseActor) {
+      if (id === "player") return { x: 3, y: 5 };
+      return { ...FIELD_LAB_MEMBER_SPAWNS[id] };
+    }
+    return { ...baseActor.position };
+  };
+
   return {
     ...base,
     actors: [
-      actor("player", spawns.player?.x ?? 3, spawns.player?.y ?? 5),
+      actor(
+        "player",
+        spawns.player?.x ?? authoredDefaultPosition("player").x,
+        spawns.player?.y ?? authoredDefaultPosition("player").y
+      ),
       ...unique.map((memberId) => {
-        const spawn = spawns.squad?.[memberId] ?? FIELD_LAB_MEMBER_SPAWNS[memberId];
+        const spawn = spawns.squad?.[memberId] ?? authoredDefaultPosition(memberId);
         return actor(memberId, spawn.x, spawn.y);
       }),
       ...(situation === "TASK_PRESSURE"
