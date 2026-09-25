@@ -12,6 +12,7 @@ import type {
   CooperativeEpisodeSnapshot
 } from "../world/cooperative-episode-contract";
 import type { FieldLabLayout, FieldLabSituation, SquadMemberId } from "../world/types";
+import type { TaskPressureSnapshot } from "../world/task-pressure-contract";
 import type {
   FieldLabExperimentDiff,
   FieldLabExperimentSlot
@@ -58,6 +59,7 @@ export interface SquadFieldLabHudState {
   paused: boolean;
   setupPlacement: boolean;
   episode: CooperativeEpisodeSnapshot | null;
+  taskPressure: TaskPressureSnapshot | null;
   latestEpisodeOutcome: CooperativeEpisodeOutcome;
   experiments: Readonly<Partial<Record<FieldLabExperimentSlot, {
     label: string;
@@ -185,6 +187,8 @@ export class SquadFieldLabHud {
   private readonly orderStatus: HTMLElement;
   private readonly pressureBlock: HTMLElement;
   private readonly pressureStatus: HTMLElement;
+  private readonly taskBlock: HTMLElement;
+  private readonly taskStatus: HTMLElement;
   private readonly situationButtons = new Map<FieldLabSituation, HTMLButtonElement>();
   private readonly layoutButtons = new Map<FieldLabLayout, HTMLButtonElement>();
   private readonly setupPlacementButton: HTMLButtonElement;
@@ -225,8 +229,14 @@ export class SquadFieldLabHud {
 
     const situationRow = document.createElement("div");
     situationRow.className = "squad-lab-situation-grid";
-    for (const situation of ["TRAINING", "PRESSURE"] as const) {
-      const control = button(situation === "TRAINING" ? "Training" : "Pressure");
+    for (const situation of ["TRAINING", "PRESSURE", "TASK_PRESSURE"] as const) {
+      const control = button(
+        situation === "TRAINING"
+          ? "Training"
+          : situation === "PRESSURE"
+            ? "Pressure"
+            : "Task pressure"
+      );
       control.dataset.situation = situation;
       control.addEventListener("click", () => callbacks.onSituation(situation));
       situationRow.append(control);
@@ -512,6 +522,17 @@ export class SquadFieldLabHud {
     pressureActions.append(playerRepel, focusedRepel, selectedRepel);
     this.pressureBlock.append(pressureHeading, this.pressureStatus, pressureActions);
 
+    this.taskBlock = document.createElement("section");
+    this.taskBlock.className = "squad-lab-pressure-block";
+    this.taskBlock.dataset.taskPressureBlock = "true";
+    const taskHeading = document.createElement("div");
+    taskHeading.className = "squad-lab-section-title";
+    taskHeading.textContent = "Shared task pressure";
+    this.taskStatus = document.createElement("div");
+    this.taskStatus.className = "squad-lab-pressure-status";
+    this.taskStatus.dataset.taskPressureStatus = "true";
+    this.taskBlock.append(taskHeading, this.taskStatus);
+
     this.status = document.createElement("div");
     this.status.className = "squad-lab-status";
     this.orderStatus = document.createElement("div");
@@ -554,6 +575,7 @@ export class SquadFieldLabHud {
       this.experimentDiffSummary,
       this.trialDiffSummary,
       this.pressureBlock,
+      this.taskBlock,
       this.status,
       this.orderStatus,
       footer
@@ -684,6 +706,22 @@ export class SquadFieldLabHud {
     this.pressureStatus.textContent = state.episode
       ? `${state.episode.phase} · cycle ${state.episode.cycle + 1} · last ${state.episode.lastOutcome} · repelled by ${state.episode.repelledBy.join(", ") || "none"}`
       : "pressure inactive";
+
+    this.taskBlock.hidden = state.situation !== "TASK_PRESSURE";
+    const task = state.taskPressure;
+    const taskProgress = task
+      ? Math.round((task.progressTicks / Math.max(1, task.requiredProgressTicks)) * 100)
+      : 0;
+    this.taskBlock.dataset.tone = task?.phase === "COMPLETED" || task?.phase === "SETTLED"
+      ? "success"
+      : task?.contested
+        ? "danger"
+        : task?.phase === "ACTIVE"
+          ? "warning"
+          : "normal";
+    this.taskStatus.textContent = task
+      ? `${task.phase} · progress ${taskProgress}% · ${task.playerCommitted ? "YOU committed" : "YOU outside"} · ${task.contested ? "CONTESTED" : "clear"}`
+      : "task pressure inactive";
 
     this.status.textContent =
       `${state.situation} / ${state.layout} · squad ${control.activeMembers.length} · selected ${control.selected.map((id) => LABELS[id]).join(" + ")} · focus ${LABELS[control.focused]} · ` +
