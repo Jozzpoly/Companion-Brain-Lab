@@ -1,6 +1,6 @@
 # Field Lab — Shared Task Under Pressure Situation Contract
 
-Status: **NEXT SITUATION HYPOTHESIS · MANUAL-FIRST · NO AUTONOMY PROMOTION · NOT AN OWNER GATE**
+Status: **STP-0 CONTRACT RED-TEAM COMPLETE · STP-1 MANUAL APPARATUS AUTHORIZED AS HYPOTHESIS · NO AUTONOMY PROMOTION · NOT AN OWNER GATE**
 
 Date: **2026-09-25**
 
@@ -242,3 +242,147 @@ Owner attention becomes useful only when the resulting live experience is materi
 This campaign succeeds not when the task-zone implementation is green, but when it answers:
 
 > **Can the Field Lab create a shared situation rich enough that different manually authored companion intentions produce meaningfully different cooperative episodes — giving us real evidence about what a future teammate brain should understand and take responsibility for?**
+
+## 11. STP-0 contract red-team result
+
+STP-0 was checked against current live World/Rapier rather than treated as a paper design.
+
+### Existing substrate already sufficient
+
+Current runtime already provides several seams the situation needs:
+
+- `ActorSpec.collisionMode = solid | sensor`;
+- every actor is already a real dynamic Rapier body;
+- `ActorSnapshot.contacts[]` preserves **counterpart identity**, not only an aggregate contact count;
+- experimental squad bodies already accept bounded external motion authority in Field Lab scenarios;
+- World already separates external attempts from factual post-physics outcomes;
+- the Field Lab already preserves setup positions, manual orders and action provenance.
+
+Therefore this situation does **not** require a new collision framework, generic combat model or new telemetry architecture before the apparatus can be attempted.
+
+### Important design correction
+
+The hostile should **not** simply chase the player.
+
+If it does, the player can turn the specimen into a kiting problem and the companion's role becomes difficult to distinguish from generic pursuit management.
+
+The stronger contract is:
+
+> **the player must remain committed to a visible task zone while the hostile continuously pressures the task zone itself.**
+
+This creates a shared spatial responsibility:
+
+- player presence advances the task;
+- hostile presence in/near the task suspends progress;
+- companion positioning can materially delay or redirect hostile arrival because the hostile is a real solid body;
+- player can abandon the task and personally intercept, sacrificing progress time;
+- after completion the squad still exists in the same World and must recover/regroup.
+
+### Minimal World representation
+
+Do not introduce a generic zones framework yet.
+
+A bounded `TaskPressure` contract may own:
+
+- task center + radius;
+- required progress ticks;
+- current progress ticks;
+- whether player is currently committed;
+- whether hostile pressure currently contests the task;
+- completion tick;
+- hostile home / recovery target;
+- minimal action/outcome facts if REPEL is admitted.
+
+Working state can remain small:
+
+`IDLE → ACTIVE → COMPLETED → SETTLED`
+
+Semantics:
+
+- **IDLE:** task visible; pressure has not started;
+- **ACTIVE:** begins immediately when the player first commits to the task; hostile advances toward the visible task zone;
+- **COMPLETED:** required visible progress was accumulated; task no longer needs defense and hostile retreats toward home;
+- **SETTLED:** hostile reached home; ordinary squad relationship can be observed again.
+
+No state transition should require the participant to know an invisible timing window.
+
+### Progress rule for the first apparatus
+
+Prefer a reversible rule:
+
+- player inside task zone + task uncontested → progress increments;
+- player outside → progress pauses;
+- hostile contesting the task zone → progress pauses;
+- progress does **not** reset or decay in STP-1.
+
+Reason: reset/decay would introduce a new tuning question before we know whether the situation itself is useful. A pure pause still creates real opportunity cost and makes companion screening measurable without arbitrary punishment.
+
+### Hostile pressure
+
+The first hostile should:
+
+- be `solid`, not a sensor;
+- move toward the task-zone center while ACTIVE;
+- physically interact with player/companion bodies through normal Rapier contact;
+- contest task progress when it reaches the task pressure region;
+- retreat toward home after task completion.
+
+This deliberately tests whether the existing physical substrate can make **screening materially true**.
+
+If dynamic-body pushing/sliding produces dominant jank, that is a situation falsifier or bounded physics issue; do not disguise it with AI logic.
+
+### REPEL role
+
+REPEL is allowed only as a donor affordance, not a required solution.
+
+The apparatus should first remain meaningful through position/contact alone.
+
+If REPEL is included:
+
+- it must be valid throughout the obvious ACTIVE pressure state when in range;
+- it must not depend on a hidden windup/timing oracle;
+- action attempt and outcome remain World-owned;
+- manual campaigns must include strategies that do not depend on REPEL.
+
+If the situation becomes interesting only when REPEL is timed correctly, reject the situation design.
+
+### Exact STP-1 evidence question
+
+> **With the same initial task/threat setup, can different manual companion positioning strategies materially change how continuously the player can remain committed to the task, while every important cause is participant-visible and World-owned?**
+
+Primary evidence should be:
+
+- task completion time / accumulated progress;
+- ticks player is committed;
+- ticks task is contested;
+- hostile contact counterpart + duration where material;
+- manual order/action provenance;
+- recovery/regroup after completion.
+
+Do not add these as permanent metrics until the first browser specimen demonstrates which ones are actually needed to interpret the result.
+
+### STP-1 implementation boundary
+
+Authorized next implementation is limited to:
+
+1. one new bounded Field Lab situation;
+2. one TaskPressure World contract;
+3. one visible task-zone rendering/progress representation;
+4. one solid hostile moving toward that zone;
+5. task contest/completion/recovery semantics;
+6. enough incident/trace evidence to distinguish the manual strategies actually exercised.
+
+Still prohibited:
+
+- autonomy;
+- protect/bodyguard mode;
+- generic combat;
+- health/damage;
+- carry/object interaction;
+- second hostile;
+- task-capable companion;
+- broad command grammar;
+- convenience instrumentation not demanded by observed ambiguity.
+
+If this bounded apparatus cannot already produce several distinct manual cooperative strategies, stop at STP-1 and reject/rework before expanding it.
+
