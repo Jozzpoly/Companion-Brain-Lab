@@ -36,7 +36,10 @@ import {
   type SquadOrderMode
 } from "../squad/field-lab-squad-control";
 import { S0_STEP_SECONDS } from "../physics/rapier-physical-world";
-import { LabWorld } from "../world/world";
+import {
+  LabWorld,
+  SQUAD_FIELD_LAB_TASK_PRESSURE_RULES
+} from "../world/world";
 import type {
   CooperativeEpisodeActionAttempt,
   CooperativeEpisodeActionOutcome,
@@ -44,6 +47,7 @@ import type {
   CooperativeEpisodeParticipantId,
   CooperativeEpisodeSnapshot
 } from "../world/cooperative-episode-contract";
+import type { TaskPressureSnapshot } from "../world/task-pressure-contract";
 import { squadFieldLabScenario, type FieldLabSpawnOverrides } from "../world/scenarios";
 import type {
   ActorSnapshot,
@@ -170,6 +174,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
   private situation: FieldLabSituation = "TRAINING";
   private layout: FieldLabLayout = "MIXED";
   private cooperativeEpisode: CooperativeEpisodeSnapshot | null = null;
+  private taskPressure: TaskPressureSnapshot | null = null;
   private latestCooperativeEpisodeOutcome: CooperativeEpisodeOutcome = "NONE";
   private lastCooperativeActionOutcomes: readonly CooperativeEpisodeActionOutcome[] = [];
   private pendingCooperativeAttempts: CooperativeEpisodeActionAttempt[] = [];
@@ -470,6 +475,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
     });
     this.snapshotValue = result.snapshot;
     this.cooperativeEpisode = result.cooperativeEpisode;
+    this.taskPressure = result.taskPressure;
     this.lastCooperativeActionOutcomes = result.cooperativeEpisodeActionOutcomes;
     this.latestCooperativeEpisodeOutcome = result.cooperativeEpisodeOutcome;
     this.recordActiveTrialFrame();
@@ -505,7 +511,13 @@ export class SquadFieldLabScene extends Phaser.Scene {
       this.log(`direct ${memberLabel(next.focused)} ${next.directControl ? "ON" : "off"}`);
     }
     if (Phaser.Input.Keyboard.JustDown(this.keys.situation)) {
-      this.situation = this.situation === "TRAINING" ? "PRESSURE" : "TRAINING";
+      const situations: readonly FieldLabSituation[] = [
+        "TRAINING",
+        "PRESSURE",
+        "TASK_PRESSURE"
+      ];
+      const current = situations.indexOf(this.situation);
+      this.situation = situations[(current + 1) % situations.length] ?? "TRAINING";
       this.log(`situation -> ${this.situation}`);
       void this.loadWorld(true);
     }
@@ -892,7 +904,11 @@ export class SquadFieldLabScene extends Phaser.Scene {
       this.graphics.lineBetween(x, y - r, x, y + r);
     }
 
-    this.drawCooperativePressure(snapshot, sx, sy, scale);
+    if (this.taskPressure) {
+      this.drawTaskPressure(snapshot, sx, sy, scale);
+    } else {
+      this.drawCooperativePressure(snapshot, sx, sy, scale);
+    }
 
     const control = this.control.snapshot();
     const player = actor(snapshot, "player");
@@ -1023,6 +1039,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       paused: this.paused,
       setupPlacement: this.setupPlacement,
       episode: this.cooperativeEpisode,
+      taskPressure: this.taskPressure,
       latestEpisodeOutcome: this.latestCooperativeEpisodeOutcome,
       experiments: experimentSummaries,
       experimentDiff,
@@ -1064,6 +1081,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       memberStatuses,
       cooperativeEpisode: this.cooperativeEpisode,
       cooperativeEpisodeOutcome: this.latestCooperativeEpisodeOutcome,
+      taskPressure: this.taskPressure,
       cooperativeActionOutcomes: this.lastCooperativeActionOutcomes,
       experiments: { A: experimentA, B: experimentB },
       experimentDiff,
@@ -1077,6 +1095,67 @@ export class SquadFieldLabScene extends Phaser.Scene {
       trialComparison: this.trialComparison,
       recentEvents: this.eventLog
     });
+  }
+
+  private drawTaskPressure(
+    snapshot: WorldSnapshot,
+    sx: (x: number) => number,
+    sy: (y: number) => number,
+    scale: number
+  ): void {
+    const task = this.taskPressure;
+    if (!task) {
+      this.hostileLabel.setVisible(false);
+      return;
+    }
+
+    const rules = SQUAD_FIELD_LAB_TASK_PRESSURE_RULES;
+    const centerX = sx(rules.taskCenter.x);
+    const centerY = sy(rules.taskCenter.y);
+    const taskRadius = rules.taskRadius * scale;
+    const progress = task.progressTicks / Math.max(1, task.requiredProgressTicks);
+
+    const taskColor = task.phase === "COMPLETED" || task.phase === "SETTLED"
+      ? 0x7ee787
+      : task.contested
+        ? 0xff5d66
+        : task.playerCommitted
+          ? 0x58a6ff
+          : 0xd29922;
+
+    this.graphics.fillStyle(taskColor, 0.13);
+    this.graphics.fillCircle(centerX, centerY, taskRadius);
+    this.graphics.lineStyle(4, taskColor, 0.9);
+    this.graphics.strokeCircle(centerX, centerY, taskRadius);
+
+    const barWidth = taskRadius * 2.2;
+    const barHeight = 10;
+    const barX = centerX - barWidth / 2;
+    const barY = centerY - taskRadius - 20;
+    this.graphics.fillStyle(0x161b22, 0.95);
+    this.graphics.fillRect(barX, barY, barWidth, barHeight);
+    this.graphics.fillStyle(taskColor, 0.95);
+    this.graphics.fillRect(barX, barY, barWidth * Math.max(0, Math.min(1, progress)), barHeight);
+    this.graphics.lineStyle(2, 0xf0f6fc, 0.72);
+    this.graphics.strokeRect(barX, barY, barWidth, barHeight);
+
+    const hostile = actor(snapshot, "hostile");
+    const hx = sx(hostile.position.x);
+    const hy = sy(hostile.position.y);
+    const bodyR = hostile.radius * scale;
+    this.hostileLabel.setVisible(true);
+    this.hostileLabel.setText(task.phase === "COMPLETED" || task.phase === "SETTLED" ? "THREAT ↩" : "THREAT");
+    this.hostileLabel.setPosition(hx, hy);
+    this.hostileLabel.setColor(task.contested ? "#ff7b72" : "#ffb07a");
+    this.graphics.fillStyle(0xff7b72, 1);
+    this.graphics.fillCircle(hx, hy, bodyR);
+    this.graphics.lineStyle(3, 0xf0f6fc, 0.86);
+    this.graphics.strokeCircle(hx, hy, bodyR);
+
+    if (task.phase === "ACTIVE") {
+      this.graphics.lineStyle(2, 0xff7b72, 0.35);
+      this.graphics.lineBetween(hx, hy, centerX, centerY);
+    }
   }
 
   private drawCooperativePressure(
@@ -1435,6 +1514,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       this.lastCooperativeActionOutcomes = [];
       this.latestCooperativeEpisodeOutcome = "NONE";
       this.cooperativeEpisode = next.cooperativeEpisode();
+      this.taskPressure = next.taskPressure();
       this.log(
         `Field Lab world reconstructed · ${this.situation}/${this.layout} · ` +
         `${restoredPositions ? "persistent experiment setup restored" : preservePositions ? "positions + control preserved" : "authored default positions"}`
