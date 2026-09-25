@@ -49,7 +49,8 @@ Records what the Owner actually wants, rejects, accepts or deliberately leaves o
 Examples:
 
 - target = embodied teammate, not follower/pathfinding demo;
-- Foundation movement = PASS · REWORK-READY;
+- movement substrate = closed-enough to stop blocking richer research, not product-qualified;
+- later explicit Owner feedback / Owner-observed behavior outranks older promotion wording for product-level claims;
 - causal/debug observability is first-class apparatus;
 - combat and pre-combat are important long-term domains;
 - fast correction/direction matters;
@@ -95,6 +96,8 @@ Keep evidence class explicit:
 4. Owner judgement.
 
 A higher quantity of class-1 evidence cannot substitute for a missing class-4 judgement when the claim concerns feel/trust/readability.
+
+For product/experiential claims, later Owner-observed behavior and explicit corrections supersede older Owner interpretations and all lower evidence classes. A mechanism may remain machine-qualified after an Owner FAIL, but only for its narrow diagnostic contract; the failed product claim stays rejected until a materially changed experience is re-evaluated by the Owner.
 
 ### 2.5 Promotion Ledger — design decisions
 
@@ -148,7 +151,7 @@ Evidence or Owner judgement invalidated the product claim. Code may remain as do
 ### CLOSED-ENOUGH
 The decision is good enough to stop consuming attention until richer gameplay materially falsifies it.
 
-Foundation movement is an example.
+The movement substrate is an example only in this scoped sense: the Owner permitted the project to move on from movement-only investigation. `CLOSED-ENOUGH` is not an alias for product PASS.
 
 ---
 
