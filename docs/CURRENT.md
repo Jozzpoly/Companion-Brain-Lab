@@ -1094,3 +1094,37 @@ Status remains:
 
 > **MACHINE-QUALIFIED ADVANCED FIELD LAB + TEMPORAL TRIAL EVIDENCE · NOT OWNER-READY · AUTONOMY NOT PROMOTED**
 
+---
+
+## 22. Field Lab discovery result — doorway compression / recovery — 2026-09-25
+
+Qualified source `d1664f1e996fd287d1d032d6b6fcff1faaa484e2` passed `squad-field-lab-browser` run `36133404762` with 188/188 test files, 744/744 tests, production build, broad Field Lab, persistent A/B, Trial/Trace and the controlled doorway campaign all PASS.
+
+Trial/Trace has now produced a substantive discovery rather than merely qualifying itself.
+
+For a fixed four-member DIAMOND MOVE through DOORWAY:
+
+- baseline spacing `1.00`: C2/C3 block at `t74` and remain blocked through `t150`, terminal error `5.24 m`;
+- increasing responsiveness to `1.00` only makes obstruction happen earlier (`t61`) and does not resolve it;
+- lowering responsiveness to `0.27` removes blocked ticks only because the members do not reach the doorway inside the horizon; terminal error grows to about `6.20 m`;
+- reducing formation spacing materially changes recovery: at `0.90` C2/C3 remain blocked until `t142`, at `0.85` until `t102`, at `0.80` until `t95`, and at `0.75` until `t90`;
+- live compression from `1.00 → 0.80` is strongly timing-sensitive: intervention at `t75` recovers only by `t130`, at `t90` by `t141`, while `t110` remains blocked through `t150`.
+
+The important interpretation is local and mechanistic:
+
+> this doorway failure is not solved by motor responsiveness alone; formation geometry and the history/timing of deformation materially change whether the squad escapes the obstruction.
+
+This campaign also justified three narrow Trace improvements: obstruction exposure/terminal state, authored intervention provenance, and surfaced last-block timing. No broader replay/score/autonomy infrastructure was added.
+
+Current candidate semantic pressure, **not promoted behavior**:
+
+> treat formation as a deformable relational envelope; investigate anticipatory/manual compression before constrained transit and later re-expansion.
+
+Do not implement automatic bottleneck detection or autonomous formation compression from this one specimen. Next use of the hypothesis should be a changed-condition manual falsifier.
+
+Detailed evidence and boundaries are in `docs/COMPANION_SQUAD_FIELD_LAB_CAMPAIGN.md` section 22.
+
+Status:
+
+> **DOORWAY DISCOVERY MACHINE PASS · GENERALIZATION UNPROVEN · NOT OWNER-READY · AUTONOMY NOT PROMOTED**
+
