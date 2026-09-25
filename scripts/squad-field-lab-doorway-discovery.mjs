@@ -230,6 +230,38 @@ try {
       expectedDiff: "DYNAMICS"
     },
     {
+      id: "spacing-065",
+      label: "diamond spacing 0.65",
+      apply: async () => {
+        await setNumeric(page, "spacingScale", 0.65);
+      },
+      expectedDiff: "DYNAMICS"
+    },
+    {
+      id: "spacing-075",
+      label: "diamond spacing 0.75",
+      apply: async () => {
+        await setNumeric(page, "spacingScale", 0.75);
+      },
+      expectedDiff: "DYNAMICS"
+    },
+    {
+      id: "spacing-080",
+      label: "diamond spacing 0.80",
+      apply: async () => {
+        await setNumeric(page, "spacingScale", 0.80);
+      },
+      expectedDiff: "DYNAMICS"
+    },
+    {
+      id: "spacing-090",
+      label: "diamond spacing 0.90",
+      apply: async () => {
+        await setNumeric(page, "spacingScale", 0.90);
+      },
+      expectedDiff: "DYNAMICS"
+    },
+    {
       id: "expanded-spacing",
       label: "diamond spacing 1.50",
       apply: async () => {
