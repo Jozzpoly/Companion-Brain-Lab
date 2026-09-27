@@ -202,7 +202,16 @@ The original 2026-09-13 skeleton remains the strongest statement of the mission:
 - first-class visual/causal debugging;
 - later higher cognition only when it adds value.
 
-The Foundation PASS explicitly bought permission for aggressive redesign. The project must stop treating the legacy eight-slot follower plus new target sources as the product.
+Historical continuity warning:
+
+- movement was always the **first collaboration language**, never the product;
+- the early Owner "spark" was evidence that embodied relationship dynamics could begin to feel alive, not evidence that the teammate had been delivered;
+- later Owner feedback explicitly warned that Companion had stood too long near that first spark and must not become an indefinitely cautious research lab;
+- the broad Field Lab is Owner-confirmed as a valuable research/authoring instrument, but it must serve progress toward the actual teammate and must not become a substitute for delivering continuous game-like cooperation;
+- the still-open product pressure is broader than any one scenario: ordinary relation → preparation/readiness → meaningful contribution/initiative → player correction/takeover → disengagement/recovery → regroup, with the player remaining an active participant;
+- combat/pre-combat cooperation remains part of the original target. The failure of Stage B and the rejection of Shared Task Under Pressure invalidate those **specimens**, not that long-term domain.
+
+The scoped movement-substrate closure explicitly bought permission for aggressive redesign. It was permission to stop blocking on movement-only qualification, **not** a product or teammate PASS. The project must stop treating the legacy eight-slot follower plus new target sources as the product.
 
 #### Recovery sequence
 
@@ -246,17 +255,27 @@ The spike was implemented before full strategic recovery had completed. Therefor
 
 Do not delete this work merely because it was premature. Do not let its existence make it architecture authority either.
 
-### Current recovery campaign — discover the first compelling teammate situation
+### Current recovery campaign — recover the next highest-value teammate pressure
 
 The project does **not** currently have a justified linear feature roadmap.
 
-The next job is to choose and build the smallest coherent situation in which the project's real tensions become necessary and observable. That situation should be selected for **Owner-visible information gain**, not because the latest code already happens to contain commands, a threat proxy, or a particular brain seam.
+After the Shared Task Under Pressure rejection, do **not** assume the next move must be another synthetic Field Lab situation. Re-evaluate the project from the north star and live substrate.
+
+The next tranche may be:
+
+- a new compact situation;
+- a missing World/interaction capability that unlocks several situations;
+- a more natural combat/pre-combat cooperative pressure;
+- a Field Lab authoring capability that materially broadens the manual gold standard;
+- or another bounded step that directly advances continuous game-like teammate behavior.
+
+Choose the smallest move with the highest Owner-visible information gain and the best chance of advancing the teammate rather than merely making the apparatus more sophisticated.
 
 ### C0 — Truth / donor map
 
 Before behavior expansion, maintain an explicit classification of existing material:
 
-- **Owner-confirmed / closed:** project mission, Foundation `PASS · REWORK-READY`, importance of full causal/debug observability, rejection of the stripped movement/Stage-B Owner stimuli;
+- **Owner-confirmed / closed:** project mission; movement substrate is closed-enough to stop blocking richer research (not product-qualified); importance of full causal/debug observability; rejection of the stripped movement/Stage-B Owner stimuli;
 - **strong evidence / donor candidates:** World authority, existing physical body/movement competence, incident capture, causal workbench, provenance/falsifiers, directive/proposal/arbitration separation from the post-FAIL spike;
 - **experimental mechanisms:** CCC/A1/S5/A1.1 research, Stage B pressure proxy, current command grammar/HUD/envelope constants;
 - **rejected product claims:** movement-only culmination, hidden-debug participant shell, marker proximity presented as teammate capability;
