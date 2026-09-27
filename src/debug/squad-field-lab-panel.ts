@@ -1,4 +1,5 @@
 import type { FieldLabSquadControlSnapshot, FieldLabMemberTarget } from "../squad/field-lab-squad-control";
+import type { CombatTakeoverShadowDecision } from "../brain/combat-takeover-shadow";
 import type {
   FieldLabExperimentDiff,
   FieldLabExperimentRecord,
@@ -44,6 +45,7 @@ export interface SquadFieldLabPanelState {
   trials: Readonly<Partial<Record<FieldLabTrialSlot, FieldLabTrialSummary>>>;
   activeTrial: { slot: FieldLabTrialSlot; frameCount: number } | null;
   trialComparison: FieldLabTrialComparison | null;
+  combatTakeoverShadow: CombatTakeoverShadowDecision | null;
   recentEvents: readonly string[];
 }
 
@@ -265,6 +267,18 @@ export class SquadFieldLabPanel {
           <div>attempts ${state.cooperativeActionOutcomes.length > 0
             ? state.cooperativeActionOutcomes.map((outcome) => `${outcome.actorId}:${outcome.status}@${fmt(outcome.distance)}m`).join(" · ")
             : "none this step"}</div>
+        </div>
+      </section>
+      ` : ""}
+      ${state.combatTakeoverShadow ? `
+      <section class="squad-field-debug-section" data-combat-takeover-shadow="true" data-tone="${state.combatTakeoverShadow.recommendation === "TAKE_OVER" ? "warning" : "normal"}">
+        <h2>Combat takeover shadow · zero authority</h2>
+        <div class="squad-field-debug-lines">
+          <div><strong>${state.combatTakeoverShadow.recommendation}</strong> · ${state.combatTakeoverShadow.reasonCode}</div>
+          <div>bearer ${state.combatTakeoverShadow.evidence.currentBearer ? combatActorLabel(state.combatTakeoverShadow.evidence.currentBearer) : "none"} · phase ${state.combatTakeoverShadow.evidence.phase} · pressure remaining ${state.combatTakeoverShadow.evidence.phaseTicksRemainingObserved ?? "n/a"}t</div>
+          <div>C1 prepared ${state.combatTakeoverShadow.evidence.companionPrepared ? "YES" : "no"} · source ${escapeHtml(state.combatTakeoverShadow.evidence.preparationSource)} · strike-now ${state.combatTakeoverShadow.evidence.companionCanStrikeNow ? "YES" : "no"} · distance ${state.combatTakeoverShadow.evidence.companionToHostileDistance === null ? "n/a" : fmt(state.combatTakeoverShadow.evidence.companionToHostileDistance)}m / ${fmt(state.combatTakeoverShadow.evidence.strikeRange)}m</div>
+          <div>reason · ${escapeHtml(state.combatTakeoverShadow.reason)}</div>
+          <div>authority ${state.combatTakeoverShadow.runtimeAuthorityClaim} · action NONE · movement NONE · hidden timing ${state.combatTakeoverShadow.evidence.hiddenTimingUsedForDecision ? "USED" : "not used"}</div>
         </div>
       </section>
       ` : ""}
