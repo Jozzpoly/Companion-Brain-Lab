@@ -320,8 +320,9 @@ try {
   await context.close();
 
   // Regression for the Owner feedback: teammate=1 on moving main must no longer
-  // become a hidden-debug participant shell. The rejected public artifact stays
-  // pinned to its historical SHA; current development keeps the microscope.
+  // become a separate hidden-debug shell. Participant-first sequencing is allowed
+  // to start with the microscope collapsed, but the full causal workbench must
+  // remain available in the same runtime through one obvious disclosure action.
   const workbenchContext = await browser.newContext({
     viewport: { width: 1600, height: 1000 }
   });
@@ -343,28 +344,42 @@ try {
   });
   await workbenchPage.locator("#game-root canvas").waitFor({ state: "visible", timeout: 15_000 });
   const workbenchPanel = workbenchPage.locator("#debug-panel");
+  const disclosure = workbenchPage.locator(".debug-collapse");
+  const content = workbenchPage.locator(".debug-panel-content");
 
   invariant(
     !(await workbenchPanel.evaluate((node) => node.classList.contains("is-teammate-sandbox"))),
     "Moving main resurrected the rejected teammate hidden-debug shell."
   );
   invariant(
-    await workbenchPage.locator(".debug-collapse").isVisible(),
+    await disclosure.isVisible(),
     "Current workbench lost the causal-panel disclosure control."
   );
   invariant(
-    (await workbenchPage.locator(".debug-panel-content").evaluate(
-      (node) => getComputedStyle(node).display
-    )) !== "none",
-    "Current workbench hides causal/debug content."
+    await workbenchPanel.evaluate((node) => node.classList.contains("is-collapsed")),
+    "Teammate specimen no longer starts participant-first with the microscope collapsed."
   );
   invariant(
-    await workbenchPage.locator('[data-player-command-hud="true"]').isVisible(),
-    "Current workbench is missing the fast player command HUD."
+    (await content.evaluate((node) => getComputedStyle(node).display)) === "none",
+    "Collapsed teammate specimen unexpectedly leaks the causal microscope into the first impression."
+  );
+
+  await disclosure.click();
+  await workbenchPage.waitForFunction(
+    () => !document.querySelector("#debug-panel")?.classList.contains("is-collapsed")
+  );
+
+  invariant(
+    (await content.evaluate((node) => getComputedStyle(node).display)) !== "none",
+    "Participant-first teammate specimen cannot reopen the full causal workbench."
   );
   invariant(
-    await workbenchPage.getByText("Player direction ↔ local autonomy", { exact: true }).isVisible(),
-    "Current workbench is missing directive/autonomy causal state."
+    await workbenchPage.locator('[data-shared-danger-hud="true"]').isVisible(),
+    "Teammate specimen lost its participant-facing shared-danger controls."
+  );
+  invariant(
+    await workbenchPage.getByText("S1 apparatus · shared danger", { exact: true }).isVisible(),
+    "Expanded teammate specimen is missing the shared-danger causal microscope."
   );
 
   await workbenchPage.screenshot({
@@ -383,8 +398,9 @@ try {
 
   summary.workbenchSurface = {
     query: "?teammate=1",
-    fullCausalWorkbenchVisible: true,
-    playerCommandHudVisible: true,
+    participantFirstInitiallyCollapsed: true,
+    fullCausalWorkbenchExpandableInSameRuntime: true,
+    sharedDangerHudVisible: true,
     hiddenDebugContractRetiredOnMovingMain: true,
     errors: workbenchErrors
   };
