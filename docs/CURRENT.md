@@ -2052,3 +2052,212 @@ Reject promotion if the seam merely restates a scripted browser condition, depen
 Current status:
 
 > **BIDIRECTIONAL PREPARED MANUAL TAKEOVER MACHINE-QUALIFIED · SHARED CAUSAL STRUCTURE SUPPORTED · SHADOW DECISION SEAM NOW JUSTIFIED · LIVE AUTONOMOUS STRIKE STILL FORBIDDEN · NOT OWNER-QUALIFIED**
+
+
+---
+
+## 30. Zero-authority Combat takeover shadow — qualified against manual causal evidence — 2026-09-27
+
+Bidirectional manual takeover evidence justified one narrow cognition experiment without granting C1 live combat authority.
+
+Question:
+
+> **Can a local observer recognize the same material takeover opportunity exposed by manual authoring, abstain in the relevant counterfactuals, and remain causally incapable of acting?**
+
+### Shadow decision boundary
+
+A dedicated pure evaluator now emits only:
+
+- `TAKE_OVER`; or
+- `DO_NOT_TAKE_OVER`.
+
+The positive recommendation requires all of the following factual conditions:
+
+- Combat Micro exists;
+- phase is `PRESSURING`;
+- the current responsibility bearer is YOU;
+- C1 is explicitly prepared through the currently qualified Field Lab preparation signal;
+- C1 is factually within current STRIKE range.
+
+Negative reason codes distinguish:
+
+- no Combat Micro state;
+- no active pressure;
+- C1 already bears current pressure;
+- C1 is not prepared;
+- C1 is prepared but lacks a current in-range intervention opportunity.
+
+The evaluator carries explicit evidence including phase, bearer, preparation source, factual C1↔hostile distance, STRIKE range and observed pressure ticks.
+
+Critically:
+
+- `phaseTicksRemaining` is observable debug evidence but is **not used as a decision threshold**;
+- `actionAttempt = null`;
+- `movementIntent = null`;
+- runtime authority claim is `NONE_SHADOW_OBSERVATION_ONLY`.
+
+### Unit falsification boundary
+
+Unit coverage includes:
+
+- positive prepared + in-range + `PRESSURING YOU`;
+- in-range `APPROACHING` → no takeover;
+- `PRESSURING C1` → no redundant takeover;
+- proximity without explicit preparation → no takeover;
+- prepared but out of range → no takeover;
+- pressure with 71 ticks remaining vs 1 tick remaining → same recommendation, proving no hidden timing threshold;
+- no Combat Micro state → clean abstention.
+
+### Browser integration
+
+Field Lab debug now shows a dedicated section:
+
+`Combat takeover shadow · zero authority`
+
+It exposes:
+
+- recommendation;
+- reason code;
+- current bearer;
+- combat phase;
+- observed remaining pressure ticks;
+- preparation truth and source;
+- current factual distance / STRIKE range;
+- natural-language reason;
+- explicit zero action / zero movement / zero runtime authority boundary.
+
+The scene uses the evaluator only during UI/debug observation. The recommendation is never routed into `queueCombatMicroAttempt`, motion intent or World mutation.
+
+### First browser falsifier FAIL — test expectation was too narrow
+
+Initial source:
+
+`6000d68c96b2c42d8a034002131d6aff2e6a68e2`
+
+Evidence:
+
+- `validate #1778` — SUCCESS;
+- all pre-existing Field Lab / manual takeover gates passed;
+- the new shadow browser falsifier failed only at its final withdrawal assertion.
+
+After a real manual C1 takeover, World correctly entered:
+
+`RECOVERING · bearer C1`
+
+The shadow correctly returned:
+
+`DO_NOT_TAKE_OVER · NO_ACTIVE_PRESSURE`
+
+The falsifier had incorrectly expected `COMPANION_ALREADY_BEARER` immediately.
+
+This was a harness overconstraint, not a reason to change the evaluator or World. The correct lifecycle contains two distinct abstention reasons:
+
+1. immediately after the takeover action: no active pressure during `RECOVERING`;
+2. later, once `PRESSURING C1` resumes: C1 already bears responsibility.
+
+The evaluator was left unchanged. The falsifier was strengthened to check both states.
+
+### Qualified browser lifecycle
+
+Qualified source:
+
+`0f2137aa162acab42105bffc3bd24dcc609b04b9`
+
+Evidence:
+
+- `validate #1779` — SUCCESS;
+- `squad-field-lab-browser #160 · run 36330719657` — SUCCESS;
+- **191/191 test files PASS**;
+- **771/771 tests PASS**;
+- production build PASS;
+- broad Field Lab PASS;
+- persistent A/B PASS;
+- one-companion combat-authoring PASS;
+- forward prepared takeover PASS;
+- reverse prepared takeover PASS;
+- zero-authority takeover shadow PASS;
+- durable manual action/order provenance PASS;
+- exact shadow screenshots inspected;
+- no page / console / request errors.
+
+The qualified browser falsifier establishes:
+
+- prepared C1 without active pressure does **not** recommend takeover;
+- `PRESSURING YOU` + explicit preparation + current in-range opportunity does recommend `TAKE_OVER`;
+- the positive recommendation itself does not:
+  - reduce hostile HP,
+  - transfer pressure,
+  - add C1 to strike history,
+  - create movement;
+- removing preparation under the same factual pressure suppresses the recommendation;
+- restoring preparation recovers the recommendation;
+- only the later explicit manual C1 STRIKE changes World and transfers responsibility;
+- immediately afterward the shadow abstains during `RECOVERING`;
+- once World later reaches `PRESSURING C1`, the shadow abstains as `COMPANION_ALREADY_BEARER`;
+- no hidden pressure-tick threshold is used.
+
+Observed qualified timing was:
+
+- positive `PRESSURING YOU` cue after 81 stepped ticks;
+- later `PRESSURING C1` state after 93 further stepped ticks.
+
+Those counts are evidence from this run, not policy thresholds.
+
+### Exact artifact review
+
+Positive shadow screenshot:
+
+- World: `PRESSURING · HP 2/3 · pressure target YOU · hits YOU 0 / C1 0 · history YOU`;
+- shadow: `TAKE_OVER · TAKEOVER_CONDITIONS_PRESENT`;
+- C1: `prepared YES · FIELD_LAB_HOLD · strike-now YES`;
+- explicit authority line:
+  `NONE_SHADOW_OBSERVATION_ONLY · action NONE · movement NONE · hidden timing not used`.
+
+Post-manual-takeover screenshot:
+
+- World: `PRESSURING · HP 1/3 · pressure target C1 · history YOU → C1`;
+- shadow: `DO_NOT_TAKE_OVER · COMPANION_ALREADY_BEARER`;
+- authority remains zero.
+
+Canonical interpretation:
+
+> **A ZERO-AUTHORITY LOCAL SHADOW SEAM CAN NOW RECOGNIZE THE MANUALLY DISCOVERED TAKEOVER OPPORTUNITY AND ABSTAIN WHEN THE CAUSAL PRECONDITIONS DO NOT HOLD, WITHOUT MUTATING WORLD OR MOVEMENT.**
+
+This is a cognition-observation qualification, not autonomy.
+
+### What remains unproven
+
+Do not infer:
+
+- autonomous C1 STRIKE;
+- a complete combat policy;
+- that HOLD is the final semantic meaning of preparation;
+- that the four current predicates are sufficient outside this bounded fixture;
+- robustness across materially different geometry / starting configurations;
+- good combat;
+- teammate feel;
+- Owner qualification.
+
+The current seam is intentionally close to the manually established causal relation. That is a feature of this stage, not evidence that the broader decision problem is solved.
+
+### Next research boundary
+
+The next high-value falsifier should challenge **robustness and counterfactual specificity** before any proposal/execution bridge:
+
+> **Across materially different prepared geometries and pressure timings, does the shadow continue to agree with factual takeover opportunity and abstain for the right causal reasons, without degenerating into “STRIKE is possible → TAKE_OVER”?**
+
+Prefer a small browser counterfactual matrix that varies geometry and preparation while keeping World rules fixed.
+
+Useful cells include:
+
+- prepared + pressured YOU + in range → TAKE_OVER;
+- prepared + pressured YOU + out of range → DO_NOT;
+- unprepared + pressured YOU + in range → DO_NOT;
+- prepared + in range but no pressure → DO_NOT;
+- C1 already bears pressure → DO_NOT.
+
+Do not grant action authority after that matrix merely because classification remains correct. A later bridge, if justified, should first expose a **shadow proposal / intent with provenance** that still cannot execute.
+
+Current status:
+
+> **ZERO-AUTHORITY TAKEOVER SHADOW MACHINE-QUALIFIED · NON-INTERFERENCE QUALIFIED · COUNTERFACTUAL ROBUSTNESS ACROSS GEOMETRY STILL OPEN · LIVE AUTONOMOUS STRIKE FORBIDDEN · NOT OWNER-QUALIFIED**
