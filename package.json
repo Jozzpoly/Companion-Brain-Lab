@@ -46,7 +46,8 @@
     "browser:squad-field-lab-responsibility-patterns": "node scripts/squad-field-lab-responsibility-patterns.mjs",
     "browser:squad-field-lab-reverse-takeover": "node scripts/squad-field-lab-reverse-takeover.mjs",
     "browser:squad-field-lab-takeover-shadow": "node scripts/squad-field-lab-takeover-shadow.mjs",
-    "browser:squad-field-lab-takeover-shadow-matrix": "node scripts/squad-field-lab-takeover-shadow-matrix.mjs"
+    "browser:squad-field-lab-takeover-shadow-matrix": "node scripts/squad-field-lab-takeover-shadow-matrix.mjs",
+    "browser:squad-field-lab-takeover-shadow-trace": "node scripts/squad-field-lab-takeover-shadow-trace.mjs"
   },
   "dependencies": {
     "@dimforge/rapier2d-deterministic-compat": "0.20.0",
