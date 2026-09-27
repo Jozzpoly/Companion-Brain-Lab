@@ -174,9 +174,16 @@ try {
       text.includes("ACTION") &&
       text.includes("STRIKE") &&
       text.includes("STRIKE outcome") &&
-      text.includes("SUCCEEDED"),
+      text.includes("SUCCEEDED") &&
+      text.includes("A combat") &&
+      text.includes("B combat") &&
+      text.includes("Combat Δ B−A") &&
+      text.includes("HP 3 → 2") &&
+      text.includes("target YOU → C1") &&
+      text.includes("strikes C1") &&
+      text.includes("HOSTILE_STRUCK×1"),
     6_000,
-    "combat action provenance survives Trial"
+    "combat responsibility trace survives Trial"
   );
   invariant(
     comparison.includes("queued@hostile"),
@@ -237,12 +244,13 @@ try {
       manualC1StrikeChangesWorldState: true,
       manualC1StrikeTransfersPressure: true,
       strikeAttemptAndOutcomeSurviveTrialProvenance: true,
+      combatResponsibilityTimelineIsVisibleInABTrace: true,
       largerRosterCanCoexistWithoutCombatSemanticExpansion: true,
       c2StrikeAuthorityExplicitlyRejected: true,
       noCompanionCognitionAuthorityAdded: true
     },
     interpretationBoundary:
-      "This qualifies Combat Micro as a one-companion manual Field Lab authoring situation. It does not qualify combat quality, autonomous STRIKE, multi-companion combat semantics, or Owner-facing teammate behavior.",
+      "This qualifies Combat Micro as a one-companion manual Field Lab authoring situation with temporal responsibility observability. It does not qualify combat quality, autonomous STRIKE, multi-companion combat semantics, or Owner-facing teammate behavior.",
     errors
   };
   await writeFile(`${ROOT}/summary.json`, JSON.stringify(summary, null, 2), "utf8");
