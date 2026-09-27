@@ -132,9 +132,9 @@ try {
   await setup.click();
   const box = await canvas.boundingBox();
   invariant(box, "canvas unavailable");
-  await dragBody(page, box, { x: 4.6, y: 5.0 }, { x: 10.9, y: 5.0 });
+  await dragBody(page, box, { x: 4.6, y: 5.0 }, { x: 10.8, y: 5.0 });
   await waitFor(page, (text) => text.includes("setup place C1"), 5_000, "C1 staged");
-  await dragBody(page, box, { x: 3.0, y: 5.0 }, { x: 11.2, y: 4.2 });
+  await dragBody(page, box, { x: 3.0, y: 5.0 }, { x: 11.35, y: 4.45 });
   await waitFor(page, (text) => text.includes("setup place YOU"), 5_000, "player staged");
   await setup.click();
 
@@ -197,6 +197,12 @@ try {
     220,
     "visible C1 pressure cue"
   );
+
+  await page.screenshot({
+    path: `${ROOT}/00-visible-c1-pressure-before-takeover.png`,
+    type: "png",
+    fullPage: true
+  });
 
   await page.locator('[data-combat-action="player"]').click();
   await tap(page, "o");
