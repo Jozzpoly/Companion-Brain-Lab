@@ -149,6 +149,22 @@ export const SCENARIOS: Readonly<Record<ScenarioId, ScenarioSpec>> = {
     obstacles: FIELD_LAB_LAYOUT_OBSTACLES.MIXED
   }
 ,
+  "squad-field-lab-combat-micro": {
+    id: "squad-field-lab-combat-micro",
+    label: "Companion / Squad Field Lab · combat micro authoring",
+    width: 16,
+    height: 10,
+    actors: [
+      actor("player", 3, 5),
+      actor("companion", 4.6, 5),
+      actor("squad-2", 4.8, 3.8),
+      actor("squad-3", 4.8, 6.2),
+      actor("squad-4", 6.0, 5),
+      actor("hostile", 11.8, 5, { radius: 0.34, speed: 1.7, collisionMode: "sensor" })
+    ],
+    obstacles: FIELD_LAB_LAYOUT_OBSTACLES.MIXED
+  }
+,
   "squad-field-lab-task-pressure": {
     id: "squad-field-lab-task-pressure",
     label: "Companion / Squad Field Lab · shared task pressure",
@@ -201,9 +217,11 @@ export function squadFieldLabScenario(
   const base = SCENARIOS[
     situation === "TASK_PRESSURE"
       ? "squad-field-lab-task-pressure"
-      : situation === "PRESSURE"
-        ? "squad-field-lab-pressure"
-        : "squad-field-lab"
+      : situation === "COMBAT_MICRO"
+        ? "squad-field-lab-combat-micro"
+        : situation === "PRESSURE"
+          ? "squad-field-lab-pressure"
+          : "squad-field-lab"
   ];
   const authoredDefaultPosition = (id: SquadMemberId | "player"): Vec2 => {
     const baseActor = base.actors.find((candidate) => candidate.id === id);
@@ -228,9 +246,11 @@ export function squadFieldLabScenario(
       }),
       ...(situation === "TASK_PRESSURE"
         ? [actor("hostile", 13.4, 5, { radius: 0.34, speed: 1.65, collisionMode: "solid" })]
-        : situation === "PRESSURE"
-          ? [actor("hostile", 7.1, 5, { radius: 0.34, speed: 1.65, collisionMode: "sensor" })]
-          : [])
+        : situation === "COMBAT_MICRO"
+          ? [actor("hostile", 11.8, 5, { radius: 0.34, speed: 1.7, collisionMode: "sensor" })]
+          : situation === "PRESSURE"
+            ? [actor("hostile", 7.1, 5, { radius: 0.34, speed: 1.65, collisionMode: "sensor" })]
+            : [])
     ],
     obstacles: FIELD_LAB_LAYOUT_OBSTACLES[layout].map((obstacle) => ({ ...obstacle }))
   };
