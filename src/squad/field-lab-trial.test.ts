@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { CombatMicroSnapshot } from "../world/combat-micro-contract";
 import type { FieldLabTrialFrame } from "./field-lab-trial";
 import {
   compareFieldLabTrials,
@@ -17,6 +18,7 @@ function frame(
     tick,
     playerPosition: { x: 0, y: 0 },
     cooperativeOutcome: "NONE",
+    combatMicro: null,
     members: [{
       memberId: "companion",
       position: { x, y: 0 },
@@ -30,6 +32,49 @@ function frame(
       contactCount,
       status
     }]
+  };
+}
+
+function combatSnapshot(input: {
+  phase: CombatMicroSnapshot["phase"];
+  hostileHealth: number;
+  targetActorId: CombatMicroSnapshot["targetActorId"];
+  playerHits?: number;
+  companionHits?: number;
+  lastOutcome?: CombatMicroSnapshot["lastOutcome"];
+  lastOutcomeTick?: number | null;
+  successfulStrikeHistory?: CombatMicroSnapshot["successfulStrikeHistory"];
+}): CombatMicroSnapshot {
+  const history = [...(input.successfulStrikeHistory ?? [])];
+  return {
+    phase: input.phase,
+    phaseTicksRemaining:
+      input.phase === "PRESSURING" || input.phase === "RECOVERING" ? 10 : 0,
+    hostileHealth: input.hostileHealth,
+    targetActorId: input.targetActorId,
+    actorHitCounts: {
+      player: input.playerHits ?? 0,
+      companion: input.companionHits ?? 0
+    },
+    lastHitActorId:
+      input.lastOutcome === "ACTOR_HIT" ? input.targetActorId : null,
+    lastOutcome: input.lastOutcome ?? "NONE",
+    lastOutcomeTick: input.lastOutcomeTick ?? null,
+    lastSuccessfulStrikers:
+      input.lastOutcome === "HOSTILE_STRUCK" && history.length > 0
+        ? [history[history.length - 1]!]
+        : [],
+    successfulStrikeHistory: history
+  };
+}
+
+function combatFrame(
+  tick: number,
+  combatMicro: CombatMicroSnapshot
+): FieldLabTrialFrame {
+  return {
+    ...frame(tick, tick, 5 - Math.min(tick, 4), "MOVING"),
+    combatMicro
   };
 }
 
@@ -120,6 +165,95 @@ describe("Field Lab trial traces", () => {
     expect(bSummary.firstArrivedTickOffset).toBe(3);
     expect(bSummary.finalStatus).toBe("ARRIVED");
     expect(bSummary.finalTargetError).toBeCloseTo(1);
+  });
+
+  it("summarizes and compares combat responsibility over time without selecting a winner", () => {
+    const initial = combatSnapshot({
+      phase: "APPROACHING",
+      hostileHealth: 3,
+      targetActorId: "player"
+    });
+
+    const a = createFieldLabTrialRecord({
+      slot: "A",
+      label: "no combat intervention",
+      startedAtTick: 0,
+      initialCombatMicro: initial,
+      frames: [
+        combatFrame(1, initial),
+        combatFrame(2, initial),
+        combatFrame(3, initial),
+        combatFrame(4, initial)
+      ]
+    });
+
+    const b = createFieldLabTrialRecord({
+      slot: "B",
+      label: "C1 takes responsibility",
+      startedAtTick: 0,
+      initialCombatMicro: initial,
+      frames: [
+        combatFrame(1, combatSnapshot({
+          phase: "RECOVERING",
+          hostileHealth: 2,
+          targetActorId: "companion",
+          lastOutcome: "HOSTILE_STRUCK",
+          lastOutcomeTick: 1,
+          successfulStrikeHistory: ["companion"]
+        })),
+        combatFrame(2, combatSnapshot({
+          phase: "APPROACHING",
+          hostileHealth: 2,
+          targetActorId: "companion",
+          lastOutcome: "HOSTILE_STRUCK",
+          lastOutcomeTick: 1,
+          successfulStrikeHistory: ["companion"]
+        })),
+        combatFrame(3, combatSnapshot({
+          phase: "PRESSURING",
+          hostileHealth: 2,
+          targetActorId: "companion",
+          lastOutcome: "HOSTILE_STRUCK",
+          lastOutcomeTick: 1,
+          successfulStrikeHistory: ["companion"]
+        })),
+        combatFrame(4, combatSnapshot({
+          phase: "RECOVERING",
+          hostileHealth: 2,
+          targetActorId: "companion",
+          companionHits: 1,
+          lastOutcome: "ACTOR_HIT",
+          lastOutcomeTick: 4,
+          successfulStrikeHistory: ["companion"]
+        }))
+      ]
+    });
+
+    const bSummary = summarizeFieldLabTrial(b).combatMicro!;
+    expect(bSummary.initialPhase).toBe("APPROACHING");
+    expect(bSummary.finalPhase).toBe("RECOVERING");
+    expect(bSummary.hostileDamage).toBe(1);
+    expect(bSummary.initialTargetActorId).toBe("player");
+    expect(bSummary.finalTargetActorId).toBe("companion");
+    expect(bSummary.targetTransitions).toBe(1);
+    expect(bSummary.phaseTransitions).toBe(4);
+    expect(bSummary.targetTicks).toEqual({ player: 0, companion: 4 });
+    expect(bSummary.actorHitDelta).toEqual({ player: 0, companion: 1 });
+    expect(bSummary.successfulStrikesAdded).toEqual(["companion"]);
+    expect(bSummary.outcomeEvents).toEqual({
+      HOSTILE_STRUCK: 1,
+      ACTOR_HIT: 1
+    });
+
+    const comparison = compareFieldLabTrials(a, b).combatMicro!;
+    expect(comparison.hostileDamageDelta).toBe(1);
+    expect(comparison.playerTargetTicksDelta).toBe(-4);
+    expect(comparison.companionTargetTicksDelta).toBe(4);
+    expect(comparison.targetTransitionsDelta).toBe(1);
+    expect(comparison.phaseTransitionsDelta).toBe(4);
+    expect(comparison.playerHitDeltaDelta).toBe(0);
+    expect(comparison.companionHitDeltaDelta).toBe(1);
+    expect(comparison.successfulStrikeCountDelta).toBe(1);
   });
 
   it("rejects empty traces rather than manufacturing evidence", () => {
