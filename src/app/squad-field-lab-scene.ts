@@ -1,6 +1,9 @@
 import Phaser from "phaser";
 import { SquadFieldLabHud } from "./squad-field-lab-hud";
-import { evaluateCombatTakeoverShadow } from "../brain/combat-takeover-shadow";
+import {
+  evaluateCombatTakeoverShadow,
+  type CombatTakeoverShadowDecision
+} from "../brain/combat-takeover-shadow";
 import {
   createFieldLabExperiment,
   decodeFieldLabExperiment,
@@ -1137,19 +1140,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
         : null,
       trialComparison: this.trialComparison
     });
-    const c1Assignment = this.control.assignmentFor("companion");
-    const combatTakeoverShadow = this.situation === "COMBAT_MICRO"
-      ? evaluateCombatTakeoverShadow({
-          snapshot,
-          combat: this.combatMicro,
-          rules: COMBAT_MICRO_RULES,
-          companionPrepared: c1Assignment.mode === "HOLD",
-          preparationSource:
-            c1Assignment.mode === "HOLD"
-              ? "FIELD_LAB_HOLD"
-              : `FIELD_LAB_${c1Assignment.mode}`
-        })
-      : null;
+    const combatTakeoverShadow = this.currentCombatTakeoverShadow(snapshot);
 
     const focusedBody = actor(snapshot, state.focused);
     const player = actor(snapshot, "player");
@@ -1668,6 +1659,23 @@ export class SquadFieldLabScene extends Phaser.Scene {
     );
   }
 
+  private currentCombatTakeoverShadow(
+    snapshot: WorldSnapshot
+  ): CombatTakeoverShadowDecision | null {
+    if (this.situation !== "COMBAT_MICRO") return null;
+    const c1Assignment = this.control.assignmentFor("companion");
+    return evaluateCombatTakeoverShadow({
+      snapshot,
+      combat: this.combatMicro,
+      rules: COMBAT_MICRO_RULES,
+      companionPrepared: c1Assignment.mode === "HOLD",
+      preparationSource:
+        c1Assignment.mode === "HOLD"
+          ? "FIELD_LAB_HOLD"
+          : `FIELD_LAB_${c1Assignment.mode}`
+    });
+  }
+
   private recordActiveTrialFrame(): void {
     const active = this.activeTrial;
     const snapshot = this.snapshotValue;
@@ -1695,6 +1703,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       playerPosition: player.position,
       cooperativeOutcome: this.latestCooperativeEpisodeOutcome,
       combatMicro: this.combatMicro,
+      combatTakeoverShadow: this.currentCombatTakeoverShadow(snapshot),
       members
     }));
 
