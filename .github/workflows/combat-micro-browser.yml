@@ -8,6 +8,7 @@ on:
       - "src/world/combat-micro-contract.ts"
       - "src/world/combat-micro-contract.test.ts"
       - "src/world/world.ts"
+      - "src/world/world.test.ts"
       - "src/world/types.ts"
       - "src/world/scenarios.ts"
       - "src/app/r1-lab-scene.ts"
