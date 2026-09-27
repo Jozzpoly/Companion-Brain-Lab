@@ -30,6 +30,7 @@ on:
       - "scripts/squad-field-lab-manual-episode-authoring.mjs"
       - "scripts/squad-field-lab-combat-authoring.mjs"
       - "scripts/squad-field-lab-takeover-shadow.mjs"
+      - "scripts/squad-field-lab-takeover-shadow-matrix.mjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/squad-field-lab-browser.yml"
@@ -78,6 +79,8 @@ jobs:
         run: npm run browser:squad-field-lab-combat-authoring
       - name: Zero-authority takeover shadow falsifier
         run: npm run browser:squad-field-lab-takeover-shadow
+      - name: Takeover shadow counterfactual matrix
+        run: npm run browser:squad-field-lab-takeover-shadow-matrix
       - name: Durable manual action/order provenance regression
         run: npm run browser:squad-field-lab-manual-episode
       - name: Upload Field Lab evidence
@@ -91,5 +94,6 @@ jobs:
             artifacts/squad-field-lab-manual-episode-authoring/
             artifacts/squad-field-lab-combat-authoring/
             artifacts/squad-field-lab-takeover-shadow/
+            artifacts/squad-field-lab-takeover-shadow-matrix/
           if-no-files-found: warn
           retention-days: 14
