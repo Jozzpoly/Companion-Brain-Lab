@@ -43,7 +43,8 @@
     "browser:combat-micro-manual": "node scripts/combat-micro-manual-browser.mjs",
     "browser:combat-micro-strategies": "node scripts/combat-micro-strategy-campaign.mjs",
     "browser:squad-field-lab-combat-authoring": "node scripts/squad-field-lab-combat-authoring.mjs",
-    "browser:squad-field-lab-responsibility-patterns": "node scripts/squad-field-lab-responsibility-patterns.mjs"
+    "browser:squad-field-lab-responsibility-patterns": "node scripts/squad-field-lab-responsibility-patterns.mjs",
+    "browser:squad-field-lab-reverse-takeover": "node scripts/squad-field-lab-reverse-takeover.mjs"
   },
   "dependencies": {
     "@dimforge/rapier2d-deterministic-compat": "0.20.0",
