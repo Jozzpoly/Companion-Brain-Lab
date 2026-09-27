@@ -2261,3 +2261,186 @@ Do not grant action authority after that matrix merely because classification re
 Current status:
 
 > **ZERO-AUTHORITY TAKEOVER SHADOW MACHINE-QUALIFIED · NON-INTERFERENCE QUALIFIED · COUNTERFACTUAL ROBUSTNESS ACROSS GEOMETRY STILL OPEN · LIVE AUTONOMOUS STRIKE FORBIDDEN · NOT OWNER-QUALIFIED**
+
+
+---
+
+## 31. Takeover shadow counterfactual geometry matrix — classification robustness qualified — 2026-09-27
+
+The zero-authority takeover shadow was challenged outside the single geometry that originally qualified it.
+
+Question:
+
+> **Does the shadow preserve the manually grounded takeover distinction when geometry, preparation and current responsibility are varied across fresh browser runtimes, or has it merely overfit one authored scene?**
+
+No World rules, combat rules, evaluator predicates or action authority were changed for this campaign.
+
+### Matrix structure
+
+Each cell starts in a fresh browser runtime and authors its own initial geometry.
+
+Qualified cells:
+
+1. prepared C1 + `PRESSURING YOU` + near-west in-range geometry;
+2. prepared C1 + `PRESSURING YOU` + different near-south in-range geometry;
+3. prepared C1 + `PRESSURING YOU` + far-west out-of-range geometry;
+4. unprepared C1 + `PRESSURING YOU` in the near-west fixture;
+5. prepared C1 + near-west geometry but no active pressure;
+6. prepared C1 already carrying `PRESSURING C1` in the near-south fixture.
+
+Every cell preserves the zero-authority contract:
+
+- action NONE;
+- movement NONE;
+- runtime authority `NONE_SHADOW_OBSERVATION_ONLY`;
+- no hidden timing threshold.
+
+### First matrix run — material harness boundary discovered
+
+Initial source:
+
+`4e94fe0fd0632323b93f416e87c256484b5c9e56`
+
+The matrix reached the final already-bearer cell and failed while trying to establish C1 as the responsibility bearer:
+
+`prepared-c1-pressure-near-south: C1 engagement missing`
+
+This did **not** falsify the takeover classifier.
+
+The failing setup had placed C1 essentially on the factual `1.05m` STRIKE boundary during `APPROACHING`. Combat action validity is resolved from the **post-physics frame**, so the hostile can move between the pre-step observation and action resolution. A position that is observationally on the range boundary is therefore not a guaranteed successful action one World step later.
+
+World and shadow both use the same factual range and epsilon. The discrepancy was temporal, not a threshold mismatch.
+
+Canonical boundary finding:
+
+> **OBSERVATION-TIME ACTION OPPORTUNITY IS NOT AUTOMATICALLY AN EXECUTION-TIME GUARANTEE WHEN THE WORLD CAN MOVE BEFORE ACTION RESOLUTION.**
+
+This matters for any future proposal/execution bridge. A shadow observation must not later be converted mechanically into an assumption that the same action will still be valid when executed.
+
+The evaluator and World were left unchanged.
+
+The final already-bearer fixture was moved deliberately inside STRIKE range so that the matrix tests responsibility classification rather than boundary timing.
+
+### Qualified source
+
+`d70483ef68a64e68de75f583119126ee1ec6ef3f`
+
+Evidence:
+
+- `validate #1785` — SUCCESS;
+- `squad-field-lab-browser #164 · run 36352519832` — SUCCESS;
+- **191/191 test files PASS**;
+- **771/771 tests PASS**;
+- production build PASS;
+- broad Field Lab PASS;
+- persistent A/B PASS;
+- one-companion combat authoring PASS;
+- zero-authority takeover lifecycle PASS;
+- takeover shadow counterfactual matrix PASS;
+- durable manual action/order provenance PASS;
+- matrix screenshots inspected;
+- no page / console / request errors;
+- repo remains `main`-only.
+
+### Qualified matrix evidence
+
+**Prepared + pressured YOU + near-west**
+
+- C1 authored at approximately `10.8, 5.0`;
+- pressure cue after 81 stepped ticks;
+- shadow:
+  `TAKE_OVER · TAKEOVER_CONDITIONS_PRESENT`;
+- factual distance approximately `1.05m / 1.05m`;
+- World remains:
+  `PRESSURING · HP 2/3 · target YOU · hits YOU 0 / C1 0 · history YOU`.
+
+**Prepared + pressured YOU + near-south**
+
+- C1 authored at approximately `11.85, 5.9`;
+- pressure cue after 81 stepped ticks;
+- shadow:
+  `TAKE_OVER · TAKEOVER_CONDITIONS_PRESENT`;
+- factual distance approximately `0.85m / 1.05m`;
+- World again remains manual-only with `history YOU`.
+
+The positive relation therefore survives a materially different approach bearing and distance inside the valid range.
+
+**Prepared + pressured YOU + far-west**
+
+- pressure cue after 81 stepped ticks;
+- factual distance approximately `2.25m / 1.05m`;
+- shadow:
+  `DO_NOT_TAKE_OVER · COMPANION_OUT_OF_STRIKE_RANGE`.
+
+**Unprepared + pressured YOU**
+
+- C1 assignment is FOLLOW rather than the currently qualified preparation signal;
+- pressure cue after 84 stepped ticks;
+- shadow:
+  `DO_NOT_TAKE_OVER · COMPANION_NOT_PREPARED`.
+
+The FOLLOW motor changes geometry during the episode, which is expected. The key qualified fact is that current pressure does not by itself authorize the takeover classification.
+
+**Prepared + no pressure**
+
+- phase remains `APPROACHING`;
+- C1 is factually within STRIKE range;
+- shadow:
+  `DO_NOT_TAKE_OVER · NO_ACTIVE_PRESSURE`.
+
+This directly rejects the degenerate rule:
+
+`STRIKE possible → TAKE_OVER`.
+
+**Prepared + C1 already bears pressure**
+
+- manual C1 action establishes `history C1`;
+- later `PRESSURING C1` appears after 89 stepped ticks;
+- shadow:
+  `DO_NOT_TAKE_OVER · COMPANION_ALREADY_BEARER`;
+- factual distance approximately `0.78m / 1.05m`.
+
+### Exact artifact review
+
+The four stored matrix screenshots visibly agree with the machine summary:
+
+- near-west positive:
+  prepared HOLD, `PRESSURING YOU`, `TAKE_OVER`, zero authority;
+- near-south positive:
+  different spatial relation, `TAKE_OVER`, zero authority;
+- far-west negative:
+  clear spatial separation, `COMPANION_OUT_OF_STRIKE_RANGE`;
+- unprepared negative:
+  FOLLOW assignment, `COMPANION_NOT_PREPARED`.
+
+No screenshot shows the shadow mutating HP, strike history, movement or responsibility.
+
+### What is now supported
+
+Within bounded Combat Micro:
+
+> **THE TAKEOVER SHADOW IS NO LONGER SUPPORTED ONLY BY ONE AUTHORED GEOMETRY. IT DISTINGUISHES TAKEOVER OPPORTUNITY FROM OUT-OF-RANGE, UNPREPARED, NO-PRESSURE AND ALREADY-BEARER COUNTERFACTUALS ACROSS FRESH RUNTIMES WHILE REMAINING CAUSALLY OBSERVATIONAL.**
+
+This is still a classification result, not a behavior policy.
+
+### What remains open
+
+Do not infer:
+
+- autonomous STRIKE;
+- approach planning to manufacture future STRIKE opportunities;
+- that HOLD is the final preparation semantic;
+- that an observed in-range opportunity guarantees later execution validity;
+- a complete combat policy;
+- combat quality or teammate feel;
+- Owner qualification.
+
+The next useful step should improve the Field Lab as a research instrument rather than jump to execution:
+
+> **persist the shadow recommendation, reason and selected evidence in temporal trial frames so A/B traces can compare when a takeover opportunity appears, disappears and why.**
+
+That would let manually authored behavior patterns and local cognition evidence be compared over time while preserving zero runtime authority.
+
+Current status:
+
+> **COUNTERFACTUAL TAKEOVER SHADOW ROBUSTNESS MACHINE-QUALIFIED WITHIN BOUNDED COMBAT MICRO · OBSERVATION→EXECUTION TEMPORAL GAP EXPLICITLY OPEN · ZERO ACTION/MOVEMENT AUTHORITY · TEMPORAL SHADOW TRACE NEXT · NOT OWNER-QUALIFIED**
