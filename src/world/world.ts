@@ -22,6 +22,15 @@ import {
   type CooperativeEpisodeSnapshot
 } from "./cooperative-episode-contract";
 import {
+  initialCombatMicroSnapshot,
+  resolveCombatMicroAfterPhysics,
+  type CombatMicroActionAttempt,
+  type CombatMicroActionOutcome,
+  type CombatMicroEpisodeOutcome,
+  type CombatMicroRules,
+  type CombatMicroSnapshot
+} from "./combat-micro-contract";
+import {
   activeTaskPressureCenter,
   initialTaskPressureSnapshot,
   resolveTaskPressureAfterPhysics,
@@ -75,6 +84,16 @@ export const S5_COOPERATIVE_EPISODE_RULES: CooperativeEpisodeRules = {
   homeArrivalRange: 0.18
 };
 
+export const COMBAT_MICRO_RULES: CombatMicroRules = {
+  strikeRange: 1.05,
+  attackRange: 0.8,
+  pressureBreakRange: 1.25,
+  pressureTicks: 72,
+  recoveryTicks: 42,
+  hostileHealth: 3,
+  strikeDamage: 1
+};
+
 export const SQUAD_FIELD_LAB_PRESSURE_RULES: CooperativeEpisodeRules = {
   repelRange: 1.2,
   pressureRange: 0.86,
@@ -102,6 +121,7 @@ export interface WorldSituationStepInput {
   motionIntents: readonly MotionIntent[];
   actionAttempts?: readonly WorldActionAttempt[];
   cooperativeEpisodeAttempts?: readonly CooperativeEpisodeActionAttempt[];
+  combatMicroAttempts?: readonly CombatMicroActionAttempt[];
   experimentalSquadMotionIntents?: readonly ExperimentalSquadMotionIntent[];
 }
 
@@ -113,6 +133,9 @@ export interface WorldSituationStepResult {
   cooperativeEpisodeActionOutcomes: readonly CooperativeEpisodeActionOutcome[];
   cooperativeEpisode: CooperativeEpisodeSnapshot | null;
   cooperativeEpisodeOutcome: CooperativeEpisodeOutcome;
+  combatMicroActionOutcomes: readonly CombatMicroActionOutcome[];
+  combatMicro: CombatMicroSnapshot | null;
+  combatMicroOutcome: CombatMicroEpisodeOutcome;
   taskPressure: TaskPressureSnapshot | null;
 }
 
@@ -150,6 +173,7 @@ export class LabWorld {
   private sharedDangerValue: SharedDangerSnapshot | null;
   private cooperativeEpisodeValue: CooperativeEpisodeSnapshot | null;
   private readonly cooperativeEpisodeRulesValue: CooperativeEpisodeRules | null;
+  private combatMicroValue: CombatMicroSnapshot | null;
   private taskPressureValue: TaskPressureSnapshot | null;
   private readonly taskPressureRulesValue: TaskPressureRules | null;
 
@@ -169,6 +193,10 @@ export class LabWorld {
     this.cooperativeEpisodeValue = this.cooperativeEpisodeRulesValue
       ? initialCooperativeEpisodeSnapshot(this.cooperativeEpisodeRulesValue)
       : null;
+    this.combatMicroValue =
+      scenarioSpecValue.id === "combat-micro"
+        ? initialCombatMicroSnapshot(COMBAT_MICRO_RULES)
+        : null;
     this.taskPressureRulesValue =
       scenarioSpecValue.id === "squad-field-lab-task-pressure"
         ? SQUAD_FIELD_LAB_TASK_PRESSURE_RULES
@@ -226,6 +254,17 @@ export class LabWorld {
       : null;
   }
 
+  combatMicro(): CombatMicroSnapshot | null {
+    return this.combatMicroValue
+      ? {
+          ...this.combatMicroValue,
+          actorHitCounts: { ...this.combatMicroValue.actorHitCounts },
+          lastSuccessfulStrikers: [...this.combatMicroValue.lastSuccessfulStrikers],
+          successfulStrikeHistory: [...this.combatMicroValue.successfulStrikeHistory]
+        }
+      : null;
+  }
+
   taskPressure(): TaskPressureSnapshot | null {
     return this.taskPressureValue
       ? {
@@ -271,6 +310,10 @@ export class LabWorld {
     if (!this.cooperativeEpisodeValue && cooperativeEpisodeAttempts.length > 0) {
       throw new Error("Cooperative episode actions require an active cooperative-pressure scenario.");
     }
+    const combatMicroAttempts = input.combatMicroAttempts ?? [];
+    if (!this.combatMicroValue && combatMicroAttempts.length > 0) {
+      throw new Error("Combat micro actions require the active combat-micro scenario.");
+    }
     const experimentalSquadMotionIntents = input.experimentalSquadMotionIntents ?? [];
     if (
       this.scenarioSpecValue.id !== "squad-field-lab" &&
@@ -290,6 +333,7 @@ export class LabWorld {
     const worldDrivenIntents = [
       ...this.sharedDangerWorldMotion(before),
       ...this.cooperativeEpisodeWorldMotion(before),
+      ...this.combatMicroWorldMotion(before),
       ...this.taskPressureWorldMotion(before)
     ];
     const actors = this.physical.step(
@@ -356,6 +400,28 @@ export class LabWorld {
       cooperativeEpisodeOutcome = resolved.episodeOutcome;
     }
 
+    let combatMicroActionOutcomes: readonly CombatMicroActionOutcome[] = [];
+    let combatMicroOutcome: CombatMicroEpisodeOutcome = "NONE";
+    if (this.combatMicroValue) {
+      const player = body(after, "player");
+      const companion = body(after, "companion");
+      const hostile = body(after, "hostile");
+      const resolved = resolveCombatMicroAfterPhysics({
+        observationTick: before.tick,
+        before: this.combatMicroValue,
+        postPhysics: {
+          hostilePosition: hostile.position,
+          playerPosition: player.position,
+          companionPosition: companion.position
+        },
+        attempts: combatMicroAttempts,
+        rules: COMBAT_MICRO_RULES
+      });
+      this.combatMicroValue = resolved.after;
+      combatMicroActionOutcomes = resolved.actionOutcomes;
+      combatMicroOutcome = resolved.episodeOutcome;
+    }
+
     if (this.taskPressureValue && this.taskPressureRulesValue) {
       const player = body(after, "player");
       const hostile = body(after, "hostile");
@@ -391,6 +457,9 @@ export class LabWorld {
       cooperativeEpisodeActionOutcomes,
       cooperativeEpisode: this.cooperativeEpisode(),
       cooperativeEpisodeOutcome,
+      combatMicroActionOutcomes,
+      combatMicro: this.combatMicro(),
+      combatMicroOutcome,
       taskPressure: this.taskPressure()
     };
   }
@@ -472,6 +541,35 @@ export class LabWorld {
       ? { x: delta.x / length, y: delta.y / length }
       : { x: 0, y: 0 };
     return [{ bodyId: "hostile", move }];
+  }
+
+  private combatMicroWorldMotion(snapshot: WorldSnapshot): PhysicalWorldBodyMotionIntent[] {
+    const state = this.combatMicroValue;
+    if (!state) return [];
+
+    if (state.phase === "PRESSURING" || state.phase === "DEFEATED") {
+      return [{ bodyId: "hostile", move: { x: 0, y: 0 } }];
+    }
+
+    const hostile = body(snapshot, "hostile");
+    const target = body(snapshot, state.targetActorId);
+    const towardTarget = {
+      x: target.position.x - hostile.position.x,
+      y: target.position.y - hostile.position.y
+    };
+    const length = Math.hypot(towardTarget.x, towardTarget.y);
+    if (length <= 1e-9) {
+      return [{ bodyId: "hostile", move: { x: 0, y: 0 } }];
+    }
+
+    const sign = state.phase === "RECOVERING" ? -1 : 1;
+    return [{
+      bodyId: "hostile",
+      move: {
+        x: sign * towardTarget.x / length,
+        y: sign * towardTarget.y / length
+      }
+    }];
   }
 
   snapshot(): WorldSnapshot {
