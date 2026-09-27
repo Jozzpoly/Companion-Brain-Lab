@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { SquadFieldLabHud } from "./squad-field-lab-hud";
+import { evaluateCombatTakeoverShadow } from "../brain/combat-takeover-shadow";
 import {
   createFieldLabExperiment,
   decodeFieldLabExperiment,
@@ -1136,6 +1137,20 @@ export class SquadFieldLabScene extends Phaser.Scene {
         : null,
       trialComparison: this.trialComparison
     });
+    const c1Assignment = this.control.assignmentFor("companion");
+    const combatTakeoverShadow = this.situation === "COMBAT_MICRO"
+      ? evaluateCombatTakeoverShadow({
+          snapshot,
+          combat: this.combatMicro,
+          rules: COMBAT_MICRO_RULES,
+          companionPrepared: c1Assignment.mode === "HOLD",
+          preparationSource:
+            c1Assignment.mode === "HOLD"
+              ? "FIELD_LAB_HOLD"
+              : `FIELD_LAB_${c1Assignment.mode}`
+        })
+      : null;
+
     const focusedBody = actor(snapshot, state.focused);
     const player = actor(snapshot, "player");
     const focusedTarget = this.control.targetFor(state.focused, player.position);
@@ -1177,6 +1192,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
         ? { slot: this.activeTrial.slot, frameCount: this.activeTrial.frames.length }
         : null,
       trialComparison: this.trialComparison,
+      combatTakeoverShadow,
       recentEvents: this.eventLog
     });
   }
