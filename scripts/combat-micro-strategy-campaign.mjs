@@ -145,7 +145,7 @@ async function threeBeat(page, sequence) {
 function snapshot(text) {
   const hp = text.match(/hostile HP (\d+)\/3/)?.[1] ?? null;
   const hits = text.match(/hits player (\d+) \/ companion (\d+)/);
-  const history = text.match(/successful strike history ([^\n]+)/)?.[1]?.trim() ?? "none";
+  const history = text.match(/successful strike history ([\\s\\S]*?)(?=latest attempts)/)?.[1]?.trim() ?? "none";
   const target = text.match(/pressure target (player|companion)/)?.[1] ?? null;
   const phase = text.match(/phase (APPROACHING|PRESSURING|RECOVERING|DEFEATED)/)?.[1] ?? null;
   return {
