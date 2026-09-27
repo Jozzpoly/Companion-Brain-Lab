@@ -1138,6 +1138,14 @@ export class R1LabScene extends Phaser.Scene {
         ? 0x63a8ff
         : value.id === "companion"
           ? 0xf2c15c
+          : this.combatMicro
+            ? this.combatMicro.phase === "PRESSURING"
+              ? 0xff5d66
+              : this.combatMicro.phase === "RECOVERING"
+                ? 0xe3b341
+                : this.combatMicro.phase === "DEFEATED"
+                  ? 0x484f58
+                  : 0xff9b5e
           : this.cooperativeEpisode
             ? this.cooperativeEpisode.phase === "PRESSURING"
               ? 0xff5d66
@@ -1164,6 +1172,7 @@ export class R1LabScene extends Phaser.Scene {
       if (value.id === "hostile") {
         this.drawSharedDangerBody(value, snapshot, sx, sy, scale);
         this.drawCooperativeEpisodeBody(value, snapshot, sx, sy, scale);
+        this.drawCombatMicroBody(value, snapshot, sx, sy, scale);
       }
       if (value.id === "companion") {
         this.drawSharedDangerReadinessGlyph(value, snapshot, sx, sy, scale);
@@ -1288,6 +1297,81 @@ export class R1LabScene extends Phaser.Scene {
     } else if (danger.lastOutcome === "ATTACK_MISSED") {
       this.graphics.lineStyle(3, 0xe3b341, 0.85);
       this.graphics.strokeCircle(x, y, hostile.radius * scale * 2.2);
+    }
+  }
+
+  private drawCombatMicroBody(
+    hostile: ActorSnapshot,
+    snapshot: WorldSnapshot,
+    sx: (x: number) => number,
+    sy: (y: number) => number,
+    scale: number
+  ): void {
+    const state = this.combatMicro;
+    if (!state) return;
+
+    const x = sx(hostile.position.x);
+    const y = sy(hostile.position.y);
+    const bodyR = hostile.radius * scale;
+    const target = actor(snapshot, state.targetActorId);
+
+    // The pressure relationship is visible in-world rather than hidden in the panel.
+    if (state.phase === "APPROACHING" || state.phase === "PRESSURING") {
+      const tone = state.phase === "PRESSURING" ? 0xff5d66 : 0xff9b5e;
+      this.graphics.lineStyle(state.phase === "PRESSURING" ? 4 : 2, tone, state.phase === "PRESSURING" ? 0.82 : 0.42);
+      this.graphics.lineBetween(x, y, sx(target.position.x), sy(target.position.y));
+    }
+
+    // Three tiny pips make the bounded encounter persistence participant-legible.
+    const pipWidth = bodyR * 0.75;
+    const pipHeight = Math.max(4, bodyR * 0.22);
+    const pipGap = Math.max(3, bodyR * 0.16);
+    const total = COMBAT_MICRO_RULES.hostileHealth * pipWidth + (COMBAT_MICRO_RULES.hostileHealth - 1) * pipGap;
+    const startX = x - total / 2;
+    const pipY = y - bodyR * 1.85;
+    for (let index = 0; index < COMBAT_MICRO_RULES.hostileHealth; index += 1) {
+      this.graphics.fillStyle(index < state.hostileHealth ? 0xff9b5e : 0x39414d, 0.95);
+      this.graphics.fillRect(startX + index * (pipWidth + pipGap), pipY, pipWidth, pipHeight);
+    }
+
+    if (state.phase === "PRESSURING") {
+      const progress = state.phaseTicksRemaining / COMBAT_MICRO_RULES.pressureTicks;
+      this.graphics.lineStyle(3, 0xff5d66, 0.76);
+      this.graphics.strokeCircle(x, y, bodyR * (1.8 + (1 - progress) * 1.7));
+    }
+
+    if (state.phase === "RECOVERING" && state.lastOutcome === "HOSTILE_STRUCK") {
+      const r = bodyR * 1.6;
+      this.graphics.lineStyle(5, 0x7ee787, 0.95);
+      this.graphics.lineBetween(x - r, y - r, x + r, y + r);
+      this.graphics.lineBetween(x - r, y + r, x + r, y - r);
+      for (const actorId of state.lastSuccessfulStrikers) {
+        const source = actor(snapshot, actorId);
+        this.graphics.lineStyle(3, 0x7ee787, 0.9);
+        this.graphics.strokeCircle(
+          sx(source.position.x),
+          sy(source.position.y),
+          source.radius * scale * 1.45
+        );
+      }
+    }
+
+    if (state.lastOutcome === "ACTOR_HIT" && state.lastHitActorId) {
+      const hit = actor(snapshot, state.lastHitActorId);
+      const hx = sx(hit.position.x);
+      const hy = sy(hit.position.y);
+      const r = hit.radius * scale * 2.15;
+      this.graphics.lineStyle(5, 0xff5d66, 0.95);
+      this.graphics.strokeCircle(hx, hy, r);
+      this.graphics.lineBetween(hx - r, hy, hx + r, hy);
+      this.graphics.lineBetween(hx, hy - r, hx, hy + r);
+    }
+
+    if (state.phase === "DEFEATED") {
+      const r = bodyR * 1.8;
+      this.graphics.lineStyle(5, 0x7ee787, 0.92);
+      this.graphics.lineBetween(x - r, y - r, x + r, y + r);
+      this.graphics.lineBetween(x - r, y + r, x + r, y - r);
     }
   }
 
@@ -1645,7 +1729,8 @@ export class R1LabScene extends Phaser.Scene {
 
     const apparatusActive = snapshot.scenarioId === "shared-danger";
     const cooperativeEpisodeActive = snapshot.scenarioId === "cooperative-episode";
-    this.commandHud.setVisible(!apparatusActive && !cooperativeEpisodeActive);
+    const combatMicroActive = snapshot.scenarioId === "combat-micro";
+    this.commandHud.setVisible(!apparatusActive && !cooperativeEpisodeActive && !combatMicroActive);
     this.commandHud.update({ directive });
     this.apparatusHud.update({
       active: apparatusActive,
@@ -1658,6 +1743,29 @@ export class R1LabScene extends Phaser.Scene {
     });
 
     const sections: CausalPanelModel["sections"] = [
+      ...(combatMicroActive && this.combatMicro ? [{
+        id: "combat-micro-manual",
+        title: "Combat micro · manual responsibility spike",
+        tone: this.combatMicro.phase === "PRESSURING"
+          ? "danger" as const
+          : this.combatMicro.phase === "DEFEATED"
+            ? "success" as const
+            : this.combatMicro.phase === "RECOVERING"
+              ? "warning" as const
+              : "normal" as const,
+        lines: [
+          `phase ${this.combatMicro.phase} · remaining ${this.combatMicro.phaseTicksRemaining}t · hostile HP ${this.combatMicro.hostileHealth}/${COMBAT_MICRO_RULES.hostileHealth}`,
+          `pressure target ${this.combatMicro.targetActorId} · hits player ${this.combatMicro.actorHitCounts.player} / companion ${this.combatMicro.actorHitCounts.companion}`,
+          `last world outcome ${this.combatMicro.lastOutcome} · hit actor ${this.combatMicro.lastHitActorId ?? "none"} · outcome tick ${this.combatMicro.lastOutcomeTick ?? "none"}`,
+          `successful strike history ${this.combatMicro.successfulStrikeHistory.join(" → ") || "none"}`,
+          this.lastCombatMicroActionOutcomes.length > 0
+            ? `latest attempts ${this.lastCombatMicroActionOutcomes.map((outcome) => `${outcome.actorId}:${outcome.status}@${compact(outcome.distance)}m`).join(" · ")}`
+            : "latest attempts none",
+          `STRIKE range ${compact(COMBAT_MICRO_RULES.strikeRange)}m · valid throughout APPROACHING / PRESSURING`,
+          `latest episode outcome ${this.lastCombatMicroOutcome}`,
+          "MANUAL SPIKE ONLY · WASD + E player · arrows + Enter companion · no companion cognition authority"
+        ]
+      } satisfies CausalPanelSection] : []),
       ...(cooperativeEpisodeActive && this.cooperativeEpisode ? [{
         id: "s5-manual-episode",
         title: "S5 manual baseline · continuous cooperative episode",
@@ -2387,11 +2495,12 @@ export class R1LabScene extends Phaser.Scene {
       this.sharedPressure = next.sharedPressure();
       this.sharedDanger = next.sharedDanger();
       this.cooperativeEpisode = next.cooperativeEpisode();
-      if (id === "shared-danger" || id === "cooperative-episode") {
+      this.combatMicro = next.combatMicro();
+      if (id === "shared-danger" || id === "cooperative-episode" || id === "combat-micro") {
         this.companionMode = "manual";
         this.a1Authority.setVariant("off");
       }
-      this.commandHud.setVisible(id !== "shared-danger" && id !== "cooperative-episode");
+      this.commandHud.setVisible(id !== "shared-danger" && id !== "cooperative-episode" && id !== "combat-micro");
       this.apparatusHud.setVisible(id === "shared-danger");
       this.autonomousProposalDecision = null;
       this.arbitrationDecision = null;
@@ -2404,6 +2513,9 @@ export class R1LabScene extends Phaser.Scene {
       this.pendingCooperativeEpisodeAttempts.length = 0;
       this.lastCooperativeEpisodeActionOutcomes = [];
       this.lastCooperativeEpisodeOutcome = "NONE";
+      this.pendingCombatMicroAttempts.length = 0;
+      this.lastCombatMicroActionOutcomes = [];
+      this.lastCombatMicroOutcome = "NONE";
       this.s3AuthorityEnabled = this.teammateSpecimenSurface && id === "shared-danger";
       this.sharedDangerReadinessEnabled = this.teammateSpecimenSurface && id === "shared-danger";
       this.s3Contribution = null;
@@ -2427,6 +2539,9 @@ export class R1LabScene extends Phaser.Scene {
       }
       if (id === "cooperative-episode") {
         this.logEvent("S5 manual baseline armed · WASD+E player · arrows+Enter companion · no AI authority");
+      }
+      if (id === "combat-micro") {
+        this.logEvent("combat micro manual spike armed · WASD+E player · arrows+Enter companion · no AI authority");
       }
       this.drawWorld(this.snapshotValue);
       this.updatePanel(this.snapshotValue);
