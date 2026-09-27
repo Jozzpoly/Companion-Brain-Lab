@@ -9,7 +9,7 @@ export type ActorId = "player" | "companion";
  */
 export type ExperimentalSquadMemberId = "squad-2" | "squad-3" | "squad-4";
 export type SquadMemberId = "companion" | ExperimentalSquadMemberId;
-export type FieldLabSituation = "TRAINING" | "PRESSURE" | "TASK_PRESSURE";
+export type FieldLabSituation = "TRAINING" | "PRESSURE" | "COMBAT_MICRO" | "TASK_PRESSURE";
 export type FieldLabLayout = "OPEN" | "DOORWAY" | "PILLAR" | "MIXED";
 export type WorldBodyId = ActorId | ExperimentalSquadMemberId | "hostile";
 export type ScenarioId =
@@ -22,6 +22,7 @@ export type ScenarioId =
   | "combat-micro"
   | "squad-field-lab"
   | "squad-field-lab-pressure"
+  | "squad-field-lab-combat-micro"
   | "squad-field-lab-task-pressure";
 
 export interface Vec2 {
