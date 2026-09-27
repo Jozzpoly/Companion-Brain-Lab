@@ -194,7 +194,8 @@ export class LabWorld {
       ? initialCooperativeEpisodeSnapshot(this.cooperativeEpisodeRulesValue)
       : null;
     this.combatMicroValue =
-      scenarioSpecValue.id === "combat-micro"
+      scenarioSpecValue.id === "combat-micro" ||
+      scenarioSpecValue.id === "squad-field-lab-combat-micro"
         ? initialCombatMicroSnapshot(COMBAT_MICRO_RULES)
         : null;
     this.taskPressureRulesValue =
@@ -318,6 +319,7 @@ export class LabWorld {
     if (
       this.scenarioSpecValue.id !== "squad-field-lab" &&
       this.scenarioSpecValue.id !== "squad-field-lab-pressure" &&
+      this.scenarioSpecValue.id !== "squad-field-lab-combat-micro" &&
       this.scenarioSpecValue.id !== "squad-field-lab-task-pressure" &&
       experimentalSquadMotionIntents.length > 0
     ) {
