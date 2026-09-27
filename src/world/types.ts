@@ -19,6 +19,7 @@ export type ScenarioId =
   | "head-on"
   | "shared-danger"
   | "cooperative-episode"
+  | "combat-micro"
   | "squad-field-lab"
   | "squad-field-lab-pressure"
   | "squad-field-lab-task-pressure";
