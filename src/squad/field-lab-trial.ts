@@ -5,7 +5,12 @@ import {
   type SquadOrderMode
 } from "./field-lab-squad-control";
 import type { CooperativeEpisodeOutcome } from "../world/cooperative-episode-contract";
-import type { ActorSnapshot, SquadMemberId, Vec2 } from "../world/types";
+import type {
+  CombatMicroEpisodeOutcome,
+  CombatMicroPhase,
+  CombatMicroSnapshot
+} from "../world/combat-micro-contract";
+import type { ActorId, ActorSnapshot, SquadMemberId, Vec2 } from "../world/types";
 
 export const FIELD_LAB_TRIAL_SCHEMA = "companion-field-lab-trial-v1" as const;
 export const FIELD_LAB_TRIAL_MAX_FRAMES = 7_200;
@@ -45,6 +50,7 @@ export interface FieldLabTrialFrame {
   tick: number;
   playerPosition: Vec2;
   cooperativeOutcome: CooperativeEpisodeOutcome;
+  combatMicro: CombatMicroSnapshot | null;
   members: readonly FieldLabTrialMemberSample[];
 }
 
@@ -54,6 +60,7 @@ export interface FieldLabTrialRecord {
   label: string;
   startedAtTick: number;
   endedAtTick: number;
+  initialCombatMicro: CombatMicroSnapshot | null;
   frames: readonly FieldLabTrialFrame[];
   events: readonly FieldLabTrialEvent[];
 }
@@ -80,6 +87,23 @@ export interface FieldLabTrialMemberSummary {
   orderTransitions: number;
 }
 
+export interface FieldLabTrialCombatSummary {
+  samples: number;
+  initialPhase: CombatMicroPhase;
+  finalPhase: CombatMicroPhase;
+  phaseTransitions: number;
+  initialHostileHealth: number;
+  finalHostileHealth: number;
+  hostileDamage: number;
+  initialTargetActorId: ActorId;
+  finalTargetActorId: ActorId;
+  targetTransitions: number;
+  targetTicks: Readonly<Record<ActorId, number>>;
+  actorHitDelta: Readonly<Record<ActorId, number>>;
+  successfulStrikesAdded: readonly ActorId[];
+  outcomeEvents: Readonly<Partial<Record<CombatMicroEpisodeOutcome, number>>>;
+}
+
 export interface FieldLabTrialSummary {
   slot: FieldLabTrialSlot;
   label: string;
@@ -89,6 +113,7 @@ export interface FieldLabTrialSummary {
   events: readonly FieldLabTrialEvent[];
   members: readonly FieldLabTrialMemberSummary[];
   cooperativeOutcomes: Readonly<Partial<Record<CooperativeEpisodeOutcome, number>>>;
+  combatMicro: FieldLabTrialCombatSummary | null;
 }
 
 export interface FieldLabTrialMemberComparison {
@@ -104,10 +129,22 @@ export interface FieldLabTrialMemberComparison {
   orderTransitionsDelta: number;
 }
 
+export interface FieldLabTrialCombatComparison {
+  hostileDamageDelta: number;
+  playerTargetTicksDelta: number;
+  companionTargetTicksDelta: number;
+  targetTransitionsDelta: number;
+  phaseTransitionsDelta: number;
+  playerHitDeltaDelta: number;
+  companionHitDeltaDelta: number;
+  successfulStrikeCountDelta: number;
+}
+
 export interface FieldLabTrialComparison {
   a: FieldLabTrialSummary;
   b: FieldLabTrialSummary;
   members: readonly FieldLabTrialMemberComparison[];
+  combatMicro: FieldLabTrialCombatComparison | null;
 }
 
 function distance(a: Vec2, b: Vec2): number {
@@ -116,6 +153,15 @@ function distance(a: Vec2, b: Vec2): number {
 
 function cloneVec(value: Vec2): Vec2 {
   return { x: value.x, y: value.y };
+}
+
+function cloneCombatMicro(snapshot: CombatMicroSnapshot): CombatMicroSnapshot {
+  return {
+    ...snapshot,
+    actorHitCounts: { ...snapshot.actorHitCounts },
+    lastSuccessfulStrikers: [...snapshot.lastSuccessfulStrikers],
+    successfulStrikeHistory: [...snapshot.successfulStrikeHistory]
+  };
 }
 
 export function classifyFieldLabTrialMember(input: {
@@ -143,6 +189,7 @@ export function createFieldLabTrialFrame(input: {
   tick: number;
   playerPosition: Vec2;
   cooperativeOutcome: CooperativeEpisodeOutcome;
+  combatMicro?: CombatMicroSnapshot | null;
   members: readonly {
     memberId: SquadMemberId;
     body: ActorSnapshot;
@@ -155,6 +202,7 @@ export function createFieldLabTrialFrame(input: {
     tick: input.tick,
     playerPosition: cloneVec(input.playerPosition),
     cooperativeOutcome: input.cooperativeOutcome,
+    combatMicro: input.combatMicro ? cloneCombatMicro(input.combatMicro) : null,
     members: input.members.map(({ memberId, body, target, targetValid, slotTolerance }) => ({
       memberId,
       position: cloneVec(body.position),
@@ -178,6 +226,7 @@ function cloneFrame(frame: FieldLabTrialFrame): FieldLabTrialFrame {
     tick: frame.tick,
     playerPosition: cloneVec(frame.playerPosition),
     cooperativeOutcome: frame.cooperativeOutcome,
+    combatMicro: frame.combatMicro ? cloneCombatMicro(frame.combatMicro) : null,
     members: frame.members.map((member) => ({
       ...member,
       position: cloneVec(member.position),
@@ -192,6 +241,7 @@ export function createFieldLabTrialRecord(input: {
   slot: FieldLabTrialSlot;
   label: string;
   startedAtTick: number;
+  initialCombatMicro?: CombatMicroSnapshot | null;
   frames: readonly FieldLabTrialFrame[];
   events?: readonly FieldLabTrialEvent[];
 }): FieldLabTrialRecord {
@@ -205,6 +255,9 @@ export function createFieldLabTrialRecord(input: {
     label: input.label,
     startedAtTick: input.startedAtTick,
     endedAtTick: frames[frames.length - 1]!.tick,
+    initialCombatMicro: input.initialCombatMicro
+      ? cloneCombatMicro(input.initialCombatMicro)
+      : null,
     frames,
     events: (input.events ?? []).map((event) => ({ ...event }))
   };
@@ -221,6 +274,77 @@ export function summarizeFieldLabTrial(record: FieldLabTrialRecord): FieldLabTri
       cooperativeOutcomes[frame.cooperativeOutcome] =
         (cooperativeOutcomes[frame.cooperativeOutcome] ?? 0) + 1;
     }
+  }
+
+  const combatFrames = record.frames
+    .map((frame) => frame.combatMicro)
+    .filter((sample): sample is CombatMicroSnapshot => sample !== null);
+  let combatMicro: FieldLabTrialCombatSummary | null = null;
+  if (combatFrames.length > 0) {
+    const baseline = record.initialCombatMicro
+      ? cloneCombatMicro(record.initialCombatMicro)
+      : cloneCombatMicro(combatFrames[0]!);
+    const final = combatFrames[combatFrames.length - 1]!;
+    const targetTicks: Record<ActorId, number> = { player: 0, companion: 0 };
+    const outcomeEvents: Partial<Record<CombatMicroEpisodeOutcome, number>> = {};
+    let targetTransitions = 0;
+    let phaseTransitions = 0;
+    let previousTarget = baseline.targetActorId;
+    let previousPhase = baseline.phase;
+    let previousOutcomeTick = baseline.lastOutcomeTick;
+
+    for (const sample of combatFrames) {
+      targetTicks[sample.targetActorId] += 1;
+      if (sample.targetActorId !== previousTarget) {
+        targetTransitions += 1;
+        previousTarget = sample.targetActorId;
+      }
+      if (sample.phase !== previousPhase) {
+        phaseTransitions += 1;
+        previousPhase = sample.phase;
+      }
+      if (
+        sample.lastOutcomeTick !== null &&
+        sample.lastOutcomeTick !== previousOutcomeTick &&
+        sample.lastOutcome !== "NONE"
+      ) {
+        outcomeEvents[sample.lastOutcome] = (outcomeEvents[sample.lastOutcome] ?? 0) + 1;
+        previousOutcomeTick = sample.lastOutcomeTick;
+      }
+    }
+
+    const historyPrefixLength = Math.min(
+      baseline.successfulStrikeHistory.length,
+      final.successfulStrikeHistory.length
+    );
+    const successfulStrikesAdded =
+      final.successfulStrikeHistory.slice(historyPrefixLength);
+
+    combatMicro = {
+      samples: combatFrames.length,
+      initialPhase: baseline.phase,
+      finalPhase: final.phase,
+      phaseTransitions,
+      initialHostileHealth: baseline.hostileHealth,
+      finalHostileHealth: final.hostileHealth,
+      hostileDamage: Math.max(0, baseline.hostileHealth - final.hostileHealth),
+      initialTargetActorId: baseline.targetActorId,
+      finalTargetActorId: final.targetActorId,
+      targetTransitions,
+      targetTicks,
+      actorHitDelta: {
+        player: Math.max(
+          0,
+          final.actorHitCounts.player - baseline.actorHitCounts.player
+        ),
+        companion: Math.max(
+          0,
+          final.actorHitCounts.companion - baseline.actorHitCounts.companion
+        )
+      },
+      successfulStrikesAdded,
+      outcomeEvents
+    };
   }
 
   const members: FieldLabTrialMemberSummary[] = [];
@@ -323,7 +447,8 @@ export function summarizeFieldLabTrial(record: FieldLabTrialRecord): FieldLabTri
     frameCount: record.frames.length,
     events: record.events.map((event) => ({ ...event })),
     members,
-    cooperativeOutcomes
+    cooperativeOutcomes,
+    combatMicro
   };
 }
 
@@ -357,5 +482,27 @@ export function compareFieldLabTrials(
     });
   }
 
-  return { a, b, members };
+  const combatMicro =
+    a.combatMicro && b.combatMicro
+      ? {
+          hostileDamageDelta: b.combatMicro.hostileDamage - a.combatMicro.hostileDamage,
+          playerTargetTicksDelta:
+            b.combatMicro.targetTicks.player - a.combatMicro.targetTicks.player,
+          companionTargetTicksDelta:
+            b.combatMicro.targetTicks.companion - a.combatMicro.targetTicks.companion,
+          targetTransitionsDelta:
+            b.combatMicro.targetTransitions - a.combatMicro.targetTransitions,
+          phaseTransitionsDelta:
+            b.combatMicro.phaseTransitions - a.combatMicro.phaseTransitions,
+          playerHitDeltaDelta:
+            b.combatMicro.actorHitDelta.player - a.combatMicro.actorHitDelta.player,
+          companionHitDeltaDelta:
+            b.combatMicro.actorHitDelta.companion - a.combatMicro.actorHitDelta.companion,
+          successfulStrikeCountDelta:
+            b.combatMicro.successfulStrikesAdded.length -
+            a.combatMicro.successfulStrikesAdded.length
+        }
+      : null;
+
+  return { a, b, members, combatMicro };
 }
