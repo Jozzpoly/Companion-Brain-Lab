@@ -13,6 +13,7 @@ on:
       - "src/world/scenarios.ts"
       - "src/app/r1-lab-scene.ts"
       - "scripts/combat-micro-manual-browser.mjs"
+      - "scripts/combat-micro-strategy-campaign.mjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/combat-micro-browser.yml"
@@ -53,12 +54,16 @@ jobs:
         run: npm run check
       - name: Manual combat responsibility browser falsifier
         run: npm run browser:combat-micro-manual
+      - name: Strategy diversity falsifier
+        run: npm run browser:combat-micro-strategies
       - name: Upload combat micro evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: combat-micro-browser-${{ github.sha }}
-          path: artifacts/combat-micro-manual/
+          path: |
+            artifacts/combat-micro-manual/
+            artifacts/combat-micro-strategies/
           if-no-files-found: warn
           retention-days: 14
       - name: Publish combat-micro-browser commit status
