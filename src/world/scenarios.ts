@@ -107,6 +107,18 @@ export const SCENARIOS: Readonly<Record<ScenarioId, ScenarioSpec>> = {
     ],
     obstacles: []
   },
+  "combat-micro": {
+    id: "combat-micro",
+    label: "Combat micro · manual responsibility spike",
+    width: WIDTH,
+    height: HEIGHT,
+    actors: [
+      actor("player", 3, 4),
+      actor("companion", 4.8, 5.2),
+      actor("hostile", 9.4, 4, { radius: 0.34, speed: 1.7, collisionMode: "sensor" })
+    ],
+    obstacles: []
+  },
   "squad-field-lab": {
     id: "squad-field-lab",
     label: "Companion / Squad Field Lab",
