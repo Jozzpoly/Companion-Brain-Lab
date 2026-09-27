@@ -1774,3 +1774,156 @@ Reject the next step if:
 Current status:
 
 > **FIELD LAB COMBAT AUTHORING MACHINE-QUALIFIED · TEMPORAL RESPONSIBILITY A/B OBSERVABILITY QUALIFIED · ROUTINE CI BOUNDED · NO AUTONOMY PROMOTION · NOT OWNER-QUALIFIED · NEXT: MULTI-BEAT MANUAL RESPONSIBILITY-PATTERN DISCOVERY**
+
+
+---
+
+## 28. First multi-beat responsibility patterns — preparation is causal — 2026-09-27
+
+After temporal Combat Micro responsibility traces were qualified, the next campaign deliberately avoided adding another action verb or autonomous authority.
+
+Question:
+
+> **Can the same material situation produce different multi-beat responsibility histories because an actor reacts to a participant-visible World state, rather than because the author knows a hidden timing sequence?**
+
+The first directional hypothesis was:
+
+`C1 engages → C1 becomes visibly pressured → player takes over → consequence follows the new responsibility bearer`
+
+### Two failed takeover attempts — retained as material negative evidence
+
+Initial source:
+
+`f01d7e8cd0fc50969322a656aacf3c59e641bf71`
+
+The broad Lab, persistent A/B and single-action Combat Micro falsifiers all passed, but the new multi-beat pattern failed.
+
+At the visible `PRESSURING C1` cue the player attempted STRIKE, yet World remained:
+
+`HP 2/3 · pressure target C1 · hits YOU 0 / C1 0 · history C1`
+
+A second attempt changed only authored start geometry, without changing World rules, strike range or hostile parameters:
+
+`4dd28efd382a5f960948d5eef95949b9e6c962cf`
+
+It failed the same way.
+
+The exact pre-takeover screenshot from the second failure was inspected. It showed the underlying cause:
+
+- C1 had not preserved the authored starting point;
+- ordinary FOLLOW / formation authority had moved C1 during the developing situation;
+- therefore the authored initial geometry did not guarantee a later shared intervention opportunity.
+
+Canonical interpretation:
+
+> **A static starting position is not preparation.**
+>
+> In this dynamic situation, later responsibility transfer depends on whether the actors preserve a material opportunity to intervene.
+
+Do not “fix” this evidence by widening STRIKE range, freezing hostile motion, or tuning coordinates until the old hypothesis passes.
+
+### Explicit preparation rework
+
+The rework changed no combat semantics.
+
+Before capturing A/B, C1 receives an explicit existing Field Lab `HOLD` assignment at the authored responsibility point. The same prepared HOLD state is then restored for both trials.
+
+This makes preparation part of the causal setup rather than a hidden assumption.
+
+Qualified source:
+
+`d972e906bea3779441cabefe434ea1b4b5765b28`
+
+Evidence:
+
+- `validate #1766` — SUCCESS;
+- `squad-field-lab-browser #153 · run 36318140438` — SUCCESS;
+- 190/190 test files PASS;
+- 764/764 tests PASS;
+- production build PASS;
+- broad Field Lab PASS;
+- persistent A/B PASS;
+- single-action combat authoring PASS;
+- multi-beat responsibility-pattern falsifier PASS;
+- durable manual action/order provenance regression PASS;
+- exact artifact and both responsibility-pattern screenshots inspected;
+- no page / console / request errors.
+
+Both trials begin from structurally identical captured setups and the same initial explicit C1 engagement.
+
+#### Pattern A — C1 bears responsibility
+
+Prepared C1 holds position, STRIKEs and remains the responsibility bearer.
+
+Observed result:
+
+- first material C1 consequence after 163 stepped ticks;
+- final state:
+  `RECOVERING · HP 2/3 · pressure target C1 · hits YOU 0 / C1 1 · history C1`.
+
+#### Pattern B — player takeover from visibly pressured C1
+
+Prepared C1 begins identically.
+
+The player does **not** take over at a preselected tick. The intervention is triggered only after the participant-visible condition:
+
+`PRESSURING · pressure target C1 · no hit yet`
+
+The cue occurred after 91 stepped ticks in this qualified run.
+
+The player then explicitly STRIKEs, responsibility transfers, and the later consequence follows the player.
+
+Observed result:
+
+- player consequence 149 stepped ticks after the takeover segment began;
+- final state:
+  `RECOVERING · HP 1/3 · pressure target YOU · hits YOU 1 / C1 0 · history C1 → YOU`.
+
+The temporal trace distinguishes:
+
+- target ownership over time;
+- responsibility-transfer count;
+- actor-specific consequences;
+- strike history;
+- factual World outcomes.
+
+### What this establishes
+
+Machine evidence now supports a stronger statement than “multiple manual STRIKE sequences are possible”:
+
+> **The bounded situation can express a conditional multi-beat responsibility pattern in which explicit preparation preserves an intervention opportunity, C1 assumes responsibility, a visible pressure state creates a takeover opportunity, the player takes responsibility, and later World consequence follows the new bearer.**
+
+This is the first current campaign result where **preparation, engagement and responsibility transfer form one causal chain** rather than separate UI mechanisms.
+
+It does **not** establish:
+
+- that HOLD is the final product command or final meaning of “prepare”;
+- autonomous companion takeover / yielding;
+- an optimal combat policy;
+- combat quality;
+- teammate feel;
+- Owner qualification.
+
+The important donor is the causal structure, not the concrete key sequence or constants.
+
+### Current hypothesis to challenge next
+
+The result is still directional:
+
+`C1 → player`
+
+Before deriving any brain semantic from it, challenge the symmetry:
+
+> **Can a prepared C1 take over from a visibly pressured player under the same material rules, with the same kind of causal observability?**
+
+If the reverse direction survives, compare both histories for shared structure rather than adding more variants indefinitely.
+
+A candidate abstract relation to investigate — not yet architecture authority — is:
+
+`prepared / available → current responsibility bearer → visible pressure → intervention opportunity → takeover / yield → consequence / recovery`
+
+Only after bidirectional manual evidence should the project consider a shadow decision seam asking whether C1 **would choose** a takeover under those conditions. Do not grant live autonomous STRIKE authority yet.
+
+Current status:
+
+> **ONE DIRECTIONAL PREPARED TAKEOVER PATTERN MACHINE-QUALIFIED · PREPARATION SHOWN TO BE MATERIAL · REVERSE TAKEOVER STILL UNPROVEN · NO AUTONOMY PROMOTION · NOT OWNER-QUALIFIED**
