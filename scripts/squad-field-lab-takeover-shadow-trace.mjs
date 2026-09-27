@@ -164,7 +164,7 @@ try {
   while (aTicks < TOTAL_TICKS) {
     await tap(page, "o");
     aTicks += 1;
-    if (aFirstPositiveTick === null && (await shadowText(page)).includes("TAKE_OVER")) {
+    if (aFirstPositiveTick === null && (await shadowText(page)).includes("TAKE_OVER · TAKEOVER_CONDITIONS_PRESENT")) {
       aFirstPositiveTick = aTicks;
     }
   }
@@ -172,7 +172,7 @@ try {
   const aFinalStatus = await combatStatus(page);
   invariant(aFinalStatus.includes("history YOU"), `Trace A lost manual-only history: ${aFinalStatus}`);
   invariant(!aFinalStatus.includes("YOU → C1"), "Trace A shadow executed a hidden takeover.");
-  invariant((await shadowText(page)).includes("TAKE_OVER"), "Trace A opportunity did not remain open at the bounded endpoint.");
+  invariant((await shadowText(page)).includes("TAKE_OVER · TAKEOVER_CONDITIONS_PRESENT"), "Trace A opportunity did not remain open at the bounded endpoint.");
   await page.locator('[data-trial-toggle="A"]').click();
   await waitFor(page, (text) => text.includes("not recording"), 4_000, "trace A stop");
 
@@ -188,7 +188,7 @@ try {
   while (bTicks < TOTAL_TICKS) {
     await tap(page, "o");
     bTicks += 1;
-    if ((await shadowText(page)).includes("TAKE_OVER")) {
+    if ((await shadowText(page)).includes("TAKE_OVER · TAKEOVER_CONDITIONS_PRESENT")) {
       bFirstPositiveTick = bTicks;
       break;
     }
