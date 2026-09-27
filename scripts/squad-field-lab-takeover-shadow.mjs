@@ -226,17 +226,39 @@ try {
   invariant(manualTakeover.includes("pressure target C1"), `Manual C1 STRIKE did not transfer responsibility: ${manualTakeover}`);
   invariant(manualTakeover.includes("history YOU → C1"), `Manual takeover history missing: ${manualTakeover}`);
 
+  const recoveryShadow = await waitForText(
+    () => shadowText(page),
+    (text) =>
+      text.includes("DO_NOT_TAKE_OVER") &&
+      text.includes("NO_ACTIVE_PRESSURE") &&
+      text.includes("bearer C1") &&
+      text.includes("phase RECOVERING") &&
+      text.includes("authority NONE_SHADOW_OBSERVATION_ONLY"),
+    5_000,
+    "shadow withdraws during post-takeover recovery"
+  );
+  invariant(recoveryShadow.includes("action NONE"), "Recovery shadow gained action authority.");
+
+  const c1Pressured = await stepUntil(
+    page,
+    (status) =>
+      status.includes("PRESSURING") &&
+      status.includes("pressure target C1"),
+    220,
+    "visible C1 pressure after takeover"
+  );
   const alreadyBearerShadow = await waitForText(
     () => shadowText(page),
     (text) =>
       text.includes("DO_NOT_TAKE_OVER") &&
       text.includes("COMPANION_ALREADY_BEARER") &&
       text.includes("bearer C1") &&
+      text.includes("phase PRESSURING") &&
       text.includes("authority NONE_SHADOW_OBSERVATION_ONLY"),
     5_000,
-    "shadow withdraws after manual takeover"
+    "shadow refuses redundant takeover when C1 already bears pressure"
   );
-  invariant(alreadyBearerShadow.includes("action NONE"), "Post-takeover shadow gained action authority.");
+  invariant(alreadyBearerShadow.includes("action NONE"), "Already-bearer shadow gained action authority.");
 
   await page.screenshot({
     path: `${ROOT}/02-shadow-withdraws-after-manual-takeover.png`,
@@ -267,7 +289,9 @@ try {
       removingPreparationSuppressesRecommendationUnderSamePressure: true,
       restoringPreparationRecoversRecommendation: true,
       manualC1StrikeAloneTransfersResponsibility: true,
-      shadowWithdrawsWhenC1AlreadyBearsResponsibility: true,
+      shadowWithdrawsDuringRecoveryAfterTakeover: true,
+      shadowRefusesRedundantTakeoverWhenC1LaterBearsPressure: true,
+      c1PressureAfterTakeoverObservedAfterTicks: c1Pressured.ticks,
       hiddenPressureTimingNotUsedForDecision: true
     },
     interpretationBoundary:
