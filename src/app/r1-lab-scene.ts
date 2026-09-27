@@ -76,6 +76,12 @@ import type {
   CooperativeEpisodeOutcome,
   CooperativeEpisodeSnapshot
 } from "../world/cooperative-episode-contract";
+import type {
+  CombatMicroActionAttempt,
+  CombatMicroActionOutcome,
+  CombatMicroEpisodeOutcome,
+  CombatMicroSnapshot
+} from "../world/combat-micro-contract";
 import type { SharedPressureSnapshot } from "../world/shared-pressure";
 import type {
   SharedDangerEpisodeOutcome,
@@ -92,7 +98,12 @@ import type {
   WorldSnapshot,
   WorldBodyId
 } from "../world/types";
-import { LabWorld, S1_SHARED_DANGER_RULES, S5_COOPERATIVE_EPISODE_RULES } from "../world/world";
+import {
+  COMBAT_MICRO_RULES,
+  LabWorld,
+  S1_SHARED_DANGER_RULES,
+  S5_COOPERATIVE_EPISODE_RULES
+} from "../world/world";
 import { isOwnerReviewSearch, isTeammateReviewSearch, ownerReviewAllowsPanelAction } from "./owner-review-mode";
 import { PlayerCommandHud } from "./player-command-hud";
 import { SharedDangerApparatusHud } from "./shared-danger-apparatus-hud";
@@ -233,6 +244,7 @@ export class R1LabScene extends Phaser.Scene {
   private sharedPressure: SharedPressureSnapshot | null = null;
   private sharedDanger: SharedDangerSnapshot | null = null;
   private cooperativeEpisode: CooperativeEpisodeSnapshot | null = null;
+  private combatMicro: CombatMicroSnapshot | null = null;
   private situatedResponsibility: S2SituatedResponsibilityDecision | null = null;
   private s3AuthorityEnabled = false;
   private s3Contribution: S3MaterialContributionProposal | null = null;
@@ -246,6 +258,9 @@ export class R1LabScene extends Phaser.Scene {
   private pendingCooperativeEpisodeAttempts: CooperativeEpisodeActionAttempt[] = [];
   private lastCooperativeEpisodeActionOutcomes: readonly CooperativeEpisodeActionOutcome[] = [];
   private lastCooperativeEpisodeOutcome: CooperativeEpisodeOutcome = "NONE";
+  private pendingCombatMicroAttempts: CombatMicroActionAttempt[] = [];
+  private lastCombatMicroActionOutcomes: readonly CombatMicroActionOutcome[] = [];
+  private lastCombatMicroOutcome: CombatMicroEpisodeOutcome = "NONE";
   private appliedLocalRetries = 0;
   private decisionRoutePlan: StaticRoutePlan | null = null;
   private postRoutePlan: StaticRoutePlan | null = null;
@@ -262,7 +277,7 @@ export class R1LabScene extends Phaser.Scene {
   private keys!: Record<
     "w" | "a" | "s" | "d" | "up" | "down" | "left" | "right" |
     "reset" | "pause" | "step" | "mode" | "incident" | "natural" | "time" |
-    "one" | "two" | "three" | "four" | "five" | "six" | "f1" | "f2" | "f3" |
+    "one" | "two" | "three" | "four" | "five" | "six" | "seven" | "f1" | "f2" | "f3" |
     "playerAction" | "companionAction" | "withhold",
     Phaser.Input.Keyboard.Key
   >;
@@ -315,6 +330,7 @@ export class R1LabScene extends Phaser.Scene {
       four: Phaser.Input.Keyboard.KeyCodes.FOUR,
       five: Phaser.Input.Keyboard.KeyCodes.FIVE,
       six: Phaser.Input.Keyboard.KeyCodes.SIX,
+      seven: Phaser.Input.Keyboard.KeyCodes.SEVEN,
       f1: Phaser.Input.Keyboard.KeyCodes.F1,
       f2: Phaser.Input.Keyboard.KeyCodes.F2,
       f3: Phaser.Input.Keyboard.KeyCodes.F3,
@@ -352,22 +368,28 @@ export class R1LabScene extends Phaser.Scene {
     const evidence = this.computeIntents(this.snapshotValue);
     const beforeDanger = this.world.sharedDanger();
     const beforeCooperativeEpisode = this.world.cooperativeEpisode();
+    const beforeCombatMicro = this.world.combatMicro();
     const actionAttempts = this.scenarioId === "shared-danger"
       ? this.pendingActionAttempts.splice(0)
       : [];
     const cooperativeEpisodeAttempts = this.scenarioId === "cooperative-episode"
       ? this.pendingCooperativeEpisodeAttempts.splice(0)
       : [];
+    const combatMicroAttempts = this.scenarioId === "combat-micro"
+      ? this.pendingCombatMicroAttempts.splice(0)
+      : [];
     const worldResult = this.world.stepSituation({
       motionIntents: evidence.intents,
       actionAttempts,
-      cooperativeEpisodeAttempts
+      cooperativeEpisodeAttempts,
+      combatMicroAttempts
     });
     const after = worldResult.snapshot;
     this.snapshotValue = after;
     this.sharedPressure = this.world.sharedPressure();
     this.sharedDanger = worldResult.sharedDanger;
     this.cooperativeEpisode = worldResult.cooperativeEpisode;
+    this.combatMicro = worldResult.combatMicro;
     this.updateSituatedResponsibility(after);
     if (worldResult.actionOutcomes.length > 0) {
       this.lastActionOutcomes = worldResult.actionOutcomes;
@@ -383,6 +405,12 @@ export class R1LabScene extends Phaser.Scene {
     if (worldResult.cooperativeEpisodeOutcome !== "NONE") {
       this.lastCooperativeEpisodeOutcome = worldResult.cooperativeEpisodeOutcome;
     }
+    if (this.scenarioId === "combat-micro") {
+      this.lastCombatMicroActionOutcomes = worldResult.combatMicroActionOutcomes;
+    }
+    if (worldResult.combatMicroOutcome !== "NONE") {
+      this.lastCombatMicroOutcome = worldResult.combatMicroOutcome;
+    }
     this.logSharedPressureTransition(evidence.pressureBefore, this.sharedPressure);
     this.logSharedDangerTransition(beforeDanger, this.sharedDanger, worldResult.actionOutcomes, worldResult.episodeOutcome);
     this.logCooperativeEpisodeTransition(
@@ -390,6 +418,12 @@ export class R1LabScene extends Phaser.Scene {
       this.cooperativeEpisode,
       worldResult.cooperativeEpisodeActionOutcomes,
       worldResult.cooperativeEpisodeOutcome
+    );
+    this.logCombatMicroTransition(
+      beforeCombatMicro,
+      this.combatMicro,
+      worldResult.combatMicroActionOutcomes,
+      worldResult.combatMicroOutcome
     );
     this.updatePostEvidence(after, evidence.target);
 
@@ -1017,6 +1051,34 @@ export class R1LabScene extends Phaser.Scene {
     }
     if (episodeOutcome !== "NONE") {
       this.logEvent(`S1 episode outcome ${episodeOutcome}`);
+    }
+  }
+
+  private logCombatMicroTransition(
+    before: CombatMicroSnapshot | null,
+    after: CombatMicroSnapshot | null,
+    actionOutcomes: readonly CombatMicroActionOutcome[],
+    episodeOutcome: CombatMicroEpisodeOutcome
+  ): void {
+    if (!after) return;
+    if (
+      !before ||
+      before.phase !== after.phase ||
+      before.hostileHealth !== after.hostileHealth ||
+      before.targetActorId !== after.targetActorId ||
+      before.lastOutcome !== after.lastOutcome
+    ) {
+      this.logEvent(
+        `combat micro ${before?.phase ?? "NONE"} -> ${after.phase} · hp ${after.hostileHealth}/${COMBAT_MICRO_RULES.hostileHealth} · target ${after.targetActorId} · outcome ${after.lastOutcome}`
+      );
+    }
+    for (const outcome of actionOutcomes) {
+      this.logEvent(
+        `combat micro ${outcome.actorId} ${outcome.kind} -> ${outcome.status} · ${compact(outcome.distance)}m · ${outcome.phaseObserved}`
+      );
+    }
+    if (episodeOutcome !== "NONE") {
+      this.logEvent(`combat micro episode outcome ${episodeOutcome}`);
     }
   }
 
@@ -2005,6 +2067,7 @@ export class R1LabScene extends Phaser.Scene {
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.five)) void this.loadScenario("shared-danger");
     if (Phaser.Input.Keyboard.JustDown(this.keys.six)) void this.loadScenario("cooperative-episode");
+    if (Phaser.Input.Keyboard.JustDown(this.keys.seven)) void this.loadScenario("combat-micro");
 
     if (this.scenarioId === "shared-danger") {
       if (Phaser.Input.Keyboard.JustDown(this.keys.playerAction)) this.queueWorldAction("player");
@@ -2023,6 +2086,19 @@ export class R1LabScene extends Phaser.Scene {
       }
       if (Phaser.Input.Keyboard.JustDown(this.keys.companionAction)) {
         this.queueCooperativeEpisodeAction("companion");
+      }
+      if (Phaser.Input.Keyboard.JustDown(this.keys.pause)) this.togglePause();
+      if (Phaser.Input.Keyboard.JustDown(this.keys.step)) this.queueSingleStep();
+      if (Phaser.Input.Keyboard.JustDown(this.keys.time)) this.cycleTimeScale();
+      return;
+    }
+
+    if (this.scenarioId === "combat-micro") {
+      if (Phaser.Input.Keyboard.JustDown(this.keys.playerAction)) {
+        this.queueCombatMicroAction("player");
+      }
+      if (Phaser.Input.Keyboard.JustDown(this.keys.companionAction)) {
+        this.queueCombatMicroAction("companion");
       }
       if (Phaser.Input.Keyboard.JustDown(this.keys.pause)) this.togglePause();
       if (Phaser.Input.Keyboard.JustDown(this.keys.step)) this.queueSingleStep();
@@ -2096,6 +2172,19 @@ export class R1LabScene extends Phaser.Scene {
     }
     this.pendingCooperativeEpisodeAttempts.push({ actorId, kind: "REPEL", targetId: "hostile" });
     this.logEvent(`S5 manual REPEL queued · ${actorId}`);
+  }
+
+  private queueCombatMicroAction(actorId: "player" | "companion"): void {
+    if (this.scenarioId !== "combat-micro") {
+      this.logEvent(`combat micro action ignored outside combat-micro · ${actorId}`);
+      return;
+    }
+    if (this.pendingCombatMicroAttempts.some((attempt) => attempt.actorId === actorId)) {
+      this.logEvent(`combat micro STRIKE already queued this frame · ${actorId}`);
+      return;
+    }
+    this.pendingCombatMicroAttempts.push({ actorId, kind: "STRIKE", targetId: "hostile" });
+    this.logEvent(`combat micro STRIKE queued · ${actorId}`);
   }
 
   private toggleS4Withhold(): void {
