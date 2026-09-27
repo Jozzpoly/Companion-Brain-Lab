@@ -99,6 +99,26 @@ function combatTrialLine(
   );
 }
 
+function takeoverShadowTrialLine(
+  slot: "A" | "B",
+  shadow: FieldLabTrialSummary["combatTakeoverShadow"]
+): string {
+  if (!shadow) return "";
+  const tick = (value: number | null) => value === null ? "none" : `${value}t`;
+  const reasons = Object.entries(shadow.reasonTicks)
+    .map(([reason, count]) => `${reason}×${count}`)
+    .join(" · ") || "none";
+  return (
+    `<div class="squad-field-debug-subline"><strong>${slot} shadow</strong> · ` +
+    `TAKE_OVER ${shadow.takeOverTicks}/${shadow.samples}t · ` +
+    `first/last ${tick(shadow.firstTakeOverTickOffset)}/${tick(shadow.lastTakeOverTickOffset)} · ` +
+    `episodes ${shadow.takeOverEpisodes} · longest ${shadow.longestTakeOverRun}t · ` +
+    `recommendation transitions ${shadow.recommendationTransitions} · reason transitions ${shadow.reasonTransitions} · ` +
+    `final ${shadow.finalRecommendation}/${shadow.finalReasonCode}</div>` +
+    `<div class="squad-field-debug-subline">${slot} shadow reasons · ${escapeHtml(reasons)}</div>`
+  );
+}
+
 export class SquadFieldLabPanel {
   private readonly root: HTMLElement;
   private readonly content: HTMLElement;
@@ -232,6 +252,16 @@ export class SquadFieldLabPanel {
               combatTrialLine("B", state.trialComparison.b.combatMicro) +
               (state.trialComparison.combatMicro
                 ? `<div><strong>Combat Δ B−A</strong> · damage ${signed(state.trialComparison.combatMicro.hostileDamageDelta, 0)} · target time YOU ${signed(state.trialComparison.combatMicro.playerTargetTicksDelta, 0)}t / C1 ${signed(state.trialComparison.combatMicro.companionTargetTicksDelta, 0)}t · target transfers ${signed(state.trialComparison.combatMicro.targetTransitionsDelta, 0)} · phase transfers ${signed(state.trialComparison.combatMicro.phaseTransitionsDelta, 0)} · hits YOU ${signed(state.trialComparison.combatMicro.playerHitDeltaDelta, 0)} / C1 ${signed(state.trialComparison.combatMicro.companionHitDeltaDelta, 0)} · strikes ${signed(state.trialComparison.combatMicro.successfulStrikeCountDelta, 0)}</div>`
+                : "")
+            : ""}
+          ${state.trialComparison && (
+              state.trialComparison.a.combatTakeoverShadow ||
+              state.trialComparison.b.combatTakeoverShadow
+            )
+            ? takeoverShadowTrialLine("A", state.trialComparison.a.combatTakeoverShadow) +
+              takeoverShadowTrialLine("B", state.trialComparison.b.combatTakeoverShadow) +
+              (state.trialComparison.combatTakeoverShadow
+                ? `<div><strong>Shadow Δ B−A</strong> · TAKE_OVER ${signed(state.trialComparison.combatTakeoverShadow.takeOverTicksDelta, 0)}t · episodes ${signed(state.trialComparison.combatTakeoverShadow.takeOverEpisodesDelta, 0)} · longest ${signed(state.trialComparison.combatTakeoverShadow.longestTakeOverRunDelta, 0)}t · recommendation transitions ${signed(state.trialComparison.combatTakeoverShadow.recommendationTransitionsDelta, 0)} · reason transitions ${signed(state.trialComparison.combatTakeoverShadow.reasonTransitionsDelta, 0)}</div>`
                 : "")
             : ""}
           ${state.trialComparison
