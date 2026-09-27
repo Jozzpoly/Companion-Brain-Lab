@@ -31,6 +31,7 @@ on:
       - "scripts/squad-field-lab-combat-authoring.mjs"
       - "scripts/squad-field-lab-responsibility-patterns.mjs"
       - "scripts/squad-field-lab-reverse-takeover.mjs"
+      - "scripts/squad-field-lab-takeover-shadow.mjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/squad-field-lab-browser.yml"
@@ -80,6 +81,8 @@ jobs:
         run: npm run browser:squad-field-lab-responsibility-patterns
       - name: Reverse responsibility takeover falsifier
         run: npm run browser:squad-field-lab-reverse-takeover
+      - name: Zero-authority takeover shadow falsifier
+        run: npm run browser:squad-field-lab-takeover-shadow
       - name: Durable manual action/order provenance regression
         run: npm run browser:squad-field-lab-manual-episode
       - name: Upload Field Lab evidence
@@ -94,5 +97,6 @@ jobs:
             artifacts/squad-field-lab-combat-authoring/
             artifacts/squad-field-lab-responsibility-patterns/
             artifacts/squad-field-lab-reverse-takeover/
+            artifacts/squad-field-lab-takeover-shadow/
           if-no-files-found: warn
           retention-days: 14
