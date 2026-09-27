@@ -986,6 +986,8 @@ export class SquadFieldLabScene extends Phaser.Scene {
 
     if (this.taskPressure) {
       this.drawTaskPressure(snapshot, sx, sy, scale);
+    } else if (this.combatMicro) {
+      this.drawCombatMicro(snapshot, sx, sy, scale);
     } else {
       this.drawCooperativePressure(snapshot, sx, sy, scale);
     }
@@ -1260,6 +1262,112 @@ export class SquadFieldLabScene extends Phaser.Scene {
         sx(activeCenter.x),
         sy(activeCenter.y)
       );
+    }
+  }
+
+  private drawCombatMicro(
+    snapshot: WorldSnapshot,
+    sx: (x: number) => number,
+    sy: (y: number) => number,
+    scale: number
+  ): void {
+    const state = this.combatMicro;
+    const hostile = snapshot.actors.find((entry) => entry.id === "hostile");
+    if (!state || !hostile) {
+      this.hostileLabel.setVisible(false);
+      return;
+    }
+
+    const x = sx(hostile.position.x);
+    const y = sy(hostile.position.y);
+    const bodyR = hostile.radius * scale;
+    const target = actor(snapshot, state.targetActorId);
+
+    this.hostileLabel.setVisible(true);
+    this.hostileLabel.setText(`THREAT · HP ${state.hostileHealth}/${COMBAT_MICRO_RULES.hostileHealth}`);
+    this.hostileLabel.setPosition(x, y);
+    this.hostileLabel.setColor(
+      state.phase === "PRESSURING"
+        ? "#ff7b72"
+        : state.phase === "DEFEATED"
+          ? "#8b949e"
+          : "#ffb07a"
+    );
+
+    this.graphics.fillStyle(
+      state.phase === "DEFEATED"
+        ? 0x484f58
+        : state.phase === "RECOVERING"
+          ? 0xe3b341
+          : state.phase === "PRESSURING"
+            ? 0xff5d66
+            : 0xff9b5e,
+      1
+    );
+    this.graphics.fillCircle(x, y, bodyR);
+    this.graphics.lineStyle(3, 0xf0f6fc, 0.86);
+    this.graphics.strokeCircle(x, y, bodyR);
+
+    if (state.phase === "APPROACHING" || state.phase === "PRESSURING") {
+      this.graphics.lineStyle(
+        state.phase === "PRESSURING" ? 4 : 2,
+        state.phase === "PRESSURING" ? 0xff5d66 : 0xff9b5e,
+        state.phase === "PRESSURING" ? 0.8 : 0.42
+      );
+      this.graphics.lineBetween(x, y, sx(target.position.x), sy(target.position.y));
+    }
+
+    const pipWidth = bodyR * 0.72;
+    const pipGap = Math.max(3, bodyR * 0.14);
+    const pipHeight = Math.max(4, bodyR * 0.2);
+    const total =
+      COMBAT_MICRO_RULES.hostileHealth * pipWidth +
+      (COMBAT_MICRO_RULES.hostileHealth - 1) * pipGap;
+    const startX = x - total / 2;
+    const pipY = y - bodyR * 1.9;
+    for (let index = 0; index < COMBAT_MICRO_RULES.hostileHealth; index += 1) {
+      this.graphics.fillStyle(index < state.hostileHealth ? 0xff9b5e : 0x39414d, 0.95);
+      this.graphics.fillRect(startX + index * (pipWidth + pipGap), pipY, pipWidth, pipHeight);
+    }
+
+    if (state.phase === "PRESSURING") {
+      const progress = Math.max(
+        0,
+        Math.min(1, state.phaseTicksRemaining / COMBAT_MICRO_RULES.pressureTicks)
+      );
+      this.graphics.lineStyle(3, 0xff5d66, 0.72);
+      this.graphics.strokeCircle(x, y, bodyR * (1.8 + (1 - progress) * 1.55));
+    }
+
+    if (state.phase === "RECOVERING" && state.lastOutcome === "HOSTILE_STRUCK") {
+      const r = bodyR * 1.65;
+      this.graphics.lineStyle(5, 0x7ee787, 0.95);
+      this.graphics.lineBetween(x - r, y - r, x + r, y + r);
+      this.graphics.lineBetween(x - r, y + r, x + r, y - r);
+      for (const contributor of state.lastSuccessfulStrikers) {
+        const source = snapshot.actors.find((entry) => entry.id === contributor);
+        if (!source) continue;
+        this.graphics.lineStyle(3, 0x7ee787, 0.86);
+        this.graphics.lineBetween(sx(source.position.x), sy(source.position.y), x, y);
+      }
+    }
+
+    if (state.lastOutcome === "ACTOR_HIT" && state.lastHitActorId) {
+      const hit = actor(snapshot, state.lastHitActorId);
+      const hx = sx(hit.position.x);
+      const hy = sy(hit.position.y);
+      const r = hit.radius * scale * 2.0;
+      this.graphics.lineStyle(5, 0xff5d66, 0.92);
+      this.graphics.strokeCircle(hx, hy, r);
+      this.graphics.lineBetween(hx - r, hy, hx + r, hy);
+      this.graphics.lineBetween(hx, hy - r, hx, hy + r);
+    }
+
+    if (state.phase === "DEFEATED") {
+      const r = bodyR * 1.7;
+      this.graphics.lineStyle(5, 0x7ee787, 0.92);
+      this.graphics.lineBetween(x - r, y - r, x + r, y + r);
+      this.graphics.lineBetween(x - r, y + r, x + r, y - r);
     }
   }
 
