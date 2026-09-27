@@ -19,6 +19,7 @@ export type CausalPanelAction =
   | "scenario-head-on"
   | "scenario-shared-danger"
   | "scenario-cooperative-episode"
+  | "scenario-combat-micro"
   | "s1-player-intervene"
   | "s1-companion-intervene"
   | "toggle-s3-authority"
@@ -65,7 +66,7 @@ const DEFAULT_LAYERS: Readonly<Record<WorldDebugLayer, boolean>> = {
   contacts: true
 };
 
-const DEFAULT_OPEN_SECTION_IDS = new Set(["s1-apparatus", "s5-manual-episode", "readiness", "s2-responsibility", "s3-contribution", "s4-correction", "direction", "run", "stage-b", "recovery", "route", "motion", "a1", "p2"]);
+const DEFAULT_OPEN_SECTION_IDS = new Set(["combat-micro-manual", "s1-apparatus", "s5-manual-episode", "readiness", "s2-responsibility", "s3-contribution", "s4-correction", "direction", "run", "stage-b", "recovery", "route", "motion", "a1", "p2"]);
 
 export class CausalPanelDisclosureState {
   private readonly remembered = new Map<string, boolean>();
@@ -209,7 +210,8 @@ export class CausalPanel {
       button("Doorway", "scenario-doorway"),
       button("Head-on", "scenario-head-on"),
       button("Danger", "scenario-shared-danger"),
-      button("Episode", "scenario-cooperative-episode")
+      button("Episode", "scenario-cooperative-episode"),
+      button("Combat", "scenario-combat-micro")
     );
 
     const apparatusGrid = document.createElement("div");
@@ -266,7 +268,7 @@ export class CausalPanel {
 
     const hint = document.createElement("section");
     hint.className = "debug-section debug-hint";
-    hint.textContent = "Keyboard: WASD player · arrows manual companion · 5 Danger · 6 Episode · E player action · Enter companion action · F1/F2/F3 experimental commands · M mode · N actuator · T time · P pause · O step · I incident · R reset.";
+    hint.textContent = "Keyboard: WASD player · arrows manual companion · 5 Danger · 6 Episode · 7 Combat · E player action · Enter companion action · F1/F2/F3 experimental commands · M mode · N actuator · T time · P pause · O step · I incident · R reset.";
 
     this.content.append(controls, layers, this.sectionsRoot, hint);
 
