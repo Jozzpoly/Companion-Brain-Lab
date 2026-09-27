@@ -17,6 +17,7 @@ import type {
 } from "../world/cooperative-episode-contract";
 import type { TaskPressureSnapshot } from "../world/task-pressure-contract";
 import type {
+  ActorId,
   ActorSnapshot,
   FieldLabLayout,
   FieldLabSituation,
@@ -69,6 +70,31 @@ function escapeHtml(value: string): string {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function combatActorLabel(id: ActorId): string {
+  return id === "player" ? "YOU" : "C1";
+}
+
+function combatTrialLine(
+  slot: "A" | "B",
+  combat: FieldLabTrialSummary["combatMicro"]
+): string {
+  if (!combat) return "";
+  const strikes = combat.successfulStrikesAdded.map(combatActorLabel).join(" → ") || "none";
+  const outcomes = Object.entries(combat.outcomeEvents)
+    .map(([outcome, count]) => `${outcome}×${count}`)
+    .join(" · ") || "none";
+  return (
+    `<div class="squad-field-debug-subline"><strong>${slot} combat</strong> · ` +
+    `phase ${combat.initialPhase} → ${combat.finalPhase} · ` +
+    `HP ${combat.initialHostileHealth} → ${combat.finalHostileHealth} · damage ${combat.hostileDamage} · ` +
+    `target ${combatActorLabel(combat.initialTargetActorId)} → ${combatActorLabel(combat.finalTargetActorId)} · ` +
+    `target time YOU ${combat.targetTicks.player}t / C1 ${combat.targetTicks.companion}t · ` +
+    `target transfers ${combat.targetTransitions} · phase transfers ${combat.phaseTransitions} · ` +
+    `hits YOU +${combat.actorHitDelta.player} / C1 +${combat.actorHitDelta.companion} · ` +
+    `strikes ${strikes} · outcomes ${outcomes}</div>`
+  );
 }
 
 export class SquadFieldLabPanel {
@@ -195,6 +221,16 @@ export class SquadFieldLabPanel {
                 .map(({ slot, event }) =>
                   `<div class="squad-field-debug-subline">${slot} t${event.tick} · ${event.category} · ${escapeHtml(event.scope)} · ${escapeHtml(event.path)} · ${escapeHtml(event.before)} → ${escapeHtml(event.after)}</div>`
                 ).join("")
+            : ""}
+          ${state.trialComparison && (
+              state.trialComparison.a.combatMicro ||
+              state.trialComparison.b.combatMicro
+            )
+            ? combatTrialLine("A", state.trialComparison.a.combatMicro) +
+              combatTrialLine("B", state.trialComparison.b.combatMicro) +
+              (state.trialComparison.combatMicro
+                ? `<div><strong>Combat Δ B−A</strong> · damage ${signed(state.trialComparison.combatMicro.hostileDamageDelta, 0)} · target time YOU ${signed(state.trialComparison.combatMicro.playerTargetTicksDelta, 0)}t / C1 ${signed(state.trialComparison.combatMicro.companionTargetTicksDelta, 0)}t · target transfers ${signed(state.trialComparison.combatMicro.targetTransitionsDelta, 0)} · phase transfers ${signed(state.trialComparison.combatMicro.phaseTransitionsDelta, 0)} · hits YOU ${signed(state.trialComparison.combatMicro.playerHitDeltaDelta, 0)} / C1 ${signed(state.trialComparison.combatMicro.companionHitDeltaDelta, 0)} · strikes ${signed(state.trialComparison.combatMicro.successfulStrikeCountDelta, 0)}</div>`
+                : "")
             : ""}
           ${state.trialComparison
             ? state.trialComparison.members.map((member) => {
