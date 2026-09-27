@@ -29,8 +29,6 @@ on:
       - "scripts/squad-field-lab-experiment-browser-smoke.mjs"
       - "scripts/squad-field-lab-manual-episode-authoring.mjs"
       - "scripts/squad-field-lab-combat-authoring.mjs"
-      - "scripts/squad-field-lab-responsibility-patterns.mjs"
-      - "scripts/squad-field-lab-reverse-takeover.mjs"
       - "scripts/squad-field-lab-takeover-shadow.mjs"
       - "package.json"
       - "package-lock.json"
@@ -73,14 +71,11 @@ jobs:
         run: npm run browser:squad-field-lab
       - name: Persistent A-B experiment rehearsal
         run: npm run browser:squad-field-lab-experiments
-      # Historical doorway discovery and rejected task-pressure campaigns remain
-      # reproducible from package scripts, but are not routine per-push gates.
+      # Historical doorway, rejected task-pressure, and now-qualified manual
+      # takeover campaigns remain reproducible from package scripts, but are
+      # not routine per-push gates.
       - name: Active one-companion combat authoring falsifier
         run: npm run browser:squad-field-lab-combat-authoring
-      - name: Multi-beat responsibility pattern falsifier
-        run: npm run browser:squad-field-lab-responsibility-patterns
-      - name: Reverse responsibility takeover falsifier
-        run: npm run browser:squad-field-lab-reverse-takeover
       - name: Zero-authority takeover shadow falsifier
         run: npm run browser:squad-field-lab-takeover-shadow
       - name: Durable manual action/order provenance regression
@@ -95,8 +90,6 @@ jobs:
             artifacts/squad-field-lab-experiment-browser/
             artifacts/squad-field-lab-manual-episode-authoring/
             artifacts/squad-field-lab-combat-authoring/
-            artifacts/squad-field-lab-responsibility-patterns/
-            artifacts/squad-field-lab-reverse-takeover/
             artifacts/squad-field-lab-takeover-shadow/
           if-no-files-found: warn
           retention-days: 14
