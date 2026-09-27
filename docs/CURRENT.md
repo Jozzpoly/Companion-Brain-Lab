@@ -1293,118 +1293,115 @@ That situation choice is now the highest-value unresolved strategic question. It
 
 ---
 
-## 25. Next continuation plan — Shared Task Under Pressure — 2026-09-25
+## 25. Shared Task Under Pressure campaign — consolidated result — 2026-09-25
 
-The strategic boundary from section 24 has now been converted into an explicit next situation hypothesis.
+The post-recovery situation hypothesis was **Shared Task Under Pressure**: a visible player task under embodied hostile pressure, with manual companion positioning used as the discovery instrument and no autonomy promotion.
 
-Canonical planning document:
+The bounded World apparatus was valid and useful as research infrastructure:
 
-`docs/FIELD_LAB_SHARED_TASK_PRESSURE_PLAN.md`
+- visible World-owned task progress;
+- real solid hostile body;
+- counterpart-aware contact truth;
+- task contest / completion / recovery semantics;
+- same-world setup, orders and Trial provenance;
+- no hidden timing oracle required by the apparatus.
+
+### Single-zone evidence
+
+Qualified source `7186c888001d5efcd885eb7915b33e8c9a69980c`, workflow `#112 / 36171126061`:
+
+- 189/189 test files PASS;
+- 747/747 tests PASS;
+- production build and all Field Lab regressions PASS;
+- no-screen baseline: `122/180` progress, 178 contested ticks, 162 player↔hostile contact ticks;
+- one static C1 physical screen: `180/180`, zero contested ticks, zero player contact, no REPEL, same-world settle at t274.
+
+This established only that real companion body placement can materially preserve player task continuity.
+
+A broader manual strategy campaign at source `4f468882a18f47c25c78c12fe781196862a752c6`, workflow `#115`, then falsified the single-zone situation as a behavior-discovery specimen:
+
+- the correct pre-screen completed the task and accumulated 113 C1↔hostile contact ticks;
+- parked-away, off-axis and reachable-poor HOLD variants all stalled at `122/180`;
+- early intercept improved only to `132/180`;
+- late intercept improved only to `126/180`.
+
+Interpretation:
+
+> **the single-zone task was dominated by one magic body-placement solution rather than exposing a rich manual responsibility space.**
+
+That strategy script is retained as historical donor evidence only and is no longer an active CI gate.
+
+### Two-stage rework and final rejection
+
+The bounded rework introduced two visible sequential task stations. Completing Station A visibly transferred responsibility to Station B and retargeted the same hostile. This successfully broke the one-static-screen trick.
+
+However it did **not** create a robust manual one-companion handoff.
+
+Reactive post-transfer reposition failed:
+
+- Station A completed;
+- C1 reached the attempted Station B screen only after the transfer;
+- Station B remained at `0/120` under sustained contest through the 520-tick horizon.
+
+A second falsifier used a participant-visible anticipatory cue: C1 was ordered toward the future Station B screen when Station A visibly reached `100/120`.
+
+Final negative qualification source:
+
+`9c6f291a829fd1f10916d3bae6517bc87d8583b2`
+
+Workflow:
+
+`squad-field-lab-browser #126 · run 36196809730 · SUCCESS`
+
+Gate:
+
+- 189/189 test files PASS;
+- 747/747 tests PASS;
+- production build PASS;
+- broad Field Lab PASS;
+- persistent A/B PASS;
+- doorway discovery regression PASS;
+- manual cooperative authoring regression PASS;
+- two-stage task-pressure rejection specimen PASS as **negative evidence**.
+
+Two-stage results:
+
+| strategy | Station B max progress | Station B contested ticks | final |
+| --- | ---: | ---: | --- |
+| static Station A screen | 30/120 | 314 | ACTIVE / CONTESTED |
+| visible-cue anticipatory reposition | 2/120 | 316 | ACTIVE / CONTESTED |
+
+The anticipatory intervention was not hidden-timing play: it was issued at visible Station A progress `100/120`, arrived before the player committed to Station B, and still failed to create robust Station B protection.
+
+Canonical verdict:
+
+> **SHARED TASK PRESSURE APPARATUS = USEFUL DONOR EVIDENCE**
+>
+> **SINGLE-ZONE SITUATION = REJECTED AS MAGIC-PLACEMENT DOMINATED**
+>
+> **TWO-STAGE REWORK = REJECTED AS BRITTLE / COLLISION-GEOMETRY DOMINATED FOR CURRENT BEHAVIOR DISCOVERY**
+>
+> **NO SCREENING / PROTECT / INTERCEPT SEMANTIC PROMOTION · NO AUTONOMY PROMOTION · NOT OWNER-QUALIFIED**
+
+Do not tune geometry, add another hostile, add HP/combat, or invent protect/intercept autonomy to rescue this campaign. Its value is the evidence it generated and the World/action/trace seams that remain useful donors.
+
+### Next strategic boundary
+
+The Field Lab still needs situations that expose **qualitatively different meaningful responsibilities**, not merely different placements in one collision puzzle.
+
+The next conversation should therefore reopen situation selection from the Owner-confirmed north star and current Field Lab capabilities. It must not continue Shared Task Under Pressure by inertia.
+
+Prefer the next hypothesis only if it:
+
+- keeps the player materially involved rather than spectating;
+- supports multiple manual solutions with visibly different responsibilities;
+- changes meaningfully over time without hidden timing;
+- has real World consequences;
+- can expose correction / takeover / yielding / recovery;
+- does not require a broad combat, inventory or interaction framework before producing evidence;
+- does not collapse to one static geometry trick.
 
 Current status:
 
-> **STP-0 CONTRACT RED-TEAM COMPLETE · STP-1 MANUAL APPARATUS AUTHORIZED AS HYPOTHESIS · NO AUTONOMY PROMOTION · NOT AN OWNER GATE**
-
-### Why this route
-
-The Field Lab can already preserve a manually authored multi-beat causal chain. The limiting factor is no longer trace fidelity or formation instrumentation; it is the poverty of meaningful World affordances outside movement plus REPEL.
-
-Three situation families were compared:
-
-- protected transit / escape — cheap but too likely to collapse back into another movement problem;
-- shared task under pressure — selected because it makes the player materially occupied while companion positioning can help/interfere;
-- carry/rescue/escort — rich but too expensive in new interaction/carry semantics for the next bounded experiment.
-
-### Selected situation hypothesis
-
-A visible task zone requires player commitment over time.
-
-When the player first commits:
-
-- a real **solid** hostile begins advancing toward the task zone, not chasing the player;
-- player presence advances visible task progress while the task is uncontested;
-- leaving the zone pauses progress;
-- hostile pressure in the task region pauses progress;
-- companion/player bodies can physically screen because contact is materially true;
-- task completion makes the hostile recover/retreat while the squad remains in the same World for regroup.
-
-The first apparatus deliberately uses **pause**, not reset/decay, for interrupted progress. This avoids creating a tuning problem before situation value is known.
-
-REPEL may remain available as a bounded donor, but the situation must be meaningful without hidden timing and must support manual strategies that do not depend on REPEL.
-
-### STP-0 live substrate result
-
-No broad prerequisite framework was discovered.
-
-Existing substrate already provides:
-
-- solid/sensor collision mode;
-- dynamic Rapier bodies;
-- counterpart-aware contact records;
-- bounded experimental squad motion;
-- World-owned action/outcome seams;
-- setup placement;
-- manual order/action Trial provenance.
-
-Therefore STP-1 may be attempted as one small reversible World/situation extension.
-
-### Authorized STP-1 scope
-
-Only:
-
-1. bounded TaskPressure contract;
-2. one Field Lab situation;
-3. visible task zone + progress;
-4. one solid hostile moving toward the zone;
-5. contest/completion/recovery semantics;
-6. evidence required to interpret the manual strategies actually run.
-
-No autonomy, bodyguard mode, HP/damage, generic combat, second hostile, carry system, broad command grammar or speculative telemetry.
-
-Primary STP-1 question:
-
-> **With the same initial task/threat setup, can different manual companion positioning strategies materially change how continuously the player can remain committed to the task, with participant-visible and World-owned causality?**
-
-If the answer is no, reject/rework the situation before expanding it.
-
----
-
-## 26. STP-1 manual shared-task apparatus result — 2026-09-25
-
-Source `7186c888001d5efcd885eb7915b33e8c9a69980c` passed `squad-field-lab-browser #112` / run `36171126061` with 189/189 test files, 747/747 tests, production build and all existing Field Lab regressions.
-
-Narrow causal result:
-
-- no-screen baseline stalled at `122/180` progress with `178` contested ticks and `162` player↔hostile contact ticks;
-- manual C1 physical screen reached `180/180` at `t180`, produced zero task-contested and player-contact ticks, used no REPEL, then settled in the same World at `t274`.
-
-This proves only that manual companion physical positioning can materially change one shared task.
-
-It does **not** qualify the situation as a broad behavior laboratory specimen. A single ideal HOLD location may still trivialize it.
-
-Current status:
-
-> **STP-1 MANUAL APPARATUS MACHINE PASS · STP-2 MANUAL STRATEGY FALSIFICATION ACTIVE · SITUATION NOT QUALIFIED · NOT OWNER-QUALIFIED · AUTONOMY NOT PROMOTED**
-
-Next work must use the existing apparatus to test qualitatively different manual strategies and wrong/corrected plans before adding any new behavior feature.
-
----
-
-## 26. STP-1 verdict — shared-task apparatus works, first situation is under-constrained — 2026-09-25
-
-Runtime `7186c888001d5efcd885eb7915b33e8c9a69980c` passed workflow `#112 / 36171126061` with 189/189 test files, 747/747 tests, build and all Field Lab browser regressions.
-
-Narrow evidence:
-
-- no-help task trial reached only `122/180` progress, with 178 contested ticks and 162 player↔hostile contact ticks;
-- one manually authored static C1 physical screen reached `180/180`, zero contested ticks and zero player↔hostile contact, then same-world recovery settled at t274;
-- REPEL was not required.
-
-Canonical interpretation:
-
-> **TASK-PRESSURE APPARATUS MACHINE PASS · SINGLE-ZONE SITUATION REWORK · NOT OWNER-QUALIFIED · NO BEHAVIOR/AUTONOMY PROMOTION**
-
-The machine result establishes that companion body placement can materially protect player commitment. It does not establish useful teammate behavior. The first situation is too easy to saturate with one static HOLD.
-
-Next bounded falsifier is **STP-1b two visible task stations**. Station completion visibly moves responsibility to a second location and hostile pressure retargets that active station. The test is whether static screening fails across the stage transition while explicit manual companion reposition materially restores continuity.
+> **FIELD LAB MOVEMENT / FORMATION / EXPERIMENT SUBSTRATE MACHINE-QUALIFIED · SHARED TASK PRESSURE CAMPAIGN CLOSED-REJECTED · BROAD BEHAVIOR LAB INCOMPLETE · NOT OWNER-QUALIFIED · AUTONOMY NOT PROMOTED**
 
