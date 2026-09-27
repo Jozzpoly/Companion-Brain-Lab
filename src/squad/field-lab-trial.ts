@@ -1,3 +1,8 @@
+import type {
+  CombatTakeoverShadowDecision,
+  CombatTakeoverShadowReasonCode,
+  CombatTakeoverShadowRecommendation
+} from "../brain/combat-takeover-shadow";
 import {
   FIELD_LAB_SQUAD_MEMBERS,
   type FieldLabMemberTarget,
@@ -51,6 +56,7 @@ export interface FieldLabTrialFrame {
   playerPosition: Vec2;
   cooperativeOutcome: CooperativeEpisodeOutcome;
   combatMicro: CombatMicroSnapshot | null;
+  combatTakeoverShadow: CombatTakeoverShadowDecision | null;
   members: readonly FieldLabTrialMemberSample[];
 }
 
@@ -104,6 +110,23 @@ export interface FieldLabTrialCombatSummary {
   outcomeEvents: Readonly<Partial<Record<CombatMicroEpisodeOutcome, number>>>;
 }
 
+export interface FieldLabTrialTakeoverShadowSummary {
+  samples: number;
+  initialRecommendation: CombatTakeoverShadowRecommendation;
+  finalRecommendation: CombatTakeoverShadowRecommendation;
+  initialReasonCode: CombatTakeoverShadowReasonCode;
+  finalReasonCode: CombatTakeoverShadowReasonCode;
+  takeOverTicks: number;
+  doNotTakeOverTicks: number;
+  firstTakeOverTickOffset: number | null;
+  lastTakeOverTickOffset: number | null;
+  takeOverEpisodes: number;
+  longestTakeOverRun: number;
+  recommendationTransitions: number;
+  reasonTransitions: number;
+  reasonTicks: Readonly<Partial<Record<CombatTakeoverShadowReasonCode, number>>>;
+}
+
 export interface FieldLabTrialSummary {
   slot: FieldLabTrialSlot;
   label: string;
@@ -114,6 +137,7 @@ export interface FieldLabTrialSummary {
   members: readonly FieldLabTrialMemberSummary[];
   cooperativeOutcomes: Readonly<Partial<Record<CooperativeEpisodeOutcome, number>>>;
   combatMicro: FieldLabTrialCombatSummary | null;
+  combatTakeoverShadow: FieldLabTrialTakeoverShadowSummary | null;
 }
 
 export interface FieldLabTrialMemberComparison {
@@ -140,11 +164,22 @@ export interface FieldLabTrialCombatComparison {
   successfulStrikeCountDelta: number;
 }
 
+export interface FieldLabTrialTakeoverShadowComparison {
+  takeOverTicksDelta: number;
+  takeOverEpisodesDelta: number;
+  longestTakeOverRunDelta: number;
+  recommendationTransitionsDelta: number;
+  reasonTransitionsDelta: number;
+  firstTakeOverTickOffsetDelta: number | null;
+  lastTakeOverTickOffsetDelta: number | null;
+}
+
 export interface FieldLabTrialComparison {
   a: FieldLabTrialSummary;
   b: FieldLabTrialSummary;
   members: readonly FieldLabTrialMemberComparison[];
   combatMicro: FieldLabTrialCombatComparison | null;
+  combatTakeoverShadow: FieldLabTrialTakeoverShadowComparison | null;
 }
 
 function distance(a: Vec2, b: Vec2): number {
@@ -153,6 +188,15 @@ function distance(a: Vec2, b: Vec2): number {
 
 function cloneVec(value: Vec2): Vec2 {
   return { x: value.x, y: value.y };
+}
+
+function cloneCombatTakeoverShadow(
+  decision: CombatTakeoverShadowDecision
+): CombatTakeoverShadowDecision {
+  return {
+    ...decision,
+    evidence: { ...decision.evidence }
+  };
 }
 
 function cloneCombatMicro(snapshot: CombatMicroSnapshot): CombatMicroSnapshot {
@@ -190,6 +234,7 @@ export function createFieldLabTrialFrame(input: {
   playerPosition: Vec2;
   cooperativeOutcome: CooperativeEpisodeOutcome;
   combatMicro?: CombatMicroSnapshot | null;
+  combatTakeoverShadow?: CombatTakeoverShadowDecision | null;
   members: readonly {
     memberId: SquadMemberId;
     body: ActorSnapshot;
@@ -203,6 +248,9 @@ export function createFieldLabTrialFrame(input: {
     playerPosition: cloneVec(input.playerPosition),
     cooperativeOutcome: input.cooperativeOutcome,
     combatMicro: input.combatMicro ? cloneCombatMicro(input.combatMicro) : null,
+    combatTakeoverShadow: input.combatTakeoverShadow
+      ? cloneCombatTakeoverShadow(input.combatTakeoverShadow)
+      : null,
     members: input.members.map(({ memberId, body, target, targetValid, slotTolerance }) => ({
       memberId,
       position: cloneVec(body.position),
@@ -227,6 +275,9 @@ function cloneFrame(frame: FieldLabTrialFrame): FieldLabTrialFrame {
     playerPosition: cloneVec(frame.playerPosition),
     cooperativeOutcome: frame.cooperativeOutcome,
     combatMicro: frame.combatMicro ? cloneCombatMicro(frame.combatMicro) : null,
+    combatTakeoverShadow: frame.combatTakeoverShadow
+      ? cloneCombatTakeoverShadow(frame.combatTakeoverShadow)
+      : null,
     members: frame.members.map((member) => ({
       ...member,
       position: cloneVec(member.position),
@@ -347,6 +398,77 @@ export function summarizeFieldLabTrial(record: FieldLabTrialRecord): FieldLabTri
     };
   }
 
+  const shadowFrames = record.frames
+    .map((frame) => ({
+      tick: frame.tick,
+      sample: frame.combatTakeoverShadow
+    }))
+    .filter(
+      (entry): entry is { tick: number; sample: CombatTakeoverShadowDecision } =>
+        entry.sample !== null
+    );
+  let combatTakeoverShadow: FieldLabTrialTakeoverShadowSummary | null = null;
+  if (shadowFrames.length > 0) {
+    let takeOverTicks = 0;
+    let firstTakeOverTickOffset: number | null = null;
+    let lastTakeOverTickOffset: number | null = null;
+    let takeOverEpisodes = 0;
+    let longestTakeOverRun = 0;
+    let currentTakeOverRun = 0;
+    let recommendationTransitions = 0;
+    let reasonTransitions = 0;
+    const reasonTicks: Partial<Record<CombatTakeoverShadowReasonCode, number>> = {};
+    let previousRecommendation: CombatTakeoverShadowRecommendation | null = null;
+    let previousReason: CombatTakeoverShadowReasonCode | null = null;
+
+    for (const { tick, sample } of shadowFrames) {
+      reasonTicks[sample.reasonCode] = (reasonTicks[sample.reasonCode] ?? 0) + 1;
+      if (
+        previousRecommendation !== null &&
+        sample.recommendation !== previousRecommendation
+      ) {
+        recommendationTransitions += 1;
+      }
+      if (previousReason !== null && sample.reasonCode !== previousReason) {
+        reasonTransitions += 1;
+      }
+
+      if (sample.recommendation === "TAKE_OVER") {
+        takeOverTicks += 1;
+        if (currentTakeOverRun === 0) takeOverEpisodes += 1;
+        currentTakeOverRun += 1;
+        longestTakeOverRun = Math.max(longestTakeOverRun, currentTakeOverRun);
+        const offset = tick - record.startedAtTick;
+        if (firstTakeOverTickOffset === null) firstTakeOverTickOffset = offset;
+        lastTakeOverTickOffset = offset;
+      } else {
+        currentTakeOverRun = 0;
+      }
+
+      previousRecommendation = sample.recommendation;
+      previousReason = sample.reasonCode;
+    }
+
+    const initial = shadowFrames[0]!.sample;
+    const final = shadowFrames[shadowFrames.length - 1]!.sample;
+    combatTakeoverShadow = {
+      samples: shadowFrames.length,
+      initialRecommendation: initial.recommendation,
+      finalRecommendation: final.recommendation,
+      initialReasonCode: initial.reasonCode,
+      finalReasonCode: final.reasonCode,
+      takeOverTicks,
+      doNotTakeOverTicks: shadowFrames.length - takeOverTicks,
+      firstTakeOverTickOffset,
+      lastTakeOverTickOffset,
+      takeOverEpisodes,
+      longestTakeOverRun,
+      recommendationTransitions,
+      reasonTransitions,
+      reasonTicks
+    };
+  }
+
   const members: FieldLabTrialMemberSummary[] = [];
   for (const memberId of FIELD_LAB_SQUAD_MEMBERS) {
     const timedSamples = record.frames
@@ -448,7 +570,8 @@ export function summarizeFieldLabTrial(record: FieldLabTrialRecord): FieldLabTri
     events: record.events.map((event) => ({ ...event })),
     members,
     cooperativeOutcomes,
-    combatMicro
+    combatMicro,
+    combatTakeoverShadow
   };
 }
 
@@ -504,5 +627,34 @@ export function compareFieldLabTrials(
         }
       : null;
 
-  return { a, b, members, combatMicro };
+  const combatTakeoverShadow =
+    a.combatTakeoverShadow && b.combatTakeoverShadow
+      ? {
+          takeOverTicksDelta:
+            b.combatTakeoverShadow.takeOverTicks -
+            a.combatTakeoverShadow.takeOverTicks,
+          takeOverEpisodesDelta:
+            b.combatTakeoverShadow.takeOverEpisodes -
+            a.combatTakeoverShadow.takeOverEpisodes,
+          longestTakeOverRunDelta:
+            b.combatTakeoverShadow.longestTakeOverRun -
+            a.combatTakeoverShadow.longestTakeOverRun,
+          recommendationTransitionsDelta:
+            b.combatTakeoverShadow.recommendationTransitions -
+            a.combatTakeoverShadow.recommendationTransitions,
+          reasonTransitionsDelta:
+            b.combatTakeoverShadow.reasonTransitions -
+            a.combatTakeoverShadow.reasonTransitions,
+          firstTakeOverTickOffsetDelta: nullableDelta(
+            a.combatTakeoverShadow.firstTakeOverTickOffset,
+            b.combatTakeoverShadow.firstTakeOverTickOffset
+          ),
+          lastTakeOverTickOffsetDelta: nullableDelta(
+            a.combatTakeoverShadow.lastTakeOverTickOffset,
+            b.combatTakeoverShadow.lastTakeOverTickOffset
+          )
+        }
+      : null;
+
+  return { a, b, members, combatMicro, combatTakeoverShadow };
 }
