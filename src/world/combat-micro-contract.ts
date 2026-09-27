@@ -9,7 +9,7 @@ export type CombatMicroPhase =
 export type CombatMicroEpisodeOutcome =
   | "NONE"
   | "HOSTILE_STRUCK"
-  | "PLAYER_HIT"
+  | "ACTOR_HIT"
   | "HOSTILE_DEFEATED";
 
 export interface CombatMicroRules {
@@ -26,7 +26,9 @@ export interface CombatMicroSnapshot {
   phase: CombatMicroPhase;
   phaseTicksRemaining: number;
   hostileHealth: number;
-  playerHitCount: number;
+  targetActorId: ActorId;
+  actorHitCounts: Readonly<Record<ActorId, number>>;
+  lastHitActorId: ActorId | null;
   lastOutcome: CombatMicroEpisodeOutcome;
   lastOutcomeTick: number | null;
   lastSuccessfulStrikers: readonly ActorId[];
@@ -115,8 +117,11 @@ function assertSnapshot(snapshot: CombatMicroSnapshot): void {
   if (!Number.isInteger(snapshot.hostileHealth) || snapshot.hostileHealth < 0) {
     throw new Error("Combat micro hostileHealth must be a non-negative integer.");
   }
-  if (!Number.isInteger(snapshot.playerHitCount) || snapshot.playerHitCount < 0) {
-    throw new Error("Combat micro playerHitCount must be a non-negative integer.");
+  for (const actorId of ["player", "companion"] as const) {
+    const count = snapshot.actorHitCounts[actorId];
+    if (!Number.isInteger(count) || count < 0) {
+      throw new Error(`Combat micro actorHitCounts.${actorId} must be a non-negative integer.`);
+    }
   }
   if (
     (snapshot.phase === "PRESSURING" || snapshot.phase === "RECOVERING") &&
@@ -138,6 +143,7 @@ function assertSnapshot(snapshot: CombatMicroSnapshot): void {
 function clone(snapshot: CombatMicroSnapshot): CombatMicroSnapshot {
   return {
     ...snapshot,
+    actorHitCounts: { ...snapshot.actorHitCounts },
     lastSuccessfulStrikers: [...snapshot.lastSuccessfulStrikers],
     successfulStrikeHistory: [...snapshot.successfulStrikeHistory]
   };
@@ -217,7 +223,9 @@ export function initialCombatMicroSnapshot(rules: CombatMicroRules): CombatMicro
     phase: "APPROACHING",
     phaseTicksRemaining: 0,
     hostileHealth: rules.hostileHealth,
-    playerHitCount: 0,
+    targetActorId: "player",
+    actorHitCounts: { player: 0, companion: 0 },
+    lastHitActorId: null,
     lastOutcome: "NONE",
     lastOutcomeTick: null,
     lastSuccessfulStrikers: [],
@@ -232,12 +240,18 @@ export function initialCombatMicroSnapshot(rules: CombatMicroRules): CombatMicro
  * shared material problem can support several responsibility allocations
  * without a hidden timing oracle or passive body placement counting as help.
  *
+ * A single successful striker becomes the hostile's next fixture-local
+ * retaliation target. This is not promoted enemy AI or aggro architecture; it
+ * makes "I intervened" carry a material responsibility cost that can transfer
+ * between player and companion. Simultaneous strikers preserve the previous
+ * target to avoid actor-order bias.
+ *
  * Ordering:
  * 1. one shared post-physics frame already exists;
  * 2. player/companion STRIKE attempts are validated simultaneously;
  * 3. successful explicit actions resolve before hostile pressure consequence;
- * 4. if nobody lands an action, movement may still break hostile pressure;
- * 5. otherwise the hostile pressure clock advances.
+ * 4. if nobody lands an action, movement by the current target may break pressure;
+ * 5. otherwise the hostile pressure clock advances against that target.
  */
 export function resolveCombatMicroAfterPhysics(
   input: ResolveCombatMicroTickInput
@@ -271,6 +285,10 @@ export function resolveCombatMicroAfterPhysics(
     const episodeOutcome: CombatMicroEpisodeOutcome = defeated
       ? "HOSTILE_DEFEATED"
       : "HOSTILE_STRUCK";
+    const targetActorId =
+      successfulActors.length === 1
+        ? successfulActors[0]!
+        : input.before.targetActorId;
 
     return {
       after: {
@@ -278,6 +296,7 @@ export function resolveCombatMicroAfterPhysics(
         phase: defeated ? "DEFEATED" : "RECOVERING",
         phaseTicksRemaining: defeated ? 0 : input.rules.recoveryTicks,
         hostileHealth,
+        targetActorId,
         lastOutcome: episodeOutcome,
         lastOutcomeTick: outcomeTick,
         lastSuccessfulStrikers: successfulActors,
@@ -316,13 +335,14 @@ export function resolveCombatMicroAfterPhysics(
     };
   }
 
-  const hostilePlayerDistance = distance(
+  const targetPosition = actorPosition(input.postPhysics, input.before.targetActorId);
+  const hostileTargetDistance = distance(
     input.postPhysics.hostilePosition,
-    input.postPhysics.playerPosition
+    targetPosition
   );
 
   if (input.before.phase === "APPROACHING") {
-    if (hostilePlayerDistance <= input.rules.attackRange + EPSILON) {
+    if (hostileTargetDistance <= input.rules.attackRange + EPSILON) {
       return {
         after: {
           ...clone(input.before),
@@ -344,7 +364,7 @@ export function resolveCombatMicroAfterPhysics(
     };
   }
 
-  if (hostilePlayerDistance > input.rules.pressureBreakRange + EPSILON) {
+  if (hostileTargetDistance > input.rules.pressureBreakRange + EPSILON) {
     return {
       after: {
         ...clone(input.before),
@@ -370,17 +390,22 @@ export function resolveCombatMicroAfterPhysics(
     };
   }
 
+  const targetActorId = input.before.targetActorId;
   return {
     after: {
       ...clone(input.before),
       phase: "RECOVERING",
       phaseTicksRemaining: input.rules.recoveryTicks,
-      playerHitCount: input.before.playerHitCount + 1,
-      lastOutcome: "PLAYER_HIT",
+      actorHitCounts: {
+        ...input.before.actorHitCounts,
+        [targetActorId]: input.before.actorHitCounts[targetActorId] + 1
+      },
+      lastHitActorId: targetActorId,
+      lastOutcome: "ACTOR_HIT",
       lastOutcomeTick: outcomeTick,
       lastSuccessfulStrikers: []
     },
     actionOutcomes,
-    episodeOutcome: "PLAYER_HIT"
+    episodeOutcome: "ACTOR_HIT"
   };
 }
