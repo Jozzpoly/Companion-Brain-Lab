@@ -198,6 +198,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
     slot: FieldLabTrialSlot;
     label: string;
     startedAtTick: number;
+    initialCombatMicro: CombatMicroSnapshot | null;
     frames: FieldLabTrialFrame[];
     events: FieldLabTrialEvent[];
   } | null = null;
@@ -1586,6 +1587,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       slot,
       label: setup.label || `Setup ${slot}`,
       startedAtTick: this.snapshotValue.tick,
+      initialCombatMicro: this.combatMicro,
       frames: [],
       events: []
     };
@@ -1608,6 +1610,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       slot: active.slot,
       label: active.label,
       startedAtTick: active.startedAtTick,
+      initialCombatMicro: active.initialCombatMicro,
       frames: active.frames,
       events: active.events
     });
@@ -1675,6 +1678,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       tick: snapshot.tick,
       playerPosition: player.position,
       cooperativeOutcome: this.latestCooperativeEpisodeOutcome,
+      combatMicro: this.combatMicro,
       members
     }));
 
