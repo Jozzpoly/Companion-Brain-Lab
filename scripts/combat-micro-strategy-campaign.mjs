@@ -145,7 +145,7 @@ async function threeBeat(page, sequence) {
 function snapshot(text) {
   const hp = text.match(/hostile HP (\d+)\/3/)?.[1] ?? null;
   const hits = text.match(/hits player (\d+) \/ companion (\d+)/);
-  const history = text.match(/successful strike history ([\\s\\S]*?)(?=latest attempts)/)?.[1]?.trim() ?? "none";
+  const history = text.match(/successful strike history (.*?)(?=latest attempts)/)?.[1]?.trim() ?? "none";
   const target = text.match(/pressure target (player|companion)/)?.[1] ?? null;
   const phase = text.match(/phase (APPROACHING|PRESSURING|RECOVERING|DEFEATED)/)?.[1] ?? null;
   return {
@@ -268,11 +268,57 @@ try {
   results.push({ id: "player-disengages", ...disengagedState });
   await shot(page, "05-player-disengages.png");
 
+  const byId = Object.fromEntries(results.map((entry) => [entry.id, entry]));
+  const playerOnlyResult = byId["player-only"];
+  const companionOnlyResult = byId["companion-only"];
+  const alternatingResult = byId["alternating"];
+  const postHitResult = byId["post-hit-companion-takeover"];
+  const disengageResult = byId["player-disengages"];
+
+  const diversityChecks = {
+    playerAndCompanionOwnershipDiffer:
+      playerOnlyResult.history === "player → player → player" &&
+      companionOnlyResult.history === "companion → companion → companion",
+    alternatingOwnershipIsPreserved:
+      alternatingResult.history === "companion → player → companion",
+    sameCompanionResolutionCanFollowDifferentWorldHistory:
+      companionOnlyResult.history === postHitResult.history &&
+      companionOnlyResult.playerHits === 0 &&
+      postHitResult.playerHits === 1,
+    disengagementIsARealNonCombatAlternative:
+      disengageResult.hostileHealth === 3 &&
+      disengageResult.playerHits === 0 &&
+      disengageResult.companionHits === 0 &&
+      disengageResult.history === "none"
+  };
+
+  const summary = {
+    schema: "companion-brain-lab-combat-micro-strategy-campaign-v2",
+    sourceSha: process.env.GITHUB_SHA ?? process.env.VITE_SOURCE_SHA ?? null,
+    question:
+      "Does combat-micro admit several materially distinct manual responsibility allocations, or collapse to one magic choreography?",
+    variants: results,
+    diversityChecks,
+    fixedFacts: {
+      sameScenario: true,
+      sameHostileHealth: 3,
+      sameStrikeRange: true,
+      noCompanionCognitionAuthority: true,
+      passivePlacementNeverCountsAsStrike: true
+    },
+    interpretationBoundary:
+      "This only establishes manual responsibility-allocation diversity inside one deliberately tiny strike/pressure loop. Equivalent final world states are allowed when their causal responsibility histories differ. It does not qualify combat quality, teammate feel, autonomy, tactics, or the pressure-transfer rule as product semantics.",
+    errors
+  };
+
+  // Persist evidence before the final campaign verdict so any future red-team
+  // failure leaves inspectable variant data instead of only an assertion string.
+  await writeFile(`${ROOT}/summary.json`, JSON.stringify(summary, null, 2), "utf8");
+  console.log("[COMBAT_MICRO_STRATEGIES_EVIDENCE]", JSON.stringify(summary));
+
   invariant(
-    new Set(results.map((entry) =>
-      [entry.phase, entry.hostileHealth, entry.playerHits, entry.companionHits, entry.history].join("|")
-    )).size === results.length,
-    "Strategy campaign collapsed to duplicate outcome signatures."
+    Object.values(diversityChecks).every(Boolean),
+    `Strategy diversity evidence failed: ${JSON.stringify(diversityChecks)}`
   );
   invariant(
     await page.locator("#runtime-fault-sentinel").count() === 0,
@@ -282,25 +328,6 @@ try {
   invariant(errors.console.length === 0, `Console errors: ${errors.console.join(" | ")}`);
   invariant(errors.requests.length === 0, `Failed requests: ${errors.requests.join(" | ")}`);
 
-  const summary = {
-    schema: "companion-brain-lab-combat-micro-strategy-campaign-v1",
-    sourceSha: process.env.GITHUB_SHA ?? process.env.VITE_SOURCE_SHA ?? null,
-    question:
-      "Does combat-micro admit several materially distinct manual responsibility allocations, or collapse to one magic choreography?",
-    variants: results,
-    fixedFacts: {
-      sameScenario: true,
-      sameHostileHealth: 3,
-      sameStrikeRange: true,
-      noCompanionCognitionAuthority: true,
-      passivePlacementNeverCountsAsStrike: true
-    },
-    interpretationBoundary:
-      "This only establishes manual responsibility-allocation diversity inside one deliberately tiny strike/pressure loop. It does not qualify combat quality, teammate feel, autonomy, tactics, or the pressure-transfer rule as product semantics.",
-    errors
-  };
-
-  await writeFile(`${ROOT}/summary.json`, JSON.stringify(summary, null, 2), "utf8");
   console.log("[COMBAT_MICRO_STRATEGIES]", JSON.stringify(summary));
   await context.close();
 } finally {
