@@ -272,8 +272,12 @@ try {
     companion: { x: 10.8, y: 5.0 },
     player: { x: 11.35, y: 4.45 }
   };
+  // Deliberately inside (not exactly on) the STRIKE boundary. The World
+  // resolves attempts after physics; an APPROACHING hostile can move between
+  // observation and action resolution, so the already-bearer setup must not
+  // accidentally turn into a boundary-timing test.
   const nearSouth = {
-    companion: { x: 11.85, y: 6.05 },
+    companion: { x: 11.85, y: 5.90 },
     player: { x: 11.35, y: 4.45 }
   };
   const farWest = {
