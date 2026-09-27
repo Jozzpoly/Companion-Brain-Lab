@@ -11,6 +11,7 @@ import type {
   CooperativeEpisodePhase,
   CooperativeEpisodeSnapshot
 } from "../world/cooperative-episode-contract";
+import type { CombatMicroSnapshot } from "../world/combat-micro-contract";
 import type { FieldLabLayout, FieldLabSituation, SquadMemberId } from "../world/types";
 import type { TaskPressureSnapshot } from "../world/task-pressure-contract";
 import type {
@@ -50,6 +51,9 @@ export interface SquadFieldLabHudCallbacks {
   onPlayerRepel(): void;
   onFocusedRepel(): void;
   onSelectedRepel(): void;
+  onPlayerStrike(): void;
+  onFocusedStrike(): void;
+  onSelectedStrike(): void;
 }
 
 export interface SquadFieldLabHudState {
@@ -59,6 +63,7 @@ export interface SquadFieldLabHudState {
   paused: boolean;
   setupPlacement: boolean;
   episode: CooperativeEpisodeSnapshot | null;
+  combatMicro: CombatMicroSnapshot | null;
   taskPressure: TaskPressureSnapshot | null;
   latestEpisodeOutcome: CooperativeEpisodeOutcome;
   experiments: Readonly<Partial<Record<FieldLabExperimentSlot, {
@@ -187,6 +192,8 @@ export class SquadFieldLabHud {
   private readonly orderStatus: HTMLElement;
   private readonly pressureBlock: HTMLElement;
   private readonly pressureStatus: HTMLElement;
+  private readonly combatBlock: HTMLElement;
+  private readonly combatStatus: HTMLElement;
   private readonly taskBlock: HTMLElement;
   private readonly taskStatus: HTMLElement;
   private readonly situationButtons = new Map<FieldLabSituation, HTMLButtonElement>();
@@ -229,13 +236,15 @@ export class SquadFieldLabHud {
 
     const situationRow = document.createElement("div");
     situationRow.className = "squad-lab-situation-grid";
-    for (const situation of ["TRAINING", "PRESSURE", "TASK_PRESSURE"] as const) {
+    for (const situation of ["TRAINING", "PRESSURE", "COMBAT_MICRO", "TASK_PRESSURE"] as const) {
       const control = button(
         situation === "TRAINING"
           ? "Training"
           : situation === "PRESSURE"
             ? "Pressure"
-            : "Task pressure"
+            : situation === "COMBAT_MICRO"
+              ? "Combat micro"
+              : "Task pressure"
       );
       control.dataset.situation = situation;
       control.addEventListener("click", () => callbacks.onSituation(situation));
@@ -522,6 +531,29 @@ export class SquadFieldLabHud {
     pressureActions.append(playerRepel, focusedRepel, selectedRepel);
     this.pressureBlock.append(pressureHeading, this.pressureStatus, pressureActions);
 
+    this.combatBlock = document.createElement("section");
+    this.combatBlock.className = "squad-lab-pressure-block";
+    this.combatBlock.dataset.combatMicroBlock = "true";
+    const combatHeading = document.createElement("div");
+    combatHeading.className = "squad-lab-section-title";
+    combatHeading.textContent = "Combat micro authoring · YOU + C1 only";
+    this.combatStatus = document.createElement("div");
+    this.combatStatus.className = "squad-lab-pressure-status";
+    this.combatStatus.dataset.combatMicroStatus = "true";
+    const combatActions = document.createElement("div");
+    combatActions.className = "squad-lab-pressure-actions";
+    const playerStrike = button("E · Player STRIKE");
+    playerStrike.dataset.combatAction = "player";
+    playerStrike.addEventListener("click", () => callbacks.onPlayerStrike());
+    const focusedStrike = button("Enter · Focus STRIKE");
+    focusedStrike.dataset.combatAction = "focused";
+    focusedStrike.addEventListener("click", () => callbacks.onFocusedStrike());
+    const selectedStrike = button("Space · Selected STRIKE");
+    selectedStrike.dataset.combatAction = "selected";
+    selectedStrike.addEventListener("click", () => callbacks.onSelectedStrike());
+    combatActions.append(playerStrike, focusedStrike, selectedStrike);
+    this.combatBlock.append(combatHeading, this.combatStatus, combatActions);
+
     this.taskBlock = document.createElement("section");
     this.taskBlock.className = "squad-lab-pressure-block";
     this.taskBlock.dataset.taskPressureBlock = "true";
@@ -575,6 +607,7 @@ export class SquadFieldLabHud {
       this.experimentDiffSummary,
       this.trialDiffSummary,
       this.pressureBlock,
+      this.combatBlock,
       this.taskBlock,
       this.status,
       this.orderStatus,
@@ -706,6 +739,21 @@ export class SquadFieldLabHud {
     this.pressureStatus.textContent = state.episode
       ? `${state.episode.phase} · cycle ${state.episode.cycle + 1} · last ${state.episode.lastOutcome} · repelled by ${state.episode.repelledBy.join(", ") || "none"}`
       : "pressure inactive";
+
+    this.combatBlock.hidden = state.situation !== "COMBAT_MICRO";
+    const combat = state.combatMicro;
+    this.combatBlock.dataset.tone = combat?.phase === "DEFEATED"
+      ? "success"
+      : combat?.phase === "PRESSURING"
+        ? "danger"
+        : combat?.phase === "RECOVERING"
+          ? "warning"
+          : "normal";
+    this.combatStatus.textContent = combat
+      ? `${combat.phase} · HP ${combat.hostileHealth}/3 · pressure target ${combat.targetActorId === "player" ? "YOU" : "C1"} · hits YOU ${combat.actorHitCounts.player} / C1 ${combat.actorHitCounts.companion} · history ${combat.successfulStrikeHistory.map((id) => id === "player" ? "YOU" : "C1").join(" → ") || "none"}`
+      : "combat micro inactive";
+    this.combatBlock.title =
+      "Bounded research situation. Only YOU and canonical C1 have STRIKE authority; C2–C4 remain movement/formation authoring bodies.";
 
     this.taskBlock.hidden = state.situation !== "TASK_PRESSURE";
     const task = state.taskPressure;
