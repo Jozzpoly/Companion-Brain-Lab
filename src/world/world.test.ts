@@ -141,3 +141,55 @@ describe("S0 physical apparatus", () => {
     world.dispose();
   });
 });
+
+
+describe("combat micro World integration", () => {
+  it("keeps combat actions scenario-local", async () => {
+    const world = await LabWorld.create("open");
+    expect(() =>
+      world.stepSituation({
+        motionIntents: [intent("player", 0, 0), intent("companion", 0, 0)],
+        combatMicroAttempts: [{ actorId: "companion", kind: "STRIKE", targetId: "hostile" }]
+      })
+    ).toThrow(/combat-micro scenario/);
+    world.dispose();
+  });
+
+  it("resolves explicit companion action after physics and physically recoils from its new pressure target", async () => {
+    const world = await LabWorld.createFromSpec({
+      id: "combat-micro",
+      label: "combat micro integration fixture",
+      width: 12,
+      height: 8,
+      obstacles: [],
+      actors: [
+        { id: "player", position: { x: 3, y: 4 }, radius: 0.3, speed: 3 },
+        { id: "companion", position: { x: 5, y: 4 }, radius: 0.3, speed: 3 },
+        { id: "hostile", position: { x: 5.8, y: 4 }, radius: 0.34, speed: 1.7, collisionMode: "sensor" }
+      ]
+    });
+
+    const struck = world.stepSituation({
+      motionIntents: [intent("player", 0, 0), intent("companion", 0, 0)],
+      combatMicroAttempts: [{ actorId: "companion", kind: "STRIKE", targetId: "hostile" }]
+    });
+    expect(struck.combatMicroOutcome).toBe("HOSTILE_STRUCK");
+    expect(struck.combatMicro?.hostileHealth).toBe(2);
+    expect(struck.combatMicro?.targetActorId).toBe("companion");
+    expect(struck.combatMicroActionOutcomes).toHaveLength(1);
+    expect(struck.combatMicroActionOutcomes[0]?.status).toBe("SUCCEEDED");
+
+    const hostileAfterStrike = struck.snapshot.actors.find((entry) => entry.id === "hostile");
+    if (!hostileAfterStrike) throw new Error("Missing combat-micro hostile after strike.");
+
+    const recovery = world.stepSituation({
+      motionIntents: [intent("player", 0, 0), intent("companion", 0, 0)]
+    });
+    const hostileAfterRecoveryStep = recovery.snapshot.actors.find((entry) => entry.id === "hostile");
+    if (!hostileAfterRecoveryStep) throw new Error("Missing combat-micro hostile during recovery.");
+
+    expect(recovery.combatMicro?.phase).toBe("RECOVERING");
+    expect(hostileAfterRecoveryStep.position.x).toBeGreaterThan(hostileAfterStrike.position.x);
+    world.dispose();
+  });
+});
