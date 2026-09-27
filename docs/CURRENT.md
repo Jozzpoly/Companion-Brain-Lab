@@ -1,7 +1,7 @@
 # Companion Brain Lab — CURRENT
 
 Status: **CANONICAL EXECUTION ENTRYPOINT · STRATEGIC RECOVERY / QUESTION-DRIVEN EXECUTION**
-Date: **2026-09-25**
+Date: **2026-09-27**
 
 Read this first before continuing the project.
 
@@ -1424,3 +1424,156 @@ Current status:
 
 > **FIELD LAB MOVEMENT / FORMATION / EXPERIMENT SUBSTRATE MACHINE-QUALIFIED · SHARED TASK PRESSURE CAMPAIGN CLOSED-REJECTED · BROAD BEHAVIOR LAB INCOMPLETE · NOT OWNER-QUALIFIED · AUTONOMY NOT PROMOTED**
 
+
+
+---
+
+## 26. Combat-micro manual responsibility campaign — 2026-09-27
+
+After Shared Task Under Pressure was rejected as collision-geometry dominated, situation selection was reopened from the Owner-confirmed north star rather than continuing that apparatus by inertia.
+
+The chosen bounded hypothesis returned to the project's original combat / preparation-for-combat domain without building a combat framework:
+
+> **Can one persistent embodied problem support several materially different player/companion responsibility allocations, with explicit action, factual consequence, takeover, yielding and non-action, without hidden timing or passive body placement counting as help?**
+
+### Bounded representation
+
+A new isolated `combat-micro` situation now provides:
+
+- one embodied hostile in the same Rapier World;
+- explicit `STRIKE` attempts for player and canonical companion;
+- action validity throughout `APPROACHING / PRESSURING`, not a hidden WINDUP frame;
+- three bounded hostile health units;
+- World-owned action consequence;
+- a current pressure target;
+- movement-based pressure break;
+- factual `ACTOR_HIT` consequence if pressure is not answered;
+- explicit recovery and terminal defeat;
+- no companion cognition authority.
+
+Passive proximity or body placement cannot damage the hostile.
+
+A single successful striker becomes the hostile's next pressure target. This is an **experimental specimen rule used to make intervention carry responsibility**, not an earned aggro/combat semantic and not architecture authority.
+
+### Mechanical / browser qualification
+
+Qualified source:
+
+`1f00194db2b263e33457e2ac8160199a195989cb`
+
+Evidence:
+
+- `validate #1743` — SUCCESS;
+- `combat-micro-browser #7 / run 36311016868` — SUCCESS;
+- 190/190 test files PASS;
+- 763/763 tests PASS;
+- production build PASS;
+- manual combat browser falsifier PASS;
+- strategy-diversity browser falsifier PASS;
+- no page / console / request errors.
+
+The manual browser falsifier established only that, in the same live World:
+
+- passive placement is not contribution;
+- companion can explicitly act and become the pressure bearer;
+- that actor can break pressure through movement;
+- player can explicitly take responsibility back;
+- responsibility can transfer again and the encounter can resolve;
+- doing nothing can produce a factual World consequence.
+
+### Strategy-diversity falsifier
+
+The first aggregate strategy check failed for a **test-harness reason**, not a behavior finding: a malformed history parser collapsed different causal histories to `none`, and a generic "every final-state fingerprint must differ" invariant was itself too strong because distinct causal strategies may legitimately converge to the same final World state.
+
+The corrected falsifier preserves the per-variant behavioral assertions and compares the causal responsibility differences that matter.
+
+Qualified results:
+
+| manual variant | final World state | factual history |
+| --- | --- | --- |
+| player-only | hostile defeated | player → player → player |
+| companion-only | hostile defeated | companion → companion → companion |
+| alternating responsibility | hostile defeated; companion incurred one hit | companion → player → companion |
+| companion takeover after player consequence | hostile defeated; player hit count remains 1 | companion → companion → companion after the prior player hit |
+| player disengages | hostile remains 3/3, no hits | no strike history |
+
+All four campaign diversity checks passed:
+
+- player-only and companion-only ownership remain distinct;
+- alternating ownership remains causally preserved;
+- the same later companion resolution can occur after a materially different prior World history;
+- disengagement is a real non-combat alternative.
+
+Canonical interpretation:
+
+> **COMBAT-MICRO SURVIVES THE MAGIC-CHOREOGRAPHY FALSIFIER AS A MANUAL RESPONSIBILITY-ALLOCATION SITUATION DONOR.**
+
+This is stronger than the rejected Shared Task specimen because the useful outcome does not depend on one magic static body placement and the player remains an active participant in the same material problem.
+
+It does **not** establish:
+
+- good combat;
+- good teammate feel;
+- tactical competence;
+- autonomous combat behavior;
+- a final engagement / aggro model;
+- that `STRIKE`, health=3 or pressure-transfer-on-strike are product semantics;
+- Owner approval.
+
+### Participant-visible red-team
+
+Exact artifact review was performed, not only text assertions.
+
+The causal transitions are visible in-world through hostile pursuit/pressure, pressure-target changes, recoil, health pips, strike consequence and actor-specific hit feedback. However the presentation remains intentionally abstract circles and simple glyphs.
+
+Therefore:
+
+> **NOT AN OWNER GATE.**
+
+The specimen is currently an instrument for discovering behavior, not a meaningful gameplay milestone.
+
+### Regression / truth hygiene found during the campaign
+
+The historical `command-autonomy-browser` gate had been stale-failing since the teammate specimen was intentionally changed to start participant-first with its Causal Workbench collapsed.
+
+The old test still required debug content and the command HUD to be visible immediately, contradicting current canonical truth.
+
+The gate was corrected **without changing product behavior**:
+
+Qualified source:
+
+`1a07c7914dfd371cad0a7777c5aced67f9bca411`
+
+Evidence:
+
+- `command-autonomy-browser #62` — SUCCESS;
+- `validate #1738` — SUCCESS.
+
+Current tested contract:
+
+- `?teammate=1` begins participant-first with the microscope collapsed;
+- this is not a separate hidden-debug shell;
+- the full Causal Workbench can be expanded in the same runtime with one disclosure action;
+- participant-facing shared-danger controls remain available.
+
+### Next strategic boundary
+
+Do **not** give the local brain `STRIKE` authority merely because the manual situation passed.
+
+The next question is now:
+
+> **Can this richer manual responsibility space become a useful behavior-authoring substrate from which preparation, engagement, yielding, takeover, re-entry and recovery patterns can be discovered before any of those labels are promoted into autonomous semantics?**
+
+The leading next move is to reuse the already Owner-valued Field Lab authoring / A-B / Trial apparatus rather than build another isolated automation layer.
+
+Important integration constraint discovered by read-only audit:
+
+- current Field Lab `PRESSURE` action plumbing already supports player plus several squad participants;
+- `combat-micro` is deliberately scoped to `player | companion`;
+- silently widening it to four-companion combat would violate the current one-companion-first research scope and would promote semantics without evidence.
+
+Therefore any first Field Lab transplant should remain **explicitly one-companion scoped** and preserve the existing broader squad apparatus around it without claiming multi-companion combat semantics. If doing that cleanly requires broad architecture or awkward special cases, stop and reassess rather than forcing the transplant.
+
+Current status:
+
+> **COMBAT-MICRO MANUAL SITUATION MACHINE-QUALIFIED · MANUAL RESPONSIBILITY DIVERSITY DEMONSTRATED · FIELD-LAB AUTHORING TRANSPLANT IS THE LEADING NEXT HYPOTHESIS · NO AUTONOMY PROMOTION · NOT OWNER-QUALIFIED**
