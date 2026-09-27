@@ -1756,6 +1756,12 @@ export class R1LabScene extends Phaser.Scene {
         lines: [
           `phase ${this.combatMicro.phase} · remaining ${this.combatMicro.phaseTicksRemaining}t · hostile HP ${this.combatMicro.hostileHealth}/${COMBAT_MICRO_RULES.hostileHealth}`,
           `pressure target ${this.combatMicro.targetActorId} · hits player ${this.combatMicro.actorHitCounts.player} / companion ${this.combatMicro.actorHitCounts.companion}`,
+          (() => {
+            const hostile = actor(snapshot, "hostile");
+            const player = actor(snapshot, "player");
+            const manualCompanion = actor(snapshot, "companion");
+            return `hostile ${compact(hostile.position.x)}, ${compact(hostile.position.y)} · player ${compact(player.position.x)}, ${compact(player.position.y)} · companion ${compact(manualCompanion.position.x)}, ${compact(manualCompanion.position.y)}`;
+          })(),
           `last world outcome ${this.combatMicro.lastOutcome} · hit actor ${this.combatMicro.lastHitActorId ?? "none"} · outcome tick ${this.combatMicro.lastOutcomeTick ?? "none"}`,
           `successful strike history ${this.combatMicro.successfulStrikeHistory.join(" → ") || "none"}`,
           this.lastCombatMicroActionOutcomes.length > 0
