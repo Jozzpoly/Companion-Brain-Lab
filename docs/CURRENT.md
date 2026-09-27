@@ -1577,3 +1577,200 @@ Therefore any first Field Lab transplant should remain **explicitly one-companio
 Current status:
 
 > **COMBAT-MICRO MANUAL SITUATION MACHINE-QUALIFIED · MANUAL RESPONSIBILITY DIVERSITY DEMONSTRATED · FIELD-LAB AUTHORING TRANSPLANT IS THE LEADING NEXT HYPOTHESIS · NO AUTONOMY PROMOTION · NOT OWNER-QUALIFIED**
+
+
+---
+
+## 27. Field Lab combat authoring + temporal responsibility trace — 2026-09-27
+
+This tranche closes the gap between the isolated `combat-micro` donor and the Owner-valued Field Lab authoring instrument.
+
+### Recovered interrupted work
+
+A connection interruption left one meaningful artifact partially completed:
+
+`20519aa0b51206a9152df8f4e04abd3908a9a082 · research: add Field Lab combat authoring falsifier`
+
+The script existed but had not yet been registered in `package.json` or the Field Lab workflow. It was therefore not qualified evidence.
+
+That interrupted work was recovered and completed rather than restarted.
+
+### One-companion Combat Micro transplant
+
+The Field Lab now exposes a fourth bounded situation:
+
+`COMBAT_MICRO`
+
+It reuses the already-qualified manual combat-micro World contract while preserving the current research scope:
+
+- YOU and canonical C1 may issue explicit `STRIKE` attempts;
+- C2–C4 remain legitimate embodied movement / formation / setup bodies;
+- C2–C4 do **not** silently inherit combat authority;
+- attempts from C2–C4 are explicitly rejected and logged;
+- no companion cognition or autonomous strike authority was added;
+- Experiment A/B can capture and restore the situation;
+- Trial provenance records explicit STRIKE attempts and World outcomes.
+
+This is deliberate one-companion-first scoping, not a future multi-companion combat architecture.
+
+### First transplant qualification
+
+Qualified source:
+
+`c14c3cc8194b080d1bee2441f58d7302f79ee2a7`
+
+Evidence:
+
+- `validate #1754` — SUCCESS;
+- `squad-field-lab-browser #143 · run 36316315937` — SUCCESS;
+- 190/190 test files PASS;
+- 763/763 tests PASS;
+- production build PASS;
+- broad Field Lab regression PASS;
+- persistent A/B regression PASS;
+- manual action/order provenance regression PASS;
+- exact browser artifact inspected.
+
+The combat-authoring falsifier established:
+
+- Combat Micro is a capturable / restorable Field Lab situation;
+- identical initial A/B setups can be compared;
+- passive placement still does not count as contribution;
+- a manual C1 STRIKE changes authoritative World state;
+- the explicit action transfers fixture-local pressure responsibility to C1;
+- STRIKE attempt and resolved World outcome survive Trial provenance;
+- a larger roster can coexist without broadening combat semantics;
+- a C2 STRIKE attempt is explicitly rejected;
+- no companion cognition authority was introduced.
+
+Exact artifact review confirmed the participant/debug surface visibly shows:
+
+- `HP 2/3`;
+- `pressure target C1`;
+- strike history `C1`;
+- STRIKE attempt and `SUCCEEDED` outcome;
+- the C2 scope rejection in Recent transitions.
+
+Canonical interpretation:
+
+> **COMBAT MICRO IS NOW A MACHINE-QUALIFIED ONE-COMPANION MANUAL FIELD LAB AUTHORING SITUATION.**
+
+It is still **not** a combat-quality PASS, autonomy PASS, teammate-feel PASS or Owner gate.
+
+### Routine CI cleanup
+
+The Field Lab workflow had accumulated old research campaigns as mandatory per-push work, including:
+
+- the 13-variant doorway discovery campaign;
+- the already rejected Shared Task Under Pressure campaign.
+
+Those historical scripts and evidence remain reproducible in the repository, but replaying them on every Field Lab change contradicted the project's own layered validation discipline.
+
+Source:
+
+`9b7eaee08844cb1f99208780af90f015d7ca13a6`
+
+Evidence:
+
+- `validate #1755` — SUCCESS;
+- `squad-field-lab-browser #144` — SUCCESS.
+
+The routine Field Lab gate now keeps:
+
+- full compile / unit / build;
+- broad Field Lab browser rehearsal;
+- persistent A/B experiment rehearsal;
+- active one-companion combat-authoring falsifier;
+- durable manual action/order provenance regression.
+
+Historical doorway and rejected task-pressure campaigns remain available on demand.
+
+Observed workflow duration dropped from approximately 7m12s to approximately 2m41s while preserving the active and durable evidence set.
+
+### Temporal combat-responsibility observability
+
+The first transplant exposed a real instrumentation gap:
+
+> Trial could preserve authored ACTION events and movement trajectories, but could not compare the **history of material responsibility** between two runs.
+
+That gap is now closed minimally.
+
+Trial frames may now retain Combat Micro snapshots, while Trial records preserve an explicit pre-first-action combat baseline. This avoids losing a first-tick intervention by treating the first post-action frame as the baseline.
+
+Trial summaries now expose, when Combat Micro is active:
+
+- initial / final combat phase;
+- phase transition count;
+- initial / final hostile health and damage;
+- initial / final pressure target;
+- target-time for YOU and C1;
+- target-transfer count;
+- YOU / C1 hit deltas;
+- successful strikes added during the trial;
+- factual combat World outcome events.
+
+A/B comparison exposes the corresponding B−A deltas without selecting a winner.
+
+Qualified source:
+
+`30c40c6c6bebbb5cc9dbfe6378942c836465e99b`
+
+Evidence:
+
+- `validate #1760` — SUCCESS;
+- `squad-field-lab-browser #149 · run 36317251134` — SUCCESS;
+- 190/190 test files PASS;
+- **764/764 tests PASS**;
+- production build PASS;
+- broad Field Lab PASS;
+- persistent A/B PASS;
+- active combat-authoring falsifier PASS;
+- durable manual action/order provenance regression PASS;
+- exact browser artifact inspected;
+- no page / console / request errors.
+
+The qualified combat-authoring observation now includes:
+
+`combatResponsibilityTimelineIsVisibleInABTrace = true`
+
+In the exact A/B artifact:
+
+- A remains no-action: hostile `3 → 3`, pressure target stays YOU;
+- B records one C1 STRIKE: hostile `3 → 2`, pressure target becomes C1;
+- Trial shows C1's STRIKE and `HOSTILE_STRUCK`;
+- the A/B combat delta shows the changed target-time and one responsibility transfer.
+
+This is **instrument qualification**, not behavior qualification.
+
+### Next strategic boundary
+
+Do **not** add autonomous STRIKE merely because the lab can now measure it.
+
+The highest-value next question is:
+
+> **Can the Field Lab expose several genuinely different multi-beat manual responsibility patterns — not just single actions — whose causal structure is rich enough to become candidates for future local-brain behavior?**
+
+The next campaign should use the same bounded combat situation and the new temporal responsibility trace to author and compare patterns such as:
+
+- C1 engages, bears pressure, yields / breaks pressure, player takes over;
+- player initially bears the problem, suffers or approaches consequence, C1 takes over;
+- responsibility alternates and later re-enters;
+- disengagement / regroup is chosen instead of continued contribution.
+
+The campaign should seek recurring conditional structure such as:
+
+`prepare → engage → bear responsibility → yield / transfer → re-enter / regroup`
+
+rather than merely replaying fixed key sequences.
+
+Reject the next step if:
+
+- the patterns collapse to one magic timing choreography;
+- useful differences are explainable only by debug labels rather than material World consequences;
+- adding another verb is required before the current responsibility structure can produce evidence;
+- the experiment begins to require broad combat architecture;
+- the result would merely justify giving STRIKE to the brain without identifying when / why responsibility should be assumed or relinquished.
+
+Current status:
+
+> **FIELD LAB COMBAT AUTHORING MACHINE-QUALIFIED · TEMPORAL RESPONSIBILITY A/B OBSERVABILITY QUALIFIED · ROUTINE CI BOUNDED · NO AUTONOMY PROMOTION · NOT OWNER-QUALIFIED · NEXT: MULTI-BEAT MANUAL RESPONSIBILITY-PATTERN DISCOVERY**
