@@ -2256,6 +2256,7 @@ export class R1LabScene extends Phaser.Scene {
     else if (action === "scenario-head-on") void this.loadScenario("head-on");
     else if (action === "scenario-shared-danger") void this.loadScenario("shared-danger");
     else if (action === "scenario-cooperative-episode") void this.loadScenario("cooperative-episode");
+    else if (action === "scenario-combat-micro") void this.loadScenario("combat-micro");
     else if (action === "s1-player-intervene") this.queueWorldAction("player");
     else if (action === "s1-companion-intervene") this.queueWorldAction("companion");
     else if (action === "toggle-s3-authority") this.toggleS3Authority();
