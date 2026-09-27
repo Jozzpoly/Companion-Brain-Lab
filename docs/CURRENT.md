@@ -1927,3 +1927,128 @@ Only after bidirectional manual evidence should the project consider a shadow de
 Current status:
 
 > **ONE DIRECTIONAL PREPARED TAKEOVER PATTERN MACHINE-QUALIFIED · PREPARATION SHOWN TO BE MATERIAL · REVERSE TAKEOVER STILL UNPROVEN · NO AUTONOMY PROMOTION · NOT OWNER-QUALIFIED**
+
+
+---
+
+## 29. Bidirectional prepared takeover — manual causal structure survives symmetry challenge — 2026-09-27
+
+The directional `C1 → player` prepared takeover pattern was challenged in the reverse direction before granting any new cognition or action authority.
+
+Question:
+
+> **Does the same prepared responsibility-transfer structure survive when YOU is the initial responsibility bearer and C1 takes over only after a participant-visible pressure cue?**
+
+No World rule, STRIKE range, hostile parameter or action verb was changed.
+
+### Reverse experiment
+
+Both A and B restore the same captured setup:
+
+- one canonical C1;
+- Combat Micro / OPEN;
+- both actors materially able to intervene;
+- C1 explicitly assigned `HOLD` so intervention readiness remains a causal preparation rather than an accidental start position.
+
+Both trials begin with the same explicit player STRIKE.
+
+Pattern A:
+
+`YOU engages → YOU remains responsibility bearer → consequence hits YOU`
+
+Pattern B:
+
+`YOU engages → visible PRESSURING YOU → C1 STRIKE → responsibility transfers to C1 → consequence hits C1`
+
+The takeover is triggered from the visible World state, not a preselected hidden tick.
+
+### Qualification
+
+Qualified source:
+
+`9521d1c6c493e8972421b098af4b6f001adffa61`
+
+Evidence:
+
+- `validate #1770` — SUCCESS;
+- `squad-field-lab-browser #155 · run 36329617184` — SUCCESS;
+- 190/190 test files PASS;
+- 764/764 tests PASS;
+- production build PASS;
+- broad Field Lab PASS;
+- persistent A/B PASS;
+- one-companion combat-authoring PASS;
+- forward prepared responsibility-pattern PASS;
+- reverse responsibility-takeover PASS;
+- durable manual action/order provenance PASS;
+- exact reverse screenshots inspected;
+- no page / console / request errors.
+
+Reverse Pattern A:
+
+- player consequence after 153 stepped ticks;
+- final:
+  `RECOVERING · HP 2/3 · pressure target YOU · hits YOU 1 / C1 0 · history YOU`.
+
+Reverse Pattern B:
+
+- visible `PRESSURING YOU` cue after 81 stepped ticks;
+- C1 then explicitly STRIKEs;
+- C1 consequence after 165 stepped ticks after the takeover segment began;
+- final:
+  `RECOVERING · HP 1/3 · pressure target C1 · hits YOU 0 / C1 1 · history YOU → C1`.
+
+Exact artifact review confirms:
+
+- before takeover, C1 remains explicitly prepared on HOLD while YOU is the current pressure target;
+- after takeover, Trial A/B distinguishes the actor-specific hit consequence, strike history and responsibility transfer;
+- the reverse result is materially symmetric in structure, not necessarily identical in timing.
+
+### Shared manual structure now supported
+
+Across both qualified takeover directions, the recurring causal structure is:
+
+`prepared / materially available`
+`→ current responsibility bearer`
+`→ participant-visible pressure`
+`→ another actor has an intervention opportunity`
+`→ explicit takeover action`
+`→ responsibility transfers`
+`→ later consequence follows the new bearer`
+
+This is stronger than a fixed authored choreography because:
+
+- preparation matters materially;
+- the decision point is grounded in visible World state;
+- transfer changes who bears later consequence;
+- the same relation survives actor-role reversal.
+
+Do not promote the concrete constants, HOLD command or STRIKE button as the final architecture. The reusable finding is the causal relation.
+
+### Next research boundary — shadow decision seam
+
+Manual evidence is now sufficient to ask a new question without giving C1 live authority:
+
+> **Given the same observable material state, can a local C1 decision seam produce an inspectable shadow recommendation such as TAKE_OVER / DO_NOT_TAKE_OVER for the same reasons the manual campaign exposed — and abstain when opportunity or need is absent?**
+
+The first shadow seam should be narrower than a policy system.
+
+It should:
+
+- have **zero action authority**;
+- consume only information that is actually available at the intended local decision boundary;
+- expose its evidence and reason;
+- distinguish at minimum:
+  - current bearer is YOU vs C1,
+  - pressure exists vs does not,
+  - C1 is materially able to intervene vs not,
+  - C1 is explicitly prepared / available vs ordinary unavailable state;
+- recommend, not execute;
+- be tested against positive and negative counterfactuals;
+- remain traceable beside manual A/B evidence.
+
+Reject promotion if the seam merely restates a scripted browser condition, depends on privileged hidden timing, or recommends takeover whenever STRIKE is possible regardless of responsibility context.
+
+Current status:
+
+> **BIDIRECTIONAL PREPARED MANUAL TAKEOVER MACHINE-QUALIFIED · SHARED CAUSAL STRUCTURE SUPPORTED · SHADOW DECISION SEAM NOW JUSTIFIED · LIVE AUTONOMOUS STRIKE STILL FORBIDDEN · NOT OWNER-QUALIFIED**
