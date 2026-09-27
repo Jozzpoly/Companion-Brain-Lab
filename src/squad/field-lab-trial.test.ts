@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { CombatTakeoverShadowDecision } from "../brain/combat-takeover-shadow";
 import type { CombatMicroSnapshot } from "../world/combat-micro-contract";
 import type { FieldLabTrialFrame } from "./field-lab-trial";
 import {
@@ -19,6 +20,7 @@ function frame(
     playerPosition: { x: 0, y: 0 },
     cooperativeOutcome: "NONE",
     combatMicro: null,
+    combatTakeoverShadow: null,
     members: [{
       memberId: "companion",
       position: { x, y: 0 },
@@ -75,6 +77,45 @@ function combatFrame(
   return {
     ...frame(tick, tick, 5 - Math.min(tick, 4), "MOVING"),
     combatMicro
+  };
+}
+
+function shadowDecision(
+  tick: number,
+  recommendation: CombatTakeoverShadowDecision["recommendation"],
+  reasonCode: CombatTakeoverShadowDecision["reasonCode"]
+): CombatTakeoverShadowDecision {
+  return {
+    kind: "COMBAT_TAKEOVER_SHADOW",
+    tick,
+    recommendation,
+    reasonCode,
+    reason: reasonCode,
+    evidence: {
+      phase: recommendation === "TAKE_OVER" ? "PRESSURING" : "APPROACHING",
+      currentBearer: "player",
+      companionPrepared: true,
+      preparationSource: "FIELD_LAB_HOLD",
+      companionToHostileDistance: 0.8,
+      strikeRange: 1.05,
+      companionCanStrikeNow: true,
+      phaseTicksRemainingObserved: recommendation === "TAKE_OVER" ? 40 : 0,
+      hiddenTimingUsedForDecision: false
+    },
+    actionAttempt: null,
+    movementIntent: null,
+    runtimeAuthorityClaim: "NONE_SHADOW_OBSERVATION_ONLY"
+  };
+}
+
+function shadowFrame(
+  tick: number,
+  recommendation: CombatTakeoverShadowDecision["recommendation"],
+  reasonCode: CombatTakeoverShadowDecision["reasonCode"]
+): FieldLabTrialFrame {
+  return {
+    ...frame(tick, tick, 5 - Math.min(tick, 4), "MOVING"),
+    combatTakeoverShadow: shadowDecision(tick, recommendation, reasonCode)
   };
 }
 
@@ -254,6 +295,65 @@ describe("Field Lab trial traces", () => {
     expect(comparison.playerHitDeltaDelta).toBe(0);
     expect(comparison.companionHitDeltaDelta).toBe(1);
     expect(comparison.successfulStrikeCountDelta).toBe(1);
+  });
+
+  it("summarizes and compares zero-authority takeover shadow windows over time", () => {
+    const a = createFieldLabTrialRecord({
+      slot: "A",
+      label: "no takeover opportunity",
+      startedAtTick: 0,
+      frames: [
+        shadowFrame(1, "DO_NOT_TAKE_OVER", "NO_ACTIVE_PRESSURE"),
+        shadowFrame(2, "DO_NOT_TAKE_OVER", "NO_ACTIVE_PRESSURE"),
+        shadowFrame(3, "DO_NOT_TAKE_OVER", "NO_ACTIVE_PRESSURE"),
+        shadowFrame(4, "DO_NOT_TAKE_OVER", "NO_ACTIVE_PRESSURE")
+      ]
+    });
+    const b = createFieldLabTrialRecord({
+      slot: "B",
+      label: "bounded takeover window",
+      startedAtTick: 0,
+      frames: [
+        shadowFrame(1, "DO_NOT_TAKE_OVER", "NO_ACTIVE_PRESSURE"),
+        shadowFrame(2, "TAKE_OVER", "TAKEOVER_CONDITIONS_PRESENT"),
+        shadowFrame(3, "TAKE_OVER", "TAKEOVER_CONDITIONS_PRESENT"),
+        shadowFrame(4, "DO_NOT_TAKE_OVER", "COMPANION_ALREADY_BEARER")
+      ]
+    });
+
+    const aSummary = summarizeFieldLabTrial(a).combatTakeoverShadow!;
+    expect(aSummary.takeOverTicks).toBe(0);
+    expect(aSummary.firstTakeOverTickOffset).toBeNull();
+    expect(aSummary.takeOverEpisodes).toBe(0);
+    expect(aSummary.recommendationTransitions).toBe(0);
+    expect(aSummary.reasonTicks).toEqual({ NO_ACTIVE_PRESSURE: 4 });
+
+    const bSummary = summarizeFieldLabTrial(b).combatTakeoverShadow!;
+    expect(bSummary.takeOverTicks).toBe(2);
+    expect(bSummary.doNotTakeOverTicks).toBe(2);
+    expect(bSummary.firstTakeOverTickOffset).toBe(2);
+    expect(bSummary.lastTakeOverTickOffset).toBe(3);
+    expect(bSummary.takeOverEpisodes).toBe(1);
+    expect(bSummary.longestTakeOverRun).toBe(2);
+    expect(bSummary.recommendationTransitions).toBe(2);
+    expect(bSummary.reasonTransitions).toBe(2);
+    expect(bSummary.initialRecommendation).toBe("DO_NOT_TAKE_OVER");
+    expect(bSummary.finalRecommendation).toBe("DO_NOT_TAKE_OVER");
+    expect(bSummary.finalReasonCode).toBe("COMPANION_ALREADY_BEARER");
+    expect(bSummary.reasonTicks).toEqual({
+      NO_ACTIVE_PRESSURE: 1,
+      TAKEOVER_CONDITIONS_PRESENT: 2,
+      COMPANION_ALREADY_BEARER: 1
+    });
+
+    const comparison = compareFieldLabTrials(a, b).combatTakeoverShadow!;
+    expect(comparison.takeOverTicksDelta).toBe(2);
+    expect(comparison.takeOverEpisodesDelta).toBe(1);
+    expect(comparison.longestTakeOverRunDelta).toBe(2);
+    expect(comparison.recommendationTransitionsDelta).toBe(2);
+    expect(comparison.reasonTransitionsDelta).toBe(2);
+    expect(comparison.firstTakeOverTickOffsetDelta).toBeNull();
+    expect(comparison.lastTakeOverTickOffsetDelta).toBeNull();
   });
 
   it("rejects empty traces rather than manufacturing evidence", () => {
