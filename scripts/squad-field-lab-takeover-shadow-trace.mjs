@@ -129,7 +129,11 @@ try {
   await setup.click();
   const box = await canvas.boundingBox();
   invariant(box, "canvas unavailable");
-  await dragBody(page, box, { x: 4.6, y: 5.0 }, { x: 10.8, y: 5.0 });
+  // Keep this trace campaign deliberately inside factual STRIKE range.
+  // Observation-time in-range state is not an execution-time guarantee because
+  // attempts resolve after the next physics step; the boundary case is a
+  // separate qualified finding, not the question this trace campaign asks.
+  await dragBody(page, box, { x: 4.6, y: 5.0 }, { x: 11.85, y: 5.90 });
   await dragBody(page, box, { x: 3.0, y: 5.0 }, { x: 11.35, y: 4.45 });
   await setup.click();
 
