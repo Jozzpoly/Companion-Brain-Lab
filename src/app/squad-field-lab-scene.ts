@@ -37,6 +37,7 @@ import {
 } from "../squad/field-lab-squad-control";
 import { S0_STEP_SECONDS } from "../physics/rapier-physical-world";
 import {
+  COMBAT_MICRO_RULES,
   LabWorld,
   SQUAD_FIELD_LAB_TASK_PRESSURE_RULES
 } from "../world/world";
@@ -47,6 +48,12 @@ import type {
   CooperativeEpisodeParticipantId,
   CooperativeEpisodeSnapshot
 } from "../world/cooperative-episode-contract";
+import type {
+  CombatMicroActionAttempt,
+  CombatMicroActionOutcome,
+  CombatMicroEpisodeOutcome,
+  CombatMicroSnapshot
+} from "../world/combat-micro-contract";
 import type { TaskPressureSnapshot } from "../world/task-pressure-contract";
 import { squadFieldLabScenario, type FieldLabSpawnOverrides } from "../world/scenarios";
 import type {
@@ -174,10 +181,14 @@ export class SquadFieldLabScene extends Phaser.Scene {
   private situation: FieldLabSituation = "TRAINING";
   private layout: FieldLabLayout = "MIXED";
   private cooperativeEpisode: CooperativeEpisodeSnapshot | null = null;
+  private combatMicro: CombatMicroSnapshot | null = null;
   private taskPressure: TaskPressureSnapshot | null = null;
   private latestCooperativeEpisodeOutcome: CooperativeEpisodeOutcome = "NONE";
+  private latestCombatMicroOutcome: CombatMicroEpisodeOutcome = "NONE";
   private lastCooperativeActionOutcomes: readonly CooperativeEpisodeActionOutcome[] = [];
   private pendingCooperativeAttempts: CooperativeEpisodeActionAttempt[] = [];
+  private lastCombatMicroActionOutcomes: readonly CombatMicroActionOutcome[] = [];
+  private pendingCombatMicroAttempts: CombatMicroActionAttempt[] = [];
   private positionMemory: FieldLabSpawnOverrides = { squad: {} };
   private readonly experiments = new Map<FieldLabExperimentSlot, FieldLabExperimentRecord>();
   private readonly trials = new Map<FieldLabTrialSlot, FieldLabTrialRecord>();
@@ -348,6 +359,13 @@ export class SquadFieldLabScene extends Phaser.Scene {
         for (const memberId of this.control.snapshot().selected) {
           this.queueCooperativeAttempt(memberId);
         }
+      },
+      onPlayerStrike: () => this.queueCombatMicroAttempt("player"),
+      onFocusedStrike: () => this.queueCombatMicroAttempt(this.control.snapshot().focused),
+      onSelectedStrike: () => {
+        for (const memberId of this.control.snapshot().selected) {
+          this.queueCombatMicroAttempt(memberId);
+        }
       }
     });
 
@@ -468,16 +486,22 @@ export class SquadFieldLabScene extends Phaser.Scene {
 
     const cooperativeEpisodeAttempts =
       this.situation === "PRESSURE" ? this.pendingCooperativeAttempts.splice(0) : [];
+    const combatMicroAttempts =
+      this.situation === "COMBAT_MICRO" ? this.pendingCombatMicroAttempts.splice(0) : [];
     const result = this.world.stepSituation({
       motionIntents: canonicalIntents,
       experimentalSquadMotionIntents,
-      cooperativeEpisodeAttempts
+      cooperativeEpisodeAttempts,
+      combatMicroAttempts
     });
     this.snapshotValue = result.snapshot;
     this.cooperativeEpisode = result.cooperativeEpisode;
+    this.combatMicro = result.combatMicro;
     this.taskPressure = result.taskPressure;
     this.lastCooperativeActionOutcomes = result.cooperativeEpisodeActionOutcomes;
     this.latestCooperativeEpisodeOutcome = result.cooperativeEpisodeOutcome;
+    this.lastCombatMicroActionOutcomes = result.combatMicroActionOutcomes;
+    this.latestCombatMicroOutcome = result.combatMicroOutcome;
     this.recordActiveTrialFrame();
 
     for (const outcome of result.cooperativeEpisodeActionOutcomes) {
@@ -498,6 +522,23 @@ export class SquadFieldLabScene extends Phaser.Scene {
         `repelled by ${result.cooperativeEpisode?.repelledBy.join(", ") || "none"}`
       );
     }
+    for (const outcome of result.combatMicroActionOutcomes) {
+      this.recordTrialIntervention(
+        "ACTION",
+        outcome.actorId === "player" ? "YOU" : "C1",
+        "STRIKE outcome",
+        "queued",
+        `${outcome.status}@${outcome.distance.toFixed(2)}m/${outcome.phaseObserved}`
+      );
+      this.log(
+        `STRIKE ${outcome.actorId === "player" ? "YOU" : "C1"} -> ${outcome.status} @ ${outcome.distance.toFixed(2)}m`
+      );
+    }
+    if (result.combatMicroOutcome !== "NONE") {
+      this.log(
+        `combat outcome ${result.combatMicroOutcome} · target ${result.combatMicro?.targetActorId ?? "none"} · HP ${result.combatMicro?.hostileHealth ?? "n/a"}`
+      );
+    }
   }
 
   private handleKeyboard(): void {
@@ -514,6 +555,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       const situations: readonly FieldLabSituation[] = [
         "TRAINING",
         "PRESSURE",
+        "COMBAT_MICRO",
         "TASK_PRESSURE"
       ];
       const current = situations.indexOf(this.situation);
@@ -522,14 +564,18 @@ export class SquadFieldLabScene extends Phaser.Scene {
       void this.loadWorld(true);
     }
     if (Phaser.Input.Keyboard.JustDown(this.keys.playerAction)) {
-      this.queueCooperativeAttempt("player");
+      if (this.situation === "COMBAT_MICRO") this.queueCombatMicroAttempt("player");
+      else this.queueCooperativeAttempt("player");
     }
     if (Phaser.Input.Keyboard.JustDown(this.keys.focusedAction)) {
-      this.queueCooperativeAttempt(this.control.snapshot().focused);
+      const focused = this.control.snapshot().focused;
+      if (this.situation === "COMBAT_MICRO") this.queueCombatMicroAttempt(focused);
+      else this.queueCooperativeAttempt(focused);
     }
     if (Phaser.Input.Keyboard.JustDown(this.keys.selectedAction)) {
       for (const memberId of this.control.snapshot().selected) {
-        this.queueCooperativeAttempt(memberId);
+        if (this.situation === "COMBAT_MICRO") this.queueCombatMicroAttempt(memberId);
+        else this.queueCooperativeAttempt(memberId);
       }
     }
     for (const [key, memberId] of [
@@ -587,6 +633,40 @@ export class SquadFieldLabScene extends Phaser.Scene {
     } else {
       this.log("setup placement OFF");
     }
+  }
+
+  private queueCombatMicroAttempt(actorId: "player" | SquadMemberId): void {
+    if (this.situation !== "COMBAT_MICRO" || !this.combatMicro) {
+      this.log(`STRIKE ignored · combat micro inactive · ${String(actorId)}`);
+      return;
+    }
+    if (actorId !== "player" && actorId !== "companion") {
+      this.log(
+        `STRIKE ignored · ${memberLabel(actorId)} has movement/formation authoring only; combat semantics remain C1-scoped`
+      );
+      return;
+    }
+    if (
+      actorId === "companion" &&
+      !this.control.snapshot().activeMembers.includes("companion")
+    ) {
+      this.log("STRIKE ignored · C1 inactive");
+      return;
+    }
+    if (this.pendingCombatMicroAttempts.some((attempt) => attempt.actorId === actorId)) return;
+    this.pendingCombatMicroAttempts.push({
+      actorId,
+      kind: "STRIKE",
+      targetId: "hostile"
+    });
+    this.recordTrialIntervention(
+      "ACTION",
+      actorId === "player" ? "YOU" : "C1",
+      "STRIKE",
+      "idle",
+      "queued@hostile"
+    );
+    this.log(`STRIKE queued · ${actorId === "player" ? "YOU" : "C1"}`);
   }
 
   private queueCooperativeAttempt(actorId: CooperativeEpisodeParticipantId): void {
@@ -1039,6 +1119,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       paused: this.paused,
       setupPlacement: this.setupPlacement,
       episode: this.cooperativeEpisode,
+      combatMicro: this.combatMicro,
       taskPressure: this.taskPressure,
       latestEpisodeOutcome: this.latestCooperativeEpisodeOutcome,
       experiments: experimentSummaries,
@@ -1537,7 +1618,11 @@ export class SquadFieldLabScene extends Phaser.Scene {
       this.pendingCooperativeAttempts = [];
       this.lastCooperativeActionOutcomes = [];
       this.latestCooperativeEpisodeOutcome = "NONE";
+      this.pendingCombatMicroAttempts = [];
+      this.lastCombatMicroActionOutcomes = [];
+      this.latestCombatMicroOutcome = "NONE";
       this.cooperativeEpisode = next.cooperativeEpisode();
+      this.combatMicro = next.combatMicro();
       this.taskPressure = next.taskPressure();
       this.log(
         `Field Lab world reconstructed · ${this.situation}/${this.layout} · ` +
