@@ -143,13 +143,24 @@ try {
   invariant(initial.includes("pressure target YOU"), `unexpected initial pressure target: ${initial}`);
   invariant(initial.includes("history none"), `authored setup invented history: ${initial}`);
 
+  // Preparation is part of the authored pattern, not an invisible geometry assumption.
+  // Freeze C1's authored responsibility point in both A and B so the later takeover
+  // question is not confounded by ordinary FOLLOW/formation motion.
+  await page.locator('[data-order-mode="HOLD"]').click();
+  await waitFor(
+    page,
+    (text) => text.includes("C1 HOLD"),
+    4_000,
+    "prepared C1 hold"
+  );
+
   for (const slot of ["A", "B"]) {
     await page.locator(`[data-experiment-capture="${slot}"]`).click();
     const label = page.locator(`[data-experiment-slot="${slot}"] .squad-lab-experiment-label`);
     await label.fill(
       slot === "A"
-        ? "C1 bears responsibility to consequence"
-        : "player takes over from pressured C1"
+        ? "prepared C1 bears responsibility to consequence"
+        : "player takes over from prepared pressured C1"
     );
     await label.blur();
   }
@@ -270,12 +281,12 @@ try {
       "Can identical starts produce materially distinct multi-beat responsibility histories based on a visible world-state cue, rather than a hidden timing choreography?",
     patterns: {
       a: {
-        label: "C1 engages and bears responsibility to consequence",
+        label: "prepared C1 holds position, engages and bears responsibility to consequence",
         firstConsequenceAfterTicks: aConsequence.ticks,
         finalStatus: aConsequence.status
       },
       b: {
-        label: "C1 engages, player takes over when C1 is visibly pressured, player bears consequence",
+        label: "prepared C1 holds position and engages; player takes over when C1 is visibly pressured, then bears consequence",
         visiblePressureCueAfterTicks: c1Pressured.ticks,
         playerConsequenceAfterTakeoverTicks: bConsequence.ticks,
         finalStatus: bConsequence.status
@@ -283,6 +294,7 @@ try {
     },
     observations: {
       identicalInitialAB: true,
+      preparedHoldPreservesSharedInterventionGeometry: true,
       sameInitialC1Engagement: true,
       takeoverTriggeredByVisiblePressureStateNotHiddenTick: true,
       patternAEndsWithCompanionConsequence: true,
@@ -295,7 +307,7 @@ try {
       noCompanionCognitionAuthorityAdded: true
     },
     interpretationBoundary:
-      "This demonstrates two materially different manually authored responsibility patterns in the bounded Combat Micro Field Lab. It does not establish autonomous behavior semantics, good combat, teammate feel, optimal policy, or Owner qualification.",
+      "This tests two materially different manually authored responsibility patterns from the same explicit prepared HOLD condition in the bounded Combat Micro Field Lab. Preparation is part of the causal setup, not hidden geometry. It does not establish autonomous behavior semantics, good combat, teammate feel, optimal policy, or Owner qualification.",
     errors
   };
   await writeFile(`${ROOT}/summary.json`, JSON.stringify(summary, null, 2), "utf8");
