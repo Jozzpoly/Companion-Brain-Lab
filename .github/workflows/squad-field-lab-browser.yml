@@ -5,6 +5,10 @@ on:
     branches:
       - main
     paths:
+      - "src/brain/combat-takeover-shadow.ts"
+      - "src/brain/combat-takeover-shadow.test.ts"
+      - "src/brain/field-lab-takeover-readiness.ts"
+      - "src/brain/field-lab-takeover-readiness.test.ts"
       - "src/world/types.ts"
       - "src/world/scenarios.ts"
       - "src/world/world.ts"
