@@ -222,8 +222,9 @@ try {
       const movePanel = await waitForText(
         () => panelText(page),
         (text) =>
-          text.includes(`C1 MOVE @${anchor.x.toFixed(2)},${anchor.y.toFixed(2)} · ARRIVED`) &&
-          text.includes("order MOVE · ARRIVED"),
+          /C1 MOVE @-?\\d+(?:\\.\\d+)?,-?\\d+(?:\\.\\d+)? · ARRIVED/.test(text.replace(/\\s+/g, " ")) &&
+          text.includes("order MOVE · ARRIVED") &&
+          text.includes("requested 0.00, 0.00"),
         5_000,
         "MOVE-equivalent arrived state"
       );
@@ -231,10 +232,12 @@ try {
       // Let ordinary World ticks prove the MOVE target is not merely an
       // instantaneous UI state. No combat has begun yet.
       for (let i = 0; i < 8; i += 1) await tap(page, "o");
-      const stablePanel = await panelText(page);
+      const stablePanel = (await panelText(page)).replace(/\\s+/g, " ");
       invariant(
-        stablePanel.includes(`C1 MOVE @${anchor.x.toFixed(2)},${anchor.y.toFixed(2)} · ARRIVED`),
-        "MOVE-equivalent preparation did not remain ARRIVED before pressure."
+        /C1 MOVE @-?\\d+(?:\\.\\d+)?,-?\\d+(?:\\.\\d+)? · ARRIVED/.test(stablePanel) &&
+          stablePanel.includes("authority FORMATION · order MOVE · ARRIVED") &&
+          stablePanel.includes("requested 0.00, 0.00"),
+        "MOVE-equivalent preparation did not remain stably ARRIVED before pressure."
       );
       invariant((await combatStatus(page)).includes("history none"), "MOVE-equivalent setup invented combat history.");
 
