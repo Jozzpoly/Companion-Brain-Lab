@@ -21,6 +21,8 @@ export interface CombatTakeoverShadowEvidence {
   currentBearer: CombatMicroSnapshot["targetActorId"] | null;
   companionPrepared: boolean;
   preparationSource: string;
+  preparationReasonCode: string;
+  preparationReason: string;
   companionToHostileDistance: number | null;
   strikeRange: number;
   companionCanStrikeNow: boolean;
@@ -46,6 +48,8 @@ export interface EvaluateCombatTakeoverShadowInput {
   rules: CombatMicroRules;
   companionPrepared: boolean;
   preparationSource: string;
+  preparationReasonCode?: string;
+  preparationReason?: string;
 }
 
 function body(snapshot: WorldSnapshot, id: "companion" | "hostile"): ActorSnapshot {
@@ -103,6 +107,8 @@ export function evaluateCombatTakeoverShadow(
         currentBearer: null,
         companionPrepared: input.companionPrepared,
         preparationSource: input.preparationSource,
+        preparationReasonCode: input.preparationReasonCode ?? "UNSPECIFIED_PREPARATION_EVIDENCE",
+        preparationReason: input.preparationReason ?? "no richer preparation evidence supplied",
         companionToHostileDistance: null,
         strikeRange: input.rules.strikeRange,
         companionCanStrikeNow: false,
@@ -125,6 +131,8 @@ export function evaluateCombatTakeoverShadow(
     currentBearer: combat.targetActorId,
     companionPrepared: input.companionPrepared,
     preparationSource: input.preparationSource,
+    preparationReasonCode: input.preparationReasonCode ?? "UNSPECIFIED_PREPARATION_EVIDENCE",
+    preparationReason: input.preparationReason ?? "no richer preparation evidence supplied",
     companionToHostileDistance,
     strikeRange: input.rules.strikeRange,
     companionCanStrikeNow,
