@@ -2444,3 +2444,219 @@ That would let manually authored behavior patterns and local cognition evidence 
 Current status:
 
 > **COUNTERFACTUAL TAKEOVER SHADOW ROBUSTNESS MACHINE-QUALIFIED WITHIN BOUNDED COMBAT MICRO · OBSERVATION→EXECUTION TEMPORAL GAP EXPLICITLY OPEN · ZERO ACTION/MOVEMENT AUTHORITY · TEMPORAL SHADOW TRACE NEXT · NOT OWNER-QUALIFIED**
+
+
+---
+
+## 32. Temporal takeover-shadow traces — cognition evidence becomes comparable over time — 2026-09-27
+
+The qualified counterfactual matrix established that the zero-authority takeover classifier was not tied to one authored geometry. The next instrument step was therefore to preserve that cognition evidence inside the same temporal Trial/A-B apparatus already used for movement, responsibility and World outcomes.
+
+Question:
+
+> **Can two identical bounded runs preserve and compare not merely the final shadow recommendation, but when the takeover opportunity appears, how long it remains open, why it changes, and whether a real manual intervention causally changes the later shadow timeline?**
+
+No autonomous action authority was added.
+
+### Temporal trial extension
+
+Field Lab Trial frames now persist a snapshot of the takeover shadow alongside the existing material frame evidence.
+
+Trial summaries expose, when shadow evidence exists:
+
+- sample count;
+- TAKE_OVER sample count;
+- first and last TAKE_OVER tick;
+- longest contiguous TAKE_OVER episode;
+- recommendation-transition count;
+- reason-transition count;
+- initial and final recommendation/reason;
+- reason occupancy over the trial;
+- authority-boundary consistency.
+
+A/B comparison exposes B−A temporal deltas without selecting a winner.
+
+The panel now renders:
+
+- `A shadow`;
+- `B shadow`;
+- reason occupancy for both;
+- `Shadow Δ B−A`.
+
+The evidence remains observational:
+
+- no action attempt is created by the trace;
+- no movement intent is created by the trace;
+- no runtime authority is promoted.
+
+### Temporal falsifier design
+
+A and B restore the same prepared Combat Micro setup and run for the same bounded `110` ticks.
+
+Both begin with the same explicit player STRIKE.
+
+**Trace A — opportunity remains open**
+
+C1 never acts. If the shadow becomes positive, it is only observed.
+
+Expected causal structure:
+
+`YOU engages → PRESSURING YOU → shadow TAKE_OVER opens → no C1 action → opportunity remains open`.
+
+**Trace B — explicit manual takeover closes the opportunity**
+
+The harness waits for the first **exact positive shadow state** and only then authors the already-qualified manual C1 STRIKE.
+
+Expected causal structure:
+
+`YOU engages → PRESSURING YOU → shadow TAKE_OVER opens → explicit C1 STRIKE → World responsibility transfers → later shadow opportunity closes`.
+
+This compares the consequence of a real authored intervention while keeping the observer non-executing.
+
+### First temporal run — execution-boundary confound
+
+Initial source:
+
+`88a9da98585daf8dd9c328b74e61e5cc9b8a8863`
+
+All earlier Field Lab, matrix and shadow gates passed. The new temporal trace failed at:
+
+`Manual takeover missing in B: RECOVERING · HP 2/3 · pressure target YOU · history YOU`
+
+The first trace fixture still placed C1 close to the observation-time STRIKE boundary. As already discovered by the matrix:
+
+> **observation-time in-range state is not an execution-time guarantee when action validity is resolved after physics.**
+
+The trace campaign was therefore moved deliberately inside factual STRIKE range so that it would test temporal cognition evidence rather than the already-known action-boundary problem.
+
+No World rule, evaluator predicate or authority changed.
+
+### Second temporal run — positive-state matcher was semantically wrong
+
+Reworked source:
+
+`b40fbff64aa046fcb19cc33e02939b6dffe3c91c`
+
+The trace still failed with the same missing manual takeover.
+
+The new cause was harness-level and distinct from geometry:
+
+the test looked for:
+
+`.includes("TAKE_OVER")`
+
+but the negative recommendation string itself is:
+
+`DO_NOT_TAKE_OVER`.
+
+Therefore the harness could mistake a negative shadow state for a positive opportunity and author C1 STRIKE too early, while World was still in `RECOVERING` from the player's first action.
+
+The evaluator, World and trace implementation were left unchanged.
+
+The falsifier was corrected to require the exact positive state:
+
+`TAKE_OVER · TAKEOVER_CONDITIONS_PRESENT`.
+
+This is an important instrumentation lesson:
+
+> **SHADOW EVIDENCE MUST BE MATCHED BY SEMANTIC STATE, NOT BY AMBIGUOUS DISPLAY SUBSTRINGS.**
+
+### Qualified source
+
+`aab30aa3217ec660f9a61d690e0628b932186135`
+
+Evidence:
+
+- `validate #1795` — SUCCESS;
+- `squad-field-lab-browser #172 · run 36353969370` — SUCCESS;
+- **191/191 test files PASS**;
+- **772/772 tests PASS**;
+- production build PASS;
+- broad Field Lab PASS;
+- persistent A/B PASS;
+- one-companion combat-authoring PASS;
+- zero-authority takeover lifecycle PASS;
+- takeover counterfactual matrix PASS;
+- temporal takeover-shadow trace PASS;
+- durable manual action/order provenance PASS;
+- exact temporal trace artifact inspected;
+- no page / console / request errors;
+- repo remains `main`-only.
+
+### Qualified temporal evidence
+
+Both traces:
+
+- start from structurally identical captured setups;
+- run exactly `110` samples;
+- first expose the exact positive takeover state at tick `82`.
+
+Trace A:
+
+- TAKE_OVER occupancy: **29 / 110 ticks**;
+- final material state:
+  `PRESSURING · HP 2/3 · pressure target YOU · hits YOU 0 / C1 0 · history YOU`;
+- final shadow:
+  `TAKE_OVER / TAKEOVER_CONDITIONS_PRESENT`;
+- the recommendation never executes itself.
+
+Trace B:
+
+- TAKE_OVER occupancy: **1 / 110 ticks**;
+- the one positive pre-action frame survives in the trace;
+- only the explicit manual C1 STRIKE changes World responsibility;
+- final material state:
+  `RECOVERING · HP 1/3 · pressure target C1 · hits YOU 0 / C1 0 · history YOU → C1`;
+- final shadow is `DO_NOT_TAKE_OVER`.
+
+A/B temporal delta:
+
+`TAKE_OVER B−A = -28 ticks`.
+
+The exact artifact visibly shows:
+
+- A shadow: `TAKE_OVER 29/110t`, first/last `82t/110t`;
+- B shadow: `TAKE_OVER 1/110t`, first/last `82t/82t`;
+- reason occupancy for both traces;
+- materially different combat-responsibility histories;
+- zero action/movement authority for the observer.
+
+Canonical interpretation:
+
+> **FIELD LAB CAN NOW COMPARE A LOCAL ZERO-AUTHORITY COGNITION SIGNAL AS A TEMPORAL CAUSAL TRACE, NOT ONLY AS A MOMENTARY DEBUG LABEL. A REAL MANUAL INTERVENTION CHANGES THE LATER SHADOW OPPORTUNITY HISTORY WHILE THE SHADOW ITSELF REMAINS NON-EXECUTING.**
+
+### What this does not establish
+
+Do not infer:
+
+- autonomous C1 STRIKE;
+- that a shadow recommendation should automatically become an action proposal;
+- that an observation-time positive recommendation remains executable one tick later;
+- policy optimality;
+- a complete combat brain;
+- combat quality or teammate feel;
+- Owner qualification.
+
+The observation→execution temporal gap remains explicitly open and is now more important, not less, because the lab can preserve when the opportunity existed.
+
+### Strategic boundary after this tranche
+
+The takeover chain has now supplied enough evidence for its current role:
+
+`manual pattern discovery`
+`→ bidirectional material responsibility transfer`
+`→ zero-authority local classifier`
+`→ counterfactual geometry robustness`
+`→ temporal cognition trace`.
+
+Do **not** continue by default toward autonomous STRIKE merely because the chain is technically ready for another bridge.
+
+Before adding proposal or execution authority, reassess the wider Owner goal for the Field Lab:
+
+> **the lab is meant to expose and author many meaningful companion patterns, dynamics and responsibility relations so later autonomy can be built from discovered behavior — not become a single-function combat-policy pipeline.**
+
+A future zero-authority proposal/provenance experiment remains a legitimate candidate, especially because the observation→execution validity gap must eventually be handled. But it should compete against broadening the lab's behavioral repertoire and comparative instrumentation rather than being treated as automatic next scope.
+
+Current status:
+
+> **TEMPORAL TAKEOVER-SHADOW A/B TRACE MACHINE-QUALIFIED · SHADOW REMAINS ZERO AUTHORITY · OBSERVATION→EXECUTION GAP PRESERVED · TAKEOVER CHAIN SUFFICIENTLY MATURE FOR CURRENT RESEARCH PURPOSE · NEXT STEP REQUIRES WIDER FIELD-LAB PRIORITY REVIEW · NOT OWNER-QUALIFIED**
