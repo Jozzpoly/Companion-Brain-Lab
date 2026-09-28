@@ -4,6 +4,7 @@ import {
   evaluateCombatTakeoverShadow,
   type CombatTakeoverShadowDecision
 } from "../brain/combat-takeover-shadow";
+import { evaluateFieldLabTakeoverReadiness } from "../brain/field-lab-takeover-readiness";
 import {
   createFieldLabExperiment,
   decodeFieldLabExperiment,
@@ -1663,16 +1664,30 @@ export class SquadFieldLabScene extends Phaser.Scene {
     snapshot: WorldSnapshot
   ): CombatTakeoverShadowDecision | null {
     if (this.situation !== "COMBAT_MICRO") return null;
+
+    const player = actor(snapshot, "player");
+    const c1Body = actor(snapshot, "companion");
     const c1Assignment = this.control.assignmentFor("companion");
+    const c1Target = this.control.targetFor("companion", player.position);
+    const c1Dynamics = this.control.effectiveDynamicsFor("companion");
+    const readiness = evaluateFieldLabTakeoverReadiness({
+      body: c1Body,
+      assignment: c1Assignment,
+      target: c1Target,
+      targetValid: Boolean(
+        c1Target.target && targetInsideWorld(snapshot, c1Body, c1Target.target)
+      ),
+      slotTolerance: c1Dynamics.slotTolerance
+    });
+
     return evaluateCombatTakeoverShadow({
       snapshot,
       combat: this.combatMicro,
       rules: COMBAT_MICRO_RULES,
-      companionPrepared: c1Assignment.mode === "HOLD",
-      preparationSource:
-        c1Assignment.mode === "HOLD"
-          ? "FIELD_LAB_HOLD"
-          : `FIELD_LAB_${c1Assignment.mode}`
+      companionPrepared: readiness.prepared,
+      preparationSource: readiness.source,
+      preparationReasonCode: readiness.reasonCode,
+      preparationReason: readiness.reason
     });
   }
 
