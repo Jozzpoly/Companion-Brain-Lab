@@ -184,7 +184,8 @@ try {
         (text) =>
           text.includes("TAKE_OVER · TAKEOVER_CONDITIONS_PRESENT") &&
           text.includes("C1 prepared YES") &&
-          text.includes("source FIELD_LAB_HOLD") &&
+          text.includes("source FIELD_LAB_HOLD_ARRIVED") &&
+          text.includes("readiness READY_INDEPENDENT_ANCHOR_SETTLED") &&
           text.includes("strike-now YES"),
         5_000,
         "HOLD positive control shadow"
@@ -245,14 +246,15 @@ try {
       const shadow = await waitForText(
         () => shadowText(page),
         (text) =>
-          text.includes("DO_NOT_TAKE_OVER · COMPANION_NOT_PREPARED") &&
+          text.includes("TAKE_OVER · TAKEOVER_CONDITIONS_PRESENT") &&
           text.includes("bearer YOU") &&
           text.includes("phase PRESSURING") &&
-          text.includes("C1 prepared no") &&
-          text.includes("source FIELD_LAB_MOVE") &&
+          text.includes("C1 prepared YES") &&
+          text.includes("source FIELD_LAB_MOVE_ARRIVED") &&
+          text.includes("readiness READY_INDEPENDENT_ANCHOR_SETTLED") &&
           text.includes("strike-now YES"),
         5_000,
-        "MOVE-equivalent shadow underclassification"
+        "MOVE-equivalent material readiness classification"
       );
 
       await page.screenshot({
@@ -290,7 +292,7 @@ try {
     schema: "companion-brain-lab-field-lab-preparation-semantics-v1",
     sourceSha: process.env.GITHUB_SHA ?? process.env.VITE_SOURCE_SHA ?? null,
     question:
-      "Is the currently-qualified preparation concept materially equivalent to the HOLD command label, or can another stable assignment preserve the same takeover opportunity while the shadow refuses it?",
+      "Can takeover preparation be represented as material readiness evidence rather than the HOLD command label while preserving distinct HOLD/MOVE provenance and the same manual World capability?",
     results,
     observations: {
       holdPreparedControlRecommendsTakeover: true,
@@ -298,16 +300,17 @@ try {
       moveCanReuseSameSpatialAnchorAsHold: true,
       moveArrivedRemainsStableBeforePressure: true,
       moveArrivedRemainsFactuallyInStrikeRangeDuringPlayerPressure: true,
-      currentShadowRejectsMoveArrivedAsNotPrepared: true,
+      moveArrivedReadinessIsRecognizedWithoutCallingMOVEItselfPrepared: true,
+      holdAndMoveArrivedPreserveDistinctPreparationProvenance: true,
       manualTakeoverStillSucceedsFromMoveArrivedState: true,
-      currentPreparationPredicateThereforeUnderClassifiesMaterialReadiness: true,
+      materialReadinessNoLongerDependsOnHOLDCommandLabel: true,
       noWorldRuleChanged: true,
       noAutonomousAuthorityAdded: true
     },
     verdict:
-      "HOLD_ONLY_PREPARATION_SEMANTIC_FALSIFIED_BY_ARRIVED_MOVE_COUNTEREXAMPLE",
+      "MATERIAL_READINESS_SEAM_QUALIFIED_ACROSS_HOLD_AND_ARRIVED_MOVE",
     interpretationBoundary:
-      "This is a negative semantic result against assignment.mode === HOLD as the preparation definition. It does not establish that every ARRIVED MOVE is prepared, nor a final readiness semantic. It shows only that HOLD is not necessary for a materially valid, stable takeover-ready state.",
+      "This qualifies one bounded Field Lab readiness abstraction: a settled independent spatial assignment can provide takeover preparation evidence regardless of whether it was authored as HOLD or an ARRIVED MOVE. It does not establish that MOVE itself is preparation, that travelling MOVE is ready, or that this is a final gameplay semantic.",
     errors
   };
 
