@@ -2825,3 +2825,338 @@ The new seam must explain **why** readiness is present or absent, preserve zero 
 Current status:
 
 > **HOLD-ONLY PREPARATION SEMANTIC FALSIFIED · MOVE/ARRIVED COUNTEREXAMPLE MACHINE-QUALIFIED · MATERIAL READINESS EVIDENCE SEAM REQUIRED · TAKEOVER SHADOW CURRENTLY KNOWN TO UNDER-CLASSIFY · NO AUTONOMY PROMOTION · NOT OWNER-QUALIFIED**
+
+
+---
+
+## 34. Material takeover readiness — command-label decoupling and motor-truth boundary — 2026-09-28
+
+Section 33 falsified the historical shortcut:
+
+`prepared === assignment.mode === HOLD`.
+
+A stable independent `MOVE` assignment could preserve the same embodied takeover capability while the old shadow denied preparation solely because the command label was not HOLD.
+
+The next step therefore extracted preparation into an explicit **zero-authority readiness evidence seam** rather than broadening the set of command labels considered prepared.
+
+### Readiness evidence seam
+
+`evaluateFieldLabTakeoverReadiness(...)` now separates:
+
+- assignment mode;
+- current authority source;
+- independent world-anchor truth;
+- target validity;
+- current target error;
+- material settle threshold;
+- current motor-request state;
+- preparation provenance;
+- human-readable reason;
+- zero-authority evidence status.
+
+Current reason families include:
+
+- `READY_INDEPENDENT_ANCHOR_SETTLED`;
+- `PLAYER_RELATIVE_FOLLOW`;
+- `DIRECT_AUTHORITY_UNRESOLVED`;
+- `INVALID_TARGET`;
+- `INDEPENDENT_ANCHOR_NOT_SETTLED`;
+- `INDEPENDENT_ANCHOR_MOTOR_STILL_ACTIVE`.
+
+The seam does not issue movement or actions.
+
+The Combat takeover shadow consumes only the resulting bounded evidence:
+
+`prepared + source + reason`.
+
+It still owns no runtime authority.
+
+### What preparation means in this bounded seam
+
+Preparation is no longer the command label itself.
+
+The currently qualified positive relation is:
+
+`independent spatial assignment`
+`+ valid target`
+`+ inside the actual Field Lab motor-stop tolerance`
+`+ motor requests no further motion`
+`→ material preparation evidence`.
+
+Therefore both of these can qualify while preserving distinct provenance:
+
+- settled HOLD;
+- settled MOVE.
+
+These do **not** currently qualify as the same readiness:
+
+- FOLLOW, because its anchor is player-relative rather than an independent responsibility point;
+- travelling MOVE;
+- invalid independent target;
+- DIRECT, which remains explicitly unresolved rather than silently interpreted.
+
+This remains a bounded Field Lab research semantic, not a final gameplay concept.
+
+### Initial readiness integration campaign
+
+The first integrated readiness implementation was built after the Section 33 counterexample.
+
+One intermediate full gate at source:
+
+`7bfd89196cb30dcc7240577f6e1397c51c67caea`
+
+failed during compile because an existing Trial test fixture still constructed `CombatTakeoverShadowDecision` without the newly required readiness-provenance fields:
+
+- `preparationReasonCode`;
+- `preparationReason`.
+
+This was fixture debt created by the stronger evidence contract, not a behavioral falsification.
+
+The fixture was updated to carry explicit readiness provenance.
+
+### First browser qualification — HOLD and stable MOVE
+
+Qualified source before boundary red-team:
+
+`5f2a0d1343baddd087dc008073b3fb2e6f90da79`
+
+Evidence:
+
+- `validate #1810` — SUCCESS;
+- `squad-field-lab-browser #181 · run 36433801621` — SUCCESS;
+- **192/192 test files PASS**;
+- **778/778 tests PASS**;
+- production build PASS;
+- broad Field Lab PASS;
+- persistent A/B PASS;
+- one-companion combat authoring PASS;
+- takeover shadow lifecycle PASS;
+- counterfactual matrix PASS;
+- temporal shadow trace PASS;
+- preparation-semantics browser campaign PASS;
+- durable manual provenance PASS;
+- no page / console / request errors.
+
+The browser campaign established two true positives from matched material conditions.
+
+**HOLD**
+
+- player pressure cue after 81 stepped ticks;
+- C1 factual STRIKE distance approximately `0.85m / 1.05m`;
+- shadow:
+  `TAKE_OVER · TAKEOVER_CONDITIONS_PRESENT`;
+- readiness source:
+  `FIELD_LAB_HOLD_ARRIVED`;
+- readiness:
+  `READY_INDEPENDENT_ANCHOR_SETTLED`;
+- manual C1 STRIKE still transfers responsibility:
+  `history YOU → C1`.
+
+**MOVE settled at the equivalent independent anchor**
+
+- MOVE remains stably ARRIVED before pressure;
+- requested and actual velocity are zero;
+- pressure cue again after 81 ticks;
+- same factual STRIKE opportunity;
+- shadow:
+  `TAKE_OVER · TAKEOVER_CONDITIONS_PRESENT`;
+- distinct readiness source:
+  `FIELD_LAB_MOVE_ARRIVED`;
+- manual C1 takeover succeeds identically.
+
+This qualified the important semantic correction:
+
+> **MATERIAL TAKEOVER READINESS DOES NOT REQUIRE THE HOLD COMMAND LABEL.**
+
+### Red-team finding — display ARRIVED was still too weak
+
+The initial seam used:
+
+`settledThreshold = slotTolerance × 1.35`.
+
+That threshold came from the coarse Field Lab Trial / display classifier for `ARRIVED`.
+
+But the actual formation motor stops requesting motion only when:
+
+`targetError <= slotTolerance`.
+
+This created a semantic gap:
+
+`slotTolerance < targetError <= 1.35 × slotTolerance`.
+
+Inside that band the UI can legitimately display `ARRIVED` while the motor still actively requests movement.
+
+That is acceptable for participant/debug readability, but it is not strong enough evidence for the claim **settled material preparation**.
+
+### Browser falsifier — real false positive
+
+Source:
+
+`e0efa6248a41d5b9ae7178d22b6fbf754166736d`
+
+Evidence:
+
+- `validate #1813` — SUCCESS;
+- all earlier Field Lab / takeover / readiness regressions passed;
+- only the new `Readiness display-slack boundary falsifier` failed.
+
+The browser authored:
+
+- slot tolerance: `0.18m`;
+- display ARRIVED threshold: `0.243m`;
+- target offset approximately `0.21m`.
+
+After one real World step the live state satisfied:
+
+- assignment: `C1 MOVE ... · ARRIVED`;
+- focused status: `order MOVE · ARRIVED`;
+- target error remained approximately `0.20m`;
+- the formation motor still requested non-zero motion.
+
+Yet the readiness seam returned:
+
+`prepared YES · READY_INDEPENDENT_ANCHOR_SETTLED`
+
+because `0.20m < 0.243m`.
+
+This is a real semantic FAIL, not a harness issue.
+
+Canonical finding:
+
+> **COARSE DISPLAY / TRIAL ARRIVAL IS NOT SUFFICIENT EVIDENCE OF MATERIAL SETTLED READINESS WHILE THE MOTOR STILL WANTS TO MOVE.**
+
+### Correction — bind readiness to motor truth
+
+The readiness seam was narrowed without changing World, combat rules, action authority, assignment semantics or display classification.
+
+Material readiness now requires both:
+
+1. `targetError <= slotTolerance` — the same geometric stop condition used by the Field Lab motor;
+2. requested motor speed is effectively zero.
+
+The looser `1.35 × slotTolerance` ARRIVED band remains available for UI / Trial readability, but no longer grants preparation evidence.
+
+An additional reason distinguishes the rare one-frame case where geometry is already inside tolerance but the snapshot still carries a non-zero motor request:
+
+`INDEPENDENT_ANCHOR_MOTOR_STILL_ACTIVE`.
+
+Unit falsifiers now cover:
+
+- display-only ARRIVED slack above the actual motor-stop tolerance;
+- geometry inside tolerance while the motor request is still non-zero;
+- the previously qualified settled HOLD / MOVE positives;
+- travelling MOVE;
+- FOLLOW;
+- invalid target;
+- DIRECT unresolved.
+
+### Final qualified source
+
+`49622d7f656602220109024bb67afdbf45c92f88`
+
+Evidence:
+
+- `validate #1815` — SUCCESS;
+- `squad-field-lab-browser #185 · run 36436155087` — SUCCESS;
+- **192/192 test files PASS**;
+- **780/780 tests PASS**;
+- production build PASS;
+- broad Field Lab PASS;
+- persistent A/B PASS;
+- one-companion combat authoring PASS;
+- takeover shadow lifecycle PASS;
+- counterfactual takeover matrix PASS;
+- temporal takeover-shadow trace PASS;
+- material preparation semantics PASS;
+- readiness display-slack boundary PASS;
+- durable manual action/order provenance PASS;
+- exact boundary screenshot inspected;
+- no page / console / request errors;
+- repo remains `main`-only.
+
+### Final true-positive evidence remains intact
+
+At the final source, the previously qualified stable cases still pass.
+
+HOLD:
+
+- threshold is now the actual `0.180m` motor-stop tolerance;
+- motor requests no further motion;
+- readiness remains `READY_INDEPENDENT_ANCHOR_SETTLED`;
+- shadow still recommends TAKE_OVER under `PRESSURING YOU`;
+- manual takeover still succeeds.
+
+Stable MOVE:
+
+- target error approximately `0.02m`;
+- requested and actual velocity `0.00`;
+- distinct source `FIELD_LAB_MOVE_ARRIVED`;
+- same readiness reason;
+- TAKE_OVER remains available under the same material pressure;
+- manual takeover still succeeds.
+
+The correction therefore removed the false-positive band without erasing the MOVE counterexample that originally falsified HOLD-only preparation.
+
+### Final boundary evidence
+
+The dedicated final browser specimen deliberately creates the display/motor disagreement:
+
+- authored target offset: `0.21m`;
+- slot tolerance: `0.18m`;
+- display ARRIVED threshold: `0.243m`;
+- after one World step:
+  - display: `MOVE · ARRIVED`;
+  - target error: approximately `0.197m`;
+  - requested velocity: approximately `0.71`;
+  - actual velocity: approximately `0.71`.
+
+Readiness correctly returns:
+
+`prepared no`
+
+`FIELD_LAB_MOVE_INDEPENDENT_ANCHOR_NOT_SETTLED`
+
+`INDEPENDENT_ANCHOR_NOT_SETTLED`.
+
+The screenshot visibly shows the intentional contradiction between coarse `ARRIVED` display status and active movement, while readiness follows the material motor truth.
+
+### Canonical interpretation
+
+> **TAKEOVER PREPARATION IS NOW REPRESENTED AS ZERO-AUTHORITY MATERIAL READINESS EVIDENCE RATHER THAN A HOLD LABEL OR A COARSE ARRIVED DISPLAY CLASSIFICATION. SETTLED HOLD AND SETTLED INDEPENDENT MOVE CAN BOTH QUALIFY, WHILE TRAVELLING / DISPLAY-SLACK MOVE DOES NOT.**
+
+This is a better extraction of the manual causal pattern, not additional autonomy.
+
+### What remains unproven
+
+Do not infer:
+
+- that every independent settled anchor is meaningful preparation for every future responsibility;
+- that this Field Lab-specific readiness abstraction should become a generic gameplay system;
+- that FOLLOW can never be preparation in a different responsibility context;
+- what DIRECT authority should mean for readiness;
+- proposal or execution authority;
+- autonomous STRIKE;
+- combat quality, teammate feel, or Owner qualification.
+
+The observation→execution temporal gap also remains open: a valid readiness/opportunity observation still does not guarantee that an action will remain executable after later World motion.
+
+### Strategic boundary after readiness correction
+
+This tranche has now removed two important forms of accidental vocabulary lock-in:
+
+1. `preparation = HOLD`;
+2. `settled preparation = coarse ARRIVED display`.
+
+The takeover chain is therefore sufficiently mature for its present research purpose.
+
+Do **not** continue by inertia into autonomous STRIKE.
+
+The next step should again compete against the wider Field Lab objective:
+
+- broaden the set of manually discoverable companion responsibilities;
+- improve authoring / comparison where the Owner still lacks expressive reach;
+- or, only if separately justified, study the observation→proposal→execution gap under zero/limited authority.
+
+Current status:
+
+> **MATERIAL TAKEOVER READINESS MACHINE-QUALIFIED · HOLD LABEL DECOUPLED · DISPLAY ARRIVAL DECOUPLED FROM MOTOR-SETTLED TRUTH · ZERO ACTION/MOVEMENT AUTHORITY PRESERVED · TAKEOVER CHAIN MATURE ENOUGH TO STOP EXPANDING BY DEFAULT · NEXT PRIORITY REQUIRES WIDER FIELD-LAB REVIEW · NOT OWNER-QUALIFIED**
