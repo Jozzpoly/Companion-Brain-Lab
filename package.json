@@ -48,7 +48,8 @@
     "browser:squad-field-lab-takeover-shadow": "node scripts/squad-field-lab-takeover-shadow.mjs",
     "browser:squad-field-lab-takeover-shadow-matrix": "node scripts/squad-field-lab-takeover-shadow-matrix.mjs",
     "browser:squad-field-lab-takeover-shadow-trace": "node scripts/squad-field-lab-takeover-shadow-trace.mjs",
-    "browser:squad-field-lab-preparation-semantics": "node scripts/squad-field-lab-preparation-semantics.mjs"
+    "browser:squad-field-lab-preparation-semantics": "node scripts/squad-field-lab-preparation-semantics.mjs",
+    "browser:squad-field-lab-readiness-boundary": "node scripts/squad-field-lab-readiness-boundary.mjs"
   },
   "dependencies": {
     "@dimforge/rapier2d-deterministic-compat": "0.20.0",
