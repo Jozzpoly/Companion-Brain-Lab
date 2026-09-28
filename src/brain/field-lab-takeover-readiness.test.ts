@@ -6,12 +6,12 @@ import type {
 } from "../squad/field-lab-squad-control";
 import type { ActorSnapshot } from "../world/types";
 
-function body(x = 5, y = 5): ActorSnapshot {
+function body(x = 5, y = 5, requestedX = 0): ActorSnapshot {
   return {
     id: "companion",
     position: { x, y },
     radius: 0.3,
-    requestedVelocity: { x: 0, y: 0 },
+    requestedVelocity: { x: requestedX, y: 0 },
     actualVelocity: { x: 0, y: 0 },
     motionError: 0,
     contacts: []
@@ -57,6 +57,7 @@ function decide(input: {
   targetX?: number;
   authority?: FieldLabMemberTarget["authority"];
   targetValid?: boolean;
+  requestedX?: number;
 }) {
   const t = target({
     mode: input.mode,
@@ -64,7 +65,7 @@ function decide(input: {
     x: input.targetX
   });
   return evaluateFieldLabTakeoverReadiness({
-    body: body(input.bodyX ?? 5),
+    body: body(input.bodyX ?? 5, 5, input.requestedX ?? 0),
     assignment: assignment(input.mode),
     target: t,
     targetValid: input.targetValid ?? true,
@@ -102,6 +103,31 @@ describe("Field Lab takeover readiness evidence", () => {
     expect(result.reasonCode).toBe("INDEPENDENT_ANCHOR_NOT_SETTLED");
     expect(result.independentWorldAnchor).toBe(true);
     expect(result.settledAtTarget).toBe(false);
+  });
+
+  it("does not reuse the looser display ARRIVED band as material settled readiness", () => {
+    const result = decide({ mode: "MOVE", bodyX: 5.2, targetX: 5 });
+
+    expect(result.targetError).toBeCloseTo(0.2, 6);
+    expect(result.settledThreshold).toBeCloseTo(0.18, 6);
+    expect(result.prepared).toBe(false);
+    expect(result.reasonCode).toBe("INDEPENDENT_ANCHOR_NOT_SETTLED");
+    expect(result.settledAtTarget).toBe(false);
+  });
+
+  it("waits for the formation motor request to stop even after geometry enters tolerance", () => {
+    const result = decide({
+      mode: "MOVE",
+      bodyX: 5.1,
+      targetX: 5,
+      requestedX: -0.25
+    });
+
+    expect(result.settledAtTarget).toBe(true);
+    expect(result.requestedSpeed).toBeCloseTo(0.25, 6);
+    expect(result.motorRequestSettled).toBe(false);
+    expect(result.prepared).toBe(false);
+    expect(result.reasonCode).toBe("INDEPENDENT_ANCHOR_MOTOR_STILL_ACTIVE");
   });
 
   it("keeps FOLLOW distinct even when transiently exactly on its player-relative target", () => {
