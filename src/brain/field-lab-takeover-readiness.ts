@@ -9,7 +9,8 @@ export type FieldLabTakeoverReadinessReasonCode =
   | "PLAYER_RELATIVE_FOLLOW"
   | "DIRECT_AUTHORITY_UNRESOLVED"
   | "INVALID_TARGET"
-  | "INDEPENDENT_ANCHOR_NOT_SETTLED";
+  | "INDEPENDENT_ANCHOR_NOT_SETTLED"
+  | "INDEPENDENT_ANCHOR_MOTOR_STILL_ACTIVE";
 
 export interface FieldLabTakeoverReadinessEvidence {
   kind: "FIELD_LAB_TAKEOVER_READINESS_EVIDENCE";
@@ -22,6 +23,8 @@ export interface FieldLabTakeoverReadinessEvidence {
   targetError: number | null;
   settledThreshold: number;
   settledAtTarget: boolean;
+  requestedSpeed: number;
+  motorRequestSettled: boolean;
   source: string;
   reason: string;
   runtimeAuthorityClaim: "NONE_EVIDENCE_ONLY";
@@ -38,6 +41,12 @@ export interface EvaluateFieldLabTakeoverReadinessInput {
 function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
+
+function speed(value: { x: number; y: number }): number {
+  return Math.hypot(value.x, value.y);
+}
+
+const MOTOR_SETTLED_EPSILON = 1e-6;
 
 function result(
   input: EvaluateFieldLabTakeoverReadinessInput,
@@ -60,6 +69,9 @@ function result(
     settledThreshold,
     settledAtTarget:
       targetError !== null && targetError <= settledThreshold,
+    requestedSpeed: speed(input.body.requestedVelocity),
+    motorRequestSettled:
+      speed(input.body.requestedVelocity) <= MOTOR_SETTLED_EPSILON,
     source:
       prepared
         ? `FIELD_LAB_${input.assignment.mode}_ARRIVED`
@@ -84,7 +96,9 @@ export function evaluateFieldLabTakeoverReadiness(
     throw new Error("Field Lab takeover readiness requires finite positive slotTolerance.");
   }
 
-  const settledThreshold = input.slotTolerance * 1.35;
+  // Material readiness must follow the actual Field Lab motor stop condition,
+  // not the looser display/trial ARRIVED band (1.35 × slotTolerance).
+  const settledThreshold = input.slotTolerance;
 
   if (input.target.authority === "DIRECT") {
     return result(
@@ -131,7 +145,19 @@ export function evaluateFieldLabTakeoverReadiness(
       false,
       targetError,
       settledThreshold,
-      `C1 has an independent ${input.assignment.mode} anchor but is still ${targetError.toFixed(3)}m from its target; settled readiness is not yet established`
+      `C1 has an independent ${input.assignment.mode} anchor but is still ${targetError.toFixed(3)}m from its target, outside the material motor-stop tolerance ${settledThreshold.toFixed(3)}m`
+    );
+  }
+
+  const requestedSpeed = speed(input.body.requestedVelocity);
+  if (requestedSpeed > MOTOR_SETTLED_EPSILON) {
+    return result(
+      input,
+      "INDEPENDENT_ANCHOR_MOTOR_STILL_ACTIVE",
+      false,
+      targetError,
+      settledThreshold,
+      `C1 is within the independent ${input.assignment.mode} target tolerance, but the Field Lab motor still requests ${requestedSpeed.toFixed(3)} normalized speed; settled readiness waits for the motor request to stop`
     );
   }
 
@@ -141,6 +167,6 @@ export function evaluateFieldLabTakeoverReadiness(
     true,
     targetError,
     settledThreshold,
-    `C1 is settled within ${settledThreshold.toFixed(3)}m of an independent ${input.assignment.mode} target; material preparation evidence is present without equating readiness to the command label`
+    `C1 is within the material motor-stop tolerance ${settledThreshold.toFixed(3)}m of an independent ${input.assignment.mode} target and the motor requests no further motion; preparation evidence is present without equating readiness to the command label`
   );
 }
