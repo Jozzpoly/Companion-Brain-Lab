@@ -2660,3 +2660,168 @@ A future zero-authority proposal/provenance experiment remains a legitimate cand
 Current status:
 
 > **TEMPORAL TAKEOVER-SHADOW A/B TRACE MACHINE-QUALIFIED · SHADOW REMAINS ZERO AUTHORITY · OBSERVATION→EXECUTION GAP PRESERVED · TAKEOVER CHAIN SUFFICIENTLY MATURE FOR CURRENT RESEARCH PURPOSE · NEXT STEP REQUIRES WIDER FIELD-LAB PRIORITY REVIEW · NOT OWNER-QUALIFIED**
+
+
+---
+
+## 33. HOLD-only preparation semantic falsified — material readiness is not a command label — 2026-09-28
+
+After the takeover chain became temporally observable, the next review deliberately stepped away from proposal/execution work and challenged one of the chain's own hidden assumptions.
+
+The Field Lab campaign doctrine explicitly says that today's `FOLLOW / HOLD / MOVE` vocabulary must not become the semantic ceiling of later companion intelligence.
+
+The current takeover shadow nevertheless received:
+
+`companionPrepared = assignment.mode === "HOLD"`
+
+That mapping was historically justified by the first manual takeover discovery, where HOLD was necessary to stop ordinary FOLLOW motion from dissolving the intervention geometry.
+
+But the evidence established that **preparation matters**. It did not establish that:
+
+`preparation == HOLD`.
+
+### Question
+
+> **Is HOLD actually necessary for the materially qualified takeover relation, or is it only one way to produce a stable intervention-ready state?**
+
+### Falsifier construction
+
+The browser campaign used two fresh one-companion Combat Micro runtimes with the same deliberately in-range geometry.
+
+#### HOLD positive control
+
+C1 was explicitly HOLDed.
+
+Observed:
+
+- visible `PRESSURING YOU`;
+- shadow:
+  `TAKE_OVER · TAKEOVER_CONDITIONS_PRESENT`;
+- C1 factual distance:
+  `0.85m / 1.05m`;
+- manual C1 STRIKE succeeded;
+- World became:
+  `RECOVERING · HP 1/3 · pressure target C1 · history YOU → C1`.
+
+#### MOVE-equivalent counterexample
+
+A temporary HOLD was used only to derive the world anchor that preserves C1's current spatial position.
+
+The assignment was then changed to **MOVE to that same material target region**.
+
+Before combat pressure, the resulting state was:
+
+- `C1 MOVE @10.28,5.88 · ARRIVED`;
+- body `11.84,5.89`;
+- target `11.83,5.88`;
+- target error `0.02m`;
+- requested velocity `0,0`;
+- actual velocity `0,0`;
+- no contacts;
+- no combat history.
+
+Eight ordinary World ticks were allowed to pass before the pressure episode. The state remained ARRIVED and stable.
+
+When the player later became visibly pressured:
+
+- World:
+  `PRESSURING · HP 2/3 · pressure target YOU`;
+- C1 remained in factual STRIKE range at `0.85m / 1.05m`;
+- current shadow returned:
+  `DO_NOT_TAKE_OVER · COMPANION_NOT_PREPARED`;
+- preparation source was explicitly:
+  `FIELD_LAB_MOVE`.
+
+The key counterfactual then succeeded:
+
+- a manual C1 STRIKE from this same MOVE/ARRIVED state was accepted by World;
+- hostile HP became `1/3`;
+- responsibility transferred to C1;
+- causal history became:
+  `YOU → C1`.
+
+Exact screenshots confirm both the refusal state and the successful manual takeover one World tick later.
+
+### Harness corrections before qualification
+
+Two earlier runs failed before reaching the semantic question.
+
+They are retained as harness findings, not evidence for or against HOLD.
+
+1. The first matcher demanded identical rounded anchor text between HOLD and right-click MOVE. The actual MOVE state differed by roughly one centimetre after pointer/world-space round-trip while remaining `ARRIVED`, target error `0.02m`, and zero velocity. Exact display-coordinate identity was therefore not a valid preparation criterion.
+2. The first regex patch accidentally double-escaped `\d` / `\s` inside JavaScript regex literals. The live panel already contained the intended material state; only the matcher was broken.
+
+No World rule, brain predicate, strike range or authority was changed in either correction.
+
+### Qualified source
+
+`30ced9d4e34dd6732de6052d94f9d43f3b056fa4`
+
+Evidence:
+
+- `validate #1801` — SUCCESS;
+- `squad-field-lab-browser #176 · run 36432126925` — SUCCESS;
+- **191/191 test files PASS**;
+- **772/772 tests PASS**;
+- production build PASS;
+- every earlier Field Lab / Combat Micro / shadow / matrix / temporal-trace gate PASS on the same HEAD;
+- preparation-semantics falsifier PASS;
+- durable manual action/order provenance PASS;
+- exact before/after browser screenshots inspected;
+- no page / console / request errors.
+
+Machine verdict:
+
+`HOLD_ONLY_PREPARATION_SEMANTIC_FALSIFIED_BY_ARRIVED_MOVE_COUNTEREXAMPLE`
+
+Canonical interpretation:
+
+> **HOLD IS NOT THE PREPARATION SEMANTIC. IT IS ONE HISTORICALLY QUALIFIED WAY TO PRESERVE A MATERIAL TAKEOVER OPPORTUNITY. A STABLE, ARRIVED MOVE ASSIGNMENT CAN PRESERVE THE SAME MANUAL TAKEOVER CAPABILITY WHILE THE CURRENT HOLD-ONLY SHADOW INCORRECTLY CLASSIFIES C1 AS NOT PREPARED.**
+
+### What this does not establish
+
+Do not replace the old mistake with a broader one.
+
+This result does **not** establish:
+
+- `MOVE == prepared`;
+- every ARRIVED MOVE is a valid preparation state;
+- any in-range body is prepared;
+- FOLLOW should count as prepared merely because it is temporarily close;
+- a final product command or final readiness model;
+- autonomous STRIKE.
+
+The stronger evidence-supported hypothesis is narrower:
+
+> **preparation should be represented as material readiness evidence, not inferred directly from the command enum.**
+
+The current candidate factors are:
+
+- an explicit spatial responsibility independent of the player's moving FOLLOW frame;
+- a material target/anchor;
+- settled / ARRIVED state at that target;
+- current factual intervention opportunity.
+
+The first three describe preparation/readiness; current STRIKE range remains a separate action-opportunity fact.
+
+### Next bounded research step
+
+Extract a zero-authority **preparation/readiness evidence seam** before modifying takeover policy.
+
+The seam should be able to distinguish at minimum:
+
+- HOLD + settled at its independent anchor → prepared evidence;
+- MOVE + ARRIVED at its independent anchor → prepared evidence candidate;
+- MOVE still travelling toward its anchor → **not yet established as prepared**;
+- FOLLOW / player-relative moving assignment → not the same preparation evidence, even if transiently in range;
+- DIRECT authority → separate / unresolved rather than silently classified.
+
+Then feed the evidence result into the takeover shadow instead of `assignment.mode === HOLD`, and rerun the existing shadow lifecycle, matrix and temporal trace.
+
+Promotion criterion is not “old tests go green”.
+
+The new seam must explain **why** readiness is present or absent, preserve zero runtime authority, and survive counterexamples where command label and material state disagree.
+
+Current status:
+
+> **HOLD-ONLY PREPARATION SEMANTIC FALSIFIED · MOVE/ARRIVED COUNTEREXAMPLE MACHINE-QUALIFIED · MATERIAL READINESS EVIDENCE SEAM REQUIRED · TAKEOVER SHADOW CURRENTLY KNOWN TO UNDER-CLASSIFY · NO AUTONOMY PROMOTION · NOT OWNER-QUALIFIED**
