@@ -222,7 +222,7 @@ try {
       const movePanel = await waitForText(
         () => panelText(page),
         (text) =>
-          /C1 MOVE @-?\\d+(?:\\.\\d+)?,-?\\d+(?:\\.\\d+)? · ARRIVED/.test(text.replace(/\\s+/g, " ")) &&
+          /C1 MOVE @-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)? · ARRIVED/.test(text.replace(/\s+/g, " ")) &&
           text.includes("order MOVE · ARRIVED") &&
           text.includes("requested 0.00, 0.00"),
         5_000,
@@ -232,9 +232,9 @@ try {
       // Let ordinary World ticks prove the MOVE target is not merely an
       // instantaneous UI state. No combat has begun yet.
       for (let i = 0; i < 8; i += 1) await tap(page, "o");
-      const stablePanel = (await panelText(page)).replace(/\\s+/g, " ");
+      const stablePanel = (await panelText(page)).replace(/\s+/g, " ");
       invariant(
-        /C1 MOVE @-?\\d+(?:\\.\\d+)?,-?\\d+(?:\\.\\d+)? · ARRIVED/.test(stablePanel) &&
+        /C1 MOVE @-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)? · ARRIVED/.test(stablePanel) &&
           stablePanel.includes("authority FORMATION · order MOVE · ARRIVED") &&
           stablePanel.includes("requested 0.00, 0.00"),
         "MOVE-equivalent preparation did not remain stably ARRIVED before pressure."
