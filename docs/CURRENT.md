@@ -3160,3 +3160,120 @@ The next step should again compete against the wider Field Lab objective:
 Current status:
 
 > **MATERIAL TAKEOVER READINESS MACHINE-QUALIFIED · HOLD LABEL DECOUPLED · DISPLAY ARRIVAL DECOUPLED FROM MOTOR-SETTLED TRUTH · ZERO ACTION/MOVEMENT AUTHORITY PRESERVED · TAKEOVER CHAIN MATURE ENOUGH TO STOP EXPANDING BY DEFAULT · NEXT PRIORITY REQUIRES WIDER FIELD-LAB REVIEW · NOT OWNER-QUALIFIED**
+
+
+---
+
+## 35. Pre-handoff wider Field Lab review — stop takeover inertia, reopen situation discovery — 2026-09-29
+
+After the material-readiness tranche was closed, the project was reviewed again against the wider Owner-confirmed Advanced Companion / Squad Field Lab objective rather than extending Combat takeover by inertia.
+
+The wider campaign truth remains:
+
+- the Field Lab is valuable as a persistent research / authoring instrument in its own right;
+- movement / formation authoring, reproducible A/B setups, temporal Trial evidence and one-companion manual Combat Micro are now materially useful substrates;
+- the broad behavior laboratory is still incomplete;
+- the main missing leverage is **not more telemetry or more parameters for their own sake**;
+- the World must expose situations in which the Owner can manually discover several qualitatively meaningful companion responsibilities.
+
+The relevant historical negative evidence still matters:
+
+- Shared Task Under Pressure single-zone collapsed to one magic static screen;
+- its two-stage rework remained brittle and collision-geometry dominated;
+- the useful manual cooperative sequence before Combat Micro remained spatial micromanagement plus one coarse action;
+- therefore new situation work must not merely hide a static placement puzzle behind richer instrumentation.
+
+### Candidate reviewed before handoff — moving responsibility / relay
+
+A possible next situation was considered:
+
+> player moves through space while hostile responsibility can be manually transferred between YOU and C1, potentially exposing preparation, takeover, yielding, changing plans and regroup.
+
+This was attractive because current Combat Micro already provides a real responsibility donor:
+
+- one successful STRIKE changes `targetActorId`;
+- that responsibility change has material later consequence;
+- it is visible and Trial-observable;
+- it requires no new autonomous authority.
+
+However read-only red-team of the actual World contract found an important limitation.
+
+Combat Micro hostile motion is not a continuous pursuit loop:
+
+- `APPROACHING` — hostile moves toward the current responsibility bearer;
+- `PRESSURING` — hostile stands still while the pressure consequence clock runs;
+- `RECOVERING` — hostile moves away from the new bearer after a successful STRIKE;
+- then the episode returns to `APPROACHING`.
+
+The current player can also break pressure by moving beyond `pressureBreakRange`.
+
+In open space this makes a naive moving-relay situation vulnerable to a degenerate solution:
+
+> **simply disengage / kite rather than create meaningful teammate responsibility structure.**
+
+Trying to rescue the idea by:
+
+- slowing the player artificially;
+- adding a dwell / capture destination;
+- forcing a corridor;
+- or adding another pressure objective
+
+would risk recreating the already rejected Shared Task Under Pressure geometry/task machinery under a different label.
+
+Therefore:
+
+> **DO NOT IMPLEMENT THE NAIVE MOVING-RESPONSIBILITY / RELAY CANDIDATE AS THE NEXT SITUATION.**
+
+This is a pre-implementation rejection, not a claim that all moving-responsibility situations are bad.
+
+The useful donor facts remain:
+
+- target responsibility transfer is real;
+- manual takeover / yielding is real;
+- material preparation can be represented without command-label lock-in;
+- temporal responsibility history is observable.
+
+But the next situation must earn its own contract.
+
+### What the next conversation should reopen
+
+Do not inherit a specific next feature from the last local idea.
+
+Reopen situation selection from the wider Field Lab objective and current evidence.
+
+A strong candidate should:
+
+- keep the player materially involved rather than spectating;
+- permit several manual solutions that differ by **responsibility**, not only body placement;
+- change meaningfully over time through participant-visible state;
+- preserve real World consequences;
+- expose at least some of preparation / contribution / takeover / yielding / correction / recovery;
+- not require hidden timing-oracle play;
+- not collapse to trivial disengagement;
+- not collapse to one magic geometry;
+- produce useful evidence before requiring a broad combat, inventory, interaction or quest framework;
+- compose naturally with existing setup / orders / direct control / A-B / Trial apparatus;
+- remain manual-first until recurring Owner-authored structure earns any autonomy hypothesis.
+
+The currently mature takeover chain should be treated as a **donor and measuring instrument**, not the active roadmap.
+
+### Handoff state
+
+No new situation implementation is in flight.
+
+No autonomous STRIKE or proposal/execution authority is in flight.
+
+No branch cleanup is pending.
+
+No known unfinished code tranche is being handed over.
+
+At this checkpoint:
+
+- repo is `main`-only;
+- canonical implementation source remains the final readiness-qualified code;
+- `docs/CURRENT.md` contains the durable campaign truth through this review;
+- the next material work is a fresh, critical situation-selection / Field-Lab-gap decision.
+
+Current status:
+
+> **FIELD LAB AUTHORING + TEMPORAL EVIDENCE + ONE-COMPANION MANUAL RESPONSIBILITY DONOR MACHINE-QUALIFIED · TAKEOVER/READINESS CHAIN BOUNDED AND MATURE · NAIVE MOVING RELAY REJECTED BEFORE IMPLEMENTATION · BROAD BEHAVIOR LAB STILL INCOMPLETE · NEXT SITUATION NOT YET CHOSEN · NOT OWNER-QUALIFIED · NO AUTONOMY PROMOTION**
