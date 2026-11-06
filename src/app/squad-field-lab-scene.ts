@@ -1,4 +1,8 @@
 import Phaser from "phaser";
+import {
+  captureCompanionLivedMoment,
+  installCompanionJaskiniaLivedMoment
+} from "../bridge/companion-jaskinia-lived-moment";
 import { SquadFieldLabHud } from "./squad-field-lab-hud";
 import {
   evaluateCombatTakeoverShadow,
@@ -208,6 +212,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
     events: FieldLabTrialEvent[];
   } | null = null;
   private readonly eventLog: string[] = [];
+  private stopJaskiniaContact: (() => void) | null = null;
 
   private keys!: Record<
     "w" | "a" | "s" | "d" | "up" | "down" | "left" | "right" |
@@ -246,6 +251,40 @@ export class SquadFieldLabScene extends Phaser.Scene {
     }
 
     this.panel = new SquadFieldLabPanel();
+
+    // Isolated research seam: the actual Field Lab situation, not invented
+    // dashboard state. Jaskinia can pin Owner remarks to a precise World tick;
+    // the bridge has no execution authority and no persistence ownership.
+    this.stopJaskiniaContact = installCompanionJaskiniaLivedMoment({
+      read: () => {
+        if (!this.snapshotValue) return null;
+        return captureCompanionLivedMoment({
+          sourceSha: (import.meta as { env?: { VITE_SOURCE_SHA?: string } }).env?.VITE_SOURCE_SHA
+            ?? "unverified-source",
+          world: this.snapshotValue,
+          control: this.control.snapshot(),
+          situation: this.situation,
+          layout: this.layout,
+          paused: this.paused,
+          combat: this.combatMicro,
+          trial: this.activeTrial ? {
+            slot: this.activeTrial.slot,
+            recordedFrames: this.activeTrial.frames.length
+          } : null
+        });
+      },
+      onRemark: ({ anchoredMoment }) => {
+        this.log(
+          "Owner remark received from Jaskinia · original World tick " +
+          (anchoredMoment?.world.tick ?? "unknown") +
+          " · no World authority change"
+        );
+      }
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.stopJaskiniaContact?.();
+      this.stopJaskiniaContact = null;
+    });
     this.hud = new SquadFieldLabHud({
       onSituation: (situation) => {
         if (this.situation === situation) return;
