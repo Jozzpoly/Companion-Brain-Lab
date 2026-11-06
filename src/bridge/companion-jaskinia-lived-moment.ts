@@ -9,6 +9,7 @@
  * no arbitrary parent-origin bridge, no access to Owner notes or localStorage.
  */
 import type { FieldLabSquadControlSnapshot } from "../squad/field-lab-squad-control";
+import type { CoverDecision } from "../brain/companion-cover-probe";
 import type { CombatMicroSnapshot } from "../world/combat-micro-contract";
 import type { WorldSnapshot, FieldLabSituation, FieldLabLayout } from "../world/types";
 
@@ -41,6 +42,13 @@ export interface CompanionLivedMoment {
     phase: string; responsibilityBearer: string; hostileHealth: number;
   };
   trial: null | { slot: string; recordedFrames: number };
+  /** Optional opt-in live authority; an A/B setup does not preserve it. */
+  cover?: {
+    enabled: boolean;
+    readyTicks: number;
+    reason: CoverDecision["reason"];
+    liveStrikeProposed: boolean;
+  };
 }
 
 export function captureCompanionLivedMoment(input: {
@@ -52,6 +60,7 @@ export function captureCompanionLivedMoment(input: {
   paused: boolean;
   combat: CombatMicroSnapshot | null;
   trial: { slot: string; recordedFrames: number } | null;
+  cover?: CoverDecision;
 }): CompanionLivedMoment {
   return {
     schema: COMPANION_MOMENT_SCHEMA,
@@ -90,7 +99,13 @@ export function captureCompanionLivedMoment(input: {
       responsibilityBearer: input.combat.targetActorId,
       hostileHealth: input.combat.hostileHealth
     } : null,
-    trial: input.trial ? { ...input.trial } : null
+    trial: input.trial ? { ...input.trial } : null,
+    ...(input.cover ? { cover: {
+      enabled: input.cover.enabled,
+      readyTicks: input.cover.readyTicks,
+      reason: input.cover.reason,
+      liveStrikeProposed: input.cover.strike
+    }} : {})
   };
 }
 
