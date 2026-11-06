@@ -5,6 +5,7 @@ import {
   installCompanionJaskiniaLivedMoment
 } from "../bridge/companion-jaskinia-lived-moment";
 import { SquadFieldLabHud } from "./squad-field-lab-hud";
+import { CompanionCoverProbe } from "../brain/companion-cover-probe";
 import {
   evaluateCombatTakeoverShadow,
   type CombatTakeoverShadowDecision
@@ -174,6 +175,8 @@ export class SquadFieldLabScene extends Phaser.Scene {
   private hud!: SquadFieldLabHud;
   private panel!: SquadFieldLabPanel;
   private readonly control = new FieldLabSquadControl();
+  private readonly cover = new CompanionCoverProbe();
+  private previousCoverReason = "OFF";
   private readonly labels = new Map<SquadMemberId, Phaser.GameObjects.Text>();
   private playerLabel!: Phaser.GameObjects.Text;
   private hostileLabel!: Phaser.GameObjects.Text;
@@ -399,6 +402,15 @@ export class SquadFieldLabScene extends Phaser.Scene {
       onClearExperiment: (slot) => this.clearExperiment(slot),
       onToggleTrial: (slot) => void this.toggleTrial(slot),
       onClearTrial: (slot) => this.clearTrial(slot),
+      onToggleCover: () => {
+        if (this.activeTrial) {
+          this.log("C1 cover unavailable inside legacy A/B Trial; policy is not part of its persisted setup schema");
+          return;
+        }
+        this.cover.setEnabled(!this.cover.enabled);
+        this.recordTrialIntervention("AUTHORITY", "C1", "cover", "manual", this.cover.enabled ? "ARMED" : "OFF");
+        this.log(`Owner C1 COVER ${this.cover.enabled ? "ARMED · may act when player is pressured" : "OFF"}`);
+      },
       onPlayerRepel: () => this.queueCooperativeAttempt("player"),
       onFocusedRepel: () => this.queueCooperativeAttempt(this.control.snapshot().focused),
       onSelectedRepel: () => {
@@ -499,6 +511,21 @@ export class SquadFieldLabScene extends Phaser.Scene {
     const control = this.control.snapshot();
     const player = actor(before, "player");
 
+    const coverDecision = this.cover.step({
+      world: before,
+      combat: this.combatMicro,
+      control,
+      situation: this.situation,
+      layout: this.layout,
+      strikeRange: COMBAT_MICRO_RULES.strikeRange
+    });
+    if (coverDecision.reason !== this.previousCoverReason) {
+      if (this.cover.enabled) {
+        this.log(`C1 cover · ${coverDecision.reason} · readiness ${coverDecision.readyTicks}t`);
+      }
+      this.previousCoverReason = coverDecision.reason;
+    }
+
     const memberMoves = new Map<SquadMemberId, Vec2>();
     for (const memberId of control.activeMembers) {
       const body = actor(before, memberId);
@@ -522,6 +549,18 @@ export class SquadFieldLabScene extends Phaser.Scene {
       }
     }
 
+    if (coverDecision.moveTarget) {
+      const c1 = actor(before, "companion");
+      const dynamics = this.control.effectiveDynamicsFor("companion");
+      memberMoves.set("companion", clampMoveToward(
+        c1.position,
+        coverDecision.moveTarget,
+        0.12,
+        dynamics.responsiveness,
+        Math.min(1.2, dynamics.slowdownRadius)
+      ));
+    }
+
     const canonicalIntents: MotionIntent[] = [
       { actorId: "player", move: playerMove },
       { actorId: "companion", move: memberMoves.get("companion") ?? { x: 0, y: 0 } }
@@ -537,6 +576,16 @@ export class SquadFieldLabScene extends Phaser.Scene {
       this.situation === "PRESSURE" ? this.pendingCooperativeAttempts.splice(0) : [];
     const combatMicroAttempts =
       this.situation === "COMBAT_MICRO" ? this.pendingCombatMicroAttempts.splice(0) : [];
+    if (coverDecision.strike &&
+        !combatMicroAttempts.some(attempt => attempt.actorId === "companion")) {
+      combatMicroAttempts.push({ actorId: "companion", kind: "STRIKE", targetId: "hostile" });
+      this.recordTrialIntervention(
+        "ACTION", "C1", "LIVE_COVER_STRIKE",
+        `prepared ${coverDecision.readyTicks}t`,
+        `World attempt from observed tick ${before.tick}`
+      );
+      this.log(`C1 live-cover STRIKE attempt · World tick ${before.tick} · player currently bears pressure`);
+    }
     const result = this.world.stepSituation({
       motionIntents: canonicalIntents,
       experimentalSquadMotionIntents,
@@ -1165,6 +1214,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
 
     this.hud.update({
       control: state,
+      cover: this.cover.snapshot,
       situation: this.situation,
       layout: this.layout,
       paused: this.paused,
@@ -1804,6 +1854,10 @@ export class SquadFieldLabScene extends Phaser.Scene {
       );
       previous?.dispose();
       this.world = next;
+      // A reconstructed World is a new encounter, not continuing readiness.
+      // No silent carrying of cover authority across a scenario or reset.
+      this.cover.setEnabled(false);
+      this.previousCoverReason = "OFF";
       this.snapshotValue = next.snapshot();
       this.accumulator = 0;
       this.singleStepQueued = false;
