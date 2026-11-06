@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { installCompanionFieldLabWorkspace } from "./companion-field-lab-workspace";
 import {
   captureCompanionLivedMoment,
   installCompanionJaskiniaLivedMoment
@@ -413,6 +414,9 @@ export class SquadFieldLabScene extends Phaser.Scene {
         }
       }
     });
+
+    const stopWorkspace = installCompanionFieldLabWorkspace();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, stopWorkspace);
 
     const keyboard = this.input.keyboard;
     if (!keyboard) throw new Error("Squad Field Lab requires keyboard input.");
