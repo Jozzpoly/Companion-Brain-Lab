@@ -88,7 +88,7 @@ async function proveOwnerEntry() {
     ,null,{timeout:12000});
     const sourceTick = async () => {
       const txt = await page.locator("#debug-panel").textContent() ?? "";
-      const found = txt.match(/tick (\\d+) · scenario squad-field-lab-combat-micro/);
+      const found = txt.match(/tick (\d+) · scenario squad-field-lab-combat-micro/);
       assert(found, "World tick missing from real source panel: "+txt.slice(0,800));
       return Number(found[1]);
     };
