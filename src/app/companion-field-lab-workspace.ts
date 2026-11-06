@@ -7,12 +7,16 @@
  * inspect in an overlay; closing them gives the World its whole viewport.
  */
 export function installCompanionFieldLabWorkspace(): () => void {
-  const shell = document.querySelector<HTMLElement>("#lab-shell");
-  const hud = document.querySelector<HTMLElement>(".squad-field-lab-hud");
-  const debug = document.querySelector<HTMLElement>("#debug-panel.squad-field-debug");
-  if (!shell || !hud || !debug) {
+  const shellNode = document.querySelector<HTMLElement>("#lab-shell");
+  const hudNode = document.querySelector<HTMLElement>(".squad-field-lab-hud");
+  const debugNode = document.querySelector<HTMLElement>("#debug-panel.squad-field-debug");
+  if (!shellNode || !hudNode || !debugNode) {
     throw new Error("Companion workspace requires the real Field Lab HUD and microscope");
   }
+  // Non-null capture across event-handler closures (strict TypeScript).
+  const shell: HTMLElement = shellNode;
+  const hud: HTMLElement = hudNode;
+  const debug: HTMLElement = debugNode;
 
   const originalHudId = hud.id;
   if (!hud.id) hud.id = "companion-squad-tools";
