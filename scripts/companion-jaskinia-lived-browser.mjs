@@ -141,6 +141,25 @@ try {
   await frame.locator('body').press("Escape");
   eq(!(await frame.locator("#debug-panel").evaluate(el => el.classList.contains("is-workspace-open"))),
     "Escape did not restore the unobstructed World");
+
+  // One critical Owner interaction: after an overlay closes in the real
+  // Jaskinia phone-width layout, keyboard input should reach the actual
+  // player's body, not only the shell, focus menu or hidden diagnostics.
+  const playerX = async () => {
+    await page.waitForTimeout(1050); // sampled by the opt-in instrument each second
+    const source = (await page.evaluate(probe, labId)).state.data.bodies;
+    return source.find(b => b.id === "player")?.x;
+  };
+  const beforeWalk = await playerX();
+  const canvas = frame.locator("#game-root canvas");
+  await canvas.click({position: {x: 130, y: 125}});
+  await page.keyboard.down("d");
+  await page.waitForTimeout(380);
+  await page.keyboard.up("d");
+  const afterWalk = await playerX();
+  eq(afterWalk > beforeWalk + 0.1,
+    "Player WASD did not reach the real World through the Jaskinia narrow viewport: " +
+      JSON.stringify({beforeWalk, afterWalk}));
   await page.screenshot({path: ART + "/03-jaskinia-narrow-world-first.png", fullPage: true});
   await page.setViewportSize({width: 1620, height: 1000});
   await page.waitForTimeout(750);
@@ -156,6 +175,7 @@ try {
     afterTick: tickAfter,
     recoveredAfterNarrowTick: recoveredTick,
     viewportEvidence: {desktop: desktopLayout, narrow: narrowLayout},
+    narrowPlayerWalk: {beforeWalk, afterWalk},
     usabilityWarning: "Responsive World footprint recovered. This does NOT qualify mobile input, Owner feel, or sustained layout quality.",
     caveat: "No Owner feel qualification; this is not solver replay or autonomous teammate"
   }, null, 2));
