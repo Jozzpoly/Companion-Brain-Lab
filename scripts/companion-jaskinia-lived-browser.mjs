@@ -102,6 +102,32 @@ try {
   await page.waitForTimeout(600);
   const tickAfter = (await page.evaluate(probe, labId)).state.data.world.tick;
   eq(tickAfter >= tickBefore, "Jaskinia maximize restored a new/restarted World");
+
+  // Do not disguise visual usability as a successful transport test. The Field
+  // Lab currently has THREE large columns. Measure its actual world footprint
+  // when hosted inside the real, freely rearrangeable Jaskinia window.
+  const measureLab = () => frame.locator("#lab-shell").evaluate(root => {
+    const rect = node => {
+      const b = node?.getBoundingClientRect();
+      return b ? { width: Math.round(b.width), height: Math.round(b.height) } : null;
+    };
+    return {
+      viewport: {width: document.documentElement.clientWidth, height: document.documentElement.clientHeight},
+      worldPane: rect(root.querySelector("#game-pane")),
+      worldCanvas: rect(root.querySelector("#game-root canvas")),
+      hud: rect(root.querySelector(".squad-lab-hud")),
+      debug: rect(root.querySelector("#debug-panel"))
+    };
+  });
+  const desktopLayout = await measureLab();
+  await page.setViewportSize({width: 430, height: 860});
+  await page.waitForTimeout(750);
+  const narrowLayout = await measureLab();
+  await page.screenshot({path: ART + "/03-jaskinia-narrow-viewport.png", fullPage: true});
+  await page.setViewportSize({width: 1620, height: 1000});
+  await page.waitForTimeout(750);
+  const recoveredTick = (await page.evaluate(probe, labId)).state?.data?.world.tick;
+  eq(recoveredTick >= tickAfter, "Viewport transition replaced or reset the World");
   eq(errors.length === 0, "Browser errors: " + errors.join(" | "));
 
   console.log(JSON.stringify({
@@ -110,6 +136,9 @@ try {
     recordedTick: note.przyrzad.dane.world.tick,
     fromTick: first.state.data.world.tick,
     afterTick: tickAfter,
+    recoveredAfterNarrowTick: recoveredTick,
+    viewportEvidence: {desktop: desktopLayout, narrow: narrowLayout},
+    usabilityWarning: "Transport PASS is not a UI/UX PASS. Narrow viewport may make the world unusably small.",
     caveat: "No Owner feel qualification; this is not solver replay or autonomous teammate"
   }, null, 2));
   await context.close();
