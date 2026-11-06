@@ -479,6 +479,89 @@
         padding:9px 6px;
       }
 
+      /* Experimental: keep the actual World playable when a lab is given
+         a small window inside Jaskinia. Same HUD/debuggers, no duplicate shell. */
+      .companion-world-tools { display: none; }
+      @media (max-width: 1200px) {
+        #lab-shell.companion-world-first { position: relative; overflow: hidden; }
+        #lab-shell.companion-world-first > #game-pane {
+          flex: 1 1 100%;
+          width: 100%;
+          min-width: 0;
+        }
+        #lab-shell.companion-world-first > .squad-field-lab-hud {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          z-index: 26;
+          flex: 0 0 auto;
+          width: min(344px, calc(100% - 18px));
+          height: 100%;
+          padding-top: 52px;
+          box-shadow: 12px 0 30px rgba(0,0,0,.4);
+          transform: translateX(-105%);
+          transition: transform 150ms ease;
+        }
+        #lab-shell.companion-world-first > #debug-panel.squad-field-debug,
+        #lab-shell.companion-world-first > #debug-panel.squad-field-debug.is-collapsed {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          right: 0;
+          z-index: 26;
+          flex: 0 0 auto;
+          flex-basis: auto;
+          width: min(376px, calc(100% - 18px));
+          height: 100%;
+          padding-top: 46px;
+          box-shadow: -12px 0 30px rgba(0,0,0,.4);
+          transform: translateX(105%);
+          transition: transform 150ms ease;
+        }
+        #lab-shell.companion-world-first > .squad-field-lab-hud.is-workspace-open,
+        #lab-shell.companion-world-first > #debug-panel.squad-field-debug.is-workspace-open,
+        #lab-shell.companion-world-first > #debug-panel.squad-field-debug.is-collapsed.is-workspace-open {
+          transform: translateX(0);
+        }
+        #lab-shell.companion-world-first #debug-panel.squad-field-debug .squad-field-debug-content {
+          height: calc(100% - 104px);
+        }
+        #lab-shell.companion-world-first > .companion-world-tools {
+          position: absolute;
+          top: 7px;
+          left: 8px;
+          right: 8px;
+          z-index: 40;
+          display: flex;
+          justify-content: space-between;
+          gap: 8px;
+          pointer-events: none;
+        }
+        .companion-world-tools-button {
+          pointer-events: auto;
+          background: rgba(13,17,23,.94);
+          color: #f0f6fc;
+          border: 1px solid rgba(88,166,255,.7);
+          border-radius: 7px;
+          font: 700 11px/1.2 ui-monospace, monospace;
+          padding: 9px 11px;
+          min-height: 36px;
+          cursor: pointer;
+          box-shadow: 0 4px 15px rgba(0,0,0,.32);
+        }
+        .companion-world-tools-button.is-active {
+          border-color: #d2a8ff;
+          background: #34234b;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #lab-shell.companion-world-first > .squad-field-lab-hud,
+        #lab-shell.companion-world-first > #debug-panel.squad-field-debug {
+          transition: none;
+        }
+      }
+
       @media (max-width: 980px) {
         #debug-panel { flex-basis: min(46vw, 460px); width: min(46vw, 460px); }
       }
