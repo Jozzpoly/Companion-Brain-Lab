@@ -5,7 +5,7 @@ import {
   installCompanionJaskiniaLivedMoment
 } from "../bridge/companion-jaskinia-lived-moment";
 import { SquadFieldLabHud } from "./squad-field-lab-hud";
-import { CompanionCoverProbe } from "../brain/companion-cover-probe";
+import { CompanionCoverProbe, realizeCoverMotion } from "../brain/companion-cover-probe";
 import {
   evaluateCombatTakeoverShadow,
   type CombatTakeoverShadowDecision
@@ -552,13 +552,8 @@ export class SquadFieldLabScene extends Phaser.Scene {
     if (coverDecision.moveTarget) {
       const c1 = actor(before, "companion");
       const dynamics = this.control.effectiveDynamicsFor("companion");
-      memberMoves.set("companion", clampMoveToward(
-        c1.position,
-        coverDecision.moveTarget,
-        0.12,
-        dynamics.responsiveness,
-        Math.min(1.2, dynamics.slowdownRadius)
-      ));
+      const motor = realizeCoverMotion(coverDecision, c1.position, dynamics);
+      if (motor) memberMoves.set("companion", motor);
     }
 
     const canonicalIntents: MotionIntent[] = [
