@@ -177,24 +177,26 @@ export function installCompanionJaskiniaLivedMoment(input: {
       !/\/jaskinia(?:-web)?\.html$/i.test(host.parentPath)) return () => {};
   let origin: string | null = initialOrigin;
   let alive = true;
-  let latestRequestedMoment: CompanionLivedMoment | null = null;
+  let momentAtNoteOpening: CompanionLivedMoment | null = null;
 
   function send(type: string, payload: Record<string, unknown>): void {
     if (!alive || !origin) return;
     try { host!.parent.postMessage({ jaskinia: 1, type, ...payload }, origin); }
     catch { /* no simulation impact */ }
   }
-  function emitMoment(): void {
+  function emitMoment(pinForOwnerNote = false): void {
     try {
       const moment = input.read();
       if (!moment) return;
       if (moment.schema !== COMPANION_MOMENT_SCHEMA) return;
       const raw = JSON.stringify(moment);
       if (raw.length > MAX_STATE_BYTES) return; // never truncate structural evidence
-      latestRequestedMoment = JSON.parse(raw) as CompanionLivedMoment;
+      const reported = JSON.parse(raw) as CompanionLivedMoment;
+      // The periodic stream must never re-anchor a note opened by the Owner.
+      if (pinForOwnerNote) momentAtNoteOpening = reported;
       send("state", {
         text: `Companion · ${moment.world.situation} · tick ${moment.world.tick} · ${moment.authority.focused} · ${moment.combat?.phase ?? "no combat"}`,
-        data: latestRequestedMoment
+        data: reported
       });
       send("signals", { values: {
         tick: moment.world.tick,
@@ -217,13 +219,16 @@ export function installCompanionJaskiniaLivedMoment(input: {
       send("hello", { name: "Companion · Shared Moment", version: "lived-moment v0", wants: ["remark"] });
       emitMoment();
     } else if (data.type === "state?") {
-      emitMoment(); // pins the *current* world before the Owner writes the note
+      momentAtNoteOpening = null;
+      emitMoment(true); // the note is bound to this tick, not a later telemetry tick
     } else if (data.type === "remark") {
+      const anchor = momentAtNoteOpening;
+      momentAtNoteOpening = null; // do not silently reuse one note's moment
       try {
         input.onRemark?.({
           text: String(data.text ?? ""),
           at: String(data.at ?? ""),
-          anchoredMoment: latestRequestedMoment
+          anchoredMoment: anchor
         });
       } catch { /* Owner note must not affect World authority */ }
     }
