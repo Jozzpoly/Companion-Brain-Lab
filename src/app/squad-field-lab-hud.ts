@@ -12,6 +12,7 @@ import type {
   CooperativeEpisodeSnapshot
 } from "../world/cooperative-episode-contract";
 import type { CombatMicroSnapshot } from "../world/combat-micro-contract";
+import type { CoverDecision } from "../brain/companion-cover-probe";
 import type { FieldLabLayout, FieldLabSituation, SquadMemberId } from "../world/types";
 import type { TaskPressureSnapshot } from "../world/task-pressure-contract";
 import type {
@@ -47,6 +48,7 @@ export interface SquadFieldLabHudCallbacks {
   onRenameExperiment(slot: FieldLabExperimentSlot, label: string): void;
   onClearExperiment(slot: FieldLabExperimentSlot): void;
   onToggleTrial(slot: FieldLabTrialSlot): void;
+  onToggleCover(): void;
   onClearTrial(slot: FieldLabTrialSlot): void;
   onPlayerRepel(): void;
   onFocusedRepel(): void;
@@ -64,6 +66,7 @@ export interface SquadFieldLabHudState {
   setupPlacement: boolean;
   episode: CooperativeEpisodeSnapshot | null;
   combatMicro: CombatMicroSnapshot | null;
+  cover: CoverDecision;
   taskPressure: TaskPressureSnapshot | null;
   latestEpisodeOutcome: CooperativeEpisodeOutcome;
   experiments: Readonly<Partial<Record<FieldLabExperimentSlot, {
@@ -193,6 +196,8 @@ export class SquadFieldLabHud {
   private readonly pressureBlock: HTMLElement;
   private readonly pressureStatus: HTMLElement;
   private readonly combatBlock: HTMLElement;
+  private readonly coverButton: HTMLButtonElement;
+  private readonly coverStatus: HTMLElement;
   private readonly combatStatus: HTMLElement;
   private readonly taskBlock: HTMLElement;
   private readonly taskStatus: HTMLElement;
@@ -540,6 +545,14 @@ export class SquadFieldLabHud {
     this.combatStatus = document.createElement("div");
     this.combatStatus.className = "squad-lab-pressure-status";
     this.combatStatus.dataset.combatMicroStatus = "true";
+    this.coverButton = button("C1 Cover: OFF", "squad-lab-button");
+    this.coverButton.dataset.c1Cover = "toggle";
+    this.coverButton.setAttribute("aria-pressed", "false");
+    this.coverButton.addEventListener("click", () => callbacks.onToggleCover());
+    this.coverStatus = document.createElement("div");
+    this.coverStatus.className = "squad-lab-inline-hint";
+    this.coverStatus.dataset.c1CoverStatus = "true";
+    this.coverStatus.textContent = "Opt-in: C1 may prepare and act when YOU are pressured; no hidden timer.";
     const combatActions = document.createElement("div");
     combatActions.className = "squad-lab-pressure-actions";
     const playerStrike = button("E · Player STRIKE");
@@ -552,7 +565,10 @@ export class SquadFieldLabHud {
     selectedStrike.dataset.combatAction = "selected";
     selectedStrike.addEventListener("click", () => callbacks.onSelectedStrike());
     combatActions.append(playerStrike, focusedStrike, selectedStrike);
-    this.combatBlock.append(combatHeading, this.combatStatus, combatActions);
+    this.combatBlock.append(
+      combatHeading, this.combatStatus,
+      this.coverButton, this.coverStatus, combatActions
+    );
 
     this.taskBlock = document.createElement("section");
     this.taskBlock.className = "squad-lab-pressure-block";
@@ -741,6 +757,17 @@ export class SquadFieldLabHud {
       : "pressure inactive";
 
     this.combatBlock.hidden = state.situation !== "COMBAT_MICRO";
+    const coverUsable =
+      state.situation === "COMBAT_MICRO" && state.layout === "OPEN" && !state.activeTrial;
+    this.coverButton.disabled = !coverUsable;
+    this.coverButton.classList.toggle("is-active", state.cover.enabled);
+    this.coverButton.setAttribute("aria-pressed", String(state.cover.enabled));
+    this.coverButton.textContent = state.cover.enabled ? "C1 Cover: ARMED" : "C1 Cover: OFF";
+    this.coverStatus.textContent = state.cover.enabled
+      ? `C1 live authority · ${state.cover.reason} · observed readiness ${state.cover.readyTicks}t · ${state.cover.currentBearer ?? "no target"} carries pressure`
+      : coverUsable
+        ? "ARM to let C1 prepare, intercept and physically help YOU. Live probe, not A/B persistence."
+        : "Requires COMBAT_MICRO / OPEN / no active A/B Trial; never through walls.";
     const combat = state.combatMicro;
     this.combatBlock.dataset.tone = combat?.phase === "DEFEATED"
       ? "success"
