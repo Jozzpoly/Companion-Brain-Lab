@@ -271,6 +271,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
           layout: this.layout,
           paused: this.paused,
           combat: this.combatMicro,
+          cover: this.cover.snapshot,
           trial: this.activeTrial ? {
             slot: this.activeTrial.slot,
             recordedFrames: this.activeTrial.frames.length
