@@ -545,7 +545,7 @@ export class SquadFieldLabHud {
     this.combatStatus = document.createElement("div");
     this.combatStatus.className = "squad-lab-pressure-status";
     this.combatStatus.dataset.combatMicroStatus = "true";
-    this.coverButton = button("C1 Cover: OFF", "squad-lab-button");
+    this.coverButton = button("C · C1 Cover: OFF", "squad-lab-button");
     this.coverButton.dataset.c1Cover = "toggle";
     this.coverButton.setAttribute("aria-pressed", "false");
     this.coverButton.addEventListener("click", () => callbacks.onToggleCover());
@@ -762,7 +762,7 @@ export class SquadFieldLabHud {
     this.coverButton.disabled = !coverUsable;
     this.coverButton.classList.toggle("is-active", state.cover.enabled);
     this.coverButton.setAttribute("aria-pressed", String(state.cover.enabled));
-    this.coverButton.textContent = state.cover.enabled ? "C1 Cover: ARMED" : "C1 Cover: OFF";
+    this.coverButton.textContent = state.cover.enabled ? "C · C1 Cover: ARMED" : "C · C1 Cover: OFF";
     this.coverStatus.textContent = state.cover.enabled
       ? `C1 live authority · ${state.cover.reason} · observed readiness ${state.cover.readyTicks}t · ${state.cover.currentBearer ?? "no target"} carries pressure`
       : coverUsable
