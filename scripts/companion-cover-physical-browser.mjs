@@ -36,6 +36,13 @@ async function runEncounter(cover) {
     if (cover) {
       await active.click();
       assert(await active.getAttribute("aria-pressed") === "true", "C1 Cover not explicitly armed");
+      await page.locator("#game-root canvas").click({position:{x:180,y:180}});
+      await tap(page,"c");
+      assert(await active.getAttribute("aria-pressed") === "false",
+        "C keyboard command could not revoke C1 Cover");
+      await tap(page,"c");
+      assert(await active.getAttribute("aria-pressed") === "true",
+        "C keyboard command could not re-arm C1 Cover");
     }
     await page.screenshot({path:`${ART}/${cover?"cover":"baseline"}-01-before.png`});
     await tap(page, "t"); // 2x fixed-step simulation, not a fake speed or physics.
