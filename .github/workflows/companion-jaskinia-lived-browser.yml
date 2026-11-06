@@ -48,7 +48,7 @@ jobs:
           python3 tools/render.py --app jaskinia --host web --out ../../dist/Jozz-Cave-Workbench/index.html
       - name: Same-origin real browser experiment — Jaskinia + Field Lab + Owner note
         run: node scripts/companion-jaskinia-lived-browser.mjs
-      - name: Live authority contrast: real Combat Micro player-hit vs opt-in C1 responsibility
+      - name: 'Live authority contrast: real Combat Micro player-hit vs opt-in C1 responsibility'
         run: node scripts/companion-cover-physical-browser.mjs
       - name: Preserve browser visual evidence
         if: always()
