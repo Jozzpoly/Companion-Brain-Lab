@@ -115,7 +115,7 @@ try {
       viewport: {width: document.documentElement.clientWidth, height: document.documentElement.clientHeight},
       worldPane: rect(root.querySelector("#game-pane")),
       worldCanvas: rect(root.querySelector("#game-root canvas")),
-      hud: rect(root.querySelector(".squad-lab-hud")),
+      hud: rect(root.querySelector(".squad-field-lab-hud")),
       debug: rect(root.querySelector("#debug-panel"))
     };
   });
@@ -123,7 +123,25 @@ try {
   await page.setViewportSize({width: 430, height: 860});
   await page.waitForTimeout(750);
   const narrowLayout = await measureLab();
-  await page.screenshot({path: ART + "/03-jaskinia-narrow-viewport.png", fullPage: true});
+  eq(desktopLayout.worldCanvas?.width >= 650,
+    "World-first desktop Jaskinia still sacrificed the World to toolbars: " + JSON.stringify(desktopLayout));
+  eq(narrowLayout.worldCanvas?.width >= 300,
+    "World-first narrow Jaskinia still sacrificed the World to toolbars: " + JSON.stringify(narrowLayout));
+
+  const squadDrawer = frame.locator('[data-workspace-drawer="squad"]');
+  const microscopeDrawer = frame.locator('[data-workspace-drawer="microscope"]');
+  await squadDrawer.click();
+  eq(await frame.locator(".squad-field-lab-hud").evaluate(el => el.classList.contains("is-workspace-open")),
+    "Squad tools did not reopen as the original full HUD");
+  await microscopeDrawer.click();
+  eq(await frame.locator("#debug-panel").evaluate(el => el.classList.contains("is-workspace-open")),
+    "The existing causal microscope cannot be reopened");
+  eq(!(await frame.locator(".squad-field-lab-hud").evaluate(el => el.classList.contains("is-workspace-open"))),
+    "Two compact drawers interfere instead of handing over the viewport");
+  await frame.locator('body').press("Escape");
+  eq(!(await frame.locator("#debug-panel").evaluate(el => el.classList.contains("is-workspace-open"))),
+    "Escape did not restore the unobstructed World");
+  await page.screenshot({path: ART + "/03-jaskinia-narrow-world-first.png", fullPage: true});
   await page.setViewportSize({width: 1620, height: 1000});
   await page.waitForTimeout(750);
   const recoveredTick = (await page.evaluate(probe, labId)).state?.data?.world.tick;
@@ -138,7 +156,7 @@ try {
     afterTick: tickAfter,
     recoveredAfterNarrowTick: recoveredTick,
     viewportEvidence: {desktop: desktopLayout, narrow: narrowLayout},
-    usabilityWarning: "Transport PASS is not a UI/UX PASS. Narrow viewport may make the world unusably small.",
+    usabilityWarning: "Responsive World footprint recovered. This does NOT qualify mobile input, Owner feel, or sustained layout quality.",
     caveat: "No Owner feel qualification; this is not solver replay or autonomous teammate"
   }, null, 2));
   await context.close();
