@@ -52,7 +52,7 @@ describe("Companion lived moment: bounded witness, not World authority", () => {
     const sent: { data: any; origin: string }[] = [];
     const parent = { postMessage(data: unknown, origin: string) { sent.push({ data, origin }); } };
     let incoming: ((event: {source: unknown;origin: string;data: unknown}) => void) | null = null;
-    let period: (() => void) | null = null;
+    let period = () => {};
     let stopped = false;
     let tick = 5;
     const remarks: { text: string; tick: number | null }[] = [];
@@ -88,7 +88,7 @@ describe("Companion lived moment: bounded witness, not World authority", () => {
     receive(parent, "https://jozzpoly.github.io",
       {jaskinia: 1, type: "remark", text: "He should have covered me", at: "now"});
     expect(remarks).toEqual([{text:"He should have covered me", tick:21}]);
-    if (period) period();
+    period();
     expect(sent.at(-2)?.data.data.world.tick).toBe(28);
     stop();
     expect(stopped).toBe(true);
