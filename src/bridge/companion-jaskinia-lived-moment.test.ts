@@ -85,6 +85,9 @@ describe("Companion lived moment: bounded witness, not World authority", () => {
     receive(parent, "https://jozzpoly.github.io", {jaskinia: 1, type: "state?"});
     expect(sent.at(-2)?.data.data.world.tick).toBe(21);
     tick = 28;
+    // The live World advances while the Owner composes the note; its anchor
+    // must remain tick 21, not the periodic telemetry sample at tick 28.
+    period();
     receive(parent, "https://jozzpoly.github.io",
       {jaskinia: 1, type: "remark", text: "He should have covered me", at: "now"});
     expect(remarks).toEqual([{text:"He should have covered me", tick:21}]);
