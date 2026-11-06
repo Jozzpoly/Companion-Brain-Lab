@@ -139,7 +139,7 @@ export function trustedJaskiniaOrigin(referrer: string): string | null {
       url.pathname.startsWith("/Jozz-Cave-Workbench/")) return url.origin;
   const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
   if (local && url.protocol === "http:" &&
-      /\\/jaskinia(?:-web)?\\.html$/i.test(url.pathname)) return url.origin;
+      /\/jaskinia(?:-web)?\.html$/i.test(url.pathname)) return url.origin;
   return null;
 }
 
