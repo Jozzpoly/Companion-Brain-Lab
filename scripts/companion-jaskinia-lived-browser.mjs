@@ -26,6 +26,31 @@ try {
   });
 
   const base = "http://127.0.0.1:4187";
+
+  // The workshop integration must not degrade the standalone Field Lab:
+  // at wide desktop width its original full HUD and causal debugger still
+  // flank the same physical scene, without Jaskinia or an external host.
+  const independent = await context.newPage();
+  await independent.goto(base + "/?fieldlab=1", {waitUntil: "domcontentloaded"});
+  await independent.locator("#debug-panel.squad-field-debug").waitFor({state:"visible"});
+  await independent.locator("#game-root canvas").waitFor({state:"visible"});
+  const standalone = await independent.evaluate(() => {
+    const width = selector => Math.round(document.querySelector(selector)?.getBoundingClientRect().width ?? 0);
+    return {
+      iframe: window.parent !== window,
+      world: width("#game-root canvas"),
+      squadTools: width(".squad-field-lab-hud"),
+      causalMicroscope: width("#debug-panel"),
+      compactNav: getComputedStyle(document.querySelector(".companion-world-tools")).display
+    };
+  });
+  eq(!standalone.iframe, "Standalone test unexpectedly framed");
+  eq(standalone.world >= 550 && standalone.squadTools >= 320 &&
+    standalone.causalMicroscope >= 350 && standalone.compactNav === "none",
+    "Standalone Companion research surface regressed: " + JSON.stringify(standalone));
+  await independent.screenshot({path: ART + "/00-standalone-full-fieldlab.png"});
+  await independent.close();
+
   await page.goto(base + "/Jozz-Cave-Workbench/index.html", {waitUntil: "domcontentloaded"});
   await page.waitForFunction(() => typeof window.__JASK?.commit === "function", {timeout: 15_000});
   const labId = await page.evaluate(url => {
@@ -169,7 +194,8 @@ try {
 
   console.log(JSON.stringify({
     status: "PASS in bounded real-browser reproduction",
-    source: "CURRENT Field Lab + old Jaskinia real windows",
+    source: "Standalone CURRENT Field Lab + old Jaskinia real windows",
+    standalone,
     recordedTick: note.przyrzad.dane.world.tick,
     fromTick: first.state.data.world.tick,
     afterTick: tickAfter,
