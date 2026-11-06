@@ -1,0 +1,77 @@
+name: companion-live-cover-isolated-preview
+
+on:
+  push:
+    branches:
+      - experiment/gpt6-companion-live-cover-2026-11-07
+    paths:
+      - src/**
+      - scripts/companion-cover-physical-browser.mjs
+      - index.html
+      - package.json
+      - package-lock.json
+      - vite.config.ts
+      - .github/workflows/companion-live-cover-isolated-preview.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: isolated-live-cover-preview
+  cancel-in-progress: true
+
+jobs:
+  publish-isolated-specimen:
+    if: github.repository == 'Jozzpoly/Companion-Brain-Lab' && github.ref == 'refs/heads/experiment/gpt6-companion-live-cover-2026-11-07'
+    runs-on: ubuntu-latest
+    env:
+      VITE_SOURCE_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Build only after the same source clears TypeScript and actual World test
+        run: |
+          if ! npm install; then
+            last="$(ls -t "$HOME"/.npm/_logs/*-debug-0.log 2>/dev/null | head -n 1 || true)"
+            if [ -z "$last" ] || ! grep -Fq "Cannot read properties of null (reading 'edgesOut')" "$last"; then
+              echo "Unknown npm failure; no public preview."
+              exit 1
+            fi
+            rm -rf node_modules
+            npm install --legacy-peer-deps
+          fi
+          npm run check
+          node scripts/companion-cover-physical-browser.mjs
+      - name: Commit only compiled, non-private files to dedicated preview branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          publish_ref="refs/heads/preview/gpt6-companion-live-cover-2026-11-07"
+          tmp="$(mktemp -d)"
+          git -C "$tmp" init -b specimen
+          git -C "$tmp" config user.name "Companion Preview Experiment"
+          git -C "$tmp" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$tmp" remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git -C "$tmp" ls-remote --exit-code origin "$publish_ref" >/dev/null; then
+            git -C "$tmp" fetch --depth=1 origin "$publish_ref"
+            git -C "$tmp" reset --hard FETCH_HEAD
+            git -C "$tmp" ls-files -z | xargs -0 -r -I '{}' rm -f -- "$tmp/{}"
+          fi
+          cp -a "$GITHUB_WORKSPACE"/dist/. "$tmp"/
+          cat > "$tmp/BUILD_INFO.json" <<EOF
+          {
+            "sourceSha": "${GITHUB_SHA}",
+            "scope": "OPEN_COMBAT_MICRO_C1_COVER",
+            "ownerQualified": false,
+            "replayable": false,
+            "previewNotHistoricalPages": true
+          }
+          EOF
+          git -C "$tmp" add -A
+          git -C "$tmp" diff --cached --quiet && exit 0
+          git -C "$tmp" commit -m "isolated preview: source ${GITHUB_SHA}"
+          git -C "$tmp" push origin "HEAD:$publish_ref"
+          echo "Published only $publish_ref from $GITHUB_SHA"
