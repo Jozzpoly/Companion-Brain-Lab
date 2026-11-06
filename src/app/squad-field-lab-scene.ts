@@ -220,7 +220,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
 
   private keys!: Record<
     "w" | "a" | "s" | "d" | "up" | "down" | "left" | "right" |
-    "tab" | "direct" | "reset" | "pause" | "step" | "time" | "situation" |
+    "tab" | "direct" | "cover" | "reset" | "pause" | "step" | "time" | "situation" |
     "playerAction" | "focusedAction" | "selectedAction" |
     "one" | "two" | "three" | "four",
     Phaser.Input.Keyboard.Key
@@ -407,15 +407,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       onClearExperiment: (slot) => this.clearExperiment(slot),
       onToggleTrial: (slot) => void this.toggleTrial(slot),
       onClearTrial: (slot) => this.clearTrial(slot),
-      onToggleCover: () => {
-        if (this.activeTrial) {
-          this.log("C1 cover unavailable inside legacy A/B Trial; policy is not part of its persisted setup schema");
-          return;
-        }
-        this.cover.setEnabled(!this.cover.enabled);
-        this.recordTrialIntervention("AUTHORITY", "C1", "cover", "manual", this.cover.enabled ? "ARMED" : "OFF");
-        this.log(`Owner C1 COVER ${this.cover.enabled ? "ARMED · may act when player is pressured" : "OFF"}`);
-      },
+      onToggleCover: () => this.toggleCoverIntent(),
       onPlayerRepel: () => this.queueCooperativeAttempt("player"),
       onFocusedRepel: () => this.queueCooperativeAttempt(this.control.snapshot().focused),
       onSelectedRepel: () => {
@@ -448,6 +440,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       right: Phaser.Input.Keyboard.KeyCodes.RIGHT,
       tab: Phaser.Input.Keyboard.KeyCodes.TAB,
       direct: Phaser.Input.Keyboard.KeyCodes.F,
+      cover: Phaser.Input.Keyboard.KeyCodes.C,
       reset: Phaser.Input.Keyboard.KeyCodes.R,
       pause: Phaser.Input.Keyboard.KeyCodes.P,
       step: Phaser.Input.Keyboard.KeyCodes.O,
@@ -640,6 +633,13 @@ export class SquadFieldLabScene extends Phaser.Scene {
   }
 
   private handleKeyboard(): void {
+    const element = document.activeElement;
+    const editingText = element instanceof HTMLInputElement ||
+      element instanceof HTMLTextAreaElement ||
+      (element instanceof HTMLElement && element.isContentEditable);
+    if (!editingText && Phaser.Input.Keyboard.JustDown(this.keys.cover)) {
+      this.toggleCoverIntent();
+    }
     if (Phaser.Input.Keyboard.JustDown(this.keys.tab)) {
       const next = this.control.cycleFocus(1);
       this.log(`focus ${memberLabel(next.focused)}`);
@@ -717,6 +717,17 @@ export class SquadFieldLabScene extends Phaser.Scene {
       this.log("authored position reset requested");
       void this.loadWorld(false);
     }
+  }
+
+  private toggleCoverIntent(): void {
+    if (this.activeTrial || this.situation !== "COMBAT_MICRO" || this.layout !== "OPEN") {
+      this.log("C1 live cover not available · requires COMBAT_MICRO / OPEN outside legacy A/B Trial");
+      return;
+    }
+    this.cover.setEnabled(!this.cover.enabled);
+    this.log(`Owner C1 COVER ${this.cover.enabled
+      ? "ARMED · local brain may intervene in real World"
+      : "OFF · Owner has revoked local action authority"}`);
   }
 
   private toggleSetupPlacement(): void {
