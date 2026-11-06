@@ -104,6 +104,7 @@ interface ContactHost {
   parent: { postMessage(data: unknown, targetOrigin: string): void };
   self: unknown;
   referrer: string;
+  parentPath?: string | null;
   listen(callback: (event: { source: unknown; origin: string; data: unknown }) => void): () => void;
   every(callback: () => void, ms: number): () => void;
 }
@@ -114,6 +115,11 @@ function realHost(): ContactHost | null {
     parent: window.parent,
     self: window,
     referrer: document.referrer,
+    parentPath: (() => {
+      // Available for the historical same-origin GitHub Pages configuration;
+      // an iframe referrer may be intentionally suppressed by Jaskinia.
+      try { return window.parent.location.pathname; } catch { return null; }
+    })(),
     listen(callback) {
       const handler = (event: MessageEvent) => callback(event);
       window.addEventListener("message", handler);
@@ -144,6 +150,15 @@ export function trustedJaskiniaOrigin(referrer: string): string | null {
   return null;
 }
 
+function permittedHostOrigin(origin: string): boolean {
+  let url: URL;
+  try { url = new URL(origin); } catch { return false; }
+  if (origin !== url.origin) return false;
+  if (url.protocol === "https:" && url.hostname === "jozzpoly.github.io") return true;
+  return url.protocol === "http:" &&
+    ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+}
+
 export function installCompanionJaskiniaLivedMoment(input: {
   read: () => CompanionLivedMoment | null;
   onRemark?: (remark: CompanionRemark) => void;
@@ -151,14 +166,22 @@ export function installCompanionJaskiniaLivedMoment(input: {
 }): () => void {
   const host = input.host === undefined ? realHost() : input.host;
   if (!host || host.self === host.parent) return () => {};
-  const origin = trustedJaskiniaOrigin(host.referrer);
-  if (!origin) return () => {};
+  // Old Jaskinia deliberately uses iframe referrerpolicy="no-referrer".
+  // The source-bound "hi" handshake must therefore be able to discover an
+  // explicitly allowed host origin. This is ORIGIN trust, not authentication
+  // of a particular same-origin app (GitHub Pages shares origin across repos).
+  const initialOrigin = trustedJaskiniaOrigin(host.referrer);
+  if (host.referrer && !initialOrigin) return () => {}; // refuse contradictory referrers
+  if (host.parentPath &&
+      !host.parentPath.startsWith("/Jozz-Cave-Workbench/") &&
+      !/\/jaskinia(?:-web)?\.html$/i.test(host.parentPath)) return () => {};
+  let origin: string | null = initialOrigin;
   let alive = true;
   let latestRequestedMoment: CompanionLivedMoment | null = null;
 
   function send(type: string, payload: Record<string, unknown>): void {
-    if (!alive) return;
-    try { host!.parent.postMessage({ jaskinia: 1, type, ...payload }, origin!); }
+    if (!alive || !origin) return;
+    try { host!.parent.postMessage({ jaskinia: 1, type, ...payload }, origin); }
     catch { /* no simulation impact */ }
   }
   function emitMoment(): void {
@@ -182,9 +205,14 @@ export function installCompanionJaskiniaLivedMoment(input: {
     } catch { /* contact failure must not affect World or input */ }
   }
   const stopListening = host.listen(event => {
-    if (!alive || event.source !== host.parent || event.origin !== origin) return;
+    if (!alive || event.source !== host.parent) return;
     const data = event.data as Record<string, unknown> | null;
     if (!data || data.jaskinia !== 1) return;
+    if (!origin) {
+      if (data.type !== "hi" || !permittedHostOrigin(event.origin)) return;
+      origin = event.origin;
+    }
+    if (event.origin !== origin) return;
     if (data.type === "hi") {
       send("hello", { name: "Companion · Shared Moment", version: "lived-moment v0", wants: ["remark"] });
       emitMoment();
@@ -200,8 +228,11 @@ export function installCompanionJaskiniaLivedMoment(input: {
       } catch { /* Owner note must not affect World authority */ }
     }
   });
-  // The iframe 'hi' can race scene creation; proactively advertise as well.
-  send("hello", { name: "Companion · Shared Moment", version: "lived-moment v0", wants: ["remark"] });
+  // If referrer is available, proactively advertise. Otherwise the
+  // source-bound hi from the real Jaskinia iframe establishes the origin.
+  if (origin) send("hello", {
+    name: "Companion · Shared Moment", version: "lived-moment v0", wants: ["remark"]
+  });
   const stopInterval = host.every(emitMoment, 1000);
   return () => {
     alive = false;
