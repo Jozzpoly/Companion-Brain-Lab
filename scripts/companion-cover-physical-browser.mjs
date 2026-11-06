@@ -78,11 +78,24 @@ async function proveOwnerEntry() {
     await page.goto("http://127.0.0.1:4188/?fieldlab=1&coverlab=1",
       {waitUntil:"domcontentloaded"});
     await page.locator(".companion-cover-playground-guide").waitFor({state:"visible"});
+    // The debug panel exposes actual World tick and layout, but initial
+    // pause is not logged as a "PAUSED" transition. Verify the *physics*
+    // does not advance rather than requiring a missing debug label.
     await page.waitForFunction(() =>
-      document.querySelector("#debug-panel")?.textContent?.includes("PAUSED") &&
       document.querySelector("#debug-panel")?.textContent?.includes("layout OPEN") &&
+      document.querySelector("#debug-panel")?.textContent?.includes("scenario squad-field-lab-combat-micro") &&
       document.querySelector('[data-combat-micro-status="true"]')?.textContent?.includes("HP 3/3")
     ,null,{timeout:12000});
+    const sourceTick = async () => {
+      const txt = await page.locator("#debug-panel").textContent() ?? "";
+      const found = txt.match(/tick (\\d+) · scenario squad-field-lab-combat-micro/);
+      assert(found, "World tick missing from real source panel: "+txt.slice(0,800));
+      return Number(found[1]);
+    };
+    const tickBeforeStart = await sourceTick();
+    await page.waitForTimeout(450);
+    assert((await sourceTick()) === tickBeforeStart,
+      "CoverLab unexpectedly advanced World before Owner started");
     const cover = page.locator('[data-c1-cover="toggle"]');
     assert(await cover.getAttribute("aria-pressed") === "false",
       "direct URL unexpectedly granted C1 action authority");
