@@ -327,6 +327,10 @@ export class SquadFieldLabScene extends Phaser.Scene {
       onToggleDirect: () => {
         const before = this.control.snapshot().directControl;
         const next = this.control.setDirectControl(!before);
+        if (next.directControl && next.focused === "companion" && this.cover.enabled) {
+          this.cover.setEnabled(false);
+          this.log("C1 cover cancelled · Owner took direct control");
+        }
         this.recordTrialIntervention(
           "AUTHORITY",
           memberLabel(next.focused),
@@ -642,6 +646,10 @@ export class SquadFieldLabScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keys.direct)) {
       const state = this.control.snapshot();
       const next = this.control.setDirectControl(!state.directControl);
+      if (next.directControl && next.focused === "companion" && this.cover.enabled) {
+        this.cover.setEnabled(false);
+        this.log("C1 cover cancelled · Owner took direct control");
+      }
       this.log(`direct ${memberLabel(next.focused)} ${next.directControl ? "ON" : "off"}`);
     }
     if (Phaser.Input.Keyboard.JustDown(this.keys.situation)) {
@@ -808,6 +816,10 @@ export class SquadFieldLabScene extends Phaser.Scene {
 
   private issueOrderFromHud(mode: SquadOrderMode): void {
     if (!this.snapshotValue) return;
+    if (this.cover.enabled && this.control.snapshot().selected.includes("companion")) {
+      this.cover.setEnabled(false);
+      this.log("C1 cover cancelled · explicit Owner order takes precedence");
+    }
     const before = this.selectedOrderSummary();
     const scope = this.selectedScopeLabel();
     if (mode === "FOLLOW") {
@@ -881,6 +893,10 @@ export class SquadFieldLabScene extends Phaser.Scene {
     }
 
     if (pointer.rightButtonDown()) {
+      if (this.cover.enabled && this.control.snapshot().selected.includes("companion")) {
+        this.cover.setEnabled(false);
+        this.log("C1 cover cancelled · direct Owner MOVE order");
+      }
       const before = this.selectedOrderSummary();
       const scope = this.selectedScopeLabel();
       this.control.issueSelected("MOVE", worldPoint);
@@ -1599,6 +1615,11 @@ export class SquadFieldLabScene extends Phaser.Scene {
   }
 
   private captureExperiment(slot: FieldLabExperimentSlot): void {
+    // V1 setup serialization has no live-cover policy. Refuse deceptive A/B.
+    if (this.cover.enabled) {
+      this.log(`capture ${slot} blocked · disarm C1 cover (not represented in v1 A/B schema)`);
+      return;
+    }
     if (!this.snapshotValue || this.loading) {
       this.log(`capture ${slot} ignored · World unavailable`);
       return;
@@ -1652,6 +1673,11 @@ export class SquadFieldLabScene extends Phaser.Scene {
   }
 
   private async toggleTrial(slot: FieldLabTrialSlot): Promise<void> {
+    // Never smuggle a live brain into legacy manual-only A/B truth.
+    if (this.cover.enabled) {
+      this.log(`trial ${slot} blocked · disarm C1 cover; A/B omits live policy`);
+      return;
+    }
     if (this.activeTrial?.slot === slot) {
       this.stopTrial("manual stop");
       return;
