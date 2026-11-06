@@ -95,6 +95,45 @@ describe("Companion lived moment: bounded witness, not World authority", () => {
     expect(incoming).toBeNull();
   });
 
+  it("supports Jaskinia's actual no-referrer iframe without giving trust to random sites", () => {
+    const sent: {type: string; origin: string}[] = [];
+    const parent = {postMessage(data: any, origin: string) { sent.push({type: data.type, origin}); }};
+    let incoming: (event: {source: unknown;origin: string;data: unknown}) => void = () => {};
+    const stop = installCompanionJaskiniaLivedMoment({
+      host: {
+        parent, self: {}, referrer: "", parentPath: "/Jozz-Cave-Workbench/index.html",
+        listen(handler) { incoming = handler; return () => {}; },
+        every() { return () => {}; }
+      },
+      read: () => sample(33)
+    });
+    expect(sent).toHaveLength(0);
+    incoming({source: parent, origin: "https://evil.example",
+      data: {jaskinia:1,type:"hi"}});
+    expect(sent).toHaveLength(0);
+    incoming({source: parent, origin: "https://jozzpoly.github.io",
+      data: {jaskinia:1,type:"hi"}});
+    expect(sent.map(x => x.type)).toEqual(["hello", "state", "signals"]);
+    expect(sent.every(x => x.origin === "https://jozzpoly.github.io")).toBe(true);
+    stop();
+  });
+
+  it("rejects a different parent path even if the origin is shared", () => {
+    let listeners = 0;
+    const parent = {postMessage() { throw Error("must not send"); }};
+    const stop = installCompanionJaskiniaLivedMoment({
+      host: {
+        parent, self: {}, referrer: "",
+        parentPath: "/Other-Project/index.html",
+        listen() { listeners++; return () => {}; },
+        every() { throw Error("must not start timer"); }
+      },
+      read: () => sample(0)
+    });
+    stop();
+    expect(listeners).toBe(0);
+  });
+
   it("keeps the lab standalone and ignores other embedding sites", () => {
     let sendCount = 0;
     const parent = { postMessage() { sendCount++; } };
