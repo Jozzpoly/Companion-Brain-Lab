@@ -71,13 +71,42 @@ async function runEncounter(cover) {
     return {result,coverStatus,sourceTrace:debug.includes("C1 live-cover STRIKE attempt")};
   } finally { await context.close(); }
 }
+async function proveOwnerEntry() {
+  const context = await browser.newContext({viewport:{width:1520,height:920}});
+  try {
+    const page = await context.newPage();
+    await page.goto("http://127.0.0.1:4188/?fieldlab=1&coverlab=1",
+      {waitUntil:"domcontentloaded"});
+    await page.locator(".companion-cover-playground-guide").waitFor({state:"visible"});
+    await page.waitForFunction(() =>
+      document.querySelector("#debug-panel")?.textContent?.includes("PAUSED") &&
+      document.querySelector("#debug-panel")?.textContent?.includes("layout OPEN") &&
+      document.querySelector('[data-combat-micro-status="true"]')?.textContent?.includes("HP 3/3")
+    ,null,{timeout:12000});
+    const cover = page.locator('[data-c1-cover="toggle"]');
+    assert(await cover.getAttribute("aria-pressed") === "false",
+      "direct URL unexpectedly granted C1 action authority");
+    await page.locator("#game-root canvas").click({position:{x:200,y:180}});
+    await tap(page,"c");
+    assert(await cover.getAttribute("aria-pressed") === "true",
+      "Owner cannot arm C1 with C from direct World entry");
+    await tap(page,"p");
+    await page.waitForFunction(() =>
+      document.querySelector("#debug-panel")?.textContent?.includes("RUNNING"),
+      null,{timeout:3000});
+    await page.screenshot({path:ART+"/00-direct-owner-coverlab-entry.png"});
+    return {entry:"?fieldlab=1&coverlab=1",pausedAtStart:true,armedOnlyOnOwnerC:true};
+  } finally { await context.close(); }
+}
 try {
   await mkdir(ART,{recursive:true});
   browser = await chromium.launch({headless:true});
+  const ownerEntry = await proveOwnerEntry();
   const baseline = await runEncounter(false);
   const covered = await runEncounter(true);
   console.log(JSON.stringify({
     status:"PASS / physically distinct opt-in C1 agency",
+    ownerEntry,
     baseline,
     covered,
     warning:"COMBAT_MICRO OPEN only. No Owner acceptance or broad teammate cognition."
