@@ -175,6 +175,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
   private hud!: SquadFieldLabHud;
   private panel!: SquadFieldLabPanel;
   private readonly control = new FieldLabSquadControl();
+  private readonly coverPlayground = new URLSearchParams(window.location.search).get("coverlab") === "1";
   private readonly cover = new CompanionCoverProbe();
   private previousCoverReason = "OFF";
   private readonly labels = new Map<SquadMemberId, Phaser.GameObjects.Text>();
@@ -231,6 +232,23 @@ export class SquadFieldLabScene extends Phaser.Scene {
   }
 
   create(): void {
+    if (this.coverPlayground) {
+      // Owner can enter the live situation with one URL, no scripted C1 action.
+      // Paused initial state gives time to observe and deliberately grant help.
+      this.situation = "COMBAT_MICRO";
+      this.layout = "OPEN";
+      this.control.setActiveCount(1);
+      this.paused = true;
+      const pane = document.querySelector("#game-pane");
+      if (pane) {
+        const guide = document.createElement("div");
+        guide.className = "companion-cover-playground-guide";
+        guide.textContent =
+          "C1 COVER LAB · START PAUSED · C: allow/revoke C1 help · P: play/pause · WASD: move YOU · R: reset · C1 OFF by default";
+        pane.append(guide);
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => guide.remove());
+      }
+    }
     this.graphics = this.add.graphics();
 
     this.playerLabel = this.add.text(0, 0, "YOU", {
