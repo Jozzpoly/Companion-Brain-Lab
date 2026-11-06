@@ -66,7 +66,7 @@ export class CompanionCoverProbe {
     this.lastDecision = this.make(value ? "NO_RELEVANT_THREAT" : "OFF", null, false, null, null);
   }
 
-  /** World rebuilds invalidate physical readiness. The Owner's cover order remains explicit. */
+  /** World reconstruction ends the prior authority episode and resets readiness. */
   worldReconstructed(): void {
     this.preparationTicks = 0;
     this.lastDecision = this.make(this.enabledValue ? "NO_RELEVANT_THREAT" : "OFF", null, false, null, null);
@@ -172,4 +172,26 @@ export class CompanionCoverProbe {
     }
     return report("READY_TO_INTERVENE", null, true, bearer, threatToCompanion);
   }
+}
+
+/** Shared motor for browser and real-World test. A decision alone never moves a body. */
+export function realizeCoverMotion(
+  decision: CoverDecision,
+  companionPosition: Vec2,
+  dynamics: { responsiveness: number; slowdownRadius: number }
+): Vec2 | null {
+  if (!decision.moveTarget) return null;
+  const delta = {
+    x: decision.moveTarget.x - companionPosition.x,
+    y: decision.moveTarget.y - companionPosition.y
+  };
+  const distance = Math.hypot(delta.x, delta.y);
+  if (distance <= 0.12) return { x: 0, y: 0 };
+  const slowdown = Math.max(0.12, Math.min(1.2, dynamics.slowdownRadius));
+  const throttle = Math.max(0.08,
+    Math.min(1, distance / slowdown) * dynamics.responsiveness);
+  return {
+    x: delta.x / distance * throttle,
+    y: delta.y / distance * throttle
+  };
 }
