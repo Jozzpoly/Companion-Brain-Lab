@@ -1,6 +1,6 @@
 # GPT-6 / Companion — stan stanowiska przed następną generacją (2026-11-07)
 
-> **Branch-local research overlay, NOT canonical `main`, Owner PASS, a personality contract, final architecture, or a roadmap for other agents.** Canonical product intent and evidence precedence remain in `docs/CURRENT.md` (last authored 2026-09-27). This overlay is deliberately short; retain history without making the next agent parse the 138 KB canonical dossier as an implicit scheduler.
+> **This is only a branch-local research overlay. It is NOT canonical `main`, NOT Owner-qualified, NOT a personality contract or final architecture, and NOT a roadmap imposed on other agents.** Canonical product intent and evidence precedence remain in `docs/CURRENT.md` (last authored 2026-09-27). This overlay is deliberately short; retain history without making the next agent parse the 138 KB canonical dossier as an implicit scheduler.
 
 ## 1. Why this line exists
 
