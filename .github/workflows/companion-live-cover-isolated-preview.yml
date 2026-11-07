@@ -1,17 +1,14 @@
 name: companion-live-cover-isolated-preview
 
+# No auto-publishing on ordinary source changes. An agent explicitly edits
+# PREVIEW_PUBLISH_REQUEST.md when a new tested specimen is justified.
 on:
   push:
     branches:
       - experiment/gpt6-companion-live-cover-2026-11-07
     paths:
-      - src/**
-      - scripts/companion-cover-physical-browser.mjs
-      - index.html
-      - package.json
-      - package-lock.json
-      - vite.config.ts
-      - .github/workflows/companion-live-cover-isolated-preview.yml
+      - "experiments/companion-live-cover/PREVIEW_PUBLISH_REQUEST.md"
+  workflow_dispatch:
 
 permissions:
   contents: write
