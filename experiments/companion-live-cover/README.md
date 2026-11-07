@@ -24,7 +24,7 @@ The actual browser A/B (identical authored player + C1 + hostile positions, OPEN
 
 Evidence: [Chrome/Playwright run 42312840114](https://github.com/Jozzpoly/Companion-Brain-Lab/actions/runs/42312840114) with screenshots, plus [real-World Vitest 42312840053](https://github.com/Jozzpoly/Companion-Brain-Lab/actions/runs/42312840053). The latter was 194 test files / 790 tests PASS.
 
-This is an *A/B of distinct behavior and material outcomes*, not proof that the teammate is pleasant, robust, intelligent across the world, or has a meaningful relationship to the player.
+This is an *A/B of distinct behavior and material outcomes*, not proof that the teammate is pleasant, robust, intelligent across the world, or has a meaningful relationship to the player. **Important methodological limitation:** the browser baseline stops on the first PLAYER hit, while the Cover variant stops on the first C1 strike. Those outcomes are real but are **not matched-horizon measures of benefit**. The successful strike changes *which actor is targeted*; C1 had **zero received hits** at the recorded endpoint, so calling this an actual paid sacrifice would be false. See [research station / source-of-truth audit](../GPT6_COMPANION_STATION_2026-11-07.md).
 
 ## Authority semantics
 
@@ -38,7 +38,7 @@ This is an *A/B of distinct behavior and material outcomes*, not proof that the 
 
 ## Experimental preview
 
-A separate push-only workflow tests and publishes a built HTML/JS specimen to **only** `preview/gpt6-companion-live-cover-2026-11-07` within this repository. It neither changes `main` nor the historical `jozzpoly.github.io/Companion-Brain-Lab/` R1. The preview is meaningful only after the publish run succeeds and a real browser verifies the URL. Do not infer deployment from a source-branch commit alone.
+The compiled specimen is frozen at source `3b954c10...`, preview commit `2c24ff8940...` ([exact manifest and CI](https://github.com/Jozzpoly/Companion-Brain-Lab/actions/runs/42314058393)). An ordinary source push now **does not automatically overwrite it**. A future agent requests an intentional replacement by updating `PREVIEW_PUBLISH_REQUEST.md`; only that file triggers the gated publish workflow. It neither changes `main` nor the historical `jozzpoly.github.io/Companion-Brain-Lab/` R1. The external raw.githack click-through in Owner's Opera remains unverified due to its confirmation interstitial, even though local browser/compiled-source provenance checks passed.
 
 ## Strongest falsifiers / what remains unresolved
 
@@ -51,6 +51,6 @@ A separate push-only workflow tests and publishes a built HTML/JS specimen to **
 
 ## Owner-friendly first question
 
-Not “does a panel turn green?” but: **Did C1 visibly notice danger, help at the right moment and take a cost onto itself, without me having to babysit it — and was it easy to cancel or change what it did?**
+Not “does a panel turn green?” but: **Did C1 help at the right moment, create additional agency for the player rather than steal it, and expose itself to a meaningful physical risk — with clear ability for the Owner to correct its actions?** The existing fixture proves none of those experiential qualities; it only shows a bounded policy causing a factual World strike and reassignment of hostile pressure.
 
 Do not turn this into another Owner gate until a non-historical, actually playable URL and a meaningful experience are available. Green machine tests are evidence of a narrow mechanism only.
