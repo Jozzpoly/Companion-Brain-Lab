@@ -17,6 +17,12 @@ on:
 permissions:
   contents: read
 
+# Repeated research commits previously left dozens of obsolete cross-repo
+# browser runs in flight. Only the latest revision of this PR is useful.
+concurrency:
+  group: companion-browser-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   real-jaskinia-contact:
     runs-on: ubuntu-latest
@@ -33,7 +39,9 @@ jobs:
             echo "npm Arborist fallback permitted only for known previous issue"
             npm install --legacy-peer-deps
           fi
-          npm run check
+          # The separate validate workflow is responsible for tsc + Vitest.
+          # This job builds exactly what its real Chrome cross-repo tests execute.
+          npm run build
       - name: Check out pinned genuine old Jaskinia as disposable browser fixture
         uses: actions/checkout@v5
         with:
