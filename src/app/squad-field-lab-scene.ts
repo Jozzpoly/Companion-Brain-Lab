@@ -5,6 +5,7 @@ import {
   installCompanionJaskiniaLivedMoment
 } from "../bridge/companion-jaskinia-lived-moment";
 import { SquadFieldLabHud } from "./squad-field-lab-hud";
+import { CompanionCoverProbe, realizeCoverMotion } from "../brain/companion-cover-probe";
 import {
   evaluateCombatTakeoverShadow,
   type CombatTakeoverShadowDecision
@@ -174,6 +175,9 @@ export class SquadFieldLabScene extends Phaser.Scene {
   private hud!: SquadFieldLabHud;
   private panel!: SquadFieldLabPanel;
   private readonly control = new FieldLabSquadControl();
+  private readonly coverPlayground = new URLSearchParams(window.location.search).get("coverlab") === "1";
+  private readonly cover = new CompanionCoverProbe();
+  private previousCoverReason = "OFF";
   private readonly labels = new Map<SquadMemberId, Phaser.GameObjects.Text>();
   private playerLabel!: Phaser.GameObjects.Text;
   private hostileLabel!: Phaser.GameObjects.Text;
@@ -217,7 +221,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
 
   private keys!: Record<
     "w" | "a" | "s" | "d" | "up" | "down" | "left" | "right" |
-    "tab" | "direct" | "reset" | "pause" | "step" | "time" | "situation" |
+    "tab" | "direct" | "cover" | "reset" | "pause" | "step" | "time" | "situation" |
     "playerAction" | "focusedAction" | "selectedAction" |
     "one" | "two" | "three" | "four",
     Phaser.Input.Keyboard.Key
@@ -228,6 +232,23 @@ export class SquadFieldLabScene extends Phaser.Scene {
   }
 
   create(): void {
+    if (this.coverPlayground) {
+      // Owner can enter the live situation with one URL, no scripted C1 action.
+      // Paused initial state gives time to observe and deliberately grant help.
+      this.situation = "COMBAT_MICRO";
+      this.layout = "OPEN";
+      this.control.setActiveCount(1);
+      this.paused = true;
+      const pane = document.querySelector("#game-pane");
+      if (pane) {
+        const guide = document.createElement("div");
+        guide.className = "companion-cover-playground-guide";
+        guide.textContent =
+          "C1 COVER LAB · START PAUSED · C: allow/revoke C1 help · P: play/pause · WASD: move YOU · R: reset · C1 OFF by default";
+        pane.append(guide);
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => guide.remove());
+      }
+    }
     this.graphics = this.add.graphics();
 
     this.playerLabel = this.add.text(0, 0, "YOU", {
@@ -268,6 +289,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
           layout: this.layout,
           paused: this.paused,
           combat: this.combatMicro,
+          cover: this.cover.snapshot,
           trial: this.activeTrial ? {
             slot: this.activeTrial.slot,
             recordedFrames: this.activeTrial.frames.length
@@ -324,6 +346,10 @@ export class SquadFieldLabScene extends Phaser.Scene {
       onToggleDirect: () => {
         const before = this.control.snapshot().directControl;
         const next = this.control.setDirectControl(!before);
+        if (next.directControl && next.focused === "companion" && this.cover.enabled) {
+          this.cover.setEnabled(false);
+          this.log("C1 cover cancelled · Owner took direct control");
+        }
         this.recordTrialIntervention(
           "AUTHORITY",
           memberLabel(next.focused),
@@ -399,6 +425,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       onClearExperiment: (slot) => this.clearExperiment(slot),
       onToggleTrial: (slot) => void this.toggleTrial(slot),
       onClearTrial: (slot) => this.clearTrial(slot),
+      onToggleCover: () => this.toggleCoverIntent(),
       onPlayerRepel: () => this.queueCooperativeAttempt("player"),
       onFocusedRepel: () => this.queueCooperativeAttempt(this.control.snapshot().focused),
       onSelectedRepel: () => {
@@ -431,6 +458,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
       right: Phaser.Input.Keyboard.KeyCodes.RIGHT,
       tab: Phaser.Input.Keyboard.KeyCodes.TAB,
       direct: Phaser.Input.Keyboard.KeyCodes.F,
+      cover: Phaser.Input.Keyboard.KeyCodes.C,
       reset: Phaser.Input.Keyboard.KeyCodes.R,
       pause: Phaser.Input.Keyboard.KeyCodes.P,
       step: Phaser.Input.Keyboard.KeyCodes.O,
@@ -499,6 +527,21 @@ export class SquadFieldLabScene extends Phaser.Scene {
     const control = this.control.snapshot();
     const player = actor(before, "player");
 
+    const coverDecision = this.cover.step({
+      world: before,
+      combat: this.combatMicro,
+      control,
+      situation: this.situation,
+      layout: this.layout,
+      strikeRange: COMBAT_MICRO_RULES.strikeRange
+    });
+    if (coverDecision.reason !== this.previousCoverReason) {
+      if (this.cover.enabled) {
+        this.log(`C1 cover · ${coverDecision.reason} · readiness ${coverDecision.readyTicks}t`);
+      }
+      this.previousCoverReason = coverDecision.reason;
+    }
+
     const memberMoves = new Map<SquadMemberId, Vec2>();
     for (const memberId of control.activeMembers) {
       const body = actor(before, memberId);
@@ -522,6 +565,13 @@ export class SquadFieldLabScene extends Phaser.Scene {
       }
     }
 
+    if (coverDecision.moveTarget) {
+      const c1 = actor(before, "companion");
+      const dynamics = this.control.effectiveDynamicsFor("companion");
+      const motor = realizeCoverMotion(coverDecision, c1.position, dynamics);
+      if (motor) memberMoves.set("companion", motor);
+    }
+
     const canonicalIntents: MotionIntent[] = [
       { actorId: "player", move: playerMove },
       { actorId: "companion", move: memberMoves.get("companion") ?? { x: 0, y: 0 } }
@@ -537,6 +587,16 @@ export class SquadFieldLabScene extends Phaser.Scene {
       this.situation === "PRESSURE" ? this.pendingCooperativeAttempts.splice(0) : [];
     const combatMicroAttempts =
       this.situation === "COMBAT_MICRO" ? this.pendingCombatMicroAttempts.splice(0) : [];
+    if (coverDecision.strike &&
+        !combatMicroAttempts.some(attempt => attempt.actorId === "companion")) {
+      combatMicroAttempts.push({ actorId: "companion", kind: "STRIKE", targetId: "hostile" });
+      this.recordTrialIntervention(
+        "ACTION", "C1", "LIVE_COVER_STRIKE",
+        `prepared ${coverDecision.readyTicks}t`,
+        `World attempt from observed tick ${before.tick}`
+      );
+      this.log(`C1 live-cover STRIKE attempt · World tick ${before.tick} · player currently bears pressure`);
+    }
     const result = this.world.stepSituation({
       motionIntents: canonicalIntents,
       experimentalSquadMotionIntents,
@@ -591,6 +651,13 @@ export class SquadFieldLabScene extends Phaser.Scene {
   }
 
   private handleKeyboard(): void {
+    const element = document.activeElement;
+    const editingText = element instanceof HTMLInputElement ||
+      element instanceof HTMLTextAreaElement ||
+      (element instanceof HTMLElement && element.isContentEditable);
+    if (!editingText && Phaser.Input.Keyboard.JustDown(this.keys.cover)) {
+      this.toggleCoverIntent();
+    }
     if (Phaser.Input.Keyboard.JustDown(this.keys.tab)) {
       const next = this.control.cycleFocus(1);
       this.log(`focus ${memberLabel(next.focused)}`);
@@ -598,6 +665,10 @@ export class SquadFieldLabScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(this.keys.direct)) {
       const state = this.control.snapshot();
       const next = this.control.setDirectControl(!state.directControl);
+      if (next.directControl && next.focused === "companion" && this.cover.enabled) {
+        this.cover.setEnabled(false);
+        this.log("C1 cover cancelled · Owner took direct control");
+      }
       this.log(`direct ${memberLabel(next.focused)} ${next.directControl ? "ON" : "off"}`);
     }
     if (Phaser.Input.Keyboard.JustDown(this.keys.situation)) {
@@ -664,6 +735,17 @@ export class SquadFieldLabScene extends Phaser.Scene {
       this.log("authored position reset requested");
       void this.loadWorld(false);
     }
+  }
+
+  private toggleCoverIntent(): void {
+    if (this.activeTrial || this.situation !== "COMBAT_MICRO" || this.layout !== "OPEN") {
+      this.log("C1 live cover not available · requires COMBAT_MICRO / OPEN outside legacy A/B Trial");
+      return;
+    }
+    this.cover.setEnabled(!this.cover.enabled);
+    this.log(`Owner C1 COVER ${this.cover.enabled
+      ? "ARMED · local brain may intervene in real World"
+      : "OFF · Owner has revoked local action authority"}`);
   }
 
   private toggleSetupPlacement(): void {
@@ -764,6 +846,10 @@ export class SquadFieldLabScene extends Phaser.Scene {
 
   private issueOrderFromHud(mode: SquadOrderMode): void {
     if (!this.snapshotValue) return;
+    if (this.cover.enabled && this.control.snapshot().selected.includes("companion")) {
+      this.cover.setEnabled(false);
+      this.log("C1 cover cancelled · explicit Owner order takes precedence");
+    }
     const before = this.selectedOrderSummary();
     const scope = this.selectedScopeLabel();
     if (mode === "FOLLOW") {
@@ -837,6 +923,10 @@ export class SquadFieldLabScene extends Phaser.Scene {
     }
 
     if (pointer.rightButtonDown()) {
+      if (this.cover.enabled && this.control.snapshot().selected.includes("companion")) {
+        this.cover.setEnabled(false);
+        this.log("C1 cover cancelled · direct Owner MOVE order");
+      }
       const before = this.selectedOrderSummary();
       const scope = this.selectedScopeLabel();
       this.control.issueSelected("MOVE", worldPoint);
@@ -1165,6 +1255,7 @@ export class SquadFieldLabScene extends Phaser.Scene {
 
     this.hud.update({
       control: state,
+      cover: this.cover.snapshot,
       situation: this.situation,
       layout: this.layout,
       paused: this.paused,
@@ -1554,6 +1645,11 @@ export class SquadFieldLabScene extends Phaser.Scene {
   }
 
   private captureExperiment(slot: FieldLabExperimentSlot): void {
+    // V1 setup serialization has no live-cover policy. Refuse deceptive A/B.
+    if (this.cover.enabled) {
+      this.log(`capture ${slot} blocked · disarm C1 cover (not represented in v1 A/B schema)`);
+      return;
+    }
     if (!this.snapshotValue || this.loading) {
       this.log(`capture ${slot} ignored · World unavailable`);
       return;
@@ -1607,6 +1703,11 @@ export class SquadFieldLabScene extends Phaser.Scene {
   }
 
   private async toggleTrial(slot: FieldLabTrialSlot): Promise<void> {
+    // Never smuggle a live brain into legacy manual-only A/B truth.
+    if (this.cover.enabled) {
+      this.log(`trial ${slot} blocked · disarm C1 cover; A/B omits live policy`);
+      return;
+    }
     if (this.activeTrial?.slot === slot) {
       this.stopTrial("manual stop");
       return;
@@ -1804,6 +1905,10 @@ export class SquadFieldLabScene extends Phaser.Scene {
       );
       previous?.dispose();
       this.world = next;
+      // A reconstructed World is a new encounter, not continuing readiness.
+      // No silent carrying of cover authority across a scenario or reset.
+      this.cover.setEnabled(false);
+      this.previousCoverReason = "OFF";
       this.snapshotValue = next.snapshot();
       this.accumulator = 0;
       this.singleStepQueued = false;

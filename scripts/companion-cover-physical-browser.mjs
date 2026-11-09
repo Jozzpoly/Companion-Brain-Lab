@@ -1,0 +1,130 @@
+import { mkdir } from "node:fs/promises";
+import { chromium } from "playwright-chromium";
+import { preview } from "vite";
+
+const ART = "artifacts/companion-cover-physical-browser";
+const assert = (x, msg) => { if (!x) throw new Error(msg); };
+const server = await preview({
+  logLevel: "error", preview: {host: "127.0.0.1", port: 4188, strictPort: true}
+});
+let browser;
+async function tap(page, key) {
+  await page.keyboard.down(key);
+  await page.waitForTimeout(35);
+  await page.keyboard.up(key);
+}
+async function runEncounter(cover) {
+  const context = await browser.newContext({viewport:{width:1800,height:1060}});
+  const page = await context.newPage();
+  const errs = [];
+  page.on("pageerror", e => errs.push(e.message));
+  const status = page.locator('[data-combat-micro-status="true"]');
+  const active = page.locator('[data-c1-cover="toggle"]');
+  try {
+    await page.goto("http://127.0.0.1:4188/?fieldlab=1", {waitUntil:"domcontentloaded"});
+    await page.locator("#game-root canvas").waitFor({state:"visible"});
+    await tap(page, "p"); // Freeze before selecting authored test conditions.
+    await page.locator('[data-situation="COMBAT_MICRO"]').click();
+    await page.locator('[data-layout="OPEN"]').click();
+    await page.locator('[data-squad-size="1"]').click();
+    await page.waitForFunction(() =>
+      document.querySelector("#debug-panel")?.textContent?.includes("scenario squad-field-lab-combat-micro") &&
+      document.querySelector("#debug-panel")?.textContent?.includes("layout OPEN")
+    ,null,{timeout:12000});
+    assert((await status.textContent()).includes("HP 3/3"), "initial Combat Micro not pristine");
+    assert(!(await active.getAttribute("aria-pressed")).includes("true"), "C1 Cover not default OFF");
+    if (cover) {
+      await active.click();
+      assert(await active.getAttribute("aria-pressed") === "true", "C1 Cover not explicitly armed");
+      await page.locator("#game-root canvas").click({position:{x:180,y:180}});
+      await tap(page,"c");
+      assert(await active.getAttribute("aria-pressed") === "false",
+        "C keyboard command could not revoke C1 Cover");
+      await tap(page,"c");
+      assert(await active.getAttribute("aria-pressed") === "true",
+        "C keyboard command could not re-arm C1 Cover");
+    }
+    await page.screenshot({path:`${ART}/${cover?"cover":"baseline"}-01-before.png`});
+    await tap(page, "t"); // 2x fixed-step simulation, not a fake speed or physics.
+    await tap(page, "p"); // Start.
+    await page.waitForFunction(({cover}) => {
+      const s = document.querySelector('[data-combat-micro-status="true"]')?.textContent ?? "";
+      return cover ? s.includes("history C1") : /hits YOU [1-9]/.test(s);
+    }, {cover}, {timeout:15000});
+    const result = (await status.textContent()) ?? "";
+    const debug = (await page.locator("#debug-panel").textContent()) ?? "";
+    const coverStatus = (await page.locator('[data-c1-cover-status="true"]').textContent()) ?? "";
+    await page.screenshot({path:`${ART}/${cover?"cover":"baseline"}-02-material-outcome.png`});
+    assert(errs.length === 0, "browser errors: " + errs.join(" | "));
+    assert(cover
+      ? result.includes("history C1") && result.includes("pressure target C1") && result.includes("HP 2/3")
+      : result.includes("history none") && /hits YOU [1-9]/.test(result),
+      "unqualified comparison result: " + JSON.stringify({cover,result,coverStatus}));
+    if (cover) {
+      assert(debug.includes("C1 live-cover STRIKE attempt"),
+        "no source-visible C1 autonomy evidence in causal microscope");
+      await tap(page, "p");
+      await active.click();
+      assert(await active.getAttribute("aria-pressed") === "false",
+        "Owner cannot explicitly revoke live C1 cover");
+    }
+    return {result,coverStatus,sourceTrace:debug.includes("C1 live-cover STRIKE attempt")};
+  } finally { await context.close(); }
+}
+async function proveOwnerEntry() {
+  const context = await browser.newContext({viewport:{width:1520,height:920}});
+  try {
+    const page = await context.newPage();
+    await page.goto("http://127.0.0.1:4188/?fieldlab=1&coverlab=1",
+      {waitUntil:"domcontentloaded"});
+    await page.locator(".companion-cover-playground-guide").waitFor({state:"visible"});
+    // The debug panel exposes actual World tick and layout, but initial
+    // pause is not logged as a "PAUSED" transition. Verify the *physics*
+    // does not advance rather than requiring a missing debug label.
+    await page.waitForFunction(() =>
+      document.querySelector("#debug-panel")?.textContent?.includes("layout OPEN") &&
+      document.querySelector("#debug-panel")?.textContent?.includes("scenario squad-field-lab-combat-micro") &&
+      document.querySelector('[data-combat-micro-status="true"]')?.textContent?.includes("HP 3/3")
+    ,null,{timeout:12000});
+    const sourceTick = async () => {
+      const txt = await page.locator("#debug-panel").textContent() ?? "";
+      const found = txt.match(/tick (\d+) · scenario squad-field-lab-combat-micro/);
+      assert(found, "World tick missing from real source panel: "+txt.slice(0,800));
+      return Number(found[1]);
+    };
+    const tickBeforeStart = await sourceTick();
+    await page.waitForTimeout(450);
+    assert((await sourceTick()) === tickBeforeStart,
+      "CoverLab unexpectedly advanced World before Owner started");
+    const cover = page.locator('[data-c1-cover="toggle"]');
+    assert(await cover.getAttribute("aria-pressed") === "false",
+      "direct URL unexpectedly granted C1 action authority");
+    await page.locator("#game-root canvas").click({position:{x:200,y:180}});
+    await tap(page,"c");
+    assert(await cover.getAttribute("aria-pressed") === "true",
+      "Owner cannot arm C1 with C from direct World entry");
+    await tap(page,"p");
+    await page.waitForFunction(() =>
+      document.querySelector("#debug-panel")?.textContent?.includes("RUNNING"),
+      null,{timeout:3000});
+    await page.screenshot({path:ART+"/00-direct-owner-coverlab-entry.png"});
+    return {entry:"?fieldlab=1&coverlab=1",pausedAtStart:true,armedOnlyOnOwnerC:true};
+  } finally { await context.close(); }
+}
+try {
+  await mkdir(ART,{recursive:true});
+  browser = await chromium.launch({headless:true});
+  const ownerEntry = await proveOwnerEntry();
+  const baseline = await runEncounter(false);
+  const covered = await runEncounter(true);
+  console.log(JSON.stringify({
+    status:"PASS / physically distinct opt-in C1 agency",
+    ownerEntry,
+    baseline,
+    covered,
+    warning:"COMBAT_MICRO OPEN only. No Owner acceptance or broad teammate cognition."
+  },null,2));
+} finally {
+  if(browser) await browser.close();
+  await new Promise(resolve => server.httpServer.close(resolve));
+}

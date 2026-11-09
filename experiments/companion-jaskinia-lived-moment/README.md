@@ -1,6 +1,6 @@
 # Companion × Jaskinia — lived cooperative moment (GPT-6, 6 Nov 2026)
 
-**Status: ISOLATED EXPERIMENT; NOT OWNER QUALIFIED; NO PUBLIC BUILD; NO NEW WORLD AUTHORITY.**
+**Status: ISOLATED EXPERIMENT; NOT OWNER QUALIFIED; NO PUBLIC BUILD OF PR #65 ALONE; NO NEW WORLD AUTHORITY.** The descendant [C1 Cover PR #66](https://github.com/Jozzpoly/Companion-Brain-Lab/pull/66) later published an independent, compiled, non-Owner-qualified specimen — not an old Jaskinia release or the historical public R1.
 
 ## What this experiment actually changes
 
@@ -34,11 +34,11 @@ The result may inspire the broader Worldbench, but it is **not a shared dependen
 - Initial compile/contract CI: **PASS** (193 test files / 784 tests), later one additional no-referrer test and one parent-path test added.
 - [Genuine real-browser Jaskinia x CURRENT Field Lab](https://github.com/Jozzpoly/Companion-Brain-Lab/actions/runs/42307706884): **bounded PASS**. Actual native Jaskinia iframe, source World tick advancing, reported bodies and authority, Owner note pinned to source data at tick 68, Owner feedback returned to lab, maximizing/unmaximizing window did not restart World (tick 127). Two browser screenshots saved as CI artifact. This was before the separate note-anchor-over-time correctness fix.
 - The first browser attempt failed because the lab wrongly depended on a referrer that Jaskinia intentionally suppresses. That limitation was found **by real cross-repo execution** and corrected; do not regress into simulated referrer tests alone.
-- Latest amendments deliberately pin the note at the moment the flag is opened even if periodic telemetry keeps advancing and measure live viewport loss in native/narrow Jaskinia. They need their own CI PASS before claiming those additions qualified.
+- Later exact-source [CI 42308967332](https://github.com/Jozzpoly/Companion-Brain-Lab/actions/runs/42308967332) **PASS** established anchored note, responsive world-first interface and standalone Field Lab preservation in genuine old Jaskinia Chrome; descendant [CI 42314065483](https://github.com/Jozzpoly/Companion-Brain-Lab/actions/runs/42314065483) also passed with Cover. These are strictly bounded engineering outcomes, not Owner experience or resilient long-term world continuity.
 
 ## What to validate next
 
-1. Latest PR CI: TypeScript, tests, production build and genuine old-Jaskinia browser rehearsal, including the note's tick despite delayed typing and desktop/narrow viewport measurements.
+1. No further CI repetition solely to reconfirm the existing transport/viewport proof. Reopen only on new contradictory browser evidence or materially changed source.
 2. Owner's actual feel in Jaskinia: input, resize, focus and ease of rediscovering the real Companion, without routing them to the pinned historical R1 page.
 3. Distinguish source-reported World snapshots from replayable experiment records. Do not claim a solver checkpoint.
 4. Explore live, reversible in-world changes that preserve cooperation and experience, rather than only inspecting read-only source claims.
