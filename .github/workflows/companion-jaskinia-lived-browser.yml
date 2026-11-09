@@ -1,7 +1,12 @@
 name: companion-jaskinia-lived-browser
 
+# The PR's three-dot diff keeps historical code files in scope even on
+# docs-only commits. For this isolated donor branch use a two-dot PUSH diff:
+# source changes trigger the browser, documentation does not.
 on:
-  pull_request:
+  push:
+    branches:
+      - experiment/gpt6-companion-live-cover-2026-11-07
     paths:
       - "src/bridge/companion-jaskinia-lived-moment.ts"
       - "src/bridge/companion-jaskinia-lived-moment.test.ts"
