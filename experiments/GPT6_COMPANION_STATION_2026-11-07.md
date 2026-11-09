@@ -1,5 +1,7 @@
 # GPT-6 / Companion — stan stanowiska przed następną generacją (2026-11-07)
 
+> **9 XI: Current direction is in [the new November 9 independent research campaign](2026-11-09-reentry/RESEARCH_CAMPAIGN_PL.md).** The old facts and falsifiers remain historical evidence. Owner now prioritizes rebuilding the existing Jaskinia's foundation, GitHub freshness and Cloudflare before large Studio features, while the labs independently research creator agency. Do not read this 7 XI note as a current implementation backlog.
+
 > **This is only a branch-local research overlay. It is NOT canonical `main`, NOT Owner-qualified, NOT a personality contract or final architecture, and NOT a roadmap imposed on other agents.** Canonical product intent and evidence precedence remain in `docs/CURRENT.md` (last authored 2026-09-27). This overlay is deliberately short; retain history without making the next agent parse the 138 KB canonical dossier as an implicit scheduler.
 
 ## 1. Why this line exists
