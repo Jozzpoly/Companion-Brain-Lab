@@ -1,4 +1,19 @@
+# Install and build output
 node_modules/
 dist/
 .vite/
+*.tsbuildinfo
+
+# Generated browser and test artifacts (uploaded by CI, not source)
+artifacts/
+coverage/
+playwright-report/
+test-results/
 *.log
+
+# Local credentials and machine files: never publish private Owner data
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
