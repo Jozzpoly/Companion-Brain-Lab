@@ -1,23 +1,6 @@
 name: s1-shared-danger-browser
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "src/app/r1-lab-scene.ts"
-      - "src/app/shared-danger-apparatus-hud.ts"
-      - "src/debug/causal-panel.ts"
-      - "src/world/shared-danger-contract.ts"
-      - "src/world/world.ts"
-      - "src/world/types.ts"
-      - "src/world/scenarios.ts"
-      - "src/physics/rapier-physical-world.ts"
-      - "index.html"
-      - "scripts/s1-shared-danger-browser-smoke.mjs"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/s1-shared-danger-browser.yml"
   workflow_dispatch:
 
 concurrency:

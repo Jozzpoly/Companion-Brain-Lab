@@ -1,22 +1,6 @@
 name: combat-micro-browser
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "src/world/combat-micro-contract.ts"
-      - "src/world/combat-micro-contract.test.ts"
-      - "src/world/world.ts"
-      - "src/world/world.test.ts"
-      - "src/world/types.ts"
-      - "src/world/scenarios.ts"
-      - "src/app/r1-lab-scene.ts"
-      - "scripts/combat-micro-manual-browser.mjs"
-      - "scripts/combat-micro-strategy-campaign.mjs"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/combat-micro-browser.yml"
   workflow_dispatch:
 
 permissions:

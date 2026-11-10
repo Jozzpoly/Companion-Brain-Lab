@@ -1,21 +1,6 @@
 name: s2-situated-responsibility-browser
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "src/brain/situated-responsibility.ts"
-      - "src/brain/situated-responsibility.test.ts"
-      - "src/app/r1-lab-scene.ts"
-      - "src/world/shared-danger-contract.ts"
-      - "src/world/world.ts"
-      - "src/world/types.ts"
-      - "src/world/scenarios.ts"
-      - "scripts/s2-situated-responsibility-browser-smoke.mjs"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/s2-situated-responsibility-browser.yml"
   workflow_dispatch:
 
 concurrency:

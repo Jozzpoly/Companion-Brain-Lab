@@ -1,22 +1,6 @@
 name: s3-material-contribution-browser
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "src/brain/situated-responsibility.ts"
-      - "src/brain/situated-responsibility.test.ts"
-      - "src/brain/s3-material-contribution.ts"
-      - "src/brain/s3-material-contribution.test.ts"
-      - "src/app/r1-lab-scene.ts"
-      - "src/debug/causal-panel.ts"
-      - "src/world/shared-danger-contract.ts"
-      - "src/world/world.ts"
-      - "scripts/s3-material-contribution-browser-smoke.mjs"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/s3-material-contribution-browser.yml"
   workflow_dispatch:
 
 concurrency:

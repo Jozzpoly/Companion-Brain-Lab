@@ -1,46 +1,6 @@
 name: squad-field-lab-browser
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "src/brain/combat-takeover-shadow.ts"
-      - "src/brain/combat-takeover-shadow.test.ts"
-      - "src/brain/field-lab-takeover-readiness.ts"
-      - "src/brain/field-lab-takeover-readiness.test.ts"
-      - "src/world/types.ts"
-      - "src/world/scenarios.ts"
-      - "src/world/world.ts"
-      - "src/world/cooperative-episode-contract.ts"
-      - "src/world/cooperative-episode-contract.test.ts"
-      - "src/world/combat-micro-contract.ts"
-      - "src/world/combat-micro-contract.test.ts"
-      - "src/world/squad-field-lab.test.ts"
-      - "src/physics/rapier-physical-world.ts"
-      - "src/squad/field-lab-squad-control.ts"
-      - "src/squad/field-lab-squad-control.test.ts"
-      - "src/squad/field-lab-experiment.ts"
-      - "src/squad/field-lab-experiment.test.ts"
-      - "src/squad/field-lab-trial.ts"
-      - "src/squad/field-lab-trial.test.ts"
-      - "src/app/squad-field-lab-scene.ts"
-      - "src/app/squad-field-lab-hud.ts"
-      - "src/debug/squad-field-lab-panel.ts"
-      - "src/main.ts"
-      - "index.html"
-      - "scripts/squad-field-lab-browser-smoke.mjs"
-      - "scripts/squad-field-lab-experiment-browser-smoke.mjs"
-      - "scripts/squad-field-lab-manual-episode-authoring.mjs"
-      - "scripts/squad-field-lab-combat-authoring.mjs"
-      - "scripts/squad-field-lab-takeover-shadow.mjs"
-      - "scripts/squad-field-lab-takeover-shadow-matrix.mjs"
-      - "scripts/squad-field-lab-takeover-shadow-trace.mjs"
-      - "scripts/squad-field-lab-preparation-semantics.mjs"
-      - "scripts/squad-field-lab-readiness-boundary.mjs"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/squad-field-lab-browser.yml"
   workflow_dispatch:
 
 permissions:

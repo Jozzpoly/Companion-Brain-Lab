@@ -1,22 +1,6 @@
 name: cooperative-episode-browser
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "src/world/cooperative-episode-contract.ts"
-      - "src/world/cooperative-episode-contract.test.ts"
-      - "src/world/world.ts"
-      - "src/world/types.ts"
-      - "src/world/scenarios.ts"
-      - "src/app/r1-lab-scene.ts"
-      - "src/debug/causal-panel.ts"
-      - "scripts/cooperative-episode-browser-smoke.mjs"
-      - "scripts/cooperative-episode-manual-choreography.mjs"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/cooperative-episode-browser.yml"
   workflow_dispatch:
 
 permissions:
