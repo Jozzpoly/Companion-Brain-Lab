@@ -17,6 +17,10 @@ Use Node.js 22 (`.nvmrc`). Install dependencies with `npm ci`, run `npm run dev`
 
 **Dependency baseline verified 2026-11-10:** `package-lock.json` and project `.npmrc` enable clean `npm ci` on Node 22. [Full CI proof](https://github.com/Jozzpoly/Companion-Brain-Lab/actions/runs/42906609446): 192 files / 780 tests and build PASS. `.npmrc` explicitly uses `legacy-peer-deps=true` because normal npm 10 peer resolution crashes (`edgesOut`). This is a documented compatibility compromise, not a fixed peer graph.
 
+## First real interaction (Field Lab)
+
+Move the player with **WASD**. Click / Shift-click squad members to select, **right-click the world** to issue selected-member movement orders, and drag visible formation slot handles. **Tab** cycles focus; **F** switches focused-member direct control (arrow keys). **P** pauses, **O** advances one paused step, **T** changes time scale, **R** resets the authored situation and **G** cycles situations. **E** triggers the player action, **Enter** the focused member's action and **Space** the selected members' action (their meaning depends on the current situation). The **Setup placement** control in the UI pauses the World and allows dragging real actor bodies to change the starting condition. These are actual research controls, not a finished game interface.
+
 ## Read next
 
 - [docs/STATE.md](docs/STATE.md) — concise actual state, evidence and open problems
