@@ -13,9 +13,9 @@ Independent R&D on **embodied cooperation between a player and one-to-few NPC te
 
 ## Run locally
 
-Use Node.js 22 (`.nvmrc`). Install dependencies with `npm install`, run `npm run dev`, and open `http://localhost:5173/?fieldlab=1`. Use `npm run check` for TypeScript, unit tests, and build. For browser tests, see [docs/RUN_AND_VERIFY.md](docs/RUN_AND_VERIFY.md).
+Use Node.js 22 (`.nvmrc`). Install dependencies with `npm ci`, run `npm run dev`, and open `http://localhost:5173/?fieldlab=1`. Use `npm run check` for TypeScript, unit tests, and build. For browser tests, see [docs/RUN_AND_VERIFY.md](docs/RUN_AND_VERIFY.md).
 
-**Known reproducibility debt:** `package-lock.json` is currently absent, even though direct versions are pinned in `package.json`. Do not claim a clean `npm ci`/fully reproducible dependency graph until a lockfile is actually generated and verified. CI contains a conditional fallback for a known npm dependency-resolution crash.
+**Dependency baseline verified 2026-11-10:** `package-lock.json` and project `.npmrc` enable clean `npm ci` on Node 22. [Full CI proof](https://github.com/Jozzpoly/Companion-Brain-Lab/actions/runs/42906609446): 192 files / 780 tests and build PASS. `.npmrc` explicitly uses `legacy-peer-deps=true` because normal npm 10 peer resolution crashes (`edgesOut`). This is a documented compatibility compromise, not a fixed peer graph.
 
 ## Read next
 

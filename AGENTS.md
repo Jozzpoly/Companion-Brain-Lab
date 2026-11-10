@@ -39,4 +39,4 @@ The Owner directs vision and judges creative/gameplay quality. Do not expect the
 
 ## Verification boundary
 
-`npm run check` is TypeScript + Vitest + Vite build (not a UI/gameplay proof). Playwright smoke scripts may require browser installation. `package-lock.json` is absent on main; dependency installation/reproducibility is a known debt. Historical GitHub Pages surfaces are source-pinned experiments. Product acceptance must not be inferred from successful Actions.
+`npm run check` is TypeScript + Vitest + Vite build (not a UI/gameplay proof). Playwright smoke scripts may require browser installation. `package-lock.json` and `.npmrc` are present; on Node 22 `npm ci` passed on clean CI at [run #42906609446](https://github.com/Jozzpoly/Companion-Brain-Lab/actions/runs/42906609446). The `.npmrc` deliberately enables legacy peer resolution for a known npm 10 crash: do not silently remove it before reproducing and fixing the root incompatibility. Historical GitHub Pages surfaces are source-pinned experiments. Product acceptance must not be inferred from successful Actions.

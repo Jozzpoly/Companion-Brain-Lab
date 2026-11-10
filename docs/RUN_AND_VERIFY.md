@@ -1,6 +1,6 @@
 # Run, verify and reproduce — Companion Brain Lab
 
-**Context:** Node 22 (`.nvmrc`); Vite + TypeScript + Vitest + Phaser 4 + Rapier 2D. Repository `main` (Sep–Nov 2026) has **no dependency lockfile**. Never claim clean reproducibility from `npm install` alone.
+**Context:** Node 22 (`.nvmrc`); Vite + TypeScript + Vitest + Phaser 4 + Rapier 2D. The repository now tracks `package-lock.json` and `.npmrc`. Use `npm ci` for clean repeatable installs with the recorded npm 10 compatibility policy. See [CI #42906609446](https://github.com/Jozzpoly/Companion-Brain-Lab/actions/runs/42906609446) for actual test evidence.
 
 ## Local
 
@@ -8,7 +8,7 @@ From a **separate checkout** of this repository, not a neighboring project:
 
 ```sh
 node --version
-npm install
+npm ci
 npm run dev
 ```
 
@@ -25,7 +25,7 @@ npm run check
 
 That executes `tsc -p tsconfig.json --noEmit`, `vitest run` and `vite build`. `npm test` alone omits TypeScript/build. For actual browser behavior, use targeted scripts already named in `package.json`, e.g. `npm run browser:squad-field-lab` and `npm run browser:squad-field-lab-combat-authoring`. Scripts need a working local Chromium/Playwright environment and can emit local artifacts; do not infer success from their existence.
 
-If `npm install` fails with the recognized npm Arborist `Cannot read properties of null (reading 'edgesOut')` crash, CI retries `npm install --legacy-peer-deps` **only** for that known signature. An unrelated install error must be investigated, not hidden by bypass flags. The absence of `package-lock.json` remains an open engineering debt.
+Dependency cleanup 2026-11-10: default npm 10.9.9 peer resolution crashed inside Arborist (`edgesOut`) on clean GitHub Actions. The earlier conditional `--legacy-peer-deps` fallback worked. Its peer-resolution mode is now declared once in project `.npmrc`, and a lockfile was generated using it. `npm ci` followed by TypeScript, 780 Vitest tests and Vite build **passed on a clean runner**. Legacy peer resolution bypasses some peer compatibility checks; remove this workaround only after proving a compatible dependency graph and rebuilding the lockfile on a clean machine. Unrelated install errors must still be investigated.
 
 ## CI and releases
 

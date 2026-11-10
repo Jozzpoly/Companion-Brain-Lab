@@ -20,7 +20,7 @@ The project studies **competent embodied cooperative NPCs**: one, later a few co
 | Nov Cover donor | [PR #66](https://github.com/Jozzpoly/Companion-Brain-Lab/pull/66) source `7f6a0c6cbad79c732b32d87a0124f70ae6e26953` (stacked on #65) | opt-in one-C1 one-hostile OPEN strike; test source reached World and altered HP/pressure; not an autonomous general brain |
 | Historical Pages | workflow `.github/workflows/pages-research-preview.yml` builds from several pinned older SHAs | historical preview surfaces, not `main`, not a current product deployment |
 | Nov compiled preview | `2c24ff8940e905326c6d1f38c8c797af4e02733b` (orphan build history; see archival manifest) | compiled artifact only; browser-provider click-through and Owner experience not verified |
-| Dependency reproducibility | exact direct deps in `package.json`, **no `package-lock.json`** in `main` | installs are not fully repeatable until lockfile and clean-machine evidence exist |
+| Dependency reproducibility | `package-lock.json` (lock v3, 89 entries) + `.npmrc` (`legacy-peer-deps=true`) now tracked | clean Node 22 `npm ci` + 192 test files / 780 tests + build PASS in [CI #42906609446](https://github.com/Jozzpoly/Companion-Brain-Lab/actions/runs/42906609446); normal npm 10 peer resolution still crashes (`edgesOut`) |
 
 ## Crucial historical acceptance boundaries
 
