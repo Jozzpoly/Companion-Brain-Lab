@@ -27,6 +27,10 @@ That executes `tsc -p tsconfig.json --noEmit`, `vitest run` and `vite build`. `n
 
 Dependency cleanup 2026-11-10: default npm 10.9.9 peer resolution crashed inside Arborist (`edgesOut`) on clean GitHub Actions. The earlier conditional `--legacy-peer-deps` fallback worked. Its peer-resolution mode is now declared once in project `.npmrc`, and a lockfile was generated using it. `npm ci` followed by TypeScript, 780 Vitest tests and Vite build **passed on the original clean-install runner**. After subsequent evidence-based deletions, the main source has **190 test files / 774 tests**, also green ([CI](https://github.com/Jozzpoly/Companion-Brain-Lab/actions/runs/42914713815)). Legacy peer resolution bypasses some peer compatibility checks; remove this workaround only after proving a compatible dependency graph and rebuilding the lockfile on a clean machine. Unrelated install errors must still be investigated.
 
+## UI implementation map
+
+The small `index.html` is now only a document/layout shell. Shared R1/Field Lab styles are in `src/app/workbench-shell.css`; the separate actual views live in `src/app/r1-lab-scene.ts`, `src/app/squad-field-lab-scene.ts` and their respective HUD/panel modules. Scene selection occurs dynamically in `src/main.ts`, with historical R1 debug bridge setup behind `src/app/r1-runtime-entry.ts`. Do not assume the default R1 URL is the active Field Lab or that shared shell CSS is final UX.
+
 ## CI and releases
 
 - `validate` runs on main pushes and PRs; machine quality only.
