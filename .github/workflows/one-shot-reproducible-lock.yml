@@ -1,5 +1,7 @@
 name: one-shot-reproducible-lock
 # CI tests dependency lock generation against an actual clean npm ci.
+# The repo's .npmrc records the existing legacy-peer-resolution fallback
+# because normal npm 10 crashes inside Arborist (edgesOut); do not hide it.
 # This temporary workflow is removed after its verified outcome.
 on:
   push:
@@ -22,7 +24,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
-      - name: Build lockfile with normal npm resolution
+      - name: Build lockfile using explicit project peer-resolution policy
         run: |
           set -euo pipefail
           test ! -e package-lock.json
