@@ -1,52 +1,28 @@
 # Companion Brain Lab
 
-Research laboratory for **embodied player-companion intelligence**: a strong local live brain, useful autonomy, tactical cooperation, fast player direction, and companions that increasingly feel like teammates rather than followers.
+Independent R&D on **embodied cooperation between a player and one-to-few NPC teammates**. The aim is a competent, readable, correctable partner in a real shared world—not a chatbot, follower demo, behavior-list framework, or debug-only success.
 
-The project is not an LLM wrapper, generic AI framework, pathfinding demo, or behavior-list exercise. Higher cognition may later complement the local brain, but the central research problem is embodied cooperation in a shared world.
+**New AI agent / different provider? Start with [AGENTS.md](AGENTS.md) and [docs/STATE.md](docs/STATE.md).** No prior ChatGPT/Claude conversation, memory, account library, or proprietary workflow is required.
 
-## Start here
+## What exists
 
-**Canonical current state:** [`docs/CURRENT.md`](docs/CURRENT.md)
+- `main` contains the **Squad Field Lab**: player and up to four companion bodies, formations, direct control, orders, parametric experiments, real Rapier/World authority, and causal diagnostics. This is a research instrument, **not an Owner-qualified teammate**.
+- One-to-one Combat Micro and manual intervention are bounded research capabilities. They do **not** prove tactical intelligence or useful cooperation.
+- The Nov 2026 **Jaskinia live note** and **C1 Cover** were *unmerged donor experiments*, not part of `main`. Recover exact sources via [archive/branch-manifest-2026-11-10.json](archive/branch-manifest-2026-11-10.json), and PRs [#65](https://github.com/Jozzpoly/Companion-Brain-Lab/pull/65)/[#66](https://github.com/Jozzpoly/Companion-Brain-Lab/pull/66).
+- Published GitHub Pages points at **historical pinned specimens**, not the current main-branch Field Lab or an approved product.
 
-That file outranks historical plans, old experiment names, closed PRs, deleted branches, and stale handoffs.
+## Run locally
 
-## Current project truth
+Use Node.js 22 (`.nvmrc`). Install dependencies with `npm install`, run `npm run dev`, and open `http://localhost:5173/?fieldlab=1`. Use `npm run check` for TypeScript, unit tests, and build. For browser tests, see [docs/RUN_AND_VERIFY.md](docs/RUN_AND_VERIFY.md).
 
-- **Owner truth precedence:** later explicit Owner feedback and Owner-observed behavior outrank machine PASS, internal state, debug evidence, older documentation and agent-authored promotion language for product-level claims. A green mechanism can remain valid diagnostic evidence while the user-facing function is FAIL.
-- **Movement / foundation:** `CLOSED-ENOUGH FOR CURRENT RESEARCH · OWNER PERMISSION TO MOVE ON · NOT PRODUCT-QUALIFIED`.
-- The older `PASS · REWORK-READY` label is now read narrowly: the Owner allowed movement-only research to stop blocking richer teammate work. It is not a product/gameplay PASS and cannot override later Owner-observed failures.
-- The 2026-09-20 OS-PREP-5 movement review was rejected as a **redundant Owner gate**: ordinary live behavior was still too similar to the previously accepted movement organism.
-- Stage B Slice 1 (`295452947e5936b79a7e3c40a79f6fdb3f239836`) remains machine-qualified as a narrow live-authority experiment, but the 2026-09-20 Owner test **rejected it as a product/Owner milestone**.
-- Owner feedback: it felt like a regression toward day-one capability; visible change was essentially red/green threat circles; there was no meaningful player command/control layer; hiding the accumulated debug/workbench made prior progress feel discarded.
-- The repo still contains the full causal/debug workbench; the rejected participant surface hid it rather than deleting it.
-- Stage B is therefore retained only as donor/regression evidence.
-- Moving `main` contains a **post-FAIL command/autonomy spike**. Its separation of player directive, autonomous proposal, arbitration, execution and World outcome is useful donor evidence; its concrete `AT_WILL/FOLLOW_ME/HOLD_HERE`, F1/F2/F3 UI and autonomy radii are experimental, not roadmap authority.
-- The active implementation/research object is now the **Companion / Squad Field Lab**: a broad manual 1–4 companion sandbox for selection, direct control, world-space orders, editable formations, dynamics, multiple spatial situations and causal debug.
-- Current regression-qualified research runtime `9c6f291a829fd1f10916d3bae6517bc87d8583b2` remains a **SQUAD MOVEMENT / FORMATION AUTHORING + EXPERIMENT SUBSTRATE · BROAD BEHAVIOR LAB INCOMPLETE · NOT OWNER-QUALIFIED · AUTONOMY NOT PROMOTED**. The Shared Task Under Pressure campaign is now closed-rejected as a behavior-discovery direction: single-zone screening collapsed to one magic body placement, while a two-stage visible responsibility transfer remained brittle/collision-geometry dominated even after reactive and visible-cue anticipatory manual reposition attempts. Its World/task/contact/trace seams remain useful donors; SCREEN/PROTECT/INTERCEPT semantics were not promoted.
-- The Owner reaffirmed on 2026-09-24 that this advanced, highly parametric laboratory is an important direction: broad freedom to author formations/behavior/dynamics should be used to discover repeatable patterns that later autonomy may earn responsibility for.
-- The Field Lab is a means, not the destination. It does **not** erase the still-open S5-style product debt: continuous game-like cooperative play / teammate outcome remains an important pressure through which discovered behavior must eventually prove value. The project must not stall indefinitely in laboratory sophistication while the live teammate remains near the early movement-era "spark".
-- Movement-only qualification should remain closed unless richer gameplay exposes a concrete substrate failure; this scoped closure must not be described as teammate/product PASS.
+**Known reproducibility debt:** `package-lock.json` is currently absent, even though direct versions are pinned in `package.json`. Do not claim a clean `npm ci`/fully reproducible dependency graph until a lockfile is actually generated and verified. CI contains a conditional fallback for a known npm dependency-resolution crash.
 
-## North star
+## Read next
 
-> During unscripted play, the Owner increasingly treats the companion as a teammate: can rely on it without babysitting, can predict enough to coordinate, notices meaningful initiative, and can correct or direct it quickly when desired.
+- [docs/STATE.md](docs/STATE.md) — concise actual state, evidence and open problems
+- [docs/RUN_AND_VERIFY.md](docs/RUN_AND_VERIFY.md) — executable commands and safety
+- [docs/RESEARCH_INDEX.md](docs/RESEARCH_INDEX.md) — how to find useful history without following old roadmaps
+- [docs/INITIAL_RESEARCH_SKELETON.md](docs/INITIAL_RESEARCH_SKELETON.md) — original intent (Sep 2026)
+- [archive/README.md](archive/README.md) — recover experiments without preserving stale development branches
 
-Near-term work should make the Field Lab increasingly valuable as an unscripted research instrument: faster authoring/perturbation/capture/restore/A-B comparison, richer meaningful dynamics, and formation behavior under geometric/cooperative pressure. Manual Owner-authored behavior is evidence for later autonomy, not a fallback. The next Owner test should emerge from real accumulated capability; another narrow movement/marker/mechanism gate is not sufficient.
-
-## Repository discipline
-
-This repository is intentionally **main-first**.
-
-- Do not create branch-per-test, branch-per-proof, or branch-per-document.
-- Prefer commits, tests, artifacts and documents for evidence provenance.
-- A temporary branch is justified only when isolation is materially useful; keep at most one active development branch unless a concrete reason requires otherwise, and delete it after merge/rejection.
-- Historical experiment branches from the 2026-09 campaign were consolidated safely. Their exact old tips are preserved in Git ancestry and indexed in [`archive/branch-manifest-2026-09-20.json`](archive/branch-manifest-2026-09-20.json).
-- Recovery instructions are in [`archive/README.md`](archive/README.md).
-
-## Important historical anchors
-
-- Original Owner intent / research frame: [`docs/INITIAL_RESEARCH_SKELETON.md`](docs/INITIAL_RESEARCH_SKELETON.md)
-- Foundation verdict: [`docs/FOUNDATION_FINAL_READINESS.md`](docs/FOUNDATION_FINAL_READINESS.md)
-- Current execution authority: [`docs/CURRENT.md`](docs/CURRENT.md)
-
-Public Pages preserve historical surfaces without replacing them. Both the old `/owner/` movement review and the Stage B `/teammate/?teammate=1` surface are historical/rejected Owner stimuli, not the current decision gate.
+This repository is **main-first**. Keep valuable evidence; do not keep obsolete plans in charge. Product/UX claims require Owner experience, not merely machine PASS.

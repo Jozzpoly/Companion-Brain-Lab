@@ -1,0 +1,44 @@
+{
+  "schema": "companion-branch-archive/1",
+  "capturedAt": "2026-11-10",
+  "repo": "Jozzpoly/Companion-Brain-Lab",
+  "purpose": "Durable provenance for closed non-product November branches before remote-head retirement; source SHA is authoritative.",
+  "archivalStatus": "PENDING_TAG_VERIFICATION_AT_INITIAL_MANIFEST_WRITE",
+  "entries": [
+    {
+      "oldRef": "refs/heads/experiment/gpt6-companion-lived-moment-2026-11-06",
+      "tip": "36e886abbacbebda95d0f13ceee5f4da3100e0e2",
+      "archiveTag": "archive/2026-11-10/jaskinia-lived-moment",
+      "pr": 65,
+      "base": "main",
+      "scope": "world-first narrow old-Jaskinia read/remark bridge and real Chrome evidence",
+      "ownerQualified": false,
+      "mergedIntoMain": false
+    },
+    {
+      "oldRef": "refs/heads/experiment/gpt6-companion-live-cover-2026-11-07",
+      "tip": "7f6a0c6cbad79c732b32d87a0124f70ae6e26953",
+      "archiveTag": "archive/2026-11-10/companion-live-cover",
+      "pr": 66,
+      "base": "experiment/gpt6-companion-lived-moment-2026-11-06",
+      "scope": "stacked on #65, experimental opt-in one-C1 Cover and Nov 9 recovery dossier; unmerged",
+      "ownerQualified": false,
+      "mergedIntoMain": false
+    },
+    {
+      "oldRef": "refs/heads/preview/gpt6-companion-live-cover-2026-11-07",
+      "tip": "2c24ff8940e905326c6d1f38c8c797af4e02733b",
+      "archiveTag": "archive/2026-11-10/cover-compiled-preview",
+      "scope": "orphan built/static artifact, built from source SHA 3b954c10bba94d3ad8eb5655d8b49d78daeffa62; not a product or current main",
+      "ownerQualified": false,
+      "mergedIntoMain": false
+    }
+  ],
+  "guardrails": [
+    "Verify each tag SHA before deleting branch",
+    "Do not delete main or rewrite history",
+    "Closed PRs remain review provenance",
+    "Some 14-day CI screenshots may expire; executable source survives in tags",
+    "If tag creation fails, do not delete its source head"
+  ]
+}

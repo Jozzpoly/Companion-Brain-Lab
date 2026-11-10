@@ -1,3 +1,5 @@
+> **HISTORICAL SNAPSHOT (2026-09-27), NOT THE CURRENT EXECUTION QUEUE.** For any new agent—including other AI providers—read [AGENTS.md](../AGENTS.md) and [docs/STATE.md](STATE.md) first. This document retains detailed September evidence, intentions and rejected branches, but newer explicit Owner direction and live Git truth take precedence. The November Jaskinia/Cover experiments were unmerged donors; see [archive manifest](../archive/branch-manifest-2026-11-10.json).
+
 # Companion Brain Lab — CURRENT
 
 Status: **CANONICAL EXECUTION ENTRYPOINT · STRATEGIC RECOVERY / QUESTION-DRIVEN EXECUTION**
