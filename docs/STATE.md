@@ -1,4 +1,4 @@
-> **Repository cleanup completed 2026-11-10:** one branch remains (`main`); the November donor branches and orphan preview were retired after their exact SHAs were verified under three archive tags. PR #65/#66 were closed without merging any experiment into product code. [Verification run](https://github.com/Jozzpoly/Companion-Brain-Lab/actions/runs/42904769440). See [archive manifest](../archive/branch-manifest-2026-11-10.json). No production Pages release or gameplay code was changed by the cleanup.
+> **Branch/PR archival stage completed 2026-11-10 (NOT a full repository cleanup):** one branch remains (`main`); the November donor branches and orphan preview were retired after their exact SHAs were verified under three archive tags. PR #65/#66 were closed without merging any experiment into product code. [Verification run](https://github.com/Jozzpoly/Companion-Brain-Lab/actions/runs/42904769440). See [archive manifest](../archive/branch-manifest-2026-11-10.json). No production Pages release or gameplay code was changed by the cleanup.
 
 # Companion Brain Lab — recoverable state
 
