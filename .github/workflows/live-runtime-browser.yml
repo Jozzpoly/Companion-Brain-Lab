@@ -1,0 +1,66 @@
+name: live-runtime-browser
+
+# Fast, source-backed browser baseline for BOTH routes of current main.
+# Historical specialist browser campaigns remain available for explicit reruns.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "scripts/command-autonomy-browser-smoke.mjs"
+      - "scripts/squad-field-lab-browser-smoke.mjs"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - ".npmrc"
+      - "vite.config.ts"
+      - ".github/workflows/live-runtime-browser.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "scripts/command-autonomy-browser-smoke.mjs"
+      - "scripts/squad-field-lab-browser-smoke.mjs"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - ".npmrc"
+      - "vite.config.ts"
+      - ".github/workflows/live-runtime-browser.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-runtime-browser-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  actual-browser:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SOURCE_SHA: ${{ github.sha }}
+      GITHUB_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Install exact dependency graph
+        run: npm ci --no-audit --no-fund
+      - name: Build actual runtime
+        run: npm run build
+      - name: R1 command and autonomy real-browser smoke
+        run: npm run browser:command-autonomy
+      - name: Squad Field Lab real-browser smoke
+        run: npm run browser:squad-field-lab
+      - name: Preserve browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-runtime-browser-${{ github.sha }}
+          path: |
+            artifacts/command-autonomy-browser/
+            artifacts/squad-field-lab-browser/
+          if-no-files-found: warn
+          retention-days: 14
