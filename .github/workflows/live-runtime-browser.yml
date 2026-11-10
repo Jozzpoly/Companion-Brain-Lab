@@ -9,6 +9,7 @@ on:
       - "src/**"
       - "scripts/command-autonomy-browser-smoke.mjs"
       - "scripts/squad-field-lab-browser-smoke.mjs"
+      - "scripts/squad-field-lab-combat-authoring.mjs"
       - "index.html"
       - "package.json"
       - "package-lock.json"
@@ -20,6 +21,7 @@ on:
       - "src/**"
       - "scripts/command-autonomy-browser-smoke.mjs"
       - "scripts/squad-field-lab-browser-smoke.mjs"
+      - "scripts/squad-field-lab-combat-authoring.mjs"
       - "index.html"
       - "package.json"
       - "package-lock.json"
@@ -54,6 +56,8 @@ jobs:
         run: npm run browser:command-autonomy
       - name: Squad Field Lab real-browser smoke
         run: npm run browser:squad-field-lab
+      - name: Squad Field Lab material combat authoring smoke
+        run: npm run browser:squad-field-lab-combat-authoring
       - name: Preserve browser evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -62,5 +66,6 @@ jobs:
           path: |
             artifacts/command-autonomy-browser/
             artifacts/squad-field-lab-browser/
+            artifacts/squad-field-lab-combat-authoring/
           if-no-files-found: warn
           retention-days: 14
