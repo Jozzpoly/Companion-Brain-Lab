@@ -1,0 +1,47 @@
+name: one-shot-reproducible-lock
+# CI tests dependency lock generation against an actual clean npm ci.
+# This temporary workflow is removed after its verified outcome.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/one-shot-reproducible-lock.yml"
+permissions:
+  contents: write
+concurrency:
+  group: one-shot-reproducible-lock
+  cancel-in-progress: false
+jobs:
+  produce-and-test:
+    if: github.repository == 'Jozzpoly/Companion-Brain-Lab' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Build lockfile with normal npm resolution
+        run: |
+          set -euo pipefail
+          test ! -e package-lock.json
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          test -s package-lock.json
+          git diff --check
+          node -e 'const p=require("./package-lock.json");if(p.lockfileVersion<3)process.exit(1);console.log("lock v",p.lockfileVersion,"packages",Object.keys(p.packages||{}).length)'
+      - name: Verify actual clean dependency install, TypeScript, tests and build
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm run check
+      - name: Commit only verified lockfile, refusing concurrent main changes
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          test "$(git diff --cached --name-only)" = package-lock.json
+          git commit -m "build: lock verified npm dependency tree for portable clean installs"
+          git push origin HEAD:refs/heads/main
+          echo "LOCKFILE_PUSHED_FROM_VERIFIED_CI"
