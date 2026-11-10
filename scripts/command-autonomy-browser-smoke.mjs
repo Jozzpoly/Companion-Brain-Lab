@@ -78,6 +78,19 @@ try {
   });
 
   await page.locator("#game-root canvas").waitFor({ state: "visible", timeout: 15_000 });
+  // Route-level regression: the default R1 specimen may not preload Field Lab.
+  const r1LoadedAssets = await page.evaluate(() =>
+    performance.getEntriesByType("resource").map((entry) => entry.name)
+  );
+  invariant(
+    r1LoadedAssets.some((url) => /\/r1-runtime-entry-[^/]+\.js(?:\?|$)/.test(url)),
+    "R1 must load its own dynamically selected runtime chunk."
+  );
+  invariant(
+    !r1LoadedAssets.some((url) => /\/squad-field-lab-scene-[^/]+\.js(?:\?|$)/.test(url)),
+    "Default R1 loaded the unrelated Field Lab scene chunk."
+  );
+
 
   const initial = await waitForPanel(
     page,

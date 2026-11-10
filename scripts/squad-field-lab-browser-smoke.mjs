@@ -110,6 +110,20 @@ try {
     timeout: 30_000
   });
   await page.locator("#game-root canvas").waitFor({ state: "visible", timeout: 15_000 });
+  // Causal architectural guard: ordinary Field Lab must not load R1's
+  // historical research prototype bridges and coordination graph.
+  const fieldLoadedAssets = await page.evaluate(() =>
+    performance.getEntriesByType("resource").map((entry) => entry.name)
+  );
+  invariant(
+    fieldLoadedAssets.some((url) => /\/squad-field-lab-scene-[^/]+\.js(?:\?|$)/.test(url)),
+    "Field Lab must load its own dynamically selected scene chunk."
+  );
+  invariant(
+    !fieldLoadedAssets.some((url) => /\/r1-runtime-entry-[^/]+\.js(?:\?|$)/.test(url)),
+    "Field Lab requested the unrelated R1 historical research runtime chunk."
+  );
+
   await page.locator('[data-squad-field-lab-hud="true"]').waitFor({ state: "visible", timeout: 10_000 });
   await waitFor(
     page,
