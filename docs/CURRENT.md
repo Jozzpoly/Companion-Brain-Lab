@@ -1,11 +1,11 @@
 > **HISTORICAL SNAPSHOT (2026-09-27), NOT THE CURRENT EXECUTION QUEUE.** For any new agent—including other AI providers—read [AGENTS.md](../AGENTS.md) and [docs/STATE.md](STATE.md) first. This document retains detailed September evidence, intentions and rejected branches, but newer explicit Owner direction and live Git truth take precedence. The November Jaskinia/Cover experiments were unmerged donors; see [archive manifest](../archive/branch-manifest-2026-11-10.json).
 
-# Companion Brain Lab — CURRENT
+# Companion Brain Lab — September 2026 research dossier (historical)
 
-Status: **CANONICAL EXECUTION ENTRYPOINT · STRATEGIC RECOVERY / QUESTION-DRIVEN EXECUTION**
-Date: **2026-09-27**
+Status: **HISTORICAL EVIDENCE · NOT CURRENT EXECUTION AUTHORITY**
+Date of original snapshot: **2026-09-27**
 
-Read this first before continuing the project.
+For current handoff, start with [AGENTS.md](../AGENTS.md) and [docs/STATE.md](STATE.md). Read this long dossier only for a specific September research question.
 
 This file records current Owner intent and execution authority after the 2026-09 retrospective and repository cleanup. Historical plans, deleted branch names, closed PRs and old handoffs remain evidence, but they do not outrank this file or newer explicit Owner feedback.
 
