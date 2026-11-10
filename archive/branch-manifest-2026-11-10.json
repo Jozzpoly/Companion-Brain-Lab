@@ -3,7 +3,7 @@
   "capturedAt": "2026-11-10",
   "repo": "Jozzpoly/Companion-Brain-Lab",
   "purpose": "Durable provenance for closed non-product November branches before remote-head retirement; source SHA is authoritative.",
-  "archivalStatus": "PENDING_TAG_VERIFICATION_AT_INITIAL_MANIFEST_WRITE",
+  "archivalStatus": "COMPLETE_VERIFIED_2026-11-10",
   "entries": [
     {
       "oldRef": "refs/heads/experiment/gpt6-companion-lived-moment-2026-11-06",
@@ -40,5 +40,20 @@
     "Closed PRs remain review provenance",
     "Some 14-day CI screenshots may expire; executable source survives in tags",
     "If tag creation fails, do not delete its source head"
-  ]
+  ],
+  "cleanupEvidence": {
+    "actionRun": "https://github.com/Jozzpoly/Companion-Brain-Lab/actions/runs/42904769440",
+    "result": "success",
+    "deletedBranches": [
+      "refs/heads/experiment/gpt6-companion-lived-moment-2026-11-06",
+      "refs/heads/experiment/gpt6-companion-live-cover-2026-11-07",
+      "refs/heads/preview/gpt6-companion-live-cover-2026-11-07"
+    ],
+    "survivingBranch": "refs/heads/main",
+    "retargetedAndClosedPullRequests": [
+      65,
+      66
+    ],
+    "tagsIndividuallyVerified": true
+  }
 }

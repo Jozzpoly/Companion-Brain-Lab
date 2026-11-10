@@ -4,9 +4,9 @@ The Sep 2026 experiment branch explosion was previously consolidated into `main`
 
 ## November 2026 donor retirement
 
-See [branch-manifest-2026-11-10.json](branch-manifest-2026-11-10.json). It records exact branch tips for two **unmerged** stacked donor PRs and one **orphan compiled preview**. The intent is to preserve each at an immutable named Git tag under `archive/2026-11-10/*` before removing their obsolete branch names.
+See [branch-manifest-2026-11-10.json](branch-manifest-2026-11-10.json). It records exact branch tips for two **unmerged** stacked donor PRs and one **orphan compiled preview**. **COMPLETED 2026-11-10:** all three exact tips are preserved at immutable named Git tags under `archive/2026-11-10/*`. The three former branch refs were deleted; only `main` remains. Both draft PRs were closed, unmerged. Exact cleanup evidence: [GitHub Actions #42904769440](https://github.com/Jozzpoly/Companion-Brain-Lab/actions/runs/42904769440).
 
-**Verify tags exist and their SHA matches the manifest before assuming cleanup completed.** If not, the previous branch refs may still be the only durable named references. New agents should not trust a manifest's planned status as evidence of actual remote action.
+**At cleanup, all three tag SHAs were read back and matched the manifest.** Any future agent should still verify live Git refs rather than trust a dated declaration. Do not recreate the old long-lived development branches by default.
 
 Recover source code using Git's ordinary refs, e.g.:
 
