@@ -1,18 +1,4 @@
 import Phaser from "phaser";
-import { R1LabScene } from "./app/r1-lab-scene";
-import { SquadFieldLabScene } from "./app/squad-field-lab-scene";
-import { participantSafeSearch } from "./app/owner-review-mode";
-import { installAuthorityA0BrowserBridge } from "./debug/authority-a0-browser-bridge";
-import { installAuthorityA11fBrowserBridge } from "./debug/authority-a1-1f-browser-bridge";
-import { installAuthorityA12p1BrowserBridge } from "./debug/authority-a1-2p1-browser-bridge";
-import { installAuthorityA12p2BrowserBridge } from "./debug/authority-a1-2p2-manual-browser-bridge";
-import { installAuthorityA12z4cBrowserBridge } from "./debug/authority-a1-2z4c-browser-bridge";
-import { installAuthorityA10BrowserBridge } from "./debug/authority-a1-browser-bridge";
-import { scheduleFoundationFaultProbe } from "./debug/foundation-fault-probe";
-import { installRelationshipCommitmentShadowBrowserBridge } from "./debug/relationship-commitment-shadow-browser-bridge";
-import { installRelationshipSemanticPerturbationBrowserBridge } from "./debug/relationship-semantic-perturbation-browser-bridge";
-import { installRelationshipSemanticPhysicsShadowBrowserBridge } from "./debug/relationship-semantic-physics-shadow-browser-bridge";
-import { installOwnerControlScaleBrowserBridge } from "./debug/owner-control-scale-browser-bridge";
 import {
   installRuntimeFaultSentinel,
   normalizeRuntimeFault
@@ -25,50 +11,50 @@ const reportRuntimeFault = installRuntimeFaultSentinel({
   }
 });
 
-try {
-  const rawSearch = window.location.search;
-  const fieldLabActive = new URLSearchParams(rawSearch).get("fieldlab") === "1";
-  const runtimeSearch = participantSafeSearch(rawSearch);
+/**
+ * Select the runtime before importing either scene. The default R1 research
+ * probes should not pull 50+ coordination modules into a Field Lab session.
+ * Catch asynchronous module-load errors through the same fail-stop sentinel.
+ */
+async function startSelectedRuntime(): Promise<void> {
+  try {
+    const rawSearch = window.location.search;
+    const fieldLabActive = new URLSearchParams(rawSearch).get("fieldlab") === "1";
+    let scene: typeof Phaser.Scene;
+    let afterGameCreated: (() => void) | null = null;
 
-  if (!fieldLabActive) {
-    installOwnerControlScaleBrowserBridge(runtimeSearch);
-    installAuthorityA0BrowserBridge(runtimeSearch);
-    installAuthorityA10BrowserBridge(runtimeSearch);
-    installAuthorityA11fBrowserBridge(runtimeSearch);
-    installAuthorityA12z4cBrowserBridge(runtimeSearch, R1LabScene.prototype);
-    installAuthorityA12p1BrowserBridge(runtimeSearch, R1LabScene.prototype);
-    // The query-only semantic physics shadow must wrap the unperturbed R1 output.
-    // The physical perturbation apparatus is installed outside it afterwards.
-    installRelationshipSemanticPhysicsShadowBrowserBridge(runtimeSearch, R1LabScene.prototype);
-    // Query-only commitment observation wraps the unperturbed R1 result and never
-    // changes intents. The perturbation apparatus remains the outermost wrapper.
-    installRelationshipCommitmentShadowBrowserBridge(runtimeSearch, R1LabScene.prototype);
-    installRelationshipSemanticPerturbationBrowserBridge(runtimeSearch, R1LabScene.prototype);
-    // P2 is intentionally outermost: existing research/shadow apparatus observes
-    // the unpromoted path first, then an explicit one-step authorization may replace
-    // only the final companion intent. semanticpush is rejected by the P2 bridge.
-    installAuthorityA12p2BrowserBridge(runtimeSearch, R1LabScene.prototype);
-  } else {
-    document.title = "Companion Brain Lab — Squad Field Lab";
+    if (fieldLabActive) {
+      const { SquadFieldLabScene } = await import("./app/squad-field-lab-scene");
+      scene = SquadFieldLabScene;
+      document.title = "Companion Brain Lab — Squad Field Lab";
+    } else {
+      const { prepareR1Runtime } = await import("./app/r1-runtime-entry");
+      const prepared = prepareR1Runtime(rawSearch);
+      scene = prepared.scene;
+      afterGameCreated = prepared.afterGameCreated;
+    }
+
+    game = new Phaser.Game({
+      type: Phaser.AUTO,
+      parent: "game-root",
+      backgroundColor: "#111318",
+      scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: 1200,
+        height: 800
+      },
+      scene: [scene]
+    });
+
+    // Preserve the old R1 fault-probe scheduling point: after Game creation.
+    afterGameCreated?.();
+  } catch (error) {
+    reportRuntimeFault(normalizeRuntimeFault({
+      source: "manual",
+      value: error
+    }));
   }
-
-  game = new Phaser.Game({
-    type: Phaser.AUTO,
-    parent: "game-root",
-    backgroundColor: "#111318",
-    scale: {
-      mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH,
-      width: 1200,
-      height: 800
-    },
-    scene: fieldLabActive ? [SquadFieldLabScene] : [R1LabScene]
-  });
-
-  if (!fieldLabActive) scheduleFoundationFaultProbe(runtimeSearch);
-} catch (error) {
-  reportRuntimeFault(normalizeRuntimeFault({
-    source: "manual",
-    value: error
-  }));
 }
+
+void startSelectedRuntime();
