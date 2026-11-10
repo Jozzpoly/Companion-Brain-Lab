@@ -24,7 +24,8 @@ jobs:
           node --input-type=module <<'NODE'
           import fs from "node:fs";
           import path from "node:path";
-          import ts from "typescript";
+          // Deliberately use a conservative import-text scanner as an upper bound.
+          // Actual Vite source-map membership below is the definitive build inclusion proof.
           function walk(d) {
             return fs.readdirSync(d, {withFileTypes:true}).flatMap(e => {
               const p=path.posix.join(d,e.name);
@@ -42,33 +43,23 @@ jobs:
             return candidates.find(x=>allSet.has(x))||null;
           }
           function readEdges(p) {
-            const source=ts.createSourceFile(p,fs.readFileSync(p,"utf8"),ts.ScriptTarget.ESNext,true);
-            const runtime=[],allImports=[],dynamic=[];
-            function add(text,isRuntime,isDynamic) {
-              if(typeof text!=="string")return;
-              const target=resolve(p,text);
-              if(!target)return;
-              allImports.push(target);
-              if(isRuntime)runtime.push(target);
-              if(isDynamic)dynamic.push(target);
+            const code=fs.readFileSync(p,"utf8");
+            const found=[],dynamic=[];
+            for(const re of [
+              /\bfrom\s*["'](\.[^"']+)["']/g,
+              /\bimport\s*["'](\.[^"']+)["']/g
+            ]) {
+              for(const m of code.matchAll(re)) {
+                const target=resolve(p,m[1]);
+                if(target)found.push(target);
+              }
             }
-            function visit(n) {
-              if(ts.isImportDeclaration(n)&&ts.isStringLiteral(n.moduleSpecifier)) {
-                const c=n.importClause;
-                const typeOnly=!!c?.isTypeOnly;
-                add(n.moduleSpecifier.text,!typeOnly,false);
-              }
-              if(ts.isExportDeclaration(n)&&n.moduleSpecifier&&ts.isStringLiteral(n.moduleSpecifier)) {
-                add(n.moduleSpecifier.text,!n.isTypeOnly,false);
-              }
-              if(ts.isCallExpression(n)&&n.expression.kind===ts.SyntaxKind.ImportKeyword) {
-                const first=n.arguments[0];
-                if(first&&ts.isStringLiteral(first))add(first.text,true,true);
-              }
-              ts.forEachChild(n,visit);
+            for(const m of code.matchAll(/\bimport\s*\(\s*["'](\.[^"']+)["']\s*\)/g)) {
+              const target=resolve(p,m[1]);
+              if(target){found.push(target);dynamic.push(target);}
             }
-            visit(source);
-            return {runtime:[...new Set(runtime)],all:[...new Set(allImports)],dynamic:[...new Set(dynamic)]};
+            const all=[...new Set(found)];
+            return {runtime:all,all,dynamic:[...new Set(dynamic)]};
           }
           const edges=new Map(all.map(p=>[p,readEdges(p)]));
           const seen=new Set(),q=["src/main.ts"];
@@ -102,7 +93,7 @@ jobs:
             const js=mp.slice(0,-4);
             bundleChunks.push({chunk:js,bytes:fs.statSync(js).size});
           }
-          const observed={productionModules:prod.length,testModules:tests.length,runtimeStaticReachable:seen.size,perFolder:groups,unreachableProduction:dormant,srcModulesInActualBuild:bundleModules.size,actualBuildSources:[...bundleModules].sort(),bundleChunks};
+          const observed={productionModules:prod.length,testModules:tests.length,sourceImportReachableUpperBound:seen.size,perFolder:groups,unreachableProduction:dormant,srcModulesInActualBuild:bundleModules.size,actualBuildSources:[...bundleModules].sort(),bundleChunks};
           console.log("STRUCTURAL_AUDIT_JSON_BEGIN");
           console.log(JSON.stringify(observed,null,2));
           console.log("STRUCTURAL_AUDIT_JSON_END");
