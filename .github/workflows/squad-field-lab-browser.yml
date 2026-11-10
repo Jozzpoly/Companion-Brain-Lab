@@ -21,18 +21,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Install dependencies
-        run: |
-          if npm install; then
-            exit 0
-          fi
-          latest_log="$(ls -t "$HOME"/.npm/_logs/*-debug-0.log 2>/dev/null | head -n 1 || true)"
-          if [ -z "$latest_log" ] || ! grep -Fq "Cannot read properties of null (reading 'edgesOut')" "$latest_log"; then
-            if [ -n "$latest_log" ]; then cat "$latest_log"; fi
-            exit 1
-          fi
-          rm -rf node_modules
-          npm install --legacy-peer-deps
+      - name: Install from repository lockfile
+        run: npm ci --no-audit --no-fund
       - name: Full compile unit and build gate
         run: npm run check
       - name: Broad Squad Field Lab browser rehearsal
