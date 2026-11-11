@@ -1,6 +1,6 @@
 # Agent entry — Companion Brain Lab (provider-independent)
 
-Read **README.md → docs/STATE.md → docs/RUN_AND_VERIFY.md** before editing. This file is an orientation contract for any independent AI assistant, IDE agent, CLI model, or human engineer. It is not tied to ChatGPT, Codex, Claude, Gemini, or a specific memory service.
+Read **README.md → docs/WHAT_MATTERS.md → docs/STATE.md → docs/RUN_AND_VERIFY.md** before editing. This file is an orientation contract for any independent AI assistant, IDE agent, CLI model, or human engineer. It is not tied to ChatGPT, Codex, Claude, Gemini, or a specific memory service.
 
 ## Mission and scope
 

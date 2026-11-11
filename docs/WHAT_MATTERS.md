@@ -1,0 +1,40 @@
+# Companion Brain Lab — what matters across AI providers
+
+**Curated 2026-11-11 · research compass, NOT a roadmap or Owner acceptance.** Separate (a) Owner intent as recorded in historical agent documents, (b) actions seen in participant recordings, (c) instrumented World facts, and (d) later agent hypotheses. No complete video originals or verbatim conversation transcript are asserted to be stored here. Reassess this document against direct newer Owner experience.
+
+## Why this laboratory exists
+
+The goal is an **embodied teammate**, one to a few: continuously capable through an inexpensive local brain, useful during combat *and preparation*, independently attentive yet quickly commanded or corrected. A companion should act in the same consequential physical world as the player; high-level cognition/LLMs are optional, not replacements for basic competence. The Owner should be able to *play → shape behavior manually → observe → perturb → compare → recognize useful recurring intent → selectively grant autonomy → correct again*. Manual authoring and a strong diagnostic inspector are valuable in their own right, not merely disposable scaffolding for the next algorithm.
+
+**Not the goal:** more marker circles, complicated movement for its own sake, hidden timing puzzles passed by instrumented browser bots, an all-purpose NPC framework, or expanding a debug dashboard until it appears intelligent. Source: [initial working intent](INITIAL_RESEARCH_SKELETON.md) and [Owner-confirmed Squad Field Lab campaign as recorded by the agent](COMPANION_SQUAD_FIELD_LAB_CAMPAIGN.md).
+
+## Hard-to-recreate findings — keep these visible
+
+| Evidence class | What happened | Crucial qualification |
+| --- | --- | --- |
+| **Owner perception reported in agent video analysis, 14 Sep** | The Owner spontaneously felt the *first weak sign of aliveness* in some curved, history-dependent companion movement. | [CCC-0 Owner Video #1 analysis](CCC_0_OWNER_VIDEO_1_BEHAVIOR_FORENSICS.md) did **not** establish that CCC shadow cognition caused it: that system had no movement authority. Appearing alive may also mean uncontrolled separation, lucky avoidance or an artifact of movement history. Analysis ≠ preserved raw recording. |
+| **Owner interaction in ~20-second recording, 21 Sep** | Pressing **E** and **Q** failed to produce useful, legible actions. E was valid only within a hidden **45-tick/0.75-second WINDUP** and 0.9 m range; Q's veto could register while changing nothing in the world. | [Owner gate reassessment](OWNER_GATE_REASSESSMENT_2026-09-21.md). The browser PASS was real but **Owner-facing FAIL**. The earlier S7 Owner gate had skipped the necessary multi-beat S5 experience; no amount of instrumented input recognition repairs that UX flaw. |
+| **Explicit negative product assessment, Sep** | A stripped-down Stage B teammate with three abstract bodies and hidden cleverness felt empty despite mechanism gates. Removing debug also removed useful agency. | [Participant gate](TEAMMATE_READINESS_PUBLIC_OWNER_GATE_2026-09-21.md), [reassessment](OWNER_GATE_REASSESSMENT_2026-09-21.md). The public specimen remains historical diagnostic evidence, not a valid Owner-ready build. |
+| **Owner direction, reflected in Sep project handoff** | The wider 1–4-body **Squad Field Lab** was affirmed as its **own valuable manual creative instrument**: direct control, formations, trial setup, capture/restore, comparison, real World consequences. | [Squad campaign](COMPANION_SQUAD_FIELD_LAB_CAMPAIGN.md); [Sep handoff](CONVERSATION_HANDOFF_2026-09-29.md). This does **not** mean its autonomy is good or the interface was approved as a finished product. Preserve the ability to shape and test behavior without an AI programmer. |
+| **Rejected automated behavior-discovery setup, Sep** | Shared Task Under Pressure was dominated by authored placement or brittle collision geometry even after redesign. | [Sep handoff §5](CONVERSATION_HANDOFF_2026-09-29.md). Keep useful World/causal donors; do **not** tune the same fixture forever or call success at its task proof of a useful teammate. |
+| **Nov donor with source-level Chrome evidence** | Jaskinia lived note exposed actual World tick/body state. Opt-in **C1 Cover** performed one physical World strike and transferred target pressure in OPEN Combat Micro. | Archived [PR #65](https://github.com/Jozzpoly/Companion-Brain-Lab/pull/65), [PR #66](https://github.com/Jozzpoly/Companion-Brain-Lab/pull/66). Different A/B stopping events; **C1 received 0 hits** before stop; global omniscient position and combat phase; 12-tick fixed readiness; no durable Cover policy after target transfer. Not live player value, learned intelligence, or a merged feature. |
+
+## Durable engineering donors, not architectural obligations
+
+The most promising inherited seams are **World-authoritative results**, explicit `attempt → outcome`, body/route and safety feasibility, separation of player order versus AI proposal versus operator editing, causal provenance, low-friction manual A/B, and time-dependent relationship/movement that can be investigated after a real incident. See [Retrospective T7](RETROSPECTIVE_T7_DECISION_DOSSIER.md) for discriminating evidence and the caution that A1 is *not* a roadmap just because it is the largest research corpus.
+
+A particularly important unanswered question is **mutual adaptation**: can C1's initiative change what the player chooses next, and can the player's correction change C1's later actions, including *when NOT to help*? Do not presuppose the November 9 “author commitments” concept, a Behavior Tree, a planner, LLM, or any specific control UI as the answer. These are competing hypotheses, not confirmed product design.
+
+## Current code/archives: how to avoid false inheritance
+
+- **Playable source first:** `main` serves `?fieldlab=1` (active research playground). Root `/` serves **historical R1**. [Run instructions](RUN_AND_VERIFY.md). A green CI test is bounded source/browser evidence, not a substitute for the Owner touching a playable situation.
+- **Historical code is physically present:** R1 and its research bridges remain isolated by route-level dynamic imports; much of `coordination/` still exists to preserve important research and regression comparators. Do not delete all old files on their age/name alone.
+- **September archaeology:** [109-branch archive manifest](../archive/branch-manifest-2026-09-20.json) describes source SHA lineage; its archive anchor was confirmed as a **main ancestor** on 11 Nov. Neither these old branch names nor old dated execution plans are active tasks.
+- **November archaeology:** [three verified Git tags](../archive/branch-manifest-2026-11-10.json) preserve two unmerged donor sources plus one **compiled-only preview**. The source refs are not merged, and a preview HTML is not a source project.
+- **Boundaries:** Git object ancestry and tags do not preserve private ChatGPT conversations, raw Owner recordings, short-lived CI artifacts or the entire account if GitHub disappears. The user currently prioritizes on-GitHub preservation; do not invent offsite ZIP work or copy private conversation material into this public repository.
+
+## One meaningful new-agent recovery test
+
+Using this repository **without any previous chat or saved GPT memory**, the successor should be able to (1) identify the **actual active Field Lab** rather than R1/Pages/donor; (2) run the exact source with `npm ci`, `npm run check`, and the relevant browser gate; (3) **manually play** one real episode involving a player, C1, a correction and a material consequence; (4) locate one **Owner FAIL** and one **positive yet inconclusive** observation above, including what raw evidence is missing; (5) recover the November donor from a named tag in a disposable checkout; and (6) state the next *falsifiable experience* without automatically continuing a historical roadmap.
+
+**Three separate verdicts:** code/commit is recoverable; software starts and responds; the Owner has genuinely gained meaningful agency. Never substitute one for another. If the third is missing, the project is not finished.

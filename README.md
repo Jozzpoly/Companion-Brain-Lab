@@ -2,7 +2,7 @@
 
 Independent R&D on **embodied cooperation between a player and one-to-few NPC teammates**. The aim is a competent, readable, correctable partner in a real shared world—not a chatbot, follower demo, behavior-list framework, or debug-only success.
 
-**New AI agent / different provider? Start with [AGENTS.md](AGENTS.md) and [docs/STATE.md](docs/STATE.md).** No prior ChatGPT/Claude conversation, memory, account library, or proprietary workflow is required.
+**New agent / different provider?** Start with [WHAT MATTERS](docs/WHAT_MATTERS.md) (meaning and hard-won evidence), then [AGENTS.md](AGENTS.md) (working rules), [STATE](docs/STATE.md) (dated live state) and [RUN AND VERIFY](docs/RUN_AND_VERIFY.md). No ChatGPT/Claude conversation or memory is required.
 
 ## What exists
 
